@@ -115,4 +115,4 @@ window.addEventListener('keyup', (event) => {
   keysPressed.delete(event.key);
 });
 
-export { handleKeyboardMovement, clock };
+export { handleKeyboardMovement, clock, keysPressed, cycleSelection };

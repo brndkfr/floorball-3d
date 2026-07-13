@@ -87,6 +87,36 @@
   #legend { display:none; margin-top:6px; margin-left:20px; font-size:11px; }
   #legend div { display:flex; align-items:center; gap:6px; margin:2px 0; }
   #legend .swatch { width:11px; height:11px; flex:none; }
+
+  /* on-screen touch controls: hidden on desktop, shown only on touch-primary
+     devices (no keyboard) - see touch-controls.js. Buttons use touch-action:
+     none so the browser doesn't intercept holds/drags as scroll/zoom gestures. */
+  #touchControls { display:none; }
+  @media (pointer: coarse) {
+    #touchControls { display:block; }
+  }
+  #touchControls button {
+    touch-action:none; user-select:none; -webkit-user-select:none;
+    font-family:var(--hud-font); color:var(--hud-accent);
+    background:rgba(79,224,255,0.12); border:1px solid var(--hud-accent-dim);
+    border-radius:8px;
+  }
+  #touchControls button:active { background:rgba(79,224,255,0.32); }
+
+  #touchDpad {
+    position:absolute; left:16px; bottom:16px; z-index:12;
+    display:grid; grid-template-columns:52px 52px 52px; grid-template-rows:52px 52px 52px;
+    gap:4px;
+  }
+  #touchDpad button { font-size:20px; }
+  #tcUp { grid-area:1/2; } #tcLeft { grid-area:2/1; }
+  #tcRight { grid-area:2/3; } #tcDown { grid-area:3/2; }
+
+  #touchActions {
+    position:absolute; right:16px; bottom:16px; z-index:12;
+    display:grid; grid-template-columns:52px 52px; gap:8px;
+  }
+  #touchActions button { height:44px; font-size:13px; text-transform:uppercase; letter-spacing:0.04em; }
 </style>
 </head>
 <body>
@@ -153,6 +183,20 @@
 </div>
 <div id="status">loading model&hellip;</div>
 <div id="crosshair"></div>
+<div id="touchControls">
+  <div id="touchDpad">
+    <button id="tcUp" aria-label="forward">&#9650;</button>
+    <button id="tcLeft" aria-label="left">&#9664;</button>
+    <button id="tcRight" aria-label="right">&#9654;</button>
+    <button id="tcDown" aria-label="back">&#9660;</button>
+  </div>
+  <div id="touchActions">
+    <button id="tcRotL" title="rotate goalie left">Q</button>
+    <button id="tcRotR" title="rotate goalie right">E</button>
+    <button id="tcCycle" title="cycle selection">Tab</button>
+    <button id="tcDeselect" title="deselect">Esc</button>
+  </div>
+</div>
 <div id="goalieLabel"></div>
 <div id="coords" class="hud-panel">
   <div class="hud-header">

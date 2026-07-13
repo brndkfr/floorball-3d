@@ -122,10 +122,14 @@ document.getElementById('resetViewBtn').addEventListener('click', () => {
 // --- scroll-wheel zoom: narrows/widens the FOV rather than dollying the
 // camera position, so it works the same whether you're walking, or have
 // something selected, without pushing through walls/objects ---
+export function applyZoomDelta(deltaFov) {
+  camera.fov = THREE.MathUtils.clamp(camera.fov + deltaFov, MIN_FOV, MAX_FOV);
+  camera.updateProjectionMatrix();
+}
+
 renderer.domElement.addEventListener('wheel', (event) => {
   event.preventDefault();
-  camera.fov = THREE.MathUtils.clamp(camera.fov + event.deltaY * ZOOM_SENSITIVITY, MIN_FOV, MAX_FOV);
-  camera.updateProjectionMatrix();
+  applyZoomDelta(event.deltaY * ZOOM_SENSITIVITY);
 }, { passive: false });
 
 window.addEventListener('resize', () => {

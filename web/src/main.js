@@ -10,6 +10,7 @@ import { updateCoverage, updateGoalieLabel } from './coverage.js';
 import './layers.js';
 import './goalie.js';
 import './selection.js';
+import './touch-controls.js';
 
 initHud();
 
