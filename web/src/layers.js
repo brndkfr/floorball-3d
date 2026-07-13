@@ -103,8 +103,10 @@ ballMtlLoader.load(
       'assets/ball.obj' + CACHE_BUST,
       (object) => {
         // ball.obj is local-origin-centred (floor contact point = 0,0,0);
-        // this sets its actual rink position (default: centre spot)
-        object.position.set(0, 0, RINK_L / 2);
+        // this sets its actual rink position - defaults to a spot inside
+        // the crease, off to one side, matching the default camera framing
+        // in scene.js (an elevated shot of the goal/crease/ball together)
+        object.position.set(-1700, 0, 5300);
         object.visible = ballCheckbox.checked;
         state.ballGroup = object;
         scene.add(object);

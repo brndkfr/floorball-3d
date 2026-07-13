@@ -14,9 +14,16 @@ scene.fog = new THREE.Fog(0x1b1b1f, 35000, 90000);
 export const DEFAULT_FOV = 70;
 export const camera = new THREE.PerspectiveCamera(DEFAULT_FOV, window.innerWidth / window.innerHeight, 50, 200000);
 export const EYE_HEIGHT = 1600; // mm, roughly adult standing eye height
-export const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, EYE_HEIGHT, 3000);
-export const DEFAULT_YAW = 0;   // facing +Z, i.e. looking down the rink's length
-export const DEFAULT_PITCH = 0;
+
+// Elevated "scouting" establishing shot: positioned out on the ice in front
+// of the crease, above eye height, pitched down to take in the goal, the
+// goalie and the crease at once - the goalie (see goalie.js) stands at
+// z=4000 facing +Z (out toward the shooter), so the camera needs to be
+// further out (larger Z) than that, looking back toward -Z (yaw=PI, not
+// the walking default of 0) to see its front rather than its back.
+export const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 3200, 9500);
+export const DEFAULT_YAW = Math.PI; // facing -Z, i.e. looking back toward the goal at the z=0 end
+export const DEFAULT_PITCH = -0.48; // ~-27deg, tilts down toward the crease
 const MIN_FOV = 20, MAX_FOV = 90; // narrower FOV reads as "zoomed in"
 const ZOOM_SENSITIVITY = 0.05; // degrees of FOV per unit of wheel deltaY
 
