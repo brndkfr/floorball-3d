@@ -168,7 +168,7 @@ add_uv_sphere(FACE_CENTER, FACE_RADIUS, 'Face')
 
 # --------------------------------------------------------------- export --
 
-out_dir = os.path.dirname(os.path.abspath(__file__))
+out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'web', 'assets')
 obj_path = os.path.join(out_dir, 'goalie.obj')
 mtl_path = os.path.join(out_dir, 'goalie.mtl')
 

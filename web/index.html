@@ -317,7 +317,7 @@ bindLayerToggle(rinkCheckbox, () => rinkGroup);
 
 const rinkMtlLoader = new MTLLoader();
 rinkMtlLoader.load(
-  'rink.mtl' + CACHE_BUST,
+  'assets/rink.mtl' + CACHE_BUST,
   (materials) => {
     materials.preload();
     if (materials.materials.Board) materials.materials.Board.side = THREE.DoubleSide;
@@ -326,7 +326,7 @@ rinkMtlLoader.load(
     const objLoader = new OBJLoader();
     objLoader.setMaterials(materials);
     objLoader.load(
-      'rink.obj' + CACHE_BUST,
+      'assets/rink.obj' + CACHE_BUST,
       (object) => {
         object.visible = rinkCheckbox.checked;
         rinkGroup = object;
@@ -353,7 +353,7 @@ bindLayerToggle(goalsCheckbox, () => goalsGroup);
 
 const goalMtlLoader = new MTLLoader();
 goalMtlLoader.load(
-  'floorball_goal.mtl' + CACHE_BUST,
+  'assets/floorball_goal.mtl' + CACHE_BUST,
   (materials) => {
     materials.preload();
     if (materials.materials.Net) {
@@ -366,7 +366,7 @@ goalMtlLoader.load(
     const objLoader = new OBJLoader();
     objLoader.setMaterials(materials);
     objLoader.load(
-      'floorball_goal.obj' + CACHE_BUST,
+      'assets/floorball_goal.obj' + CACHE_BUST,
       (object) => {
         // clone the pristine (untransformed) object before mutating either copy
         const goalB = object.clone();
@@ -402,14 +402,14 @@ bindLayerToggle(ballCheckbox, () => ballGroup);
 
 const ballMtlLoader = new MTLLoader();
 ballMtlLoader.load(
-  'ball.mtl' + CACHE_BUST,
+  'assets/ball.mtl' + CACHE_BUST,
   (materials) => {
     materials.preload();
 
     const objLoader = new OBJLoader();
     objLoader.setMaterials(materials);
     objLoader.load(
-      'ball.obj' + CACHE_BUST,
+      'assets/ball.obj' + CACHE_BUST,
       (object) => {
         // ball.obj is local-origin-centred (floor contact point = 0,0,0);
         // this sets its actual rink position (default: centre spot)
@@ -524,7 +524,7 @@ function activateGoalieModel(key) {
 }
 
 // model 1: the first-pass blocky figure (see generate_goalie.py)
-loadGoalieModel('goalie.mtl', 'goalie.obj', (object) => {
+loadGoalieModel('assets/goalie.mtl', 'assets/goalie.obj', (object) => {
   // local-origin-centred (ground contact point = 0,0,0), faces +Z by default
   // - matches goal A's mouth orientation, so it needs no extra rotation
   object.position.set(0, 0, GOAL_LINE_FROM_BOARD + 500);
@@ -554,7 +554,7 @@ loadGoalieModel('goalie.mtl', 'goalie.obj', (object) => {
 // anthropometry -> 1800 * 0.755 = ~1359mm. The model's raw Y-span is 2.0
 // units, so scale = 1359 / 2.0 = ~680mm per unit.
 const GOALIE_02_SCALE = 680; // -> ~1360mm kneeling height (180cm standing male, butterfly stance)
-loadGoalieModel('goalie_02.mtl', 'goalie_02.obj', (object) => {
+loadGoalieModel('assets/goalie_02.mtl', 'assets/goalie_02.obj', (object) => {
   object.scale.setScalar(GOALIE_02_SCALE);
   object.position.y = GOALIE_02_SCALE; // shifts local y=-1 (bottom, pre-scale) up to y=0
   const wrapper = new THREE.Group();
@@ -578,7 +578,7 @@ bindLayerToggle(gridTilesCheckbox, () => gridTilesGroup);
 
 const gridTilesMtlLoader = new MTLLoader();
 gridTilesMtlLoader.load(
-  'grid_tiles.mtl' + CACHE_BUST,
+  'assets/grid_tiles.mtl' + CACHE_BUST,
   (materials) => {
     materials.preload();
     if (materials.materials.GridLine) {
@@ -590,7 +590,7 @@ gridTilesMtlLoader.load(
     const objLoader = new OBJLoader();
     objLoader.setMaterials(materials);
     objLoader.load(
-      'grid_tiles.obj' + CACHE_BUST,
+      'assets/grid_tiles.obj' + CACHE_BUST,
       (object) => {
         const group = new THREE.Group();
         group.add(object);
@@ -626,7 +626,7 @@ bindLayerToggle(tacticalCheckbox, () => tacticalGroup);
 
 const tacticalMtlLoader = new MTLLoader();
 tacticalMtlLoader.load(
-  'tactical_zones.mtl' + CACHE_BUST,
+  'assets/tactical_zones.mtl' + CACHE_BUST,
   (materials) => {
     materials.preload();
     for (const name of ['SlotNear', 'SlotHigh', 'Pocket', 'Playmaker', 'ZentralLine']) {
@@ -641,7 +641,7 @@ tacticalMtlLoader.load(
     const objLoader = new OBJLoader();
     objLoader.setMaterials(materials);
     objLoader.load(
-      'tactical_zones.obj' + CACHE_BUST,
+      'assets/tactical_zones.obj' + CACHE_BUST,
       (object) => {
         object.visible = tacticalCheckbox.checked;
         tacticalGroup = object;

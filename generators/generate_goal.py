@@ -222,7 +222,7 @@ for foot in (FBL, FBR, BBL, BBR):
 
 # --------------------------------------------------------------- export --
 
-out_dir = os.path.dirname(os.path.abspath(__file__))
+out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'web', 'assets')
 obj_path = os.path.join(out_dir, 'floorball_goal.obj')
 mtl_path = os.path.join(out_dir, 'floorball_goal.mtl')
 

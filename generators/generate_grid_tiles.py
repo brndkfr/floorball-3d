@@ -81,7 +81,7 @@ for row in range(N_ROWS + 1):
 
 # --------------------------------------------------------------- export --
 
-out_dir = os.path.dirname(os.path.abspath(__file__))
+out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'web', 'assets')
 obj_path = os.path.join(out_dir, 'grid_tiles.obj')
 mtl_path = os.path.join(out_dir, 'grid_tiles.mtl')
 

@@ -160,7 +160,7 @@ for end_sign, board_z in ((+1, 0.0), (-1, RINK_L)):
 
 # --------------------------------------------------------------- export --
 
-out_dir = os.path.dirname(os.path.abspath(__file__))
+out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'web', 'assets')
 obj_path = os.path.join(out_dir, 'tactical_zones.obj')
 mtl_path = os.path.join(out_dir, 'tactical_zones.mtl')
 

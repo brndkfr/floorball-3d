@@ -155,7 +155,7 @@ add_disk(-(HALF_W - FACEOFF_FROM_SIDE), RINK_L / 2, DOT_D / 2, Y_MARK, 'Marking'
 
 # --------------------------------------------------------------- export --
 
-out_dir = os.path.dirname(os.path.abspath(__file__))
+out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'web', 'assets')
 obj_path = os.path.join(out_dir, 'rink.obj')
 mtl_path = os.path.join(out_dir, 'rink.mtl')
 

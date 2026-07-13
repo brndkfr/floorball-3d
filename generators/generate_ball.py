@@ -159,7 +159,7 @@ for d in hole_dirs:
 
 # --------------------------------------------------------------- export --
 
-out_dir = os.path.dirname(os.path.abspath(__file__))
+out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'web', 'assets')
 obj_path = os.path.join(out_dir, 'ball.obj')
 mtl_path = os.path.join(out_dir, 'ball.mtl')
 
