@@ -1,0 +1,5 @@
+newmtl GridLine
+Kd 0.95 0.95 0.85
+d 0.55
+illum 1
+

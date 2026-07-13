@@ -1,0 +1,13 @@
+newmtl Frame
+Kd 0.78 0.05 0.05
+Ka 0.1 0.0 0.0
+Ns 40
+
+newmtl Net
+Kd 0.95 0.95 0.95
+d 0.35
+illum 1
+
+newmtl Pad
+Kd 0.95 0.95 0.95
+

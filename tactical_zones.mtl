@@ -1,0 +1,25 @@
+newmtl SlotNear
+Kd 0.95 0.45 0.40
+d 0.35
+illum 1
+
+newmtl SlotHigh
+Kd 1.0 0.55 0.05
+d 0.5
+illum 1
+
+newmtl Pocket
+Kd 0.25 0.45 0.75
+d 0.25
+illum 1
+
+newmtl Playmaker
+Kd 0.15 0.75 0.35
+d 0.30
+illum 1
+
+newmtl ZentralLine
+Kd 0.95 0.85 0.15
+d 0.90
+illum 1
+
