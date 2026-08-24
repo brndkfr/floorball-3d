@@ -29,7 +29,7 @@ export const CHIP_DISPLAY_SCALE = 8;
 // Two team colours, distinct from the cyan analytical HUD accent and from
 // the amber authoring accent so a chip on screen never blurs into UI chrome.
 export const TEAM_COLORS = {
-  1: 0x2f6dd9, // blue
+  1: 0x2fbf4e, // green
   2: 0xd94b2f, // red
 };
 
