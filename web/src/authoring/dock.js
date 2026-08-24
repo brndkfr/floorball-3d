@@ -9,7 +9,8 @@ import { state } from '../state.js';
 import { spawnChip, nextNumber, TEAM_COLORS, rebuildFromDoc } from './chips.js';
 import { rebuildShapesFromDoc, updateShape } from './shapes.js';
 import { ensureDoc, emptyDoc } from './doc.js';
-import { saveDoc } from './storage.js';
+import { saveDoc, saveNamedSlot, loadNamedSlot, listSlots, deleteSlot, downloadDocJson, readDocFromFile } from './storage.js';
+import { encodeShareUrl } from './share.js';
 import { undo, redo, pushHistory } from './history.js';
 import { enterTopDown, exitTopDown } from './topdown-camera.js';
 import { startDrawing, cancelDrawing, handleFloorClick, tryCommitZone, drawPointCount } from './draw-tool.js';
@@ -117,6 +118,123 @@ overflowMenu.querySelector('[data-action="redo"]').addEventListener('click', () 
   overflowMenu.classList.remove('open');
   redo();
   refreshStatus();
+});
+
+// --- A3: named slots, JSON import/export, share URL -------------------
+
+const slotsPopover = document.getElementById('dockSlots');
+const fileInput = document.getElementById('dockImportFile');
+
+function loadDocInto(doc) {
+  state.doc = doc;
+  rebuildFromDoc();
+  rebuildShapesFromDoc();
+  saveDoc();
+  pushHistory();
+  refreshStatus();
+}
+
+function renderSlotsPopover() {
+  const names = listSlots();
+  slotsPopover.innerHTML = '';
+  if (names.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'slots-empty';
+    empty.textContent = 'no saved schemes yet';
+    slotsPopover.appendChild(empty);
+    return;
+  }
+  for (const name of names) {
+    const row = document.createElement('div');
+    row.className = 'slots-row';
+    const label = document.createElement('button');
+    label.type = 'button';
+    label.className = 'slots-load';
+    label.textContent = name;
+    label.title = 'Load this scheme';
+    label.addEventListener('click', () => {
+      const doc = loadNamedSlot(name);
+      if (!doc) { alert(`Could not load "${name}".`); return; }
+      loadDocInto(doc);
+      slotsPopover.classList.remove('open');
+    });
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'slots-delete';
+    del.title = 'Delete';
+    del.textContent = '\u00d7';
+    del.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!confirm(`Delete saved scheme "${name}"?`)) return;
+      deleteSlot(name);
+      renderSlotsPopover();
+    });
+    row.appendChild(label);
+    row.appendChild(del);
+    slotsPopover.appendChild(row);
+  }
+}
+
+overflowMenu.querySelector('[data-action="save"]').addEventListener('click', () => {
+  overflowMenu.classList.remove('open');
+  const suggested = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const name = prompt('Save scheme as:', suggested);
+  if (!name) return;
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  if (listSlots().includes(trimmed) && !confirm(`Overwrite existing "${trimmed}"?`)) return;
+  if (saveNamedSlot(trimmed)) refreshStatus();
+});
+
+overflowMenu.querySelector('[data-action="load"]').addEventListener('click', (e) => {
+  e.stopPropagation();
+  overflowMenu.classList.remove('open');
+  renderSlotsPopover();
+  slotsPopover.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if (!slotsPopover.contains(e.target)) slotsPopover.classList.remove('open');
+});
+
+overflowMenu.querySelector('[data-action="export"]').addEventListener('click', () => {
+  overflowMenu.classList.remove('open');
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  downloadDocJson(ensureDoc(), `floorball-scheme-${stamp}.json`);
+});
+
+overflowMenu.querySelector('[data-action="import"]').addEventListener('click', () => {
+  overflowMenu.classList.remove('open');
+  fileInput.value = '';
+  fileInput.click();
+});
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files?.[0];
+  if (!file) return;
+  const doc = await readDocFromFile(file);
+  if (!doc) { alert('Could not read that file - is it a valid floorball-3d scheme JSON?'); return; }
+  loadDocInto(doc);
+});
+
+overflowMenu.querySelector('[data-action="share"]').addEventListener('click', async () => {
+  overflowMenu.classList.remove('open');
+  const url = await encodeShareUrl(ensureDoc());
+  if (!url) {
+    // Scene too large for a URL fragment - fall back to JSON download and
+    // tell the user, so a shareable artifact still exists.
+    alert('This scheme is too large for a share URL (~32 KB max). Downloading JSON instead - share the file.');
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    downloadDocJson(ensureDoc(), `floorball-scheme-${stamp}.json`);
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    statusEl.textContent = 'share link copied to clipboard';
+    setTimeout(refreshStatus, 2000);
+  } catch (e) {
+    // Clipboard API blocked (e.g. non-HTTPS, no user gesture chain) -
+    // fall back to showing the URL for manual copy.
+    prompt('Share URL (copy manually):', url);
+  }
 });
 
 // --- keyboard: Esc exits tool mode, Ctrl+Z / Ctrl+Y for undo/redo -----

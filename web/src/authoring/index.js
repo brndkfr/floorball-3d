@@ -6,14 +6,25 @@
 
 import { state } from '../state.js';
 import { ensureDoc } from './doc.js';
-import { loadDoc } from './storage.js';
+import { loadDoc, saveDoc } from './storage.js';
+import { readHashDoc, clearHashDoc } from './share.js';
 import { rebuildFromDoc, updateChipAnimations } from './chips.js';
 import { rebuildShapesFromDoc } from './shapes.js';
 import { initHistory } from './history.js';
 import './dock.js';   // side-effect: wires up the DOM
 
-const saved = loadDoc();
-if (saved) state.doc = saved;
+// Prefer a shared doc from the URL hash so incognito links "just work"
+// without touching whatever the user already has in localStorage. Fall
+// back to the default localStorage slot for a normal reload.
+const shared = await readHashDoc();
+if (shared) {
+  state.doc = shared;
+  clearHashDoc();
+  saveDoc();
+} else {
+  const saved = loadDoc();
+  if (saved) state.doc = saved;
+}
 ensureDoc();
 rebuildFromDoc();
 rebuildShapesFromDoc();

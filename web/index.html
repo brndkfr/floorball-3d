@@ -168,6 +168,39 @@
     letter-spacing:0.05em; text-transform:uppercase; cursor:pointer;
   }
   #dockOverflow button:hover { background:rgba(255,179,71,0.18); }
+  #dockOverflow hr {
+    border:none; height:1px; background:rgba(255,179,71,0.25); margin:2px 0;
+  }
+  #dockSlots {
+    position:absolute; right:0; bottom:48px;
+    display:none; flex-direction:column; min-width:200px; max-height:280px;
+    overflow-y:auto;
+    background:rgba(20,16,10,0.94);
+    border:1px solid rgba(255,179,71,0.45);
+    border-radius:10px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.4);
+    z-index:20;
+  }
+  #dockSlots.open { display:flex; }
+  #dockSlots .slots-empty {
+    padding:10px 14px; font-family:inherit; font-size:11px;
+    color:#f7e6cf; opacity:0.7; text-transform:uppercase; letter-spacing:0.05em;
+  }
+  #dockSlots .slots-row {
+    display:flex; align-items:stretch; border-bottom:1px solid rgba(255,179,71,0.12);
+  }
+  #dockSlots .slots-row:last-child { border-bottom:none; }
+  #dockSlots .slots-load {
+    flex:1; background:transparent; color:#f7e6cf; border:none; text-align:left;
+    padding:8px 12px; font-family:inherit; font-size:12px;
+    letter-spacing:0.04em; cursor:pointer;
+  }
+  #dockSlots .slots-load:hover { background:rgba(255,179,71,0.18); }
+  #dockSlots .slots-delete {
+    background:transparent; color:#ff8080; border:none;
+    padding:0 12px; font-size:16px; cursor:pointer;
+  }
+  #dockSlots .slots-delete:hover { background:rgba(255,80,80,0.2); color:#fff; }
   #dock .dock-swatch {
     display:inline-block; width:16px; height:16px; border-radius:50%;
     background:var(--draw-color, #ffb347);
@@ -318,7 +351,15 @@
     <button data-action="undo">Undo (Ctrl+Z)</button>
     <button data-action="redo">Redo (Ctrl+Y)</button>
     <button data-action="new">New scheme</button>
+    <hr>
+    <button data-action="save">Save scheme&hellip;</button>
+    <button data-action="load">Load scheme&hellip;</button>
+    <button data-action="export">Export JSON</button>
+    <button data-action="import">Import JSON&hellip;</button>
+    <button data-action="share">Copy share link</button>
   </div>
+  <div id="dockSlots" role="menu"></div>
+  <input type="file" id="dockImportFile" accept="application/json,.json" hidden>
 </div>
 <div id="coords" class="hud-panel">
   <div class="hud-header">
