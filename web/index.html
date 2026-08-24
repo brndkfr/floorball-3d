@@ -333,7 +333,7 @@
     Selected: Arrows/WASD = move ball, goalie or chip &middot; Q/E = rotate goalie<br>
     Goalie only: hold Shift while moving/rotating for finer control<br>
     Authoring dock (bottom): click <b>Chip</b>, then click the rink to drop a player. <b>Del</b> removes the selected chip.<br>
-    Shape tools: <b>Arrow</b> (2 clicks), <b>Zone</b> (N clicks + click near start to close), <b>Text</b> (click, type, Enter) &ndash; camera swings top-down while a shape tool is active.
+    Shape tools: <b>Arrow</b> (2 clicks), <b>Zone</b> (N clicks + click near start to close), <b>Text</b> (click, type, Enter). Toggle <b>2D / 3D</b> on the dock; every tool works in both views.
     <div id="layers">
       <div class="layer-row"><label><input type="checkbox" id="rinkCheckbox" checked> Rink (board + markings)</label></div>
       <div class="layer-row"><label><input type="checkbox" id="goalsCheckbox" checked> Goals</label></div>
@@ -415,6 +415,7 @@
   <button data-tl="add" class="tl-add" title="Add frame (copy of current)" style="height:28px;min-width:32px;background:rgba(255,179,71,0.08);border:1px solid rgba(255,179,71,0.35);color:#f7e6cf;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px;">+</button>
 </div>
 <div id="dock">
+  <button class="dock-btn" data-dock="view" title="Toggle 2D top-down / 3D perspective view">3D</button>
   <button class="dock-btn" data-dock="team" title="Flip active team">T1</button>
   <button class="dock-btn" data-dock="chip" title="Chip stamp (click the rink to drop a player)">
     <span aria-hidden="true">&#9679;</span> Chip

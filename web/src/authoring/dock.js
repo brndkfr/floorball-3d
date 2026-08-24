@@ -12,7 +12,7 @@ import { ensureDoc, emptyDoc } from './doc.js';
 import { saveDoc, saveNamedSlot, loadNamedSlot, listSlots, deleteSlot, downloadDocJson, readDocFromFile } from './storage.js';
 import { encodeShareUrl } from './share.js';
 import { undo, redo, pushHistory } from './history.js';
-import { enterTopDown, exitTopDown } from './topdown-camera.js';
+import { enterTopDown, exitTopDown, isTopDown } from './topdown-camera.js';
 import { startDrawing, cancelDrawing, handleFloorClick, tryCommitZone, drawPointCount } from './draw-tool.js';
 
 const dockEl = document.getElementById('dock');
@@ -20,6 +20,7 @@ if (!dockEl) throw new Error('dock element missing from index.html');
 
 const chipBtn = dockEl.querySelector('[data-dock="chip"]');
 const teamBtn = dockEl.querySelector('[data-dock="team"]');
+const viewBtn = dockEl.querySelector('[data-dock="view"]');
 const overflowBtn = dockEl.querySelector('[data-dock="overflow"]');
 const overflowMenu = dockEl.querySelector('#dockOverflow');
 const colorBtn = dockEl.querySelector('[data-dock="color"]');
@@ -28,10 +29,6 @@ const statusEl = document.getElementById('dockStatus');
 const shapeButtons = dockEl.querySelectorAll('[data-dock-tool]');   // arrow, zone, text
 
 const SHAPE_TOOLS = new Set(['arrow', 'zone', 'text']);
-// Every authoring tool - chip included - drops the camera into top-down;
-// planning is a 2D activity, and the perspective camera makes precise
-// placement fiddly.
-const TOPDOWN_TOOLS = new Set(['chip', 'arrow', 'zone', 'text']);
 const PALETTE_COLORS = ['#ffb347', '#ff5b5b', '#5bd1ff', '#7ee06b', '#c07bff', '#ffffff', '#1a120a'];
 
 // --- state helpers ----------------------------------------------------
@@ -40,8 +37,6 @@ function setActiveTool(tool) {
   const prev = state.activeTool;
   if (prev === tool) tool = null;   // clicking active tool exits it
   state.activeTool = tool;
-
-  if (TOPDOWN_TOOLS.has(tool)) enterTopDown(); else exitTopDown();
 
   // draw-tool state: start/stop the click-to-place machine
   if (SHAPE_TOOLS.has(tool)) startDrawing(tool); else cancelDrawing();
@@ -86,6 +81,18 @@ teamBtn.addEventListener('click', () => {
   state.currentTeam = state.currentTeam === 1 ? 2 : 1;
   refreshStatus();
 });
+
+function refreshViewButton() {
+  const td = isTopDown();
+  viewBtn.textContent = td ? '2D' : '3D';
+  viewBtn.title = td ? 'Top-down view - click to switch to first-person 3D' : 'First-person 3D view - click to switch to top-down 2D';
+  viewBtn.classList.toggle('active', td);
+}
+viewBtn.addEventListener('click', () => {
+  if (isTopDown()) exitTopDown(); else enterTopDown();
+  refreshViewButton();
+});
+refreshViewButton();
 
 // overflow menu (New / Undo / Redo) - simple toggle-visibility popover
 overflowBtn.addEventListener('click', (e) => {
