@@ -185,6 +185,18 @@ window.addEventListener('pointerup', (event) => {
   mouseNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouseNDC, state.activeCamera);
 
+  // When an authoring tool is active, the tool always wins over hit-testing
+  // existing objects. Otherwise clicking a spot that happens to sit under a
+  // zone / shape / chip would select that object instead of dropping the
+  // new chip or committing the next shape point.
+  if (state.activeTool) {
+    const p = pointerToWorld(event);
+    if (!p) return;
+    coordClickEl.textContent = `x=${p.x.toFixed(0)}, z=${p.z.toFixed(0)} (tile ${tileLabelFor(p.x, p.z)})`;
+    handleFloorClickForTool(p);
+    return;
+  }
+
   const selectables = [...state.goalInstances, ...state.chipGroups, ...state.shapeObjects];
   if (state.ballGroup) selectables.push(state.ballGroup);
   if (state.goalieGroup) selectables.push(state.goalieGroup);
