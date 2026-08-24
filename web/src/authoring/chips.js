@@ -19,6 +19,12 @@ import { saveDoc } from './storage.js';
 
 export const CHIP_HEIGHT = 20;   // matches generate_player_chip.py
 export const CHIP_RADIUS = 100;  // matches generate_player_chip.py
+// Runtime display multiplier - the OBJ is player-diameter to keep coverage /
+// trajectory math honest, but at rink scale the chip reads tiny both in
+// perspective and in the top-down authoring view. Scale up the visible
+// mesh (and everything anchored to it) so the disc is easy to grab and
+// number sprite is easy to read.
+export const CHIP_DISPLAY_SCALE = 2.4;
 
 // Two team colours, distinct from the cyan analytical HUD accent and from
 // the amber authoring accent so a chip on screen never blurs into UI chrome.
@@ -112,13 +118,14 @@ function spawnChipMesh(player) {
   state.chipsRoot.add(group);
   state.chipGroups.push(group);
 
-  // drop micro-interaction: chip scales in from 0.7 -> 1.0 with a cyan ring flash.
-  // Cheap, defining for the "playful" feel called out in the plan's §3.7.
-  group.scale.set(0.7, 0.7, 0.7);
-  drops.push({ group, elapsed: 0, dur: 0.2, fromScale: 0.7, toScale: 1.0 });
+  // drop micro-interaction: chip scales in from 0.7 -> 1.0 (times display
+  // scale) with a cyan ring flash. Cheap, defining for the "playful" feel
+  // called out in the plan's §3.7.
+  group.scale.setScalar(0.7 * CHIP_DISPLAY_SCALE);
+  drops.push({ group, elapsed: 0, dur: 0.2, fromScale: 0.7 * CHIP_DISPLAY_SCALE, toScale: CHIP_DISPLAY_SCALE });
 
   const ring = new THREE.Mesh(
-    new THREE.RingGeometry(CHIP_RADIUS + 20, CHIP_RADIUS + 40, 48),
+    new THREE.RingGeometry((CHIP_RADIUS + 20) * CHIP_DISPLAY_SCALE, (CHIP_RADIUS + 40) * CHIP_DISPLAY_SCALE, 48),
     new THREE.MeshBasicMaterial({ color: 0x4fe0ff, side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthWrite: false }),
   );
   ring.rotation.x = -Math.PI / 2;
