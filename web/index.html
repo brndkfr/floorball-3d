@@ -208,7 +208,7 @@
     box-shadow:inset 0 0 0 1px rgba(0,0,0,0.3);
   }
   #dockPalette {
-    position:absolute; bottom:104px; left:50%; transform:translateX(-50%);
+    position:absolute; bottom:172px; left:50%; transform:translateX(-50%);
     display:none; gap:6px; padding:6px 8px;
     z-index:20;
     background:rgba(20,16,10,0.94);
@@ -223,8 +223,78 @@
     cursor:pointer;
   }
   #dockPalette button.active { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.35); }
+
+  /* --- Timeline strip (A4): sits above the dock, holds playback transport
+     and frame cards. Same amber-authoring language as the dock. */
+  #timeline {
+    position:absolute; left:50%; bottom:70px; z-index:13;
+    transform:translateX(-50%);
+    display:flex; align-items:center; gap:8px;
+    max-width:min(96vw, 1400px);
+    padding:6px 10px;
+    background:rgba(20,16,10,0.82);
+    border:1px solid rgba(255,179,71,0.35);
+    border-radius:14px;
+    box-shadow:0 4px 18px rgba(0,0,0,0.4);
+    font-family:'Consolas','Courier New',monospace;
+    color:#f7e6cf;
+    backdrop-filter:blur(4px);
+  }
+  #timeline .tl-transport { display:flex; align-items:center; gap:4px; }
+  #timeline .tl-transport button, #timeline .tl-transport [data-tl="speed"] {
+    height:28px; min-width:32px; padding:0 8px;
+    background:rgba(255,179,71,0.08);
+    border:1px solid rgba(255,179,71,0.35);
+    color:#f7e6cf; font-family:inherit; font-size:12px;
+    border-radius:8px; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  #timeline .tl-transport button:hover, #timeline .tl-transport [data-tl="speed"]:hover { background:rgba(255,179,71,0.22); }
+  #timeline .tl-transport button.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
+  #timeline .tl-sep { width:1px; height:22px; background:rgba(255,179,71,0.28); margin:0 4px; }
+  #timeline .tl-strip {
+    display:flex; align-items:stretch; gap:6px;
+    overflow-x:auto; overflow-y:hidden;
+    max-width:70vw; min-width:120px; padding:2px 2px 4px 2px;
+    scrollbar-width:thin;
+  }
+  #timeline .tl-card {
+    position:relative;
+    display:flex; flex-direction:column; align-items:center;
+    padding:4px 3px 3px 3px; gap:2px;
+    background:rgba(255,179,71,0.05);
+    border:1px solid rgba(255,179,71,0.30);
+    border-radius:8px;
+    cursor:pointer; flex:none;
+    transition:border-color 0.1s, background 0.1s;
+  }
+  #timeline .tl-card:hover { background:rgba(255,179,71,0.14); }
+  #timeline .tl-card.editing { border-color:#ffb347; box-shadow:0 0 0 1px rgba(255,179,71,0.5) inset; }
+  #timeline .tl-card.playing { border-color:#7ee06b; }
+  #timeline .tl-card .tl-num {
+    font-size:12px; font-weight:700; color:#ffb347; line-height:1;
+  }
+  #timeline .tl-card.editing .tl-num { color:#fff2d0; }
+  #timeline .tl-card .tl-dur {
+    width:100%; min-width:36px;
+    background:rgba(0,0,0,0.35); color:#f7e6cf;
+    border:1px solid rgba(255,179,71,0.28); border-radius:4px;
+    font-family:inherit; font-size:10px; padding:1px 2px; text-align:center;
+    -moz-appearance:textfield;
+  }
+  #timeline .tl-card .tl-dur::-webkit-outer-spin-button,
+  #timeline .tl-card .tl-dur::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+  #timeline .tl-card .tl-acts { display:flex; gap:1px; }
+  #timeline .tl-card .tl-acts button {
+    background:transparent; border:none; color:#f7e6cf; cursor:pointer;
+    font-family:inherit; font-size:11px; padding:0 3px; line-height:1;
+    opacity:0.7;
+  }
+  #timeline .tl-card .tl-acts button:hover { opacity:1; color:#ffb347; }
+  #timeline .tl-card .tl-acts button:disabled { opacity:0.25; cursor:not-allowed; }
+
   #dockStatus {
-    position:absolute; left:50%; bottom:82px; transform:translateX(-50%);
+    position:absolute; left:50%; bottom:130px; transform:translateX(-50%);
     z-index:15; font-family:'Consolas','Courier New',monospace;
     font-size:11px; color:#f7e6cf; letter-spacing:0.04em;
     background:rgba(20,16,10,0.85);
@@ -330,6 +400,20 @@
 </div>
 <div id="goalieLabel"></div>
 <div id="dockStatus">Team 1 &ndash; next #1</div>
+<div id="timeline">
+  <div class="tl-transport">
+    <button data-tl="prev" title="Step back (,)">&#9198;</button>
+    <button data-tl="play" title="Play (Space)">&#9654;</button>
+    <button data-tl="stop" title="Stop">&#9632;</button>
+    <button data-tl="next" title="Step forward (.)">&#9197;</button>
+    <button data-tl="speed" title="Speed (1..9)">1x</button>
+    <button data-tl="loop" title="Loop (R)">&#8635;</button>
+  </div>
+  <span class="tl-sep"></span>
+  <div class="tl-strip"></div>
+  <span class="tl-sep"></span>
+  <button data-tl="add" class="tl-add" title="Add frame (copy of current)" style="height:28px;min-width:32px;background:rgba(255,179,71,0.08);border:1px solid rgba(255,179,71,0.35);color:#f7e6cf;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px;">+</button>
+</div>
 <div id="dock">
   <button class="dock-btn" data-dock="team" title="Flip active team">T1</button>
   <button class="dock-btn" data-dock="chip" title="Chip stamp (click the rink to drop a player)">
@@ -343,8 +427,6 @@
     <span class="dock-swatch" aria-hidden="true"></span>
   </button>
   <div id="dockPalette" role="menu"></div>
-  <span class="dock-sep"></span>
-  <button class="dock-btn stub" disabled title="Playback (coming in A4)">&#9654;</button>
   <span class="dock-sep"></span>
   <button class="dock-btn" data-dock="overflow" title="More">&hellip;</button>
   <div id="dockOverflow" role="menu">

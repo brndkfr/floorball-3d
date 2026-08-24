@@ -2,7 +2,7 @@
 // A3 adds named slots (unlimited, one localStorage entry each) and JSON
 // import/export. Share URLs live in share.js since they're async-only.
 
-import { ensureDoc, DOC_VERSION, emptyDoc } from './doc.js';
+import { ensureDoc, acceptDoc } from './doc.js';
 
 const KEY = 'floorball-3d:doc';
 const SLOT_PREFIX = 'floorball-3d:slot:';
@@ -22,9 +22,7 @@ export function loadDoc() {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
-    const doc = JSON.parse(raw);
-    if (!doc || doc.version !== DOC_VERSION) return null;
-    return doc;
+    return acceptDoc(JSON.parse(raw));
   } catch (e) {
     console.warn('loadDoc: could not read localStorage', e);
     return null;
@@ -56,9 +54,7 @@ export function loadNamedSlot(name) {
   try {
     const raw = localStorage.getItem(SLOT_PREFIX + name);
     if (!raw) return null;
-    const doc = JSON.parse(raw);
-    if (!doc || doc.version !== DOC_VERSION) return null;
-    return doc;
+    return acceptDoc(JSON.parse(raw));
   } catch (e) {
     console.warn('loadNamedSlot: could not read localStorage', e);
     return null;
@@ -82,19 +78,12 @@ export function downloadDocJson(doc = ensureDoc(), filename = 'floorball-scheme.
 }
 
 // Reads a File (from <input type="file">) and returns the parsed doc, or
-// null on any failure. Backfills missing scheme fields for older exports.
+// null on any failure. Legacy v1 exports are migrated to the current v2
+// shape by acceptDoc.
 export async function readDocFromFile(file) {
   try {
     const text = await file.text();
-    const doc = JSON.parse(text);
-    if (!doc || doc.version !== DOC_VERSION) {
-      console.warn('readDocFromFile: version mismatch');
-      return null;
-    }
-    if (!doc.scheme) doc.scheme = emptyDoc().scheme;
-    if (!doc.scheme.players) doc.scheme.players = {};
-    if (!doc.scheme.shapes) doc.scheme.shapes = [];
-    return doc;
+    return acceptDoc(JSON.parse(text));
   } catch (e) {
     console.warn('readDocFromFile: parse failed', e);
     return null;

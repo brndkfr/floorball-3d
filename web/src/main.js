@@ -13,6 +13,7 @@ import './selection.js';
 import './touch-controls.js';
 import { updateChipAnimations } from './authoring/index.js';
 import { updateDrawPreview } from './authoring/draw-tool.js';
+import { tickPlayback } from './authoring/playback.js';
 
 initHud();
 
@@ -22,6 +23,7 @@ function animate() {
   handleKeyboardMovement(dt);
   updateChipAnimations(dt);
   updateDrawPreview();
+  tickPlayback(dt * 1000);
   const ballCenter = getBallWorldCenter(); // computed once, shared by both calls below
   updateTrajectory(ballCenter);
   updateCoverage(ballCenter);

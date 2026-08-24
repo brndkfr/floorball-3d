@@ -3,7 +3,7 @@
 // responsible for capacity fallback - encodeShareUrl returns null when the
 // resulting URL would exceed HASH_LIMIT.
 
-import { DOC_VERSION } from './doc.js';
+import { acceptDoc } from './doc.js';
 
 // Most browsers refuse or truncate URLs past ~32 KB (some Chromium builds
 // silently trim history entries). Stay comfortably under that.
@@ -54,8 +54,8 @@ export async function readHashDoc() {
   if (!m) return null;
   try {
     const json = await inflateRaw(fromBase64Url(m[1]));
-    const doc = JSON.parse(json);
-    if (doc && doc.version === DOC_VERSION) return doc;
+    const doc = acceptDoc(JSON.parse(json));
+    if (doc) return doc;
     console.warn('readHashDoc: version mismatch, ignoring hash doc');
   } catch (e) {
     console.warn('readHashDoc: decode failed', e);
