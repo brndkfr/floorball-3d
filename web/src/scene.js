@@ -163,6 +163,9 @@ export function applyZoomDelta(deltaFov) {
 }
 
 renderer.domElement.addEventListener('wheel', (event) => {
+  // Skip while a top-down authoring tool is active - that camera has its
+  // own wheel-zoom handler in authoring/topdown-camera.js.
+  if (state.activeCamera !== camera) return;
   event.preventDefault();
   applyZoomDelta(event.deltaY * ZOOM_SENSITIVITY);
 }, { passive: false });

@@ -159,7 +159,12 @@ renderer.domElement.addEventListener('pointermove', (event) => {
   setPointerHint(p);
 
   if (isLooking) {
-    setCameraLook(state.camYaw - (event.clientX - lastLookX) * LOOK_SENSITIVITY, state.camPitch - (event.clientY - lastLookY) * LOOK_SENSITIVITY);
+    // Look-drag is meaningful only for the perspective camera. In top-down
+    // authoring mode the drag drives pan (handled in topdown-camera.js);
+    // don't secretly rotate the parked perspective camera in the background.
+    if (state.activeCamera === camera) {
+      setCameraLook(state.camYaw - (event.clientX - lastLookX) * LOOK_SENSITIVITY, state.camPitch - (event.clientY - lastLookY) * LOOK_SENSITIVITY);
+    }
     lastLookX = event.clientX;
     lastLookY = event.clientY;
   }
