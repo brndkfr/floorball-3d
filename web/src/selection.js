@@ -146,6 +146,7 @@ export function deselectAll() {
 let downX = 0, downY = 0;
 let isLooking = false;
 let lastLookX = 0, lastLookY = 0;
+let isDraggingChip = false;   // set when a chip is selected in 2D and the user starts dragging
 const CLICK_MOVE_THRESHOLD = 5; // pixels
 const LOOK_SENSITIVITY = 0.0035; // radians per pixel of drag
 
@@ -157,6 +158,20 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     coordTileEl.textContent = tileLabelFor(p.x, p.z);
   }
   setPointerHint(p);
+
+  // 2D drag: while a chip is selected and the pointer moves past the click
+  // threshold, slide the chip under the cursor instead of look-dragging.
+  if (isLooking && !state.activeTool && state.chipGroups.includes(state.selected)
+      && state.activeCamera !== camera
+      && (isDraggingChip || Math.hypot(event.clientX - downX, event.clientY - downY) > CLICK_MOVE_THRESHOLD)) {
+    isDraggingChip = true;
+    if (p) {
+      state.selected.position.x = p.x;
+      state.selected.position.z = p.z;
+      selectObject(state.selected);
+    }
+    return;
+  }
 
   if (isLooking) {
     // Look-drag is meaningful only for the perspective camera. In top-down
@@ -174,12 +189,19 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
   downX = event.clientX;
   downY = event.clientY;
   isLooking = true;
+  isDraggingChip = false;
   lastLookX = event.clientX;
   lastLookY = event.clientY;
 });
 
 window.addEventListener('pointerup', (event) => {
   isLooking = false;
+  if (isDraggingChip) {
+    isDraggingChip = false;
+    persistChipPosition(state.selected);
+    scheduleHistoryPush();
+    return;
+  }
   const dx = event.clientX - downX;
   const dy = event.clientY - downY;
   // Shape / chip tools: user is placing points, not looking around. Skip

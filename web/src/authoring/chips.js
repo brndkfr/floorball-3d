@@ -23,8 +23,8 @@ export const CHIP_RADIUS = 100;  // matches generate_player_chip.py
 // trajectory math honest, but at rink scale the chip reads tiny both in
 // perspective and in the top-down authoring view. Scale up the visible
 // mesh (and everything anchored to it) so the disc is easy to grab and
-// number sprite is easy to read.
-export const CHIP_DISPLAY_SCALE = 8;
+// number sprite is easy to read. 5.0 = 1 m diameter at rink scale.
+export const CHIP_DISPLAY_SCALE = 5;
 
 // Two team colours, distinct from the cyan analytical HUD accent and from
 // the amber authoring accent so a chip on screen never blurs into UI chrome.
