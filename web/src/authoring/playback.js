@@ -281,4 +281,12 @@ function restoreEditFrame() {
 }
 
 export function playbackState() { return playback; }
+
+// Position the scene at `elapsed` ms without touching playback flags.
+// Used by the offline export driver to render each frame at max speed.
+export function seekTo(elapsed) {
+  playback.elapsed = Math.max(0, elapsed);
+  applyPose(playback.elapsed);
+}
+
 export { frameIndexAt, frameStartTime, totalDuration, bezierPos };

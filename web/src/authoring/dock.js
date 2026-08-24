@@ -249,6 +249,12 @@ overflowMenu.querySelector('[data-action="share"]').addEventListener('click', as
   }
 });
 
+overflowMenu.querySelector('[data-action="export-video"]').addEventListener('click', async () => {
+  overflowMenu.classList.remove('open');
+  const mod = await import('./export-dialog.js');
+  mod.openExportDialog();
+});
+
 // --- keyboard: Esc exits tool mode, Ctrl+Z / Ctrl+Y for undo/redo -----
 
 window.addEventListener('keydown', (event) => {
