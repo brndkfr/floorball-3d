@@ -81,24 +81,34 @@ function buildZoneGeometry(points) {
 }
 
 function makeTextSprite(text, color) {
-  const size = 256;
+  const font = 'bold 96px system-ui, sans-serif';
+  const padding = 24;
+  // measure first so long strings don't get clipped by a fixed-size canvas
+  const measureCanvas = document.createElement('canvas');
+  const mctx = measureCanvas.getContext('2d');
+  mctx.font = font;
+  const textWidth = Math.ceil(mctx.measureText(text || ' ').width);
+  const height = 128;
+  const width = Math.max(height, textWidth + padding * 2);
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d');
-  ctx.font = 'bold 96px system-ui, sans-serif';
+  ctx.font = font;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = color;
   ctx.strokeStyle = 'rgba(0,0,0,0.8)';
   ctx.lineWidth = 8;
-  ctx.strokeText(text, size / 2, size / 2);
-  ctx.fillText(text, size / 2, size / 2);
+  ctx.strokeText(text, width / 2, height / 2);
+  ctx.fillText(text, width / 2, height / 2);
   const texture = new THREE.CanvasTexture(canvas);
   texture.anisotropy = 4;
   const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
   const sprite = new THREE.Sprite(material);
   sprite.renderOrder = 2;
-  sprite.scale.set(1500, 1500, 1);
+  const worldHeight = 1500;
+  sprite.scale.set(worldHeight * (width / height), worldHeight, 1);
   return sprite;
 }
 
@@ -174,6 +184,31 @@ export function removeShape(id) {
   }
   saveDoc();
   import('./history.js').then((h) => h.pushHistory());
+}
+
+// Replace the object for `id` in-place: mutate the doc shape, remove the
+// old Object3D from its layer group, rebuild, and re-attach. Preserves the
+// selection ring by re-selecting if the shape was selected before.
+export function updateShape(id, patch) {
+  const doc = ensureDoc();
+  const shape = doc.scheme.shapes?.find((s) => s.id === id);
+  if (!shape) return;
+  Object.assign(shape, patch);
+  const oi = state.shapeObjects.findIndex((o) => o.userData.shape && o.userData.shape.id === id);
+  const wasSelected = oi >= 0 && state.selected === state.shapeObjects[oi];
+  if (oi >= 0) {
+    const old = state.shapeObjects[oi];
+    old.parent?.remove(old);
+    disposeObject(old);
+    state.shapeObjects.splice(oi, 1);
+  }
+  const obj = attachShape(shape);
+  saveDoc();
+  import('./history.js').then((h) => h.pushHistory());
+  if (wasSelected && obj) {
+    import('../selection.js').then((s) => s.selectObject(obj));
+  }
+  return obj;
 }
 
 function disposeObject(obj) {

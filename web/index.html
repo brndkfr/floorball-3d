@@ -168,6 +168,28 @@
     letter-spacing:0.05em; text-transform:uppercase; cursor:pointer;
   }
   #dockOverflow button:hover { background:rgba(255,179,71,0.18); }
+  #dock .dock-swatch {
+    display:inline-block; width:16px; height:16px; border-radius:50%;
+    background:var(--draw-color, #ffb347);
+    border:1px solid rgba(255,255,255,0.5);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.3);
+  }
+  #dockPalette {
+    position:absolute; bottom:104px; left:50%; transform:translateX(-50%);
+    display:none; gap:6px; padding:6px 8px;
+    z-index:20;
+    background:rgba(20,16,10,0.94);
+    border:1px solid rgba(255,179,71,0.45);
+    border-radius:999px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.4);
+  }
+  #dockPalette.open { display:flex; }
+  #dockPalette button {
+    width:22px; height:22px; border-radius:50%; padding:0;
+    border:2px solid rgba(255,255,255,0.35);
+    cursor:pointer;
+  }
+  #dockPalette button.active { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.35); }
   #dockStatus {
     position:absolute; left:50%; bottom:82px; transform:translateX(-50%);
     z-index:15; font-family:'Consolas','Courier New',monospace;
@@ -284,6 +306,10 @@
   <button class="dock-btn" data-dock-tool="arrow" title="Arrow (click start point then end point)">Arrow</button>
   <button class="dock-btn" data-dock-tool="zone" title="Zone (click points, click near start to close)">Zone</button>
   <button class="dock-btn" data-dock-tool="text" title="Text (click, type a label)">Text</button>
+  <button class="dock-btn" data-dock="color" title="Shape color (applies to next shape; recolors the selected shape)">
+    <span class="dock-swatch" aria-hidden="true"></span>
+  </button>
+  <div id="dockPalette" role="menu"></div>
   <span class="dock-sep"></span>
   <button class="dock-btn stub" disabled title="Playback (coming in A4)">&#9654;</button>
   <span class="dock-sep"></span>

@@ -5,6 +5,7 @@ import { scene, camera, renderer, setCameraLook } from './scene.js';
 import { handleFloorClickForTool } from './authoring/dock.js';
 import { chipDataFor, persistChipPosition, scheduleHistoryPush } from './authoring/chips.js';
 import { removeShape } from './authoring/shapes.js';
+import { shapeDataFor } from './authoring/shapes.js';
 import { setPointerHint } from './authoring/draw-tool.js';
 
 // --- coordinate readout: hover to preview, click to pin a coordinate ---
@@ -44,6 +45,56 @@ selectionRing.rotation.x = -Math.PI / 2;
 selectionRing.visible = false;
 scene.add(selectionRing);
 
+// Separate highlight for shapes (arrows/zones/text): traces the actual
+// perimeter of the shape rather than a bounding-box ring, so a zone reads
+// as "this zone is selected" not "something in this area is selected".
+let shapeHighlight = null;
+
+function clearShapeHighlight() {
+  if (!shapeHighlight) return;
+  shapeHighlight.parent?.remove(shapeHighlight);
+  shapeHighlight.traverse?.((n) => { n.geometry?.dispose?.(); n.material?.dispose?.(); });
+  shapeHighlight = null;
+}
+
+function buildShapeHighlight(obj) {
+  const shape = shapeDataFor(obj);
+  if (!shape) return null;
+  const y = 6;   // just above SHAPE_Y=5
+  const color = 0xffd21a;
+  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 1, depthWrite: false, depthTest: false });
+  if (shape.type === 'zone' && shape.points?.length >= 3) {
+    const positions = new Float32Array(shape.points.length * 3);
+    for (let i = 0; i < shape.points.length; i++) {
+      positions[i * 3] = shape.points[i].x;
+      positions[i * 3 + 1] = y;
+      positions[i * 3 + 2] = shape.points[i].z;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const loop = new THREE.LineLoop(g, mat);
+    loop.renderOrder = 3;
+    loop.frustumCulled = false;
+    return loop;
+  }
+  if (shape.type === 'arrow' && shape.points?.length >= 2) {
+    // ring around each endpoint so both start and end are clearly marked
+    const group = new THREE.Group();
+    const ringGeom = new THREE.RingGeometry(180, 260, 24);
+    ringGeom.rotateX(-Math.PI / 2);
+    for (const p of shape.points) {
+      const rm = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false });
+      const ring = new THREE.Mesh(ringGeom, rm);
+      ring.position.set(p.x, y, p.z);
+      ring.renderOrder = 3;
+      ring.frustumCulled = false;
+      group.add(ring);
+    }
+    return group;
+  }
+  return null;
+}
+
 export function labelFor(obj) {
   if (obj === state.ballGroup) return 'ball';
   if (obj === state.goalieGroup) return 'goalie';
@@ -58,6 +109,19 @@ export function labelFor(obj) {
 
 export function selectObject(obj) {
   state.selected = obj;
+  clearShapeHighlight();
+  const isShape = !!obj?.userData?.shape;
+  if (isShape) {
+    const hl = buildShapeHighlight(obj);
+    if (hl) {
+      shapeHighlight = hl;
+      scene.add(shapeHighlight);
+      selectionRing.visible = false;
+      selectedLabelEl.textContent = labelFor(obj);
+      return;
+    }
+    // text sprite (or unbuildable) - fall through to the bounding-box ring
+  }
   const box = new THREE.Box3().setFromObject(obj);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
@@ -71,6 +135,7 @@ export function selectObject(obj) {
 export function deselectAll() {
   state.selected = null;
   selectionRing.visible = false;
+  clearShapeHighlight();
   selectedLabelEl.textContent = '-';
 }
 

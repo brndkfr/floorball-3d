@@ -44,6 +44,7 @@ export const state = {
   currentTeam: 1,        // 1 | 2 - which team the chip stamp is currently placing
   activeCamera: null,    // scene.js sets this to the perspective camera at boot; swapped to ortho in shape tools
   drawState: null,       // draw-tool.js: { tool, points, preview } while an in-progress shape is being clicked out
+  drawColor: '#ffb347',  // current color for new arrows/zones/text; set via the dock color swatch
 };
 
 // Ball's local origin is its floor-contact point (see generate_ball.py), so

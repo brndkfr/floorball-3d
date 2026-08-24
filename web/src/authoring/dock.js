@@ -7,12 +7,12 @@
 
 import { state } from '../state.js';
 import { spawnChip, nextNumber, TEAM_COLORS, rebuildFromDoc } from './chips.js';
-import { rebuildShapesFromDoc } from './shapes.js';
+import { rebuildShapesFromDoc, updateShape } from './shapes.js';
 import { ensureDoc, emptyDoc } from './doc.js';
 import { saveDoc } from './storage.js';
 import { undo, redo, pushHistory } from './history.js';
 import { enterTopDown, exitTopDown } from './topdown-camera.js';
-import { startDrawing, cancelDrawing, handleFloorClick } from './draw-tool.js';
+import { startDrawing, cancelDrawing, handleFloorClick, tryCommitZone, drawPointCount } from './draw-tool.js';
 
 const dockEl = document.getElementById('dock');
 if (!dockEl) throw new Error('dock element missing from index.html');
@@ -21,10 +21,13 @@ const chipBtn = dockEl.querySelector('[data-dock="chip"]');
 const teamBtn = dockEl.querySelector('[data-dock="team"]');
 const overflowBtn = dockEl.querySelector('[data-dock="overflow"]');
 const overflowMenu = dockEl.querySelector('#dockOverflow');
+const colorBtn = dockEl.querySelector('[data-dock="color"]');
+const palette = document.getElementById('dockPalette');
 const statusEl = document.getElementById('dockStatus');
 const shapeButtons = dockEl.querySelectorAll('[data-dock-tool]');   // arrow, zone, text
 
 const SHAPE_TOOLS = new Set(['arrow', 'zone', 'text']);
+const PALETTE_COLORS = ['#ffb347', '#ff5b5b', '#5bd1ff', '#7ee06b', '#c07bff', '#ffffff', '#1a120a'];
 
 // --- state helpers ----------------------------------------------------
 
@@ -54,7 +57,12 @@ function refreshStatus() {
   let msg = `Team ${t} - next #${n}`;
   if (tool === 'chip') msg = `chip tool - click the rink to drop Team ${t} #${n} (Esc to exit)`;
   else if (tool === 'arrow') msg = 'arrow tool - click start point, then end point (Esc to exit)';
-  else if (tool === 'zone') msg = 'zone tool - click points; click near the first point to close (Esc to exit)';
+  else if (tool === 'zone') {
+    const n = drawPointCount();
+    if (n === 0) msg = 'zone tool - click corners of the area (Esc to exit)';
+    else if (n < 3) msg = `zone tool - ${n}/3+ corners placed; keep clicking (Esc to exit)`;
+    else msg = `zone tool - ${n} corners; press Enter or double-click to finish (Esc to exit)`;
+  }
   else if (tool === 'text') msg = 'text tool - click the rink where the label should go (Esc to exit)';
   statusEl.textContent = msg;
   teamBtn.style.setProperty('--team-color', '#' + TEAM_COLORS[t].toString(16).padStart(6, '0'));
@@ -118,6 +126,9 @@ window.addEventListener('keydown', (event) => {
     setActiveTool(null);
     return;
   }
+  if (event.key === 'Enter' && state.activeTool === 'zone') {
+    if (tryCommitZone()) { event.preventDefault(); refreshStatus(); return; }
+  }
   if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
     event.preventDefault();
     undo();
@@ -140,9 +151,69 @@ export function handleFloorClickForTool(worldPoint) {
     return true;
   }
   if (SHAPE_TOOLS.has(state.activeTool)) {
-    return handleFloorClick(worldPoint);
+    const consumed = handleFloorClick(worldPoint);
+    refreshStatus();
+    return consumed;
   }
   return false;
 }
+
+window.addEventListener('dblclick', () => {
+  if (state.activeTool === 'zone' && tryCommitZone()) refreshStatus();
+});
+
+// --- color palette ----------------------------------------------------
+
+function buildPalette() {
+  palette.innerHTML = '';
+  for (const c of PALETTE_COLORS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.style.background = c;
+    b.dataset.color = c;
+    b.title = c;
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      applyColor(c);
+      palette.classList.remove('open');
+    });
+    palette.appendChild(b);
+  }
+}
+
+function refreshPaletteSwatch() {
+  colorBtn.style.setProperty('--draw-color', state.drawColor);
+  palette.querySelectorAll('button').forEach((b) => {
+    b.classList.toggle('active', b.dataset.color?.toLowerCase() === state.drawColor.toLowerCase());
+  });
+}
+
+function applyColor(c) {
+  state.drawColor = c;
+  refreshPaletteSwatch();
+  const sel = state.selected;
+  const shapeIdx = state.shapeObjects.indexOf(sel);
+  if (shapeIdx >= 0) {
+    const id = sel.userData?.shape?.id;
+    if (id) {
+      const obj = updateShape(id, { color: c });
+      if (obj) import('../selection.js').then((s) => s.selectObject(obj));
+    }
+  }
+}
+
+colorBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  overflowMenu.classList.remove('open');
+  palette.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if (!palette.contains(e.target) && e.target !== colorBtn) {
+    palette.classList.remove('open');
+  }
+});
+
+buildPalette();
+refreshPaletteSwatch();
 
 refreshStatus();
