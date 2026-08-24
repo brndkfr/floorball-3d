@@ -4,6 +4,7 @@ import { state } from './state.js';
 import { scene, camera, renderer, setCameraLook } from './scene.js';
 import { handleFloorClickForTool } from './authoring/dock.js';
 import { chipDataFor, persistChipPosition, scheduleHistoryPush } from './authoring/chips.js';
+import * as pathHandles from './authoring/path-handles.js';
 import { removeShape } from './authoring/shapes.js';
 import { shapeDataFor } from './authoring/shapes.js';
 import { setPointerHint } from './authoring/draw-tool.js';
@@ -130,6 +131,8 @@ export function selectObject(obj) {
   selectionRing.position.set(center.x, 4, center.z);
   selectionRing.visible = true;
   selectedLabelEl.textContent = labelFor(obj);
+  pathHandles.refreshForSelection();
+  pathHandles.rebuild();
 }
 
 export function deselectAll() {
@@ -137,6 +140,8 @@ export function deselectAll() {
   selectionRing.visible = false;
   clearShapeHighlight();
   selectedLabelEl.textContent = '-';
+  pathHandles.refreshForSelection();
+  pathHandles.rebuild();
 }
 
 // pointerdown/pointerup with a movement threshold, instead of the native
@@ -158,6 +163,9 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     coordTileEl.textContent = tileLabelFor(p.x, p.z);
   }
   setPointerHint(p);
+
+  // Bezier control-point drag has highest priority.
+  if (pathHandles.isDragging()) { pathHandles.onDragMove(event); return; }
 
   // 2D drag: while a chip is selected and the pointer moves past the click
   // threshold, slide the chip under the cursor instead of look-dragging.
@@ -192,10 +200,13 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
   isDraggingChip = false;
   lastLookX = event.clientX;
   lastLookY = event.clientY;
+  // Path handles win over everything: check first, capture pointer if hit.
+  if (pathHandles.tryStartDrag(event)) { isLooking = false; }
 });
 
 window.addEventListener('pointerup', (event) => {
   isLooking = false;
+  if (pathHandles.isDragging()) { pathHandles.endDrag(); return; }
   if (isDraggingChip) {
     isDraggingChip = false;
     persistChipPosition(state.selected);
@@ -212,11 +223,20 @@ window.addEventListener('pointerup', (event) => {
   mouseNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouseNDC, state.activeCamera);
 
-  // When an authoring tool is active, the tool always wins over hit-testing
-  // existing objects. Otherwise clicking a spot that happens to sit under a
-  // zone / shape / chip would select that object instead of dropping the
-  // new chip or committing the next shape point.
+  // When an authoring tool is active, the tool wins - except the Chip
+  // tool checks first for an existing chip under the pointer and selects
+  // it (so you can grab / delete / move stacked players instead of piling
+  // more on top). Shape tools always commit their point regardless.
   if (state.activeTool) {
+    if (state.activeTool === 'chip' && state.chipGroups.length) {
+      const chipHits = raycaster.intersectObjects(state.chipGroups, true);
+      if (chipHits.length > 0) {
+        let obj = chipHits[0].object;
+        while (obj.parent && !state.chipGroups.includes(obj)) obj = obj.parent;
+        if (state.selected === obj) deselectAll(); else selectObject(obj);
+        return;
+      }
+    }
     const p = pointerToWorld(event);
     if (!p) return;
     coordClickEl.textContent = `x=${p.x.toFixed(0)}, z=${p.z.toFixed(0)} (tile ${tileLabelFor(p.x, p.z)})`;

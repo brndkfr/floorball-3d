@@ -91,6 +91,8 @@ function refreshViewButton() {
 viewBtn.addEventListener('click', () => {
   if (isTopDown()) exitTopDown(); else enterTopDown();
   refreshViewButton();
+  // Path handles are 2D-only; nudge them to re-evaluate visibility.
+  import('./path-handles.js').then((m) => m.rebuild());
 });
 refreshViewButton();
 

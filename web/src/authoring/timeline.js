@@ -6,6 +6,7 @@
 import {
   getFrames, getCurrentIndex, selectFrame, duplicateFrame,
   insertBlankFrame, deleteFrame, addFrame,
+  setFrameCamera, clearFrameCamera,
 } from './frames.js';
 import {
   stop, toggle, toggleLoop, setSpeed, stepFrame,
@@ -60,15 +61,18 @@ function render() {
 
     const acts = document.createElement('div');
     acts.className = 'tl-acts';
+    const hasCam = !!f.camera;
     acts.innerHTML = `
       <button title="Insert blank before" data-a="ins-before">\u25c1+</button>
       <button title="Duplicate" data-a="dup">\u29c9</button>
       <button title="Insert blank after" data-a="ins-after">+\u25b7</button>
+      <button title="${hasCam ? 'Clear camera keyframe' : 'Set camera to current view'}" data-a="cam" class="${hasCam ? 'lit' : ''}">\u25a3</button>
       <button title="Delete" data-a="del" ${frames.length <= 1 ? 'disabled' : ''}>\u00d7</button>
     `;
     acts.querySelector('[data-a="ins-before"]').addEventListener('click', (e) => { e.stopPropagation(); insertBlankFrame(i); });
     acts.querySelector('[data-a="dup"]').addEventListener('click', (e) => { e.stopPropagation(); duplicateFrame(i, i + 1); });
     acts.querySelector('[data-a="ins-after"]').addEventListener('click', (e) => { e.stopPropagation(); insertBlankFrame(i + 1); });
+    acts.querySelector('[data-a="cam"]').addEventListener('click', (e) => { e.stopPropagation(); hasCam ? clearFrameCamera(i) : setFrameCamera(i); });
     acts.querySelector('[data-a="del"]').addEventListener('click', (e) => { e.stopPropagation(); deleteFrame(i); });
     card.appendChild(acts);
 

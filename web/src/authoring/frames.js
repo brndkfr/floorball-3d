@@ -81,3 +81,37 @@ export function setFrameDuration(i, ms) {
   import('./history.js').then((h) => h.pushHistory());
   window.dispatchEvent(new Event('framesChanged'));
 }
+
+// --- camera keyframes (A5 phase B) ------------------------------------
+
+// Capture the active camera's pose into frame `i`. Stores mode so the
+// playback path can tell perspective from top-down keyframes.
+export async function setFrameCamera(i) {
+  const doc = ensureDoc();
+  const f = doc.frames[i];
+  if (!f) return;
+  const { camera, topDownCamera } = await import('../scene.js');
+  const { state } = await import('../state.js');
+  const cam = state.activeCamera;
+  const mode = cam === topDownCamera ? 'topdown' : 'perspective';
+  f.camera = {
+    mode,
+    position: [cam.position.x, cam.position.y, cam.position.z],
+    quaternion: [cam.quaternion.x, cam.quaternion.y, cam.quaternion.z, cam.quaternion.w],
+    fov: cam.isPerspectiveCamera ? cam.fov : undefined,
+    zoom: cam.zoom,
+  };
+  saveDoc();
+  import('./history.js').then((h) => h.pushHistory());
+  window.dispatchEvent(new Event('framesChanged'));
+}
+
+export function clearFrameCamera(i) {
+  const doc = ensureDoc();
+  const f = doc.frames[i];
+  if (!f || !f.camera) return;
+  delete f.camera;
+  saveDoc();
+  import('./history.js').then((h) => h.pushHistory());
+  window.dispatchEvent(new Event('framesChanged'));
+}
