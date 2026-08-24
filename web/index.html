@@ -117,6 +117,69 @@
     display:grid; grid-template-columns:52px 52px; gap:8px;
   }
   #touchActions button { height:44px; font-size:13px; text-transform:uppercase; letter-spacing:0.04em; }
+
+  /* --- Dock: authoring surface at bottom-center. Distinct visual language
+     from the analytical HUD panels (rounded pills, amber accent) so
+     "author" and "analyse" read as different modes of use. */
+  #dock {
+    position:absolute; left:50%; bottom:18px; z-index:14;
+    transform:translateX(-50%);
+    display:flex; align-items:center; gap:8px;
+    padding:8px 12px;
+    background:rgba(20, 16, 10, 0.78);
+    border:1px solid rgba(255, 179, 71, 0.45);
+    border-radius:999px;
+    box-shadow:0 6px 24px rgba(0,0,0,0.35), inset 0 0 16px rgba(255,179,71,0.06);
+    font-family:'Consolas','Courier New',monospace; color:#f7e6cf;
+    backdrop-filter:blur(4px);
+  }
+  #dock .dock-btn {
+    height:36px; min-width:36px; padding:0 12px;
+    border:1px solid rgba(255,179,71,0.35);
+    background:rgba(255,179,71,0.08);
+    color:#f7e6cf; font-family:inherit; font-size:12px;
+    letter-spacing:0.06em; text-transform:uppercase; cursor:pointer;
+    border-radius:999px; display:inline-flex; align-items:center; gap:6px;
+  }
+  #dock .dock-btn:hover { background:rgba(255,179,71,0.22); }
+  #dock .dock-btn.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
+  #dock .dock-btn.stub { opacity:0.35; cursor:not-allowed; }
+  #dock .dock-sep {
+    width:1px; height:22px; background:rgba(255,179,71,0.28); margin:0 4px;
+  }
+  #dock [data-dock="team"] {
+    min-width:44px;
+    background:var(--team-color, #2f6dd9); color:#fff; border-color:transparent;
+    font-weight:700;
+  }
+  #dock [data-dock="team"]:hover { filter:brightness(1.15); }
+  #dockOverflow {
+    position:absolute; right:0; bottom:48px;
+    display:none; flex-direction:column; min-width:140px;
+    background:rgba(20,16,10,0.94);
+    border:1px solid rgba(255,179,71,0.45);
+    border-radius:10px; overflow:hidden;
+    box-shadow:0 6px 20px rgba(0,0,0,0.4);
+  }
+  #dockOverflow.open { display:flex; }
+  #dockOverflow button {
+    background:transparent; color:#f7e6cf; border:none; text-align:left;
+    padding:8px 14px; font-family:inherit; font-size:12px;
+    letter-spacing:0.05em; text-transform:uppercase; cursor:pointer;
+  }
+  #dockOverflow button:hover { background:rgba(255,179,71,0.18); }
+  #dockStatus {
+    position:absolute; left:50%; bottom:82px; transform:translateX(-50%);
+    z-index:15; font-family:'Consolas','Courier New',monospace;
+    font-size:11px; color:#f7e6cf; letter-spacing:0.04em;
+    background:rgba(20,16,10,0.85);
+    border:1px solid rgba(255,179,71,0.35);
+    border-radius:999px; padding:4px 12px;
+    pointer-events:none; white-space:nowrap;
+    box-shadow:0 2px 8px rgba(0,0,0,0.4);
+  }
+  /* crosshair cursor while the chip tool is active */
+  body.tool-chip canvas { cursor:crosshair; }
 </style>
 </head>
 <body>
@@ -131,8 +194,9 @@
     Drag = look around (first-person) &middot; Scroll = zoom<br>
     Nothing selected: Arrows/WASD = walk the field<br>
     Tab / Shift+Tab = cycle selection &middot; Esc = deselect<br>
-    Selected: Arrows/WASD = move ball or goalie &middot; Q/E = rotate goalie<br>
-    Goalie only: hold Shift while moving/rotating for finer control
+    Selected: Arrows/WASD = move ball, goalie or chip &middot; Q/E = rotate goalie<br>
+    Goalie only: hold Shift while moving/rotating for finer control<br>
+    Authoring dock (bottom): click <b>Chip</b>, then click the rink to drop a player. <b>Del</b> removes the selected chip.
     <div id="layers">
       <div class="layer-row"><label><input type="checkbox" id="rinkCheckbox" checked> Rink (board + markings)</label></div>
       <div class="layer-row"><label><input type="checkbox" id="goalsCheckbox" checked> Goals</label></div>
@@ -198,6 +262,24 @@
   </div>
 </div>
 <div id="goalieLabel"></div>
+<div id="dockStatus">Team 1 &ndash; next #1</div>
+<div id="dock">
+  <button class="dock-btn" data-dock="team" title="Flip active team">T1</button>
+  <button class="dock-btn" data-dock="chip" title="Chip stamp (click the rink to drop a player)">
+    <span aria-hidden="true">&#9679;</span> Chip
+  </button>
+  <span class="dock-sep"></span>
+  <button class="dock-btn stub" disabled title="Ball (coming in a later milestone)">Ball</button>
+  <button class="dock-btn stub" disabled title="Shape tools (coming in A2)">Arrow</button>
+  <button class="dock-btn stub" disabled title="Playback (coming in A4)">&#9654;</button>
+  <span class="dock-sep"></span>
+  <button class="dock-btn" data-dock="overflow" title="More">&hellip;</button>
+  <div id="dockOverflow" role="menu">
+    <button data-action="undo">Undo (Ctrl+Z)</button>
+    <button data-action="redo">Redo (Ctrl+Y)</button>
+    <button data-action="new">New scheme</button>
+  </div>
+</div>
 <div id="coords" class="hud-panel">
   <div class="hud-header">
     <span class="hud-title">Coordinates</span>

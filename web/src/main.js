@@ -11,6 +11,7 @@ import './layers.js';
 import './goalie.js';
 import './selection.js';
 import './touch-controls.js';
+import { updateChipAnimations } from './authoring/index.js';
 
 initHud();
 
@@ -18,6 +19,7 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
   handleKeyboardMovement(dt);
+  updateChipAnimations(dt);
   const ballCenter = getBallWorldCenter(); // computed once, shared by both calls below
   updateTrajectory(ballCenter);
   updateCoverage(ballCenter);

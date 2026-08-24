@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { HALF_W, GRID_TILE_SIZE, GRID_N_COLS, GRID_N_ROWS } from './constants.js';
 import { state } from './state.js';
 import { scene, camera, renderer, setCameraLook } from './scene.js';
+import { handleFloorClickForTool } from './authoring/dock.js';
+import { chipDataFor, persistChipPosition, scheduleHistoryPush } from './authoring/chips.js';
 
 // --- coordinate readout: hover to preview, click to pin a coordinate ---
 const coordXEl = document.getElementById('coordX');
@@ -46,6 +48,8 @@ export function labelFor(obj) {
   const i = state.goalInstances.indexOf(obj);
   if (i === 0) return 'goal A (z=0 end)';
   if (i === 1) return 'goal B (z=40000 end)';
+  const chip = chipDataFor(obj);
+  if (chip) return `Team ${chip.team} #${chip.number}`;
   return 'object';
 }
 
@@ -110,7 +114,7 @@ window.addEventListener('pointerup', (event) => {
   mouseNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouseNDC, camera);
 
-  const selectables = [...state.goalInstances];
+  const selectables = [...state.goalInstances, ...state.chipGroups];
   if (state.ballGroup) selectables.push(state.ballGroup);
   if (state.goalieGroup) selectables.push(state.goalieGroup);
 
@@ -137,12 +141,24 @@ window.addEventListener('pointerup', (event) => {
   if (!p) return;
   coordClickEl.textContent = `x=${p.x.toFixed(0)}, z=${p.z.toFixed(0)} (tile ${tileLabelFor(p.x, p.z)})`;
 
+  // Tool mode wins over "move the selected thing" - clicking the rink while
+  // the chip stamp is active drops a new chip regardless of what's selected.
+  if (handleFloorClickForTool(p)) return;
+
   if (state.selected === state.ballGroup) {
     state.ballGroup.position.x = p.x;
     state.ballGroup.position.z = p.z;
     selectObject(state.ballGroup); // refresh the ring position under the moved ball
   } else if (state.selected === state.goalieGroup) {
     state.goalieGroup.position.x = p.x;
+    state.goalieGroup.position.z = p.z;
+    selectObject(state.goalieGroup); // refresh the ring position under the moved goalie
+  } else if (state.chipGroups.includes(state.selected)) {
+    state.selected.position.x = p.x;
+    state.selected.position.z = p.z;
+    persistChipPosition(state.selected);
+    scheduleHistoryPush();
+    selectObject(state.selected); // refresh the ring position under the moved chip
     state.goalieGroup.position.z = p.z;
     selectObject(state.goalieGroup); // refresh the ring position under the moved goalie
   }

@@ -1,0 +1,269 @@
+// Player chips: the coloured, numbered discs users drop onto the rink.
+//
+// Geometry is loaded once from player_chip.obj/.mtl (see
+// generators/generate_player_chip.py); each chip in the scene is a shallow
+// clone of that prototype with a per-instance material colour and a
+// canvas-texture number sprite as a child. Selection, drag and delete are
+// wired into the existing selection.js / controls.js paths - see the
+// state.chipGroups mentions there.
+
+import * as THREE from 'three';
+import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { CACHE_BUST } from '../constants.js';
+import { state } from '../state.js';
+import { scene } from '../scene.js';
+import { loaded, failed } from '../status.js';
+import { ensureDoc, newId } from './doc.js';
+import { saveDoc } from './storage.js';
+
+export const CHIP_HEIGHT = 20;   // matches generate_player_chip.py
+export const CHIP_RADIUS = 100;  // matches generate_player_chip.py
+
+// Two team colours, distinct from the cyan analytical HUD accent and from
+// the amber authoring accent so a chip on screen never blurs into UI chrome.
+export const TEAM_COLORS = {
+  1: 0x2f6dd9, // blue
+  2: 0xd94b2f, // red
+};
+
+// prototype loaded once from the OBJ; every chip is a fresh clone
+let chipPrototype = null;
+const pendingRebuilds = [];  // chips whose spawn was requested before load finished
+
+// per-chip drop animations, ticked from main.js's animate() via updateChipAnimations()
+const drops = [];   // { group, elapsed, dur, fromScale, toScale }
+const rings = [];   // { mesh, elapsed, dur, fromScale, toScale, fromOpacity }
+
+// --- geometry loading -------------------------------------------------
+
+state.chipsRoot = new THREE.Group();
+scene.add(state.chipsRoot);
+
+const chipMtl = new MTLLoader();
+chipMtl.load(
+  'assets/player_chip.mtl' + CACHE_BUST,
+  (materials) => {
+    materials.preload();
+    const objLoader = new OBJLoader();
+    objLoader.setMaterials(materials);
+    objLoader.load(
+      'assets/player_chip.obj' + CACHE_BUST,
+      (object) => {
+        chipPrototype = object;
+        loaded('player_chip.obj');
+        // spawn any chips that were requested (e.g. by loadDoc()) before
+        // the OBJ finished loading
+        while (pendingRebuilds.length) {
+          const p = pendingRebuilds.shift();
+          spawnChipMesh(p);
+        }
+      },
+      undefined,
+      (err) => failed('player_chip.obj', err),
+    );
+  },
+  undefined,
+  (err) => failed('player_chip.mtl', err),
+);
+
+// --- number sprite ----------------------------------------------------
+
+function makeNumberSprite(number) {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.font = 'bold 84px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth = 6;
+  ctx.strokeText(String(number), size / 2, size / 2 + 4);
+  ctx.fillText(String(number), size / 2, size / 2 + 4);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.anisotropy = 4;
+  const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
+  const sprite = new THREE.Sprite(material);
+  sprite.renderOrder = 1;
+  // ~150 mm across, floating just above the chip's top face
+  sprite.scale.set(150, 150, 1);
+  sprite.position.set(0, CHIP_HEIGHT + 10, 0);
+  return sprite;
+}
+
+// --- spawn / remove ---------------------------------------------------
+
+function spawnChipMesh(player) {
+  const group = chipPrototype.clone(true);
+  // clone materials so per-instance colour doesn't bleed across chips
+  group.traverse((child) => {
+    if (child.isMesh && child.material) {
+      child.material = child.material.clone();
+      child.material.color.setHex(TEAM_COLORS[player.team] || 0x888888);
+    }
+  });
+  group.position.set(player.x, 0, player.z);
+  group.rotation.y = player.angle || 0;
+  const sprite = makeNumberSprite(player.number);
+  group.add(sprite);
+  group.userData.chip = { id: player.id };  // let selection.js find the record
+  state.chipsRoot.add(group);
+  state.chipGroups.push(group);
+
+  // drop micro-interaction: chip scales in from 0.7 -> 1.0 with a cyan ring flash.
+  // Cheap, defining for the "playful" feel called out in the plan's §3.7.
+  group.scale.set(0.7, 0.7, 0.7);
+  drops.push({ group, elapsed: 0, dur: 0.2, fromScale: 0.7, toScale: 1.0 });
+
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(CHIP_RADIUS + 20, CHIP_RADIUS + 40, 48),
+    new THREE.MeshBasicMaterial({ color: 0x4fe0ff, side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthWrite: false }),
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.set(player.x, 3, player.z);
+  scene.add(ring);
+  rings.push({ mesh: ring, elapsed: 0, dur: 0.4, fromScale: 1.0, toScale: 2.4, fromOpacity: 0.9 });
+
+  return group;
+}
+
+export function spawnChip({ team, x, z, number, angle = 0, pushHistory = true }) {
+  const doc = ensureDoc();
+  const num = String(number ?? nextNumber(team));
+  const id = newId('p');
+  const player = { id, team, number: num, x, z, angle };
+  doc.scheme.players[id] = player;
+  if (chipPrototype) spawnChipMesh(player); else pendingRebuilds.push(player);
+  saveDoc();
+  if (pushHistory) {
+    // late import to avoid a circular dep: history.js imports from chips.js
+    import('./history.js').then((h) => h.pushHistory());
+  }
+  return id;
+}
+
+export function removeChip(id) {
+  const doc = ensureDoc();
+  if (!doc.scheme.players[id]) return;
+  delete doc.scheme.players[id];
+  const i = state.chipGroups.findIndex((g) => g.userData.chip && g.userData.chip.id === id);
+  if (i >= 0) {
+    const group = state.chipGroups[i];
+    state.chipsRoot.remove(group);
+    state.chipGroups.splice(i, 1);
+    disposeGroup(group);
+  }
+  saveDoc();
+  import('./history.js').then((h) => h.pushHistory());
+}
+
+// Called by selection.js after a floor-click drag on a chip, and by
+// controls.js after WASD movement, to persist the new position.
+export function persistChipPosition(group) {
+  const chip = group.userData.chip;
+  if (!chip) return;
+  const doc = ensureDoc();
+  const player = doc.scheme.players[chip.id];
+  if (!player) return;
+  player.x = group.position.x;
+  player.z = group.position.z;
+  player.angle = group.rotation.y;
+  saveDoc();
+}
+
+// Debounced-ish history push after drag/keyboard-move settles, so we don't
+// spam a hundred snapshots per second while the user is holding a key or
+// dragging the mouse. Callers call schedulePush() as often as they want.
+let pushTimer = null;
+export function scheduleHistoryPush() {
+  if (pushTimer) clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    pushTimer = null;
+    import('./history.js').then((h) => h.pushHistory());
+  }, 250);
+}
+
+function disposeGroup(group) {
+  group.traverse((child) => {
+    if (child.isMesh) {
+      child.geometry.dispose?.();
+      child.material?.dispose?.();
+    }
+    if (child.isSprite) {
+      child.material.map?.dispose?.();
+      child.material.dispose?.();
+    }
+  });
+}
+
+// --- team / numbering -------------------------------------------------
+
+// The smallest positive integer 1..25 that isn't used by any current chip on
+// the given team. Wraps to 1 after 25, so long sessions still yield a number.
+export function nextNumber(team) {
+  const doc = ensureDoc();
+  const used = new Set();
+  for (const p of Object.values(doc.scheme.players)) {
+    if (p.team === team) used.add(Number(p.number));
+  }
+  for (let i = 1; i <= 25; i++) if (!used.has(i)) return i;
+  return 1;
+}
+
+// --- rebuild from doc (used by history undo/redo and initial load) ----
+
+// Wipes all chip meshes and reconstructs them from state.doc.scheme.players.
+// Preserves the same THREE.Group root so any external references stay valid.
+export function rebuildFromDoc() {
+  for (const group of state.chipGroups) {
+    state.chipsRoot.remove(group);
+    disposeGroup(group);
+  }
+  state.chipGroups.length = 0;
+  drops.length = 0;
+  for (const r of rings) scene.remove(r.mesh);
+  rings.length = 0;
+
+  const doc = ensureDoc();
+  for (const player of Object.values(doc.scheme.players)) {
+    if (chipPrototype) spawnChipMesh(player); else pendingRebuilds.push(player);
+  }
+}
+
+// --- per-frame animation update ---------------------------------------
+
+export function updateChipAnimations(dt) {
+  for (let i = drops.length - 1; i >= 0; i--) {
+    const d = drops[i];
+    d.elapsed += dt;
+    const t = Math.min(d.elapsed / d.dur, 1);
+    const eased = 1 - Math.pow(1 - t, 3);   // ease-out cubic
+    const s = d.fromScale + (d.toScale - d.fromScale) * eased;
+    d.group.scale.set(s, s, s);
+    if (t >= 1) drops.splice(i, 1);
+  }
+  for (let i = rings.length - 1; i >= 0; i--) {
+    const r = rings[i];
+    r.elapsed += dt;
+    const t = Math.min(r.elapsed / r.dur, 1);
+    const s = r.fromScale + (r.toScale - r.fromScale) * t;
+    r.mesh.scale.set(s, s, s);
+    r.mesh.material.opacity = r.fromOpacity * (1 - t);
+    if (t >= 1) {
+      scene.remove(r.mesh);
+      r.mesh.geometry.dispose();
+      r.mesh.material.dispose();
+      rings.splice(i, 1);
+    }
+  }
+}
+
+// --- lookup helper for selection.js / controls.js ---------------------
+
+export function chipDataFor(group) {
+  const chip = group?.userData?.chip;
+  if (!chip) return null;
+  return ensureDoc().scheme.players[chip.id] || null;
+}

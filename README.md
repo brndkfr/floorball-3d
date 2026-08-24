@@ -47,6 +47,7 @@ python generate_ball.py        # ball.obj/.mtl
 python generate_goalie.py      # goalie.obj/.mtl (the placeholder figure)
 python generate_tactical_zones.py  # tactical_zones.obj/.mtl
 python generate_grid_tiles.py  # grid_tiles.obj/.mtl
+python generate_player_chip.py # player_chip.obj/.mtl (authoring tool)
 ```
 
 Each writes directly into `../web/assets/`. The detailed goalie model

@@ -33,6 +33,13 @@ export const state = {
 
   // coverage.js
   currentCoveragePct: null,
+
+  // authoring/* - see docs/floorball-3d-authoring-plan.md
+  doc: null,             // Doc (see authoring/doc.js). null until initDoc() runs.
+  chipsRoot: null,       // THREE.Group holding every chip; child of scene
+  chipGroups: [],        // per-chip THREE.Group, selectable, in the same array shape as goalInstances
+  activeTool: null,      // null | 'chip' (extended by later milestones)
+  currentTeam: 1,        // 1 | 2 - which team the chip stamp is currently placing
 };
 
 // Ball's local origin is its floor-contact point (see generate_ball.py), so

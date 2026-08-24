@@ -3,6 +3,7 @@ import { HALF_W, RINK_L, BALL_RADIUS } from './constants.js';
 import { state } from './state.js';
 import { camera } from './scene.js';
 import { selectObject, deselectAll, labelFor } from './selection.js';
+import { persistChipPosition, scheduleHistoryPush, removeChip, CHIP_RADIUS } from './authoring/chips.js';
 
 const targetGoalLabelEl = document.getElementById('targetGoalLabel');
 
@@ -18,7 +19,7 @@ const WALK_BOUNDARY_MARGIN = 3000; // mm past the boards you're still allowed to
 const MOVE_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'q', 'e', 'Q', 'E'];
 
 function cycleSelection(direction) {
-  const cycle = [state.ballGroup, state.goalieGroup, ...state.goalInstances].filter(Boolean);
+  const cycle = [state.ballGroup, state.goalieGroup, ...state.goalInstances, ...state.chipGroups].filter(Boolean);
   if (cycle.length === 0) return;
   const idx = state.selected ? cycle.indexOf(state.selected) : -1;
   const obj = cycle[(idx + direction + cycle.length) % cycle.length];
@@ -73,6 +74,22 @@ function handleKeyboardMovement(dt) {
     if (keysPressed.has('q') || keysPressed.has('Q')) rot -= 1;
     if (keysPressed.has('e') || keysPressed.has('E')) rot += 1;
     if (rot !== 0) goalieGroup.rotation.y += rot * GOALIE_ROTATE_SPEED * (shiftHeld ? GOALIE_FINE_FACTOR : 1) * dt;
+  } else if (state.chipGroups.includes(state.selected)) {
+    // Chip movement: same forward(+Z)/right(-X) convention as ball/goalie.
+    let dx = 0, dz = 0;
+    if (keysPressed.has('ArrowUp') || keysPressed.has('w') || keysPressed.has('W')) dz += 1;
+    if (keysPressed.has('ArrowDown') || keysPressed.has('s') || keysPressed.has('S')) dz -= 1;
+    if (keysPressed.has('ArrowLeft') || keysPressed.has('a') || keysPressed.has('A')) dx += 1;
+    if (keysPressed.has('ArrowRight') || keysPressed.has('d') || keysPressed.has('D')) dx -= 1;
+    if (dx === 0 && dz === 0) return;
+    const chip = state.selected;
+    const len = Math.hypot(dx, dz);
+    const dist = BALL_SPEED * (shiftHeld ? GOALIE_FINE_FACTOR : 1) * dt;
+    chip.position.x = THREE.MathUtils.clamp(chip.position.x + (dx / len) * dist, -HALF_W + CHIP_RADIUS, HALF_W - CHIP_RADIUS);
+    chip.position.z = THREE.MathUtils.clamp(chip.position.z + (dz / len) * dist, CHIP_RADIUS, RINK_L - CHIP_RADIUS);
+    persistChipPosition(chip);
+    scheduleHistoryPush();
+    selectObject(chip);
   } else {
     // nothing selected - WASD/arrows walk the camera instead (first-person
     // exploration). Forward/right are derived from the current look yaw, so
@@ -104,6 +121,11 @@ window.addEventListener('keydown', (event) => {
     event.preventDefault();
   } else if (event.key === 'Escape') {
     deselectAll();
+  } else if ((event.key === 'Delete' || event.key === 'Backspace') && state.chipGroups.includes(state.selected)) {
+    const chip = state.selected;
+    deselectAll();
+    removeChip(chip.userData.chip.id);
+    event.preventDefault();
   } else if (event.key === 'Tab' && document.activeElement.tagName !== 'INPUT') {
     event.preventDefault();
     cycleSelection(event.shiftKey ? -1 : 1);
