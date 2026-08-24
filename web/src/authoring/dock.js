@@ -28,6 +28,10 @@ const statusEl = document.getElementById('dockStatus');
 const shapeButtons = dockEl.querySelectorAll('[data-dock-tool]');   // arrow, zone, text
 
 const SHAPE_TOOLS = new Set(['arrow', 'zone', 'text']);
+// Every authoring tool - chip included - drops the camera into top-down;
+// planning is a 2D activity, and the perspective camera makes precise
+// placement fiddly.
+const TOPDOWN_TOOLS = new Set(['chip', 'arrow', 'zone', 'text']);
 const PALETTE_COLORS = ['#ffb347', '#ff5b5b', '#5bd1ff', '#7ee06b', '#c07bff', '#ffffff', '#1a120a'];
 
 // --- state helpers ----------------------------------------------------
@@ -37,8 +41,7 @@ function setActiveTool(tool) {
   if (prev === tool) tool = null;   // clicking active tool exits it
   state.activeTool = tool;
 
-  // camera swap: any shape tool enters top-down; anything else restores
-  if (SHAPE_TOOLS.has(tool)) enterTopDown(); else exitTopDown();
+  if (TOPDOWN_TOOLS.has(tool)) enterTopDown(); else exitTopDown();
 
   // draw-tool state: start/stop the click-to-place machine
   if (SHAPE_TOOLS.has(tool)) startDrawing(tool); else cancelDrawing();
