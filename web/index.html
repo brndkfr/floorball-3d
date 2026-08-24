@@ -180,6 +180,17 @@
   }
   /* crosshair cursor while the chip tool is active */
   body.tool-chip canvas { cursor:crosshair; }
+  body.tool-active canvas { cursor:crosshair; }
+
+  /* inline text input for the text shape tool - anchored at the click point */
+  .draw-text-input {
+    position:absolute; z-index:20; transform:translate(-50%, -50%);
+    font-family:'Consolas','Courier New',monospace; font-size:14px;
+    background:rgba(20,16,10,0.94); color:#f7e6cf;
+    border:1px solid rgba(255,179,71,0.55); border-radius:6px;
+    padding:4px 8px; outline:none; min-width:140px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.5);
+  }
 </style>
 </head>
 <body>
@@ -196,7 +207,8 @@
     Tab / Shift+Tab = cycle selection &middot; Esc = deselect<br>
     Selected: Arrows/WASD = move ball, goalie or chip &middot; Q/E = rotate goalie<br>
     Goalie only: hold Shift while moving/rotating for finer control<br>
-    Authoring dock (bottom): click <b>Chip</b>, then click the rink to drop a player. <b>Del</b> removes the selected chip.
+    Authoring dock (bottom): click <b>Chip</b>, then click the rink to drop a player. <b>Del</b> removes the selected chip.<br>
+    Shape tools: <b>Arrow</b> (2 clicks), <b>Zone</b> (N clicks + click near start to close), <b>Text</b> (click, type, Enter) &ndash; camera swings top-down while a shape tool is active.
     <div id="layers">
       <div class="layer-row"><label><input type="checkbox" id="rinkCheckbox" checked> Rink (board + markings)</label></div>
       <div class="layer-row"><label><input type="checkbox" id="goalsCheckbox" checked> Goals</label></div>
@@ -269,8 +281,10 @@
     <span aria-hidden="true">&#9679;</span> Chip
   </button>
   <span class="dock-sep"></span>
-  <button class="dock-btn stub" disabled title="Ball (coming in a later milestone)">Ball</button>
-  <button class="dock-btn stub" disabled title="Shape tools (coming in A2)">Arrow</button>
+  <button class="dock-btn" data-dock-tool="arrow" title="Arrow (click start point then end point)">Arrow</button>
+  <button class="dock-btn" data-dock-tool="zone" title="Zone (click points, click near start to close)">Zone</button>
+  <button class="dock-btn" data-dock-tool="text" title="Text (click, type a label)">Text</button>
+  <span class="dock-sep"></span>
   <button class="dock-btn stub" disabled title="Playback (coming in A4)">&#9654;</button>
   <span class="dock-sep"></span>
   <button class="dock-btn" data-dock="overflow" title="More">&hellip;</button>

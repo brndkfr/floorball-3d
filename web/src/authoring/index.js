@@ -8,6 +8,7 @@ import { state } from '../state.js';
 import { ensureDoc } from './doc.js';
 import { loadDoc } from './storage.js';
 import { rebuildFromDoc, updateChipAnimations } from './chips.js';
+import { rebuildShapesFromDoc } from './shapes.js';
 import { initHistory } from './history.js';
 import './dock.js';   // side-effect: wires up the DOM
 
@@ -15,6 +16,7 @@ const saved = loadDoc();
 if (saved) state.doc = saved;
 ensureDoc();
 rebuildFromDoc();
+rebuildShapesFromDoc();
 initHistory();
 
 export { updateChipAnimations };

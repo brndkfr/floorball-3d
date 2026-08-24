@@ -4,6 +4,7 @@ import { state } from './state.js';
 import { camera } from './scene.js';
 import { selectObject, deselectAll, labelFor } from './selection.js';
 import { persistChipPosition, scheduleHistoryPush, removeChip, CHIP_RADIUS } from './authoring/chips.js';
+import { removeShape } from './authoring/shapes.js';
 
 const targetGoalLabelEl = document.getElementById('targetGoalLabel');
 
@@ -40,6 +41,9 @@ const GOALIE_FINE_FACTOR = 0.2; // hold Shift to move/rotate the goalie at this 
 let shiftHeld = false;
 
 function handleKeyboardMovement(dt) {
+  // Shape tools take over the click surface; suspend WASD walking so the
+  // perspective camera doesn't drift while the user is authoring top-down.
+  if (state.activeTool === 'arrow' || state.activeTool === 'zone' || state.activeTool === 'text') return;
   const ballGroup = state.ballGroup, goalieGroup = state.goalieGroup;
   if (state.selected === ballGroup && ballGroup) {
     let dx = 0, dz = 0;
@@ -125,6 +129,11 @@ window.addEventListener('keydown', (event) => {
     const chip = state.selected;
     deselectAll();
     removeChip(chip.userData.chip.id);
+    event.preventDefault();
+  } else if ((event.key === 'Delete' || event.key === 'Backspace') && state.shapeObjects.includes(state.selected)) {
+    const shape = state.selected;
+    deselectAll();
+    removeShape(shape.userData.shape.id);
     event.preventDefault();
   } else if (event.key === 'Tab' && document.activeElement.tagName !== 'INPUT') {
     event.preventDefault();

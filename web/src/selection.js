@@ -4,6 +4,8 @@ import { state } from './state.js';
 import { scene, camera, renderer, setCameraLook } from './scene.js';
 import { handleFloorClickForTool } from './authoring/dock.js';
 import { chipDataFor, persistChipPosition, scheduleHistoryPush } from './authoring/chips.js';
+import { removeShape } from './authoring/shapes.js';
+import { setPointerHint } from './authoring/draw-tool.js';
 
 // --- coordinate readout: hover to preview, click to pin a coordinate ---
 const coordXEl = document.getElementById('coordX');
@@ -27,7 +29,7 @@ export function tileLabelFor(x, z) {
 export function pointerToWorld(event) {
   mouseNDC.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouseNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
-  raycaster.setFromCamera(mouseNDC, camera);
+  raycaster.setFromCamera(mouseNDC, state.activeCamera);
   return raycaster.ray.intersectPlane(floorPlane, hitPoint) ? hitPoint : null;
 }
 
@@ -50,6 +52,7 @@ export function labelFor(obj) {
   if (i === 1) return 'goal B (z=40000 end)';
   const chip = chipDataFor(obj);
   if (chip) return `Team ${chip.team} #${chip.number}`;
+  if (obj?.userData?.shape) return obj.userData.shape.type;
   return 'object';
 }
 
@@ -88,6 +91,7 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     coordZEl.textContent = p.z.toFixed(0);
     coordTileEl.textContent = tileLabelFor(p.x, p.z);
   }
+  setPointerHint(p);
 
   if (isLooking) {
     setCameraLook(state.camYaw - (event.clientX - lastLookX) * LOOK_SENSITIVITY, state.camPitch - (event.clientY - lastLookY) * LOOK_SENSITIVITY);
@@ -108,13 +112,15 @@ window.addEventListener('pointerup', (event) => {
   isLooking = false;
   const dx = event.clientX - downX;
   const dy = event.clientY - downY;
-  if (Math.hypot(dx, dy) > CLICK_MOVE_THRESHOLD) return; // was a look-drag, not a click
+  // Shape / chip tools: user is placing points, not looking around. Skip
+  // the look-drag threshold so click-across-the-rink still commits.
+  if (!state.activeTool && Math.hypot(dx, dy) > CLICK_MOVE_THRESHOLD) return;
 
   mouseNDC.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouseNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
-  raycaster.setFromCamera(mouseNDC, camera);
+  raycaster.setFromCamera(mouseNDC, state.activeCamera);
 
-  const selectables = [...state.goalInstances, ...state.chipGroups];
+  const selectables = [...state.goalInstances, ...state.chipGroups, ...state.shapeObjects];
   if (state.ballGroup) selectables.push(state.ballGroup);
   if (state.goalieGroup) selectables.push(state.goalieGroup);
 

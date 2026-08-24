@@ -31,5 +31,6 @@ export function ensureDoc() {
   if (!state.doc) state.doc = emptyDoc();
   if (!state.doc.scheme) state.doc.scheme = emptyDoc().scheme;
   if (!state.doc.scheme.players) state.doc.scheme.players = {};
+  if (!state.doc.scheme.shapes) state.doc.scheme.shapes = [];
   return state.doc;
 }

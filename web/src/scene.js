@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RINK_L, RINK_W } from './constants.js';
+import { RINK_L, RINK_W, HALF_W } from './constants.js';
 import { state } from './state.js';
 
 export const scene = new THREE.Scene();
@@ -31,6 +31,41 @@ state.camYaw = DEFAULT_YAW;
 state.camPitch = DEFAULT_PITCH;
 camera.rotation.order = 'YXZ';
 camera.position.copy(DEFAULT_CAMERA_POSITION);
+
+// --- top-down orthographic camera for shape authoring (A2). Positioned high
+// above the rink centre and pointed straight down; up-vector set so goal A
+// (z=0) sits at the top of the screen, mirroring a printed rink diagram.
+// The frustum is recomputed in the resize handler below to always fit the
+// rink with a small margin, regardless of window aspect.
+export const topDownCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 200000);
+topDownCamera.position.set(0, 60000, RINK_L / 2);
+topDownCamera.up.set(0, 0, -1);
+topDownCamera.lookAt(0, 0, RINK_L / 2);
+function fitTopDownFrustum() {
+  const aspect = window.innerWidth / window.innerHeight;
+  // Half-extents chosen so the whole rink (plus a small margin) is always
+  // visible on both axes: HALF_W = 10000 on X, RINK_L/2 = 20000 on Z.
+  const marginZ = 21500, marginX = 11000;
+  const halfH = Math.max(marginZ, marginX / aspect);
+  const halfW = halfH * aspect;
+  topDownCamera.left = -halfW;
+  topDownCamera.right = halfW;
+  topDownCamera.top = halfH;
+  topDownCamera.bottom = -halfH;
+  topDownCamera.updateProjectionMatrix();
+}
+fitTopDownFrustum();
+
+// activeCamera drives main.js's render call and selection.js's raycaster.
+// Modules should read state.activeCamera, not the perspective binding, so
+// swapping to the top-down cam (via setActiveCamera in authoring/) works.
+state.activeCamera = camera;
+export function setActiveCamera(cam) {
+  state.activeCamera = cam;
+}
+export function getActiveCamera() {
+  return state.activeCamera;
+}
 
 export const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -136,4 +171,5 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  fitTopDownFrustum();
 });

@@ -1,6 +1,6 @@
 import { initHud } from './hud.js';
-import { scene, camera, renderer } from './scene.js';
-import { getBallWorldCenter } from './state.js';
+import { scene, renderer } from './scene.js';
+import { state, getBallWorldCenter } from './state.js';
 import { handleKeyboardMovement, clock } from './controls.js';
 import { updateTrajectory } from './trajectory.js';
 import { updateCoverage, updateGoalieLabel } from './coverage.js';
@@ -12,6 +12,7 @@ import './goalie.js';
 import './selection.js';
 import './touch-controls.js';
 import { updateChipAnimations } from './authoring/index.js';
+import { updateDrawPreview } from './authoring/draw-tool.js';
 
 initHud();
 
@@ -20,10 +21,11 @@ function animate() {
   const dt = clock.getDelta();
   handleKeyboardMovement(dt);
   updateChipAnimations(dt);
+  updateDrawPreview();
   const ballCenter = getBallWorldCenter(); // computed once, shared by both calls below
   updateTrajectory(ballCenter);
   updateCoverage(ballCenter);
   updateGoalieLabel();
-  renderer.render(scene, camera);
+  renderer.render(scene, state.activeCamera);
 }
 animate();

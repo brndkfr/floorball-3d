@@ -38,8 +38,12 @@ export const state = {
   doc: null,             // Doc (see authoring/doc.js). null until initDoc() runs.
   chipsRoot: null,       // THREE.Group holding every chip; child of scene
   chipGroups: [],        // per-chip THREE.Group, selectable, in the same array shape as goalInstances
-  activeTool: null,      // null | 'chip' (extended by later milestones)
+  shapesRoot: null,      // THREE.Group holding every shape (arrow/zone/text); child of scene
+  shapeObjects: [],      // per-shape THREE.Object3D, selectable
+  activeTool: null,      // null | 'chip' | 'arrow' | 'zone' | 'text'
   currentTeam: 1,        // 1 | 2 - which team the chip stamp is currently placing
+  activeCamera: null,    // scene.js sets this to the perspective camera at boot; swapped to ortho in shape tools
+  drawState: null,       // draw-tool.js: { tool, points, preview } while an in-progress shape is being clicked out
 };
 
 // Ball's local origin is its floor-contact point (see generate_ball.py), so

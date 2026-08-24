@@ -5,6 +5,7 @@
 import { state } from '../state.js';
 import { ensureDoc } from './doc.js';
 import { rebuildFromDoc } from './chips.js';
+import { rebuildShapesFromDoc } from './shapes.js';
 import { saveDoc } from './storage.js';
 
 const MAX = 100;
@@ -24,6 +25,7 @@ export function pushHistory() {
 function apply(snap) {
   state.doc = structuredClone(snap);
   rebuildFromDoc();
+  rebuildShapesFromDoc();
   saveDoc();
 }
 
