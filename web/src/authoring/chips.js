@@ -24,7 +24,7 @@ export const CHIP_RADIUS = 100;  // matches generate_player_chip.py
 // perspective and in the top-down authoring view. Scale up the visible
 // mesh (and everything anchored to it) so the disc is easy to grab and
 // number sprite is easy to read.
-export const CHIP_DISPLAY_SCALE = 5;
+export const CHIP_DISPLAY_SCALE = 8;
 
 // Two team colours, distinct from the cyan analytical HUD accent and from
 // the amber authoring accent so a chip on screen never blurs into UI chrome.
@@ -93,8 +93,11 @@ function makeNumberSprite(number) {
   const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
   const sprite = new THREE.Sprite(material);
   sprite.renderOrder = 1;
-  // ~150 mm across, floating just above the chip's top face
-  sprite.scale.set(150, 150, 1);
+  // Sprite scale is relative to the group, so ~110 mm here becomes
+  // 110 * CHIP_DISPLAY_SCALE mm on screen - keep it clearly smaller than
+  // the disc (200 mm * scale) so a rim of team colour is always visible
+  // around the number from directly above.
+  sprite.scale.set(110, 110, 1);
   sprite.position.set(0, CHIP_HEIGHT + 10, 0);
   return sprite;
 }
