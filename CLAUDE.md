@@ -55,25 +55,78 @@
 
 - `web/src/state.js` exports one shared mutable `state` object
   (`ballGroup`, `goalieGroup`, `selected`, `targetGoal`, `camYaw`/`camPitch`,
-  etc.) that every module imports and reads/writes via property access.
-  This is deliberate: ES modules allow mutating an imported object's
+  `activeCamera`, `activeTool`, `chipGroups`, `shapeObjects`, `drawState`,
+  `playback`, etc.) that every module imports and reads/writes via property
+  access. This is deliberate: ES modules allow mutating an imported object's
   properties, but not reassigning the imported binding itself, so a shared
   object sidesteps needing a getter/setter pair for every single field.
   Add new cross-module mutable state here, not as a new file-local `let`.
 - Numbers without a cited source (Swiss Way tactical zone boundaries, the
   detailed goalie's anthropometric scale, the shooting-line "centred"
-  threshold, default camera/ball positions) are estimates, clearly commented
-  as such at their definition site - don't cite them as spec'd values.
+  threshold, default camera/ball positions, the 5x chip display scale) are
+  estimates, clearly commented as such at their definition site - don't
+  cite them as spec'd values.
+
+## Authoring / animation gotchas (A1-A7)
+
+- The Doc (`state.doc`) is v2: `{ version, frames: [{ id, duration, scheme,
+  camera? }], currentFrame }`. `doc.scheme` is a **non-enumerable accessor**
+  installed by `ensureDoc()` that returns `frames[currentFrame].scheme`, so
+  every A1-A3 callsite (`doc.scheme.players[id]`, `doc.scheme.shapes.push(...)`)
+  keeps working unchanged and `JSON.stringify` still serializes only `frames`.
+  If you `structuredClone(doc)` or `state.doc = someLoadedDoc`, the accessor
+  is lost - always run through `ensureDoc()` (or `acceptDoc()` on loaded /
+  imported / decoded payloads) to reinstall it.
+- Bezier control points on chip paths are stored as **offsets** (`im1 = {dx,
+  dz}` from the current frame's chip, `im2 = {dx, dz}` from the next frame's
+  chip), not absolute world coordinates. Moving the chip preserves the arc
+  shape. Missing im1/im2 falls back to the straight-line 1/3 and 2/3
+  positions so `bezierPos()` degenerates to a linear lerp.
+- The video export driver (`export.js`) calls `seekTo(elapsed)` on
+  `playback.js`, which sets `playback.elapsed` and runs `applyPose()` without
+  touching the `playing` flag. Don't have export code call `play()` /
+  `pause()`; that races with the `animate()` loop's `tickPlayback()` and
+  double-advances time.
+- H.264 codec strings must match resolution + fps. `export.js`'s
+  `h264CodecFor(width, height, fps)` picks level 3.1 (720p30) through 5.0
+  (1440p60) by macroblocks-per-second. A hard-coded `avc1.42E01F` throws
+  `NotSupportedError` on 1080p+, and the encoder then goes into `closed`
+  state so every subsequent `encode()` throws "Cannot call 'encode' on a
+  closed codec" - which is the confusing symptom. Also latch the encoder's
+  `error:` callback into a captured `encoderError` and rethrow it from the
+  loop.
+- Chip meshes are runtime-scaled by `CHIP_DISPLAY_SCALE` in `chips.js` (5x
+  base OBJ = 1 m disc). The underlying geometry stays at real player-radius
+  so coverage / trajectory math keeps working; the scale only affects the
+  visible mesh + number sprite + selection ring.
 
 ## Verification
 
-- There is no browser available in this environment. After any change to
-  `web/`, verify via: (1) syntax-check the changed file(s) (copy to a `.mjs`
-  temp file and run `node --check`, since plain `.js` won't parse
-  `import`/`export`), (2) `curl` the relevant path(s) against the locally
-  running dev server to confirm a 200. Actual visual/interactive behavior
-  needs the user to check in their own browser - say so explicitly rather
-  than claiming something "works."
+- **Chromium caches ES modules aggressively** even with `?bust=` query
+  strings on dynamic imports and even after `location.reload()`. When
+  testing changes via Playwright / the running dev server, do:
+  ```js
+  const client = await page.context().newCDPSession(page);
+  await client.send('Network.clearBrowserCache');
+  await client.send('Network.setCacheDisabled', { cacheDisabled: true });
+  await page.goto('about:blank');
+  await page.goto('http://localhost:8000/', { waitUntil: 'networkidle' });
+  ```
+  Otherwise you'll see errors like `The requested module does not provide
+  an export named 'X'` even though the file on disk clearly exports X.
+- **`requestAnimationFrame` is paused in unfocused / hidden Playwright
+  tabs**, so anything driven by rAF (playback interpolation via
+  `tickPlayback`, drop-flash animations) never advances. Validate playback
+  math by calling `seekTo(elapsed)` or `tickPlayback(dtMs)` directly instead
+  of waiting for real ticks.
+- **Web Workers spawned from a Playwright evaluate silently never post
+  messages back** even for inline `Blob` workers - matched behaviour across
+  module and classic workers. Any worker-driven feature has to be
+  validated in a real focused browser tab, not automated here. This is why
+  `timer-worker.js` is staged but the visible-tab path still uses rAF.
+- After any change to `web/`, syntax-check via
+  `Copy-Item file.js file.mjs; node --check file.mjs; Remove-Item file.mjs`
+  since plain `.js` won't parse `import`/`export`.
 - Stop the dev server (`Stop-Process`) before moving/renaming any file or
   directory it's serving from - Windows locks files that are open for
   reading. Likewise, `cd` out of a directory before renaming/moving it -
