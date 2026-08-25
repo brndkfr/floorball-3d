@@ -1,6 +1,7 @@
-import { renderer, applyZoomDelta } from './scene.js';
+import { renderer, applyZoomDelta, topDownCamera } from './scene.js';
 import { keysPressed, cycleSelection } from './controls.js';
 import { deselectAll } from './selection.js';
+import { state } from './state.js';
 
 // On-screen controls for touch devices (see the `@media (pointer: coarse)`
 // rule in index.html) - there's no keyboard on a phone/tablet, so WASD/
@@ -47,7 +48,15 @@ renderer.domElement.addEventListener('touchmove', (event) => {
   if (event.touches.length !== 2 || pinchStartDist === null) return;
   event.preventDefault();
   const dist = touchDistance(event.touches);
-  applyZoomDelta((pinchStartDist - dist) * PINCH_SENSITIVITY);
+  const delta = dist - pinchStartDist;
+  if (state.activeCamera === topDownCamera) {
+    // In 2D, pinch scales the orthographic zoom directly.
+    const factor = 1 + delta * 0.005;
+    topDownCamera.zoom = Math.min(Math.max(topDownCamera.zoom * factor, 0.5), 8);
+    topDownCamera.updateProjectionMatrix();
+  } else {
+    applyZoomDelta(-delta * PINCH_SENSITIVITY);
+  }
   pinchStartDist = dist;
 }, { passive: false });
 

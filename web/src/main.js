@@ -11,6 +11,7 @@ import './layers.js';
 import './goalie.js';
 import './selection.js';
 import './touch-controls.js';
+import './help.js';
 import { updateChipAnimations } from './authoring/index.js';
 import { updateDrawPreview } from './authoring/draw-tool.js';
 import { tickPlayback } from './authoring/playback.js';

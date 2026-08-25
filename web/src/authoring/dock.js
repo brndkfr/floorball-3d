@@ -14,6 +14,7 @@ import { encodeShareUrl } from './share.js';
 import { undo, redo, pushHistory } from './history.js';
 import { enterTopDown, exitTopDown, isTopDown } from './topdown-camera.js';
 import { startDrawing, cancelDrawing, handleFloorClick, tryCommitZone, drawPointCount } from './draw-tool.js';
+import { snapToNearestDot } from './faceoff-snap.js';
 
 const dockEl = document.getElementById('dock');
 if (!dockEl) throw new Error('dock element missing from index.html');
@@ -282,7 +283,10 @@ window.addEventListener('keydown', (event) => {
 // keeps the click-vs-drag threshold logic in one place.
 export function handleFloorClickForTool(worldPoint) {
   if (state.activeTool === 'chip') {
-    spawnChip({ team: state.currentTeam, x: worldPoint.x, z: worldPoint.z });
+    // A7: pull the click toward the nearest face-off dot if within snap
+    // range so rounded-position tactical schemes stay tidy.
+    const snap = snapToNearestDot(worldPoint.x, worldPoint.z);
+    spawnChip({ team: state.currentTeam, x: snap.x, z: snap.z });
     refreshStatus();
     return true;
   }

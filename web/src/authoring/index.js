@@ -11,6 +11,7 @@ import { readHashDoc, clearHashDoc } from './share.js';
 import { rebuildFromDoc, updateChipAnimations } from './chips.js';
 import { rebuildShapesFromDoc } from './shapes.js';
 import { initHistory } from './history.js';
+import { initFaceoffSnapToggle } from './faceoff-snap.js';
 import './dock.js';       // side-effect: wires up the DOM
 import './timeline.js';   // side-effect: wires up the timeline UI
 
@@ -30,5 +31,6 @@ ensureDoc();
 rebuildFromDoc();
 rebuildShapesFromDoc();
 initHistory();
+initFaceoffSnapToggle();
 
 export { updateChipAnimations };
