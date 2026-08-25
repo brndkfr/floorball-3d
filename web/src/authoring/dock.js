@@ -22,6 +22,7 @@ if (!dockEl) throw new Error('dock element missing from index.html');
 const chipBtn = dockEl.querySelector('[data-dock="chip"]');
 const teamBtn = dockEl.querySelector('[data-dock="team"]');
 const viewBtn = dockEl.querySelector('[data-dock="view"]');
+const rotateBtn = dockEl.querySelector('[data-dock="rotate"]');
 const overflowBtn = dockEl.querySelector('[data-dock="overflow"]');
 const overflowMenu = dockEl.querySelector('#dockOverflow');
 const colorBtn = dockEl.querySelector('[data-dock="color"]');
@@ -96,6 +97,11 @@ viewBtn.addEventListener('click', () => {
   import('./path-handles.js').then((m) => m.rebuild());
 });
 refreshViewButton();
+
+rotateBtn.addEventListener('click', async () => {
+  const s = await import('../scene.js');
+  s.setTopDownRotationSteps(s.getTopDownRotationSteps() + 1);
+});
 
 // overflow menu (New / Undo / Redo) - simple toggle-visibility popover
 overflowBtn.addEventListener('click', (e) => {

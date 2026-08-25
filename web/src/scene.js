@@ -15,15 +15,13 @@ export const DEFAULT_FOV = 70;
 export const camera = new THREE.PerspectiveCamera(DEFAULT_FOV, window.innerWidth / window.innerHeight, 50, 200000);
 export const EYE_HEIGHT = 1600; // mm, roughly adult standing eye height
 
-// Elevated "scouting" establishing shot: positioned out on the ice in front
-// of the crease, above eye height, pitched down to take in the goal, the
-// goalie and the crease at once - the goalie (see goalie.js) stands at
-// z=4000 facing +Z (out toward the shooter), so the camera needs to be
-// further out (larger Z) than that, looking back toward -Z (yaw=PI, not
-// the walking default of 0) to see its front rather than its back.
-export const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 3200, 9500);
-export const DEFAULT_YAW = Math.PI; // facing -Z, i.e. looking back toward the goal at the z=0 end
-export const DEFAULT_PITCH = -0.48; // ~-27deg, tilts down toward the crease
+// Elevated establishing shot from the long side of the rink, so the 40 m
+// length lays out horizontally (landscape) and the 20 m width recedes
+// toward the far boards. y=3200 puts the eye slightly above standing
+// height; pitch -0.48 tilts down to take in the crease + centre line.
+export const DEFAULT_CAMERA_POSITION = new THREE.Vector3(18000, 3200, RINK_L / 2);
+export const DEFAULT_YAW = -Math.PI / 2; // facing -X, i.e. looking across the width from the +X long side
+export const DEFAULT_PITCH = -0.48; // ~-27deg, tilts down toward the rink surface
 const MIN_FOV = 20, MAX_FOV = 90; // narrower FOV reads as "zoomed in"
 const ZOOM_SENSITIVITY = 0.05; // degrees of FOV per unit of wheel deltaY
 
@@ -41,11 +39,21 @@ export const topDownCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 20000
 topDownCamera.position.set(0, 60000, RINK_L / 2);
 topDownCamera.up.set(0, 0, -1);
 topDownCamera.lookAt(0, 0, RINK_L / 2);
-function fitTopDownFrustum() {
+
+// 0..3 * 90 deg rotation of the top-down view around Y. Default 1 (long
+// axis horizontal) so 2D lays out landscape on typical monitors. Odd
+// steps swap the frustum's long / short axis so the rotated rink still
+// fits, and rotate the camera's up-vector so the view rotates on screen.
+let topDownRotationSteps = 1;
+
+export function fitTopDownFrustum() {
   const aspect = window.innerWidth / window.innerHeight;
-  // Half-extents chosen so the whole rink (plus a small margin) is always
-  // visible on both axes: HALF_W = 10000 on X, RINK_L/2 = 20000 on Z.
-  const marginZ = 21500, marginX = 11000;
+  // Rink is 40x20 m long-side along Z. Odd rotations put the long side on
+  // screen X, so swap the "long" and "short" halves.
+  const swap = (topDownRotationSteps % 2) === 1;
+  const marginLong = 21500, marginShort = 11000;
+  const marginZ = swap ? marginShort : marginLong;
+  const marginX = swap ? marginLong : marginShort;
   const halfH = Math.max(marginZ, marginX / aspect);
   const halfW = halfH * aspect;
   topDownCamera.left = -halfW;
@@ -54,7 +62,26 @@ function fitTopDownFrustum() {
   topDownCamera.bottom = -halfH;
   topDownCamera.updateProjectionMatrix();
 }
-fitTopDownFrustum();
+
+// Rotate the top-down view by 90 deg increments. Kept as an exported
+// helper so authoring code can bind it to a UI button; the four up-vector
+// options span the rotation group around Y.
+const UPS = [
+  new THREE.Vector3(0, 0, -1),
+  new THREE.Vector3(1, 0, 0),
+  new THREE.Vector3(0, 0, 1),
+  new THREE.Vector3(-1, 0, 0),
+];
+export function setTopDownRotationSteps(steps) {
+  topDownRotationSteps = ((steps % 4) + 4) % 4;
+  topDownCamera.up.copy(UPS[topDownRotationSteps]);
+  topDownCamera.lookAt(topDownCamera.position.x, 0, topDownCamera.position.z);
+  fitTopDownFrustum();
+}
+export function getTopDownRotationSteps() { return topDownRotationSteps; }
+
+// Apply the default rotation at boot so up-vector + frustum both match.
+setTopDownRotationSteps(topDownRotationSteps);
 
 // activeCamera drives main.js's render call and selection.js's raycaster.
 // Modules should read state.activeCamera, not the perspective binding, so

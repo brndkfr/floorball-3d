@@ -29,7 +29,9 @@ planning and animating team schemes.
 
 ### Authoring & animation
 - 2D / 3D view toggle - top-down orthographic for planning, first-person
-  perspective for review. Wheel zoom + right-drag pan in 2D.
+  perspective for review. Both default to a landscape orientation of the
+  rink; the top-down view rotates in 90° steps via a dock button. Wheel
+  zoom + right-drag pan in 2D.
 - **Chip** stamp: drop numbered players (green Team 1, red Team 2). Chips
   snap to the nearest face-off dot within 800 mm (toggle in the HUD).
 - **Arrow / Zone / Text** shape tools: click-to-place tactical markers

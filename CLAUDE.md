@@ -99,6 +99,11 @@
   base OBJ = 1 m disc). The underlying geometry stays at real player-radius
   so coverage / trajectory math keeps working; the scale only affects the
   visible mesh + number sprite + selection ring.
+- `scene.fog` (near 35 000, far 90 000 toward dark grey) dims the top-down
+  view because `topDownCamera` sits 60 000 mm above the rink - right in the
+  middle of the fog band. `topdown-camera.js` saves and clears `scene.fog`
+  in `enterTopDown()` and restores it in `exitTopDown()`; anything else
+  that swaps to the ortho camera needs to do the same or accept the dim.
 
 ## Verification
 

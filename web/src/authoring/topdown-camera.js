@@ -6,7 +6,7 @@
 // Wheel-zoom scales topDownCamera.zoom; middle-mouse or right-drag pans by
 // shifting the camera's x/z. Both reset when you exit the tool.
 
-import { camera, topDownCamera, setActiveCamera } from '../scene.js';
+import { camera, topDownCamera, setActiveCamera, scene } from '../scene.js';
 
 const MIN_ZOOM = 0.5, MAX_ZOOM = 8;
 const savedTopDown = {
@@ -16,6 +16,7 @@ const savedTopDown = {
 };
 
 let savedPerspective = null;
+let savedFog = null;   // scene.fog is dimming the ortho view; disable while top-down
 
 export function enterTopDown() {
   if (savedPerspective) return;   // already in top-down
@@ -24,6 +25,8 @@ export function enterTopDown() {
     quaternion: camera.quaternion.clone(),
     fov: camera.fov,
   };
+  savedFog = scene.fog;
+  scene.fog = null;
   setActiveCamera(topDownCamera);
 }
 
@@ -34,6 +37,8 @@ export function exitTopDown() {
   camera.fov = savedPerspective.fov;
   camera.updateProjectionMatrix();
   savedPerspective = null;
+  scene.fog = savedFog;
+  savedFog = null;
   // Reset top-down transform so re-entering the tool starts fitted again.
   topDownCamera.zoom = savedTopDown.zoom;
   topDownCamera.position.x = savedTopDown.x;
