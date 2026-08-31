@@ -38,15 +38,15 @@
   .hud-panel .hud-body { margin-top:8px; }
   .hud-panel.collapsed .hud-body { display:none; }
 
-  #info { top:12px; left:12px; font-size:12px; line-height:1.5; max-width:340px; }
+  #info { top:52px; left:64px; font-size:12px; line-height:1.5; max-width:340px; }
   #info a { color:var(--hud-accent); }
 
   #status {
-    position:absolute; bottom:12px; left:12px; z-index:10;
+    position:absolute; bottom:12px; left:64px; z-index:10;
     color:#7fd6e8; font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
   }
 
-  #coords { top:12px; right:12px; font-size:13px; min-width:180px; line-height:1.6; }
+  #coords { top:52px; right:12px; font-size:13px; min-width:180px; line-height:1.6; }
   #coords .label { color:var(--hud-accent); text-transform:uppercase; font-size:10px; letter-spacing:0.05em; }
 
   #goalieLabel {
@@ -336,11 +336,55 @@
   #photoReprojError { margin-top:8px; font-size:11px; }
   #photoReprojError.ok { color:#7ee06b; }
   #photoReprojError.bad { color:#ff8080; }
+
+  /* --- App shell: persistent left rail + top bar (docs/plan.md section 2).
+     Fixed, unpositioned ancestors of nothing - all existing HUD panels stay
+     position:absolute against the viewport, so they're unaffected by this. */
+  #appTopbar {
+    position:fixed; left:0; right:0; top:0; height:40px; z-index:29;
+    display:flex; align-items:center; gap:10px; padding:0 14px 0 60px;
+    background:rgba(10,14,17,0.92); border-bottom:1px solid var(--hud-accent-dim);
+    color:var(--hud-accent); font-family:var(--hud-font); font-size:12px;
+    letter-spacing:0.08em; text-transform:uppercase;
+  }
+  #appRail {
+    position:fixed; left:0; top:0; bottom:0; width:52px; z-index:30;
+    display:flex; flex-direction:column; align-items:stretch;
+    padding-top:40px;
+    background:rgba(10,14,17,0.94); border-right:1px solid var(--hud-accent-dim);
+  }
+  #appRail button {
+    background:transparent; border:none; border-left:2px solid transparent;
+    color:#7fd6e8; font-family:var(--hud-font); font-size:10px;
+    text-transform:uppercase; letter-spacing:0.05em; padding:14px 2px;
+    cursor:pointer;
+  }
+  #appRail button:hover { background:rgba(79,224,255,0.08); color:#dff9ff; }
+  #appRail button.active {
+    color:var(--hud-accent); border-left-color:var(--hud-accent);
+    background:rgba(79,224,255,0.14);
+  }
+  @media (pointer: coarse) {
+    #appRail, #appTopbar { display:none; }
+  }
+  #libraryView {
+    position:fixed; inset:40px 0 0 52px; z-index:25; display:none;
+    align-items:center; justify-content:center;
+    background:rgba(6,14,18,0.94); color:#dff9ff;
+    font-family:var(--hud-font); font-size:13px; letter-spacing:0.04em;
+  }
 </style>
 </head>
 <body>
+<div id="appTopbar">Floorball Studio</div>
+<div id="appRail">
+  <button data-mode="plan" title="Plan: tactical authoring">Plan</button>
+  <button data-mode="analyze" title="Analyze: photo/video overlay">Analyze</button>
+  <button data-mode="library" title="Library: saved projects">Library</button>
+</div>
+<div id="libraryView">Library - coming soon</div>
 <canvas id="photo-canvas"></canvas>
-<div id="info" class="hud-panel">
+<div id="info" class="hud-panel" data-view="plan">
   <div class="hud-header">
     <span class="hud-title">IFF Floorball Rink &ndash; 40 &times; 20 m</span>
     <button class="hud-toggle" data-panel="info" title="Collapse/expand">&minus;</button>
@@ -423,8 +467,8 @@
   </div>
 </div>
 <div id="goalieLabel"></div>
-<div id="dockStatus">Team 1 &ndash; next #1</div>
-<div id="timeline">
+<div id="dockStatus" data-view="plan">Team 1 &ndash; next #1</div>
+<div id="timeline" data-view="plan">
   <div class="tl-transport">
     <button data-tl="prev" title="Step back (,)">&#9198;</button>
     <button data-tl="play" title="Play (Space)">&#9654;</button>
@@ -438,7 +482,7 @@
   <span class="tl-sep"></span>
   <button data-tl="add" class="tl-add" title="Add frame (copy of current)" style="height:28px;min-width:32px;background:rgba(255,179,71,0.08);border:1px solid rgba(255,179,71,0.35);color:#f7e6cf;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px;">+</button>
 </div>
-<div id="dock">
+<div id="dock" data-view="plan">
   <button class="dock-btn" data-dock="view" title="Toggle 2D top-down / 3D perspective view">3D</button>
   <button class="dock-btn" data-dock="rotate" title="Rotate top-down view 90&deg; (only active in 2D)">&#8635;</button>
   <button class="dock-btn" data-dock="team" title="Flip active team">T1</button>
@@ -470,7 +514,7 @@
   <div id="dockSlots" role="menu"></div>
   <input type="file" id="dockImportFile" accept="application/json,.json" hidden>
 </div>
-<div id="coords" class="hud-panel">
+<div id="coords" class="hud-panel" data-view="plan">
   <div class="hud-header">
     <span class="hud-title">Coordinates</span>
     <button class="hud-toggle" data-panel="coords" title="Collapse/expand">&minus;</button>
@@ -487,26 +531,39 @@
     </div>
   </div>
 </div>
-<div id="photoPanel" class="hud-panel collapsed">
+<div id="photoPanel" class="hud-panel collapsed" data-view="analyze">
   <div class="hud-header">
     <span class="hud-title">Photo Overlay</span>
     <button class="hud-toggle" data-panel="photoPanel" title="Collapse/expand">&minus;</button>
   </div>
   <div class="hud-body">
     <input type="file" id="photoFileInput" accept="image/*"><br><br>
+    <div id="photoAutoBanner" style="display:none; margin-bottom:8px; padding:6px 8px; border:1px solid rgba(126,224,106,0.5); background:rgba(126,224,106,0.1); border-radius:6px; font-size:11px;">
+      <span style="color:#7ee06b;">&#10003; We aligned it for you.</span>
+      <button id="photoRefineBtn" class="dock-btn" style="padding:2px 6px; font-size:10px; margin-left:6px;">Refine</button>
+    </div>
     <label>opacity <input type="range" id="photoOpacity" min="0" max="100" value="70"></label>
-    <div style="margin-top:6px;">
-      <label>camera FOV <input type="range" id="photoFovSlider" min="20" max="100" value="65" style="width:120px;"> <span id="photoFovValue">65°</span></label>
-      <button id="photoAutoFovBtn" class="dock-btn" style="padding:2px 6px; font-size:10px; margin-top:2px;">Auto-tune FOV</button>
-      <div style="opacity:0.6; font-size:10px; margin-top:2px;">tune until the overlay lines up with the real photo, not just when reprojection error is low</div>
+    <div style="margin-top:8px;">
+      <button id="photoAdvancedToggle" class="dock-btn" style="padding:2px 6px; font-size:10px;">Advanced &#9656;</button>
     </div>
-    <div style="margin-top:6px;">
-      <label>lens distortion k1 <input type="range" id="photoK1Slider" min="-40" max="40" value="0" style="width:120px;"> <span id="photoK1Value">0.00</span></label>
-      <div style="opacity:0.6; font-size:10px; margin-top:2px;">negative = barrel (edges bulge out), positive = pincushion. Nudge if straight boards curve in the photo.</div>
-    </div>
-    <div style="margin-top:6px;">
-      <label><input type="checkbox" id="photoEdgesToggle"> show edge overlay</label>
-      <div style="opacity:0.6; font-size:10px; margin-top:2px;">cyan overlay of detected edges - useful for precise landmark clicks on any floor colour</div>
+    <div id="photoAdvanced" style="display:none;">
+      <div style="margin-top:6px;">
+        <label>camera FOV <input type="range" id="photoFovSlider" min="20" max="100" value="65" style="width:120px;"> <span id="photoFovValue">65°</span></label>
+        <button id="photoAutoFovBtn" class="dock-btn" style="padding:2px 6px; font-size:10px; margin-top:2px;">Auto-tune FOV</button>
+        <div style="opacity:0.6; font-size:10px; margin-top:2px;">tune until the overlay lines up with the real photo, not just when reprojection error is low</div>
+      </div>
+      <div style="margin-top:6px;">
+        <label>lens distortion k1 <input type="range" id="photoK1Slider" min="-40" max="40" value="0" style="width:120px;"> <span id="photoK1Value">0.00</span></label>
+        <div style="opacity:0.6; font-size:10px; margin-top:2px;">negative = barrel (edges bulge out), positive = pincushion. Nudge if straight boards curve in the photo.</div>
+      </div>
+      <div style="margin-top:6px;">
+        <label><input type="checkbox" id="photoEdgesToggle"> show edge overlay</label>
+        <div style="opacity:0.6; font-size:10px; margin-top:2px;">cyan overlay of detected edges - useful for precise landmark clicks on any floor colour</div>
+      </div>
+      <div style="margin-top:6px;">
+        <button id="photoBorderModeBtn" class="dock-btn" title="Toggle border mode: click any board-top point on the photo, then click the matching spot on the mini-map. Snaps to the actual perimeter.">Border mode: off</button>
+        <div id="photoBorderModeMount"></div>
+      </div>
     </div>
     <div style="opacity:0.7; margin-top:6px; font-size:11px;">
       check a landmark below, then click it on the photo (crease corners +
@@ -518,8 +575,6 @@
     <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
       <button id="photoAutoDetectBtn" class="dock-btn" title="Try to find the goal (red frame) and crease (white paint) automatically. Works best on unoccluded, well-lit photos - manually nudge any misplaced landmark after.">Auto-detect goal + crease</button>
       <button id="photoRoiBtn" class="dock-btn" title="Draw a box around the goal - the photo zooms into that box so you can click landmarks precisely. Also constrains auto-detect to the boxed area.">Draw + zoom to goal region</button>
-      <button id="photoBorderModeBtn" class="dock-btn" title="Toggle border mode: click any board-top point on the photo, then click the matching spot on the mini-map. Snaps to the actual perimeter.">Border mode: off</button>
-      <div id="photoBorderModeMount"></div>
       <label style="font-size:11px; opacity:0.75;">
         detect as: <select id="photoAutoDetectEnd">
           <option value="A" selected>Goal A end</option>
@@ -528,6 +583,17 @@
       </label>
       <button id="photoEnterBtn" class="dock-btn">Enter Photo View</button>
       <button id="photoExitBtn" class="dock-btn">Exit Photo View</button>
+      <span class="dock-sep" style="width:auto; height:1px; margin:2px 0;"></span>
+      <button id="photoRinkFitBtn" class="dock-btn" title="Skip landmark clicking entirely - drag each corner of a rink outline onto the photo (drag it past the edge of the photo if that corner isn't actually in frame).">Fit rink outline</button>
+      <div id="photoRinkFitPanel" style="display:none; font-size:10px; opacity:0.75; margin-top:2px;">
+        Drag any corner/mid handle directly onto its matching spot on the boards - or past the photo's edge if it's out of frame. Drag inside the shape to move it all. Top edge = whichever goal is set as "detect as" above.
+        <label style="display:block; margin-top:4px;"><input type="checkbox" id="photoRinkFitUseTop" checked> use board TOP (uncheck for floor/base line)</label>
+        <label style="display:block; margin-top:2px;"><input type="checkbox" id="photoRinkFitMirror"> mirror left/right</label>
+        <div style="margin-top:4px; display:flex; gap:4px;">
+          <button id="photoRinkFitConfirmBtn" class="dock-btn" style="flex:1; padding:2px 6px; font-size:10px;">Use this fit</button>
+          <button id="photoRinkFitCancelBtn" class="dock-btn" style="flex:1; padding:2px 6px; font-size:10px;">Cancel</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -542,5 +608,6 @@
 </script>
 
 <script type="module" src="src/main.js"></script>
+<script type="module" src="src/shell.js"></script>
 </body>
 </html>

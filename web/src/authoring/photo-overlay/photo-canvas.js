@@ -43,6 +43,170 @@ function resetZoom() {
   panY = 0;
 }
 
+// Draggable rink-outline quad (Mode B alt calibration): 4 independently
+// draggable corners (+ 2 edge-midpoints) the user drags onto the boards
+// visible in the photo - or beyond the photo's edge if that part of the
+// rink wasn't actually captured (nothing here clamps to the image bounds).
+// Corners map to the 4 board-tangent landmarks, midpoints to the 2
+// board-centre landmarks (landmarks.js) - reuses the same solvePnP
+// pipeline as clicking those landmarks one at a time. Straight lines only
+// (no rounded corners): these 6 points are where the STRAIGHT boards are,
+// the true rounded corner arcs aren't part of the calibration model.
+let quad = null;        // { tl, tr, bl, br, midL, midR }, each [x,y] image px, or null
+let quadEnabled = false;
+let quadDrag = null;    // { mode: 'move'|'point', key?, startQuad, startPointer } while dragging
+let quadJustHit = false; // true if the current mousedown->click cycle hit the quad - suppresses the click-to-place-landmark handler for just that cycle
+let mirrorLR = false;
+let swapEnds = false;   // top edge = Goal B instead of Goal A (photo shot from the other end)
+
+function rinkFitScale() {
+  return image ? computeViewRect().w / image.width : 1;
+}
+
+function cloneQuad(q) {
+  const out = {};
+  for (const k of Object.keys(q)) out[k] = [q[k][0], q[k][1]];
+  return out;
+}
+
+// Even-odd-free convex-ish point-in-quad test via consistent cross-product
+// sign around tl->tr->br->bl - good enough as long as the user hasn't
+// dragged corners into a self-intersecting (bowtie) shape.
+function pointInQuad(px, py, q) {
+  const pts = [q.tl, q.tr, q.br, q.bl];
+  let sign = 0;
+  for (let i = 0; i < 4; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % 4];
+    const cross = (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1);
+    if (cross !== 0) {
+      const s = Math.sign(cross);
+      if (sign === 0) sign = s;
+      else if (s !== sign) return false;
+    }
+  }
+  return true;
+}
+
+function hitTestQuad(ix, iy) {
+  const tol = 12 / rinkFitScale();
+  for (const key of ['tl', 'tr', 'bl', 'br', 'midL', 'midR']) {
+    const [px, py] = quad[key];
+    if (Math.hypot(ix - px, iy - py) < tol) return { mode: 'point', key };
+  }
+  if (pointInQuad(ix, iy, quad)) return { mode: 'move' };
+  return null;
+}
+
+function updateQuadDrag(ix, iy) {
+  const drag = quadDrag;
+  if (drag.mode === 'move') {
+    const dx = ix - drag.startPointer.x, dy = iy - drag.startPointer.y;
+    for (const k of Object.keys(quad)) {
+      quad[k] = [drag.startQuad[k][0] + dx, drag.startQuad[k][1] + dy];
+    }
+    return;
+  }
+  if (drag.key === 'midL' || drag.key === 'midR') {
+    // Constrained to the straight board line between its two corners - a
+    // real straight edge stays straight (collinear) under any perspective.
+    const [aKey, bKey] = drag.key === 'midL' ? ['tl', 'bl'] : ['tr', 'br'];
+    const [ax, ay] = quad[aKey], [bx, by] = quad[bKey];
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy || 1;
+    const t = ((ix - ax) * dx + (iy - ay) * dy) / len2;
+    quad[drag.key] = [ax + t * dx, ay + t * dy];
+    return;
+  }
+  quad[drag.key] = [ix, iy];
+}
+
+function drawRinkFit(vr) {
+  if (!quadEnabled || !quad) return;
+  const scale = vr.w / image.width;
+  const toScreen = ([ix, iy]) => [vr.x + ix * scale, vr.y + iy * scale];
+  const corners = ['tl', 'tr', 'br', 'bl'].map((k) => toScreen(quad[k]));
+  ctx.save();
+  ctx.strokeStyle = '#5fe0ff';
+  ctx.fillStyle = '#5fe0ff';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([7, 5]);
+  // Real rink corners are 2000mm-radius arcs, but a true circle doesn't
+  // stay a circle under perspective - this "cut the corner" bezier trick
+  // rounds any (possibly perspective-distorted) quad without needing to
+  // know the actual camera pose, purely as a visual reference.
+  const CORNER_FRAC = 0.14;
+  ctx.beginPath();
+  const n = corners.length;
+  for (let i = 0; i < n; i++) {
+    const prev = corners[(i - 1 + n) % n], cur = corners[i], next = corners[(i + 1) % n];
+    const inPt = [cur[0] + (prev[0] - cur[0]) * CORNER_FRAC, cur[1] + (prev[1] - cur[1]) * CORNER_FRAC];
+    const outPt = [cur[0] + (next[0] - cur[0]) * CORNER_FRAC, cur[1] + (next[1] - cur[1]) * CORNER_FRAC];
+    if (i === 0) ctx.moveTo(inPt[0], inPt[1]); else ctx.lineTo(inPt[0], inPt[1]);
+    ctx.quadraticCurveTo(cur[0], cur[1], outPt[0], outPt[1]);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  ctx.setLineDash([]);
+  const hs = 6;
+  for (const key of ['tl', 'tr', 'bl', 'br', 'midL', 'midR']) {
+    const [x, y] = toScreen(quad[key]);
+    ctx.fillRect(x - hs, y - hs, hs * 2, hs * 2);
+  }
+  ctx.restore();
+}
+
+export function setRinkFitEnabled(on) {
+  quadEnabled = !!on;
+  if (quadEnabled && !quad && image) {
+    const w = image.width, h = image.height;
+    const x0 = w * 0.3, x1 = w * 0.7, y0 = h * 0.3, y1 = h * 0.7;
+    quad = {
+      tl: [x0, y0], tr: [x1, y0], bl: [x0, y1], br: [x1, y1],
+      midL: [x0, (y0 + y1) / 2], midR: [x1, (y0 + y1) / 2],
+    };
+  }
+  if (!quadEnabled) quadDrag = null;
+  redraw();
+}
+export function isRinkFitEnabled() { return quadEnabled; }
+export function resetRinkFit() { quad = null; }
+export function setRinkFitMirror(on) { mirrorLR = !!on; }
+export function isRinkFitMirror() { return mirrorLR; }
+export function setRinkFitSwapEnds(on) { swapEnds = !!on; }
+export function isRinkFitSwapEnds() { return swapEnds; }
+// Board top (y=500) is the crisper, less-occluded edge in most elevated
+// photos - floor level (y=0) is offered too since very low/pitch-side
+// shots can see the base line more clearly than the (foreshortened) top.
+let useTop = true;
+export function setRinkFitUseTop(on) { useTop = !!on; }
+export function isRinkFitUseTop() { return useTop; }
+
+// 4 corners + 2 side-midpoints, keyed to landmarks.js's board-tangent /
+// board-centre world points (top edge = Goal A end unless swapped, left =
+// -x side unless mirrored). Only points actually within the photo's pixel
+// bounds are returned - a handle dragged past the photo's edge means "this
+// corner isn't in frame", not a real observed pixel, so it's excluded
+// rather than fed to solvePnP as if it were a genuine click.
+export function getRinkFitLandmarks() {
+  if (!quad || !image) return null;
+  const L = mirrorLR ? 'R' : 'L', R = mirrorLR ? 'L' : 'R';
+  const suffix = useTop ? '_top' : '';
+  const topEnd = swapEnds ? 'B' : 'A', botEnd = swapEnds ? 'A' : 'B';
+  const candidates = {
+    [`goal${topEnd}_boardTangent${L}${suffix}`]: quad.tl,
+    [`goal${topEnd}_boardTangent${R}${suffix}`]: quad.tr,
+    [`goal${botEnd}_boardTangent${L}${suffix}`]: quad.bl,
+    [`goal${botEnd}_boardTangent${R}${suffix}`]: quad.br,
+    [`boardCentre${L}${suffix}`]: quad.midL,
+    [`boardCentre${R}${suffix}`]: quad.midR,
+  };
+  const out = {};
+  for (const [key, xy] of Object.entries(candidates)) {
+    if (xy[0] >= 0 && xy[0] <= image.width && xy[1] >= 0 && xy[1] <= image.height) out[key] = xy;
+  }
+  return out;
+}
+
 // Exported so photo-overlay.js can force zoom-back-to-fit when entering
 // photo view - otherwise the zoomed photo doesn't line up with the (unzoomed)
 // WebGL renderer canvas and the preview strips drift off the 3D mesh.
@@ -176,6 +340,7 @@ function redraw() {
     ctx.stroke();
     ctx.lineWidth = 1;
   }
+  drawRinkFit(vr);
 }
 
 function resizeCanvas() {
@@ -207,6 +372,8 @@ export async function loadPhoto(file) {
   previewStrips = [];
   roi = null;
   edgeOverlay = null;
+  quad = null;
+  quadEnabled = false;
   computeBaseRect();
   resetZoom();
   redraw();
@@ -236,7 +403,7 @@ export function getPlacedPoints() {
 
 canvas.addEventListener('click', (e) => {
   if (!image || !onClickLandmark) return;
-  if (roiMode || roiDrag) return; // suppress landmark placement while defining ROI
+  if (roiMode || roiDrag || quadJustHit) return; // suppress landmark placement while defining ROI or interacting with the rink outline
   const vr = computeViewRect();
   const { clientX: cx, clientY: cy } = e;
   if (cx < vr.x || cx > vr.x + vr.w || cy < vr.y || cy > vr.y + vr.h) return;
@@ -278,6 +445,17 @@ let panning = null; // { startX, startY, startPanX, startPanY } while active
 canvas.addEventListener('contextmenu', (e) => { if (image) e.preventDefault(); });
 canvas.addEventListener('mousedown', (e) => {
   if (!image) return;
+  quadJustHit = false;
+  if (e.button === 0 && quadEnabled && quad) {
+    const [ix, iy] = clientToImage(e.clientX, e.clientY);
+    const hit = hitTestQuad(ix, iy);
+    if (hit) {
+      e.preventDefault();
+      quadJustHit = true;
+      quadDrag = { ...hit, startQuad: cloneQuad(quad), startPointer: { x: ix, y: iy } };
+      return;
+    }
+  }
   if (e.button === 0 && roiMode) {
     e.preventDefault();
     const [ix, iy] = clientToImage(e.clientX, e.clientY);
@@ -291,6 +469,12 @@ canvas.addEventListener('mousedown', (e) => {
   panning = { startX: e.clientX, startY: e.clientY, startPanX: panX, startPanY: panY };
 });
 window.addEventListener('mousemove', (e) => {
+  if (quadDrag && image) {
+    const [ix, iy] = clientToImage(e.clientX, e.clientY);
+    updateQuadDrag(ix, iy);
+    redraw();
+    return;
+  }
   if (roiDrag && image) {
     const [ix, iy] = clientToImage(e.clientX, e.clientY);
     const [sx, sy] = roiDrag.startImg;
@@ -309,6 +493,7 @@ window.addEventListener('mousemove', (e) => {
   redraw();
 });
 window.addEventListener('mouseup', () => {
+  if (quadDrag) { quadDrag = null; return; }
   if (roiDrag) {
     roiDrag = null;
     // Discard tiny rects (accidental clicks).

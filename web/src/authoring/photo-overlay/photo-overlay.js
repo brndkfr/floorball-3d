@@ -15,12 +15,28 @@ import { readFocalLength35mm, focal35mmToHFovDeg } from './exif.js';
 import * as borderMode from './border-mode.js';
 import { RINK_L, HALF_W, GOAL_LINE_FROM_BOARD } from '../../constants.js';
 
+// Structured, in-page debug log (capped) so calibration state can be
+// inspected from devtools/automation at any later point in the session,
+// not just at the moment console.log happened to print it.
+function debugLog(event, data) {
+  console.log(`[photo-overlay] ${event}`, data);
+  const log = (window.__photoOverlayDebugLog ??= []);
+  log.push({ t: Date.now(), event, data });
+  if (log.length > 200) log.shift();
+}
+
 const fileInput = document.getElementById('photoFileInput');
 const listEl = document.getElementById('photoLandmarkList');
 const errorEl = document.getElementById('photoReprojError');
 const opacitySlider = document.getElementById('photoOpacity');
 const enterBtn = document.getElementById('photoEnterBtn');
 const exitBtn = document.getElementById('photoExitBtn');
+const rinkFitBtn = document.getElementById('photoRinkFitBtn');
+const rinkFitPanel = document.getElementById('photoRinkFitPanel');
+const rinkFitMirror = document.getElementById('photoRinkFitMirror');
+const rinkFitUseTop = document.getElementById('photoRinkFitUseTop');
+const rinkFitConfirmBtn = document.getElementById('photoRinkFitConfirmBtn');
+const rinkFitCancelBtn = document.getElementById('photoRinkFitCancelBtn');
 const autoDetectBtn = document.getElementById('photoAutoDetectBtn');
 const autoDetectEnd = document.getElementById('photoAutoDetectEnd');
 const roiBtn = document.getElementById('photoRoiBtn');
@@ -28,6 +44,10 @@ const autoFovBtn = document.getElementById('photoAutoFovBtn');
 const edgesToggle = document.getElementById('photoEdgesToggle');
 const borderModeBtn = document.getElementById('photoBorderModeBtn');
 const borderModeMount = document.getElementById('photoBorderModeMount');
+const advancedToggle = document.getElementById('photoAdvancedToggle');
+const advancedPanel = document.getElementById('photoAdvanced');
+const autoBanner = document.getElementById('photoAutoBanner');
+const refineBtn = document.getElementById('photoRefineBtn');
 
 const fovSlider = document.getElementById('photoFovSlider');
 const fovValue = document.getElementById('photoFovValue');
@@ -41,7 +61,12 @@ function currentK1() { return Number(k1Slider.value) * K1_SCALE; }
 
 // Preview line-strips (both goal frames + creases + boards + centre line) in
 // world (mm), projected each solve so the user sees whether their landmarks
-// produce a plausible fit BEFORE clicking Enter Photo View.
+// produce a plausible fit BEFORE clicking Enter Photo View. Each strip is
+// tagged with which landmark group actually constrains it out there - a
+// pose solved only from a handful of near-goal points has essentially no
+// rotational precision left over 40m, so showing the OTHER goal / far
+// boards regardless just draws noise that never looks right no matter
+// what's adjusted. Only draw what's actually backed by placed landmarks.
 function buildReferenceStrips() {
   const strips = [];
   for (const [prefix, boardZ, sign] of [['A', 0, +1], ['B', RINK_L, -1]]) {
@@ -50,17 +75,18 @@ function buildReferenceStrips() {
     // goal frame: mouth rectangle + back-of-net rectangle + verticals connecting
     const mouth = [[-800,0,gl], [800,0,gl], [800,1150,gl], [-800,1150,gl], [-800,0,gl]];
     const back = [[-800,0,netBackZ], [800,0,netBackZ], [800,1150,netBackZ], [-800,1150,netBackZ], [-800,0,netBackZ]];
-    strips.push({ color: '#ff8c1a', points: mouth });
-    strips.push({ color: '#ff8c1a', points: back });
-    strips.push({ color: '#ff8c1a', points: [mouth[0], back[0]] });
-    strips.push({ color: '#ff8c1a', points: [mouth[1], back[1]] });
-    strips.push({ color: '#ff8c1a', points: [mouth[2], back[2]] });
-    strips.push({ color: '#ff8c1a', points: [mouth[3], back[3]] });
+    const group = `goal${prefix}`;
+    strips.push({ color: '#ff8c1a', points: mouth, group });
+    strips.push({ color: '#ff8c1a', points: back, group });
+    strips.push({ color: '#ff8c1a', points: [mouth[0], back[0]], group });
+    strips.push({ color: '#ff8c1a', points: [mouth[1], back[1]], group });
+    strips.push({ color: '#ff8c1a', points: [mouth[2], back[2]], group });
+    strips.push({ color: '#ff8c1a', points: [mouth[3], back[3]], group });
     const cn = boardZ + sign * 2850, cf = boardZ + sign * 6850;
-    strips.push({ color: '#e8d34a', points: [[-2500,0,cn], [2500,0,cn], [2500,0,cf], [-2500,0,cf], [-2500,0,cn]] });
+    strips.push({ color: '#e8d34a', points: [[-2500,0,cn], [2500,0,cn], [2500,0,cf], [-2500,0,cf], [-2500,0,cn]], group });
   }
-  strips.push({ color: '#5fb4ff', points: buildRinkOutline() });
-  strips.push({ color: '#5fb4ff', points: [[-HALF_W,0,RINK_L/2], [HALF_W,0,RINK_L/2]] });
+  strips.push({ color: '#5fb4ff', points: buildRinkOutline(), group: 'board' });
+  strips.push({ color: '#5fb4ff', points: [[-HALF_W,0,RINK_L/2], [HALF_W,0,RINK_L/2]], group: 'board' });
   return strips;
 }
 
@@ -91,9 +117,10 @@ function buildRinkOutline() {
 
 const REFERENCE_STRIPS = buildReferenceStrips();
 
-function projectStrips(strips, projectWorld, imgW, imgH) {
+function projectStrips(strips, projectWorld, imgW, imgH, allowedGroups) {
   const out = [];
   for (const strip of strips) {
+    if (allowedGroups && !allowedGroups.has(strip.group)) continue;
     const points = [];
     for (const [x, y, z] of strip.points) {
       const p = projectWorld(x, y, z);
@@ -225,10 +252,34 @@ borderMode.setOnCommit((key, world, photoXY) => {
 
 borderModeBtn.addEventListener('click', () => {
   const on = !borderMode.isEnabled();
+  if (on) syncBorderFocus();
   borderMode.setEnabled(on);
   borderModeBtn.textContent = on ? 'Border mode: ON' : 'Border mode: off';
   borderModeBtn.classList.toggle('active', on);
   if (!on) photoCanvas.setPendingMarker(null);
+});
+
+// "detect as" tells us which goal end the photo frames - reuse it to zoom
+// the border-mode minimap to that end instead of the whole 40m rink, and
+// to keep the rink-outline tool's top/bottom labelling consistent with it
+// (whichever goal you tag as "A" here is Goal A everywhere in this panel).
+function syncBorderFocus() {
+  const end = autoDetectEnd.value === 'B' ? 'B' : 'A';
+  borderMode.setFocusEnd(end);
+  photoCanvas.setRinkFitSwapEnds(end === 'B');
+}
+autoDetectEnd.addEventListener('change', syncBorderFocus);
+
+advancedToggle.addEventListener('click', () => {
+  const open = advancedPanel.style.display !== 'none';
+  advancedPanel.style.display = open ? 'none' : 'block';
+  advancedToggle.textContent = open ? 'Advanced ▶' : 'Advanced ▼';
+});
+
+refineBtn.addEventListener('click', () => {
+  autoBanner.style.display = 'none';
+  advancedPanel.style.display = 'block';
+  advancedToggle.textContent = 'Advanced ▼';
 });
 
 // Landmark clicks can fire faster than solveCameraPose resolves (OpenCV's
@@ -248,6 +299,8 @@ async function trySolve() {
       errorEl.classList.remove('bad', 'ok');
       photoCanvas.setPreviewStrips([]);
       updatePerPointErrors([], []);
+      borderMode.setCoplanarWarning(false);
+      debugLog('trySolve:tooFewPoints', { placed: placed.length, min: MIN_LANDMARKS, keys: placed.map((p) => p.key) });
     }
     return null;
   }
@@ -264,11 +317,25 @@ async function trySolve() {
     const ys = points.map((p) => p.world[1]);
     const distinctY = new Set(ys).size;
     const coplanar = distinctY <= 1;
+    borderMode.setCoplanarWarning(coplanar);
     errorEl.textContent = `reprojection error: ${pose.reprojErrorPx.toFixed(1)} px (${placed.length} pts)`
       + (coplanar ? ' - warning: all points coplanar, add crease/post landmarks' : '');
     errorEl.classList.toggle('bad', pose.reprojErrorPx > 10 || coplanar);
     errorEl.classList.toggle('ok', pose.reprojErrorPx <= 10 && !coplanar);
     updatePerPointErrors(placed, pose.perPointErrorPx);
+    debugLog('trySolve:result', {
+      reprojErrorPx: Number(pose.reprojErrorPx.toFixed(2)),
+      pointCount: placed.length,
+      coplanar,
+      cameraPosition: pose.position.toArray(),
+      cameraFov: pose.fov,
+      points: placed.map((p, i) => ({
+        key: p.key,
+        image: [Number(p.image[0].toFixed(1)), Number(p.image[1].toFixed(1))],
+        worldY: WORLD_LANDMARKS[p.key][1],
+        errorPx: Number(pose.perPointErrorPx[i].toFixed(2)),
+      })),
+    });
     photoCamera.position.copy(pose.position);
     photoCamera.quaternion.copy(pose.quaternion);
     photoCamera.fov = pose.fov;
@@ -283,13 +350,24 @@ async function trySolve() {
     };
     saveDoc();
     if (isPhoto()) fitToPhotoRect(photoCanvas.getPhotoRect());
-    photoCanvas.setPreviewStrips(projectStrips(REFERENCE_STRIPS, pose.projectWorld, size.w, size.h));
+    // Only show reference geometry that's actually backed by a placed
+    // landmark out there - an unconstrained extrapolation 40m away just
+    // looks like broken/non-reacting lines, not a helpful preview.
+    const allowedGroups = new Set();
+    for (const p of placed) {
+      if (p.key.startsWith('goalA_')) allowedGroups.add('goalA');
+      else if (p.key.startsWith('goalB_')) allowedGroups.add('goalB');
+      else allowedGroups.add('board'); // centre*/board* landmarks
+    }
+    photoCanvas.setPreviewStrips(projectStrips(REFERENCE_STRIPS, pose.projectWorld, size.w, size.h, allowedGroups));
     return pose;
   } catch (err) {
     if (seq !== solveSeq) return null;
     errorEl.textContent = err.message || 'solve failed';
     errorEl.classList.add('bad');
     errorEl.classList.remove('ok');
+    console.error('[photo-overlay] trySolve failed', err, placed.map((p) => p.key));
+    debugLog('trySolve:error', { message: err.message || String(err), keys: placed.map((p) => p.key) });
     return null;
   }
 }
@@ -322,6 +400,10 @@ fileInput.addEventListener('change', async () => {
     }
   }
   borderMode.clearAll();
+  syncBorderFocus();
+  photoCanvas.setRinkFitEnabled(false);
+  photoCanvas.resetRinkFit();
+  rinkFitPanel.style.display = 'none';
   photoCanvas.setPendingMarker(null);
   armedKey = null;
   edgesComputed = false;
@@ -340,7 +422,23 @@ fileInput.addEventListener('change', async () => {
       fovValue.textContent = fovSlider.value + '° (EXIF ' + focal35 + 'mm equiv)';
     }
   }
-  trySolve();
+  autoBanner.style.display = 'none';
+  advancedPanel.style.display = 'none';
+  advancedToggle.textContent = 'Advanced ▶';
+
+  // Guided Step 2 (docs/plan.md 4.3): try to align automatically before
+  // asking the user to click anything - errors are swallowed since this
+  // just falls through to the existing manual landmark flow either way.
+  try {
+    const end = autoDetectEnd.value === 'B' ? 'goalB' : 'goalA';
+    await detectAndPlace(end);
+  } catch (err) {
+    console.error('auto-align on load failed', err);
+  }
+  const pose = await trySolve();
+  if (pose && pose.reprojErrorPx < 10 && photoCanvas.getPlacedPoints().length >= MIN_LANDMARKS) {
+    autoBanner.style.display = 'block';
+  }
 });
 
 opacitySlider.addEventListener('input', () => {
@@ -413,57 +511,72 @@ async function autoPlace(key, imgXY) {
   }
 }
 
+// Core of "Auto-detect goal + crease": finds the goal/crease in the image,
+// solves both L/R screen-to-world mappings, keeps the better one, and
+// places the resulting landmarks. Shared by the manual button and the
+// automatic run-on-load in Step 2 of the guided flow (docs/plan.md 4.3).
+async function detectAndPlace(end) {
+  if (!photoCanvas.hasPhoto()) return { ok: false, message: 'load a photo first' };
+  const image = photoCanvas.getImage();
+  const g = await detectGoal(image, photoCanvas.getRoi());
+  if (!g) return { ok: false, message: 'auto-detect: no red goal found (place manually)' };
+  const c = await detectCrease(image, g);
+
+  // Screen L/R doesn't determine world L/R (depends on camera side of
+  // the rink). Try both mappings and keep whichever gives lower
+  // reprojection error - solvePnP is fast enough that a double-solve
+  // is unnoticeable.
+  const buildKeyed = (swap) => {
+    const L = swap ? 'R' : 'L', R = swap ? 'L' : 'R';
+    const [tl, tr, br, bl] = g.corners;
+    const kp = [
+      [`${end}_postTop${L}`, tl], [`${end}_postTop${R}`, tr],
+      [`${end}_post${R}`, br],    [`${end}_post${L}`, bl],
+    ];
+    if (c) {
+      const [ctl, ctr, cbr, cbl] = c.corners;
+      kp.push(
+        [`${end}_creaseFar${L}`, ctl], [`${end}_creaseFar${R}`, ctr],
+        [`${end}_creaseNear${R}`, cbr], [`${end}_creaseNear${L}`, cbl],
+      );
+    }
+    return kp;
+  };
+  const size = photoCanvas.getImageSize();
+  const intr = currentIntrinsics(size);
+  const toSolveInput = (kp) => kp.map(([key, image]) => ({ world: WORLD_LANDMARKS[key], image }));
+  let chosenKp;
+  try {
+    const kpA = buildKeyed(false), kpB = buildKeyed(true);
+    const [poseA, poseB] = await Promise.all([
+      solveCameraPose(toSolveInput(kpA), intr, size.w, size.h),
+      solveCameraPose(toSolveInput(kpB), intr, size.w, size.h),
+    ]);
+    chosenKp = poseB.reprojErrorPx < poseA.reprojErrorPx ? kpB : kpA;
+  } catch {
+    // Fall back to non-swapped if one of the trial solves fails (rare -
+    // happens on very degenerate landmark layouts).
+    chosenKp = buildKeyed(false);
+  }
+  for (const [key, xy] of chosenKp) await autoPlace(key, xy);
+  return {
+    ok: true,
+    count: chosenKp.length,
+    message: `auto-detect: goal placed${c ? ' + crease' : ''} - review + nudge, then place a couple of board landmarks`,
+  };
+}
+
 autoDetectBtn.addEventListener('click', async () => {
   if (!photoCanvas.hasPhoto()) { errorEl.textContent = 'load a photo first'; return; }
-  const image = photoCanvas.getImage();
   const end = autoDetectEnd.value === 'B' ? 'goalB' : 'goalA';
   const prev = autoDetectBtn.textContent;
   autoDetectBtn.disabled = true;
   autoDetectBtn.textContent = 'Detecting...';
   try {
-    const g = await detectGoal(image, photoCanvas.getRoi());
-    if (!g) { errorEl.textContent = 'auto-detect: no red goal found (place manually)'; return; }
-    const c = await detectCrease(image, g);
-
-    // Screen L/R doesn't determine world L/R (depends on camera side of
-    // the rink). Try both mappings and keep whichever gives lower
-    // reprojection error - solvePnP is fast enough that a double-solve
-    // is unnoticeable.
-    const buildKeyed = (swap) => {
-      const L = swap ? 'R' : 'L', R = swap ? 'L' : 'R';
-      const [tl, tr, br, bl] = g.corners;
-      const kp = [
-        [`${end}_postTop${L}`, tl], [`${end}_postTop${R}`, tr],
-        [`${end}_post${R}`, br],    [`${end}_post${L}`, bl],
-      ];
-      if (c) {
-        const [ctl, ctr, cbr, cbl] = c.corners;
-        kp.push(
-          [`${end}_creaseFar${L}`, ctl], [`${end}_creaseFar${R}`, ctr],
-          [`${end}_creaseNear${R}`, cbr], [`${end}_creaseNear${L}`, cbl],
-        );
-      }
-      return kp;
-    };
-    const size = photoCanvas.getImageSize();
-    const intr = currentIntrinsics(size);
-    const toSolveInput = (kp) => kp.map(([key, image]) => ({ world: WORLD_LANDMARKS[key], image }));
-    let chosenKp;
-    try {
-      const kpA = buildKeyed(false), kpB = buildKeyed(true);
-      const [poseA, poseB] = await Promise.all([
-        solveCameraPose(toSolveInput(kpA), intr, size.w, size.h),
-        solveCameraPose(toSolveInput(kpB), intr, size.w, size.h),
-      ]);
-      chosenKp = poseB.reprojErrorPx < poseA.reprojErrorPx ? kpB : kpA;
-    } catch {
-      // Fall back to non-swapped if one of the trial solves fails (rare -
-      // happens on very degenerate landmark layouts).
-      chosenKp = buildKeyed(false);
-    }
-    for (const [key, xy] of chosenKp) await autoPlace(key, xy);
-    errorEl.textContent = `auto-detect: goal placed${c ? ' + crease' : ''} - review + nudge, then place a couple of board landmarks`;
-    errorEl.classList.remove('bad', 'ok');
+    const result = await detectAndPlace(end);
+    errorEl.textContent = result.message;
+    errorEl.classList.toggle('bad', !result.ok);
+    errorEl.classList.remove('ok');
     trySolve();
   } catch (err) {
     console.error(err);
@@ -563,6 +676,43 @@ exitBtn.addEventListener('click', () => {
   setCalibrating(photoCanvas.hasPhoto()); // still have a photo loaded - resume landmark picking
   photoCanvas.setShowMarkers(true);
 });
+
+function leaveRinkFit() {
+  photoCanvas.setRinkFitEnabled(false);
+  rinkFitPanel.style.display = 'none';
+}
+
+rinkFitBtn.addEventListener('click', () => {
+  if (!photoCanvas.hasPhoto()) { errorEl.textContent = 'load a photo first'; return; }
+  syncBorderFocus();
+  photoCanvas.setRinkFitEnabled(true);
+  rinkFitPanel.style.display = 'block';
+  errorEl.textContent = 'drag the outline onto the boards in the photo, then "Use this fit"';
+  errorEl.classList.remove('bad', 'ok');
+});
+
+rinkFitMirror.addEventListener('change', () => photoCanvas.setRinkFitMirror(rinkFitMirror.checked));
+rinkFitUseTop.addEventListener('change', () => photoCanvas.setRinkFitUseTop(rinkFitUseTop.checked));
+
+rinkFitConfirmBtn.addEventListener('click', async () => {
+  const landmarks = photoCanvas.getRinkFitLandmarks();
+  const entries = landmarks ? Object.entries(landmarks) : [];
+  console.log('[photo-overlay] rink-outline confirm:', entries.length, 'of 6 in bounds', entries.map(([k]) => k));
+  debugLog('rinkFit:confirm', { inBoundsCount: entries.length, keys: entries.map(([k]) => k) });
+  if (entries.length === 0) {
+    errorEl.textContent = 'every corner/mid handle is outside the photo - drag at least one onto the visible boards';
+    errorEl.classList.add('bad');
+    errorEl.classList.remove('ok');
+    return;
+  }
+  for (const [key, imgXY] of entries) {
+    await autoPlace(key, imgXY);
+  }
+  leaveRinkFit();
+  trySolve();
+});
+
+rinkFitCancelBtn.addEventListener('click', leaveRinkFit);
 
 window.addEventListener('resize', () => {
   if (isPhoto() && photoCanvas.hasPhoto()) fitToPhotoRect(photoCanvas.getPhotoRect());

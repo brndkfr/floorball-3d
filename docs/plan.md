@@ -45,6 +45,12 @@ re-mounted into new containers. First screen with the new shell already
 looks like a product; incremental rework would keep the dev-tool aesthetic
 around indefinitely.
 
+**Status: shipped.** Left rail (`Plan` / `Analyze` / `Library`) + top bar in
+`web/index.html`, mode-switching in [shell.js](../web/src/shell.js) via
+`[data-view]` tags on existing panels - no `authoring/`/`photo-overlay/`
+logic touched. `Library` is a placeholder ("coming soon"), per the open
+question in section 10.
+
 ---
 
 ## 3. Mode A - Tactical Planning
@@ -96,6 +102,34 @@ playback + tracking + interpolation).
 - [exif.js](../web/src/authoring/photo-overlay/exif.js) - reads
   `FocalLengthIn35mmFilm` to seed FOV.
 - Auto-tune FOV sweep with coarse+fine passes.
+- **Step 2 auto-align on load**: `detectGoal`/`detectCrease` run automatically
+  when a photo drops; a "we aligned it for you" banner + Refine button skip
+  the manual flow if reprojection error < 10px on >= 6 points. FOV/k1/edge
+  overlay/border-mode now live behind an "Advanced" accordion.
+- **Border-mode minimap zoom**: `setFocusEnd()` zooms the minimap to whichever
+  goal end the "detect as" dropdown names, instead of always showing the
+  full 40m rink at a tiny scale.
+- **"Fit rink outline" tool** ([photo-canvas.js](../web/src/authoring/photo-overlay/photo-canvas.js)):
+  a free quadrilateral (4 independently-draggable corners + 2 edge-constrained
+  midpoints, no rigid rotate/resize) the user drags onto the boards as an
+  alternative to clicking named landmarks one at a time. Maps to the 6
+  board-tangent/board-centre landmarks; a handle dragged past the photo's
+  edge (rink corner not actually in frame) is excluded from the solve rather
+  than fed in as a fake point. Board-top vs floor-level toggle, mirror
+  left/right toggle, and its goal-end labelling follows the same "detect as"
+  dropdown as auto-detect/border-mode (whichever goal you tag there is Goal A
+  everywhere in the panel). An earlier 3D fly-camera "manual fit" experiment
+  was replaced by this flat-quad approach per user preference.
+- **Reference-strip preview is now landmark-aware**: the projected
+  goal-frame/crease/board-outline overlay only draws strips actually backed
+  by a placed landmark (`goalA`/`goalB`/`board` groups) - previously it always
+  drew both goals + the full 40m outline regardless of what was placed,
+  which looked like "broken" lines when only one goal's points existed.
+- **Persistent debug log**: `window.__photoOverlayDebugLog` (capped at 200
+  entries) records every solve attempt - point count, per-point error,
+  coplanar flag, camera pose - and rink-outline confirms. Inspectable via
+  browser tools (`page.evaluate(() => window.__photoOverlayDebugLog)`)
+  without needing console access or screenshots.
 
 ### 4.2 Known problems
 
@@ -108,6 +142,20 @@ playback + tracking + interpolation).
   clicks remain the fallback.
 - **Manual calibration UX is a dev console** - 20+ controls at once, no
   guidance. The stepper redesign in 4.3 addresses this.
+- **Long-baseline point sensitivity**: board/centre-line points ~16-20m from
+  the goal cluster amplify small pixel-placement errors into large pose
+  error far more than near-goal points do (observed this session: adding 3
+  imprecisely-dragged rink-outline points took a clean 5.8px/6-point solve
+  to 165px, with the camera position jumping to a nonsensical location).
+  Neither the coplanar warning nor the per-point error catches this before
+  the fact - always re-check the overall reprojection error line after
+  adding far points, don't assume more points = better.
+- **Rink-outline tool has no zoom/pan while dragging** - handles must be
+  placed at whatever zoom level `photo-canvas.js` happens to be at, which
+  makes precisely hitting small/far features (like the centre-line board
+  point) hard on a full-photo view. Next step (not yet built): let the user
+  zoom/pan the photo while the rink-outline quad is active, the way
+  landmark clicking already supports via scroll-to-zoom.
 
 ### 4.3 Target UX (guided stepper)
 
@@ -176,7 +224,7 @@ frame.photo = {
 
 | Phase | Content | Status |
 |-------|---------|--------|
-| 1 | Manual PnP calibration | shipped, needs UX rework |
+| 1 | Manual PnP calibration | shipped; guided auto-align (4.3 Step 2), rink-outline quad tool, and debug logging shipped this session. Remaining: rink-outline zoom/pan (4.2), one-hint-at-a-time manual fallback (4.3 Step 2), before/after alignment slider |
 | 2 | YOLO player auto-detect | not started |
 | 3 | Insights compute + UI | not started; reuses Mode A modules |
 | 4 | Auto-pose facing (MoveNet / YOLO-Pose) | deferred, Option 2 in 4.3 |
@@ -225,6 +273,10 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
 4. Syntax-check via the `.mjs` trick (see CLAUDE.md verification section).
 5. Never hand-edit generated `.obj` / `.mtl` files - edit the generator.
 6. Update this file when the plan shifts; don't create parallel `handoff-*.md`.
+7. For Mode B calibration issues, check `window.__photoOverlayDebugLog` in
+   the browser (via devtools or automation) before guessing from a
+   screenshot - it has every solve's point count, per-point error, coplanar
+   flag, and camera pose.
 
 ---
 
