@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 520" font-family="Consolas, monospace">
+  <style>
+    .board { stroke:#222; stroke-width:6; fill:none; }
+    .crease { stroke:#e0a300; stroke-width:3; fill:rgba(224,163,0,0.08); }
+    .goalline { stroke:#c0392b; stroke-width:3; }
+    .post { stroke:#222; stroke-width:6; }
+    .dot { fill:#4fe0ff; stroke:#0a3a44; stroke-width:1.5; }
+    .pt { fill:#ff5b5b; stroke:#5a0000; stroke-width:1.5; }
+    .lbl { font-size:13px; fill:#111; }
+    .lbl-accent { font-size:13px; fill:#a35b00; font-weight:bold; }
+    .title { font-size:20px; fill:#111; font-weight:bold; }
+    .sub { font-size:13px; fill:#444; }
+    .net { stroke:#555; stroke-width:2; fill:rgba(120,120,120,0.15); }
+  </style>
+  <rect x="0" y="0" width="1020" height="520" fill="#f7f5ef"/>
+
+  <!-- ================= LEFT PANEL: top-down floor view ================= -->
+  <text x="20" y="30" class="title">Top-down: Goal A crease + landmarks</text>
+
+  <!-- boards (back wall) -->
+  <line x1="60" y1="440" x2="420" y2="440" class="board"/>
+  <text x="200" y="465" class="sub">boards (end of rink)</text>
+
+  <!-- crease rectangle: 5m wide x 4m deep -->
+  <rect x="120" y="260" width="240" height="150" class="crease"/>
+  <text x="130" y="253" class="sub">crease (5 x 4 m)</text>
+
+  <!-- goal line (where posts + near crease edge sit) -->
+  <line x1="60" y1="410" x2="420" y2="410" class="goalline"/>
+  <text x="425" y="414" class="sub" fill="#c0392b">goal line</text>
+
+  <!-- goal net -->
+  <rect x="205" y="392" width="70" height="18" class="net"/>
+
+  <!-- posts (on goal line, goal mouth) -->
+  <circle cx="205" cy="410" r="6" class="pt"/>
+  <circle cx="275" cy="410" r="6" class="pt"/>
+  <text x="205" y="386" class="lbl-accent" text-anchor="middle">postL</text>
+  <text x="275" y="386" class="lbl-accent" text-anchor="middle">postR</text>
+
+  <!-- crease near corners (on goal line, crease width) -->
+  <circle cx="120" cy="410" r="6" class="pt"/>
+  <circle cx="360" cy="410" r="6" class="pt"/>
+  <text x="60" y="430" class="lbl">creaseNearL</text>
+  <text x="330" y="430" class="lbl">creaseNearR</text>
+
+  <!-- crease far corners (4m out from goal line) -->
+  <circle cx="120" cy="260" r="6" class="pt"/>
+  <circle cx="360" cy="260" r="6" class="pt"/>
+  <text x="60" y="248" class="lbl">creaseFarL</text>
+  <text x="330" y="248" class="lbl">creaseFarR</text>
+
+  <!-- face-off dots, out near the boards, level with goal line -->
+  <circle cx="70" cy="410" r="7" class="dot"/>
+  <circle cx="410" cy="410" r="7" class="dot"/>
+  <text x="20" y="400" class="lbl">faceoffL</text>
+  <text x="415" y="400" class="lbl">faceoffR</text>
+
+  <!-- arrow: toward centre ice -->
+  <line x1="240" y1="230" x2="240" y2="180" stroke="#111" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="250" y="195" class="sub">toward centre ice</text>
+
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#111"/>
+    </marker>
+  </defs>
+
+  <!-- ================= RIGHT PANEL: what you see in a photo (side view) ================= -->
+  <text x="520" y="30" class="title">Side view: what "post (top)" means</text>
+  <text x="520" y="50" class="sub">(same left/right post, clicked higher up in the photo)</text>
+
+  <!-- ground line -->
+  <line x1="560" y1="410" x2="940" y2="410" class="goalline"/>
+  <text x="945" y="414" class="sub" fill="#c0392b">goal line</text>
+
+  <!-- goal frame (front view) -->
+  <rect x="650" y="290" width="140" height="120" class="net"/>
+  <line x1="650" y1="290" x2="650" y2="410" class="post"/>
+  <line x1="790" y1="290" x2="790" y2="410" class="post"/>
+  <line x1="650" y1="290" x2="790" y2="290" class="post"/>
+
+  <!-- postL/R base -->
+  <circle cx="650" cy="410" r="6" class="pt"/>
+  <circle cx="790" cy="410" r="6" class="pt"/>
+  <text x="650" y="435" class="lbl-accent" text-anchor="middle">postL</text>
+  <text x="790" y="435" class="lbl-accent" text-anchor="middle">postR</text>
+
+  <!-- postTopL/R -->
+  <circle cx="650" cy="292" r="6" class="pt"/>
+  <circle cx="790" cy="292" r="6" class="pt"/>
+  <text x="650" y="278" class="lbl-accent" text-anchor="middle">postTopL</text>
+  <text x="790" y="278" class="lbl-accent" text-anchor="middle">postTopR</text>
+
+  <!-- height annotation -->
+  <line x1="820" y1="292" x2="820" y2="410" stroke="#444" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="828" y="355" class="sub">1.15 m</text>
+
+  <!-- photographer note -->
+  <text x="520" y="465" class="sub">In your photo, click postL/postR where the post touches the floor,</text>
+  <text x="520" y="482" class="sub">then postTopL/postTopR on the same post but near the crossbar.</text>
+</svg>

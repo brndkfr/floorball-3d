@@ -318,9 +318,28 @@
     padding:4px 8px; outline:none; min-width:140px;
     box-shadow:0 4px 14px rgba(0,0,0,0.5);
   }
+
+  /* Photo Overlay (authoring/photo-overlay/): the uploaded match photo sits
+     behind the WebGL canvas (see scene.js's explicit z-index:2 on the
+     renderer's canvas), full-viewport until photo-lock resizes the WebGL
+     canvas down to match its letterboxed rect. */
+  #photo-canvas { position:fixed; inset:0; z-index:1; display:none; }
+
+  #photoPanel { top:230px; right:12px; width:270px; max-height:65vh; overflow-y:auto; }
+  .photo-landmark-row {
+    display:flex; align-items:center; justify-content:space-between; padding:2px 0; font-size:11px; cursor:pointer; gap:6px;
+  }
+  .photo-landmark-row.armed { color:var(--hud-accent); }
+  .photo-landmark-row.placed { opacity:0.6; }
+  .photo-landmark-row .err { font-size:10px; color:#c8c8c8; font-variant-numeric:tabular-nums; }
+  .photo-landmark-row .err.worst { color:#ff8080; font-weight:bold; }
+  #photoReprojError { margin-top:8px; font-size:11px; }
+  #photoReprojError.ok { color:#7ee06b; }
+  #photoReprojError.bad { color:#ff8080; }
 </style>
 </head>
 <body>
+<canvas id="photo-canvas"></canvas>
 <div id="info" class="hud-panel">
   <div class="hud-header">
     <span class="hud-title">IFF Floorball Rink &ndash; 40 &times; 20 m</span>
@@ -465,6 +484,50 @@
     <span class="label">trajectory target:</span> <span id="targetGoalLabel">-</span>
     <div style="opacity:0.7; margin-top:4px; font-family:system-ui, sans-serif; font-size:11px;">
       click (or Tab to) the ball, goalie or a<br>goal to select it - then click the floor,<br>or use arrows/WASD, to move it freely.<br>Goalie only: Q/E rotates it manually.
+    </div>
+  </div>
+</div>
+<div id="photoPanel" class="hud-panel collapsed">
+  <div class="hud-header">
+    <span class="hud-title">Photo Overlay</span>
+    <button class="hud-toggle" data-panel="photoPanel" title="Collapse/expand">&minus;</button>
+  </div>
+  <div class="hud-body">
+    <input type="file" id="photoFileInput" accept="image/*"><br><br>
+    <label>opacity <input type="range" id="photoOpacity" min="0" max="100" value="70"></label>
+    <div style="margin-top:6px;">
+      <label>camera FOV <input type="range" id="photoFovSlider" min="20" max="100" value="65" style="width:120px;"> <span id="photoFovValue">65°</span></label>
+      <button id="photoAutoFovBtn" class="dock-btn" style="padding:2px 6px; font-size:10px; margin-top:2px;">Auto-tune FOV</button>
+      <div style="opacity:0.6; font-size:10px; margin-top:2px;">tune until the overlay lines up with the real photo, not just when reprojection error is low</div>
+    </div>
+    <div style="margin-top:6px;">
+      <label>lens distortion k1 <input type="range" id="photoK1Slider" min="-40" max="40" value="0" style="width:120px;"> <span id="photoK1Value">0.00</span></label>
+      <div style="opacity:0.6; font-size:10px; margin-top:2px;">negative = barrel (edges bulge out), positive = pincushion. Nudge if straight boards curve in the photo.</div>
+    </div>
+    <div style="margin-top:6px;">
+      <label><input type="checkbox" id="photoEdgesToggle"> show edge overlay</label>
+      <div style="opacity:0.6; font-size:10px; margin-top:2px;">cyan overlay of detected edges - useful for precise landmark clicks on any floor colour</div>
+    </div>
+    <div style="opacity:0.7; margin-top:6px; font-size:11px;">
+      check a landmark below, then click it on the photo (crease corners +
+      post tops give the best fix - avoid an all-floor set). Scroll to zoom
+      in on the photo, right-click-drag to pan, double-click to reset.
+    </div>
+    <div id="photoLandmarkList" style="margin-top:6px; max-height:220px; overflow-y:auto;"></div>
+    <div id="photoReprojError">0/6 landmarks placed</div>
+    <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
+      <button id="photoAutoDetectBtn" class="dock-btn" title="Try to find the goal (red frame) and crease (white paint) automatically. Works best on unoccluded, well-lit photos - manually nudge any misplaced landmark after.">Auto-detect goal + crease</button>
+      <button id="photoRoiBtn" class="dock-btn" title="Draw a box around the goal - the photo zooms into that box so you can click landmarks precisely. Also constrains auto-detect to the boxed area.">Draw + zoom to goal region</button>
+      <button id="photoBorderModeBtn" class="dock-btn" title="Toggle border mode: click any board-top point on the photo, then click the matching spot on the mini-map. Snaps to the actual perimeter.">Border mode: off</button>
+      <div id="photoBorderModeMount"></div>
+      <label style="font-size:11px; opacity:0.75;">
+        detect as: <select id="photoAutoDetectEnd">
+          <option value="A" selected>Goal A end</option>
+          <option value="B">Goal B end</option>
+        </select>
+      </label>
+      <button id="photoEnterBtn" class="dock-btn">Enter Photo View</button>
+      <button id="photoExitBtn" class="dock-btn">Exit Photo View</button>
     </div>
   </div>
 </div>

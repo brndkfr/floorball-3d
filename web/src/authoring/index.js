@@ -14,6 +14,7 @@ import { initHistory } from './history.js';
 import { initFaceoffSnapToggle } from './faceoff-snap.js';
 import './dock.js';       // side-effect: wires up the DOM
 import './timeline.js';   // side-effect: wires up the timeline UI
+import './photo-overlay/photo-overlay.js'; // side-effect: wires up the photo overlay panel
 
 // Prefer a shared doc from the URL hash so incognito links "just work"
 // without touching whatever the user already has in localStorage. Fall

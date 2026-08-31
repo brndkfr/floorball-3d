@@ -98,6 +98,10 @@ function handleKeyboardMovement(dt) {
     // nothing selected - WASD/arrows walk the camera instead (first-person
     // exploration). Forward/right are derived from the current look yaw, so
     // movement is always relative to where you're facing, not world axes.
+    // Skip entirely if a non-walk camera (top-down, photo-lock) is active -
+    // walking would silently drag the perspective camera off-screen while
+    // a different camera is being viewed.
+    if (state.activeCamera !== camera) return;
     let f = 0, r = 0;
     if (keysPressed.has('ArrowUp') || keysPressed.has('w') || keysPressed.has('W')) f += 1;
     if (keysPressed.has('ArrowDown') || keysPressed.has('s') || keysPressed.has('S')) f -= 1;

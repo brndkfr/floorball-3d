@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 540" font-family="Consolas, monospace">
+  <!--
+    Top-down view of the full 40x20 m rink with every photo-overlay
+    landmark marked. New board landmarks (added to help pin down the
+    pose away from the goal cluster) are drawn in red with bold labels;
+    existing goal-area + centre-line landmarks are drawn in blue for
+    context. Scale: 0.02 svg-px per mm (20 px per metre).
+    World -> svg mapping: X = 60 + z * 0.02, Y = 260 + x * 0.02.
+  -->
+  <style>
+    .board    { stroke:#222; stroke-width:5; fill:rgba(60,120,200,0.06); }
+    .crease   { stroke:#e0a300; stroke-width:2; fill:rgba(224,163,0,0.10); }
+    .goalline { stroke:#c0392b; stroke-width:2; }
+    .centre   { stroke:#c0392b; stroke-width:2; stroke-dasharray:6 4; }
+    .net      { stroke:#555; stroke-width:1.5; fill:rgba(120,120,120,0.20); }
+    .old      { fill:#3a8fd8; stroke:#0a3a44; stroke-width:1; }
+    .oldlbl   { font-size:10px; fill:#25547a; }
+    .new      { fill:#ff3b3b; stroke:#5a0000; stroke-width:1.5; }
+    .newlbl   { font-size:12px; fill:#b00000; font-weight:bold; }
+    .title    { font-size:18px; fill:#111; font-weight:bold; }
+    .sub      { font-size:12px; fill:#444; }
+    .axis     { font-size:11px; fill:#666; }
+    .end      { font-size:13px; fill:#333; font-style:italic; }
+  </style>
+
+  <rect x="0" y="0" width="920" height="540" fill="#f7f5ef"/>
+  <text x="20" y="28" class="title">Rink landmarks (top-down, 40 x 20 m)</text>
+  <text x="20" y="46" class="sub">
+    Red = new board landmarks. Blue = existing goal-cluster + centre-line landmarks.
+  </text>
+
+  <!-- Rink outline with 2 m rounded corners -->
+  <path d="M 100,60 L 820,60 A 40,40 0 0 1 860,100 L 860,420 A 40,40 0 0 1 820,460
+           L 100,460 A 40,40 0 0 1 60,420 L 60,100 A 40,40 0 0 1 100,60 Z" class="board"/>
+
+  <!-- End labels -->
+  <text x="80"  y="500" class="end">Goal A end (z = 0)</text>
+  <text x="740" y="500" class="end">Goal B end (z = 40 m)</text>
+
+  <!-- Goal-line stripes at each end (3500 mm from board) -->
+  <line x1="130" y1="65"  x2="130" y2="455" class="goalline"/>
+  <line x1="790" y1="65"  x2="790" y2="455" class="goalline"/>
+  <text x="132" y="76" class="axis">goal line A</text>
+  <text x="720" y="76" class="axis">goal line B</text>
+
+  <!-- Centre line (drawn as red dashed stripe across the width) -->
+  <line x1="460" y1="65"  x2="460" y2="455" class="centre"/>
+  <text x="464" y="76" class="axis">centre line</text>
+
+  <!-- Creases (5 m wide x 4 m deep) -->
+  <rect x="117" y="210" width="80" height="100" class="crease"/>
+  <rect x="723" y="210" width="80" height="100" class="crease"/>
+
+  <!-- Goal nets (mouth 1.6 m wide x depth 2.85 m back from goal line) -->
+  <rect x="73" y="244" width="57" height="32" class="net"/>
+  <rect x="790" y="244" width="57" height="32" class="net"/>
+
+  <!-- =================== EXISTING (blue) landmarks =================== -->
+  <!-- Goal A end. Crease: near = z=2850 (svg X=117), far = z=6850 (svg X=197).
+       L = world x=-2500 (svg Y=210), R = world x=+2500 (svg Y=310). -->
+  <circle cx="117" cy="210" r="4" class="old"/>
+  <text x="60" y="204" class="oldlbl">creaseNearL</text>
+  <circle cx="117" cy="310" r="4" class="old"/>
+  <text x="60" y="325" class="oldlbl">creaseNearR</text>
+  <circle cx="197" cy="210" r="4" class="old"/>
+  <text x="200" y="204" class="oldlbl">creaseFarL</text>
+  <circle cx="197" cy="310" r="4" class="old"/>
+  <text x="200" y="325" class="oldlbl">creaseFarR</text>
+
+  <circle cx="130" cy="244" r="4" class="old"/>
+  <text x="135" y="240" class="oldlbl">postL</text>
+  <circle cx="130" cy="276" r="4" class="old"/>
+  <text x="135" y="288" class="oldlbl">postR</text>
+
+  <circle cx="130" cy="90"  r="4" class="old"/>
+  <text x="135" y="94" class="oldlbl">faceoffL</text>
+  <circle cx="130" cy="430" r="4" class="old"/>
+  <text x="135" y="426" class="oldlbl">faceoffR</text>
+
+  <!-- Goal B end (mirrored: z increases toward centre, so near = z=37150). -->
+  <circle cx="803" cy="210" r="4" class="old"/>
+  <text x="810" y="204" class="oldlbl">creaseNearL</text>
+  <circle cx="803" cy="310" r="4" class="old"/>
+  <text x="810" y="325" class="oldlbl">creaseNearR</text>
+  <circle cx="723" cy="210" r="4" class="old"/>
+  <text x="640" y="204" class="oldlbl">creaseFarL</text>
+  <circle cx="723" cy="310" r="4" class="old"/>
+  <text x="640" y="325" class="oldlbl">creaseFarR</text>
+
+  <circle cx="790" cy="244" r="4" class="old"/>
+  <text x="740" y="240" class="oldlbl">postL</text>
+  <circle cx="790" cy="276" r="4" class="old"/>
+  <text x="740" y="288" class="oldlbl">postR</text>
+
+  <circle cx="790" cy="90"  r="4" class="old"/>
+  <text x="740" y="94"  class="oldlbl">faceoffL</text>
+  <circle cx="790" cy="430" r="4" class="old"/>
+  <text x="740" y="426" class="oldlbl">faceoffR</text>
+
+  <!-- Centre-line landmarks -->
+  <circle cx="460" cy="260" r="4" class="old"/>
+  <text x="466" y="256" class="oldlbl">centreSpot</text>
+  <circle cx="460" cy="90"  r="4" class="old"/>
+  <text x="466" y="94" class="oldlbl">centreFaceoffL</text>
+  <circle cx="460" cy="430" r="4" class="old"/>
+  <text x="466" y="426" class="oldlbl">centreFaceoffR</text>
+
+  <!-- =================== NEW (red) board landmarks =================== -->
+  <!-- Corner tangent points: where the straight long-side board meets the
+       2 m corner arc. World coords (x = +/- HALF_W, z = BOARD_R or RINK_L - BOARD_R). -->
+  <circle cx="100" cy="60"  r="7" class="new"/>
+  <text x="60"  y="52" class="newlbl">goalA_boardTangentL</text>
+  <circle cx="100" cy="460" r="7" class="new"/>
+  <text x="60"  y="478" class="newlbl">goalA_boardTangentR</text>
+  <circle cx="820" cy="60"  r="7" class="new"/>
+  <text x="700" y="52" class="newlbl">goalB_boardTangentL</text>
+  <circle cx="820" cy="460" r="7" class="new"/>
+  <text x="700" y="478" class="newlbl">goalB_boardTangentR</text>
+
+  <!-- Centre-line meets long board -->
+  <circle cx="460" cy="60"  r="7" class="new"/>
+  <text x="410" y="52" class="newlbl">boardCentreL</text>
+  <circle cx="460" cy="460" r="7" class="new"/>
+  <text x="410" y="478" class="newlbl">boardCentreR</text>
+
+  <!-- Legend -->
+  <g transform="translate(20, 520)">
+    <circle cx="6"  cy="0" r="6" class="new"/>
+    <text x="18" y="4" class="sub">new board landmarks (helps pin down far-from-goal pose)</text>
+    <circle cx="386" cy="0" r="4" class="old"/>
+    <text x="398" y="4" class="sub">existing landmarks (crease / posts / face-off / centre)</text>
+  </g>
+</svg>

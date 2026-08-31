@@ -1,5 +1,17 @@
 # CLAUDE.md
 
+## Product framing (read first)
+
+Two modes on one static site, see [docs/plan.md](docs/plan.md) for the full plan:
+- **Mode A - Tactical Planning** (`web/src/authoring/`): design plays; 2D
+  authoring, 2D or 3D recording.
+- **Mode B - Photo/Video Analysis** (`web/src/authoring/photo-overlay/`):
+  align a real photo/video to the rink, then reuse Mode A's compute layer
+  (`trajectory.js`, `coverage.js`, `goalie.js`) to derive tactical insights.
+
+Know which mode a change targets before coding. The compute layer is shared;
+only the input source differs.
+
 ## Coordinate conventions (read before touching camera/movement/placement code)
 
 - Units are millimetres throughout (rink, goal, ball, goalie all generated in mm).
@@ -104,6 +116,25 @@
   middle of the fog band. `topdown-camera.js` saves and clears `scene.fog`
   in `enterTopDown()` and restores it in `exitTopDown()`; anything else
   that swaps to the ortho camera needs to do the same or accept the dim.
+
+## Photo overlay (Mode B) gotchas
+
+- **Coplanar landmark trap**: solvePnP has a well-known depth/FOV ambiguity
+  when every placed landmark shares a Y coordinate. Auto-tune FOV then
+  chases a low-reprojection-error but wildly wrong pose (observed: 12
+  board-top-only points snapped to a "20° FOV" solve at 477 px error).
+  Landmark sets used for a solve must mix at least two of {floor y=0,
+  board-top y=500, post-top y=1150}. Border mode alone is not sufficient -
+  it's a supplement to named landmarks, not a replacement. `photo-overlay.js`
+  warns when the set is coplanar, but the underlying constraint is real.
+- **`new cv.Rect(x, y, w, h)` throws "Missing field: 'width'"** on the
+  `@techstark/opencv-js` build we use. The positional constructor is not
+  bound; use `new cv.Rect({x, y, width, height})` or (preferred) filter
+  contours by centroid position instead of pre-masking with a rect.
+- **OpenCV.js used is `@techstark/opencv-js`**, NOT the docs.opencv.org
+  build. The official docs build has zero `calib3d` symbols (no solvePnP,
+  Rodrigues, findHomography). If ever re-fetching, verify with
+  `node -e "console.log(fs.readFileSync('web/lib/opencv.js','utf8').includes('solvePnP'))"`.
 
 ## Verification
 

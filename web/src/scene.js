@@ -94,10 +94,21 @@ export function getActiveCamera() {
   return state.activeCamera;
 }
 
-export const renderer = new THREE.WebGLRenderer({ antialias: true });
+export const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
+// Explicit low z-index (below every HUD element, see index.html's z-index
+// list) so authoring/photo-overlay/'s #photo-canvas can sit behind it while
+// resized/repositioned to a sub-rectangle of the viewport during photo-lock.
+renderer.domElement.style.position = 'relative';
+renderer.domElement.style.zIndex = '2';
+
+// Photo-lock camera (authoring/photo-overlay/): a third camera solved from
+// a user-clicked photo via PnP (see photo-overlay/pnp.js), swapped into
+// state.activeCamera the same way topDownCamera is. Aspect/near/far are
+// placeholders until a photo is loaded and solved.
+export const photoCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 50, 200000);
 
 // Every other object in this scene (goal, goalie) treats local +Z as
 // "forward" (yaw 0). Three.js cameras default to looking down -Z, so we add
@@ -139,6 +150,10 @@ const surroundFloor = new THREE.Mesh(
 surroundFloor.rotation.x = -Math.PI / 2;
 surroundFloor.position.set(0, -5, RINK_L / 2);
 scene.add(surroundFloor);
+// Exposed so photo-overlay/view.js can hide it while photo-locked - the
+// giant opaque plane otherwise blankets the underlying photo instead of
+// showing just the scheme on top of it.
+export { surroundFloor };
 
 // --- layer: grey scene-reference grid (generic three.js helper) ---
 const gridCheckbox = document.getElementById('gridCheckbox');
