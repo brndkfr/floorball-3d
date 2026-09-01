@@ -56,6 +56,43 @@ let quad = null;        // { tl, tr, bl, br, midL, midR }, each [x,y] image px, 
 let quadEnabled = false;
 let quadDrag = null;    // { mode: 'move'|'point', key?, startQuad, startPointer } while dragging
 let quadJustHit = false; // true if the current mousedown->click cycle hit the quad - suppresses the click-to-place-landmark handler for just that cycle
+let roiJustHit = false;  // same idea for ROI-drag: the trailing 'click' fires AFTER mouseup already cleared roiMode/roiDrag, so those alone don't suppress it
+
+// Dragging an already-placed landmark marker to nudge it, instead of
+// having to re-arm + re-click from scratch. Position updates live on every
+// mousemove (cheap, just a redraw); the solve-triggering callback only
+// fires once on mouseup so dragging doesn't hammer solvePnP every frame.
+// A drag only becomes real once the mouse actually moves past a small
+// threshold - a plain click near an existing marker (very common when
+// placing tightly-clustered points) must fall through to normal landmark
+// placement, not silently grab/relocate whatever marker happens to be
+// nearby.
+let markerDrag = null;          // { key } once promoted to an actual drag
+let markerDragCandidate = null; // { key, startX, startY } - mousedown hit a marker, not yet moved enough to count
+let markerJustHit = false;      // true only once promoted - suppresses the trailing click-to-place-landmark handler
+let onMarkerMoved = null;  // (key, imgXY) => void, set by photo-overlay.js
+export function setMarkerMovedHandler(fn) { onMarkerMoved = fn; }
+
+// Resolves a landmark key to a friendly display label for the on-photo
+// marker text (e.g. "goalA_postL" -> "Goal A - left post (base)") - kept
+// as an injected callback rather than importing landmarks.js directly, so
+// this module stays domain-agnostic. Falls back to the raw key.
+let labelResolver = (key) => key;
+export function setLabelResolver(fn) { labelResolver = fn || ((key) => key); }
+
+function hitTestMarker(clientX, clientY) {
+  if (!image) return null;
+  const vr = computeViewRect();
+  const tol = 12; // fixed screen px - markers are drawn at a fixed screen size regardless of zoom
+  let bestKey = null, bestDist = Infinity;
+  for (const [key, xy] of placed) {
+    const cx = vr.x + (xy[0] / image.width) * vr.w;
+    const cy = vr.y + (xy[1] / image.height) * vr.h;
+    const d = Math.hypot(clientX - cx, clientY - cy);
+    if (d < tol && d < bestDist) { bestDist = d; bestKey = key; }
+  }
+  return bestKey;
+}
 let mirrorLR = false;
 let swapEnds = false;   // top edge = Goal B instead of Goal A (photo shot from the other end)
 
@@ -212,6 +249,23 @@ export function getRinkFitLandmarks() {
 // WebGL renderer canvas and the preview strips drift off the 3D mesh.
 export function resetView() { resetZoom(); redraw(); }
 
+// Whether every one of the given landmark keys (or all currently placed,
+// if omitted) falls within the CURRENT viewport - lets a caller reset zoom
+// only when something would actually be invisible, instead of always
+// snapping back to the full photo on every auto-detect call (which was
+// disorienting when repeatedly re-running detect while already zoomed in
+// on a region that already showed everything fine).
+export function arePointsVisible(keys) {
+  if (!image) return true;
+  const vr = computeViewRect();
+  const list = (keys ? keys.map((k) => placed.get(k)) : [...placed.values()]).filter(Boolean);
+  return list.every(([px, py]) => {
+    const sx = vr.x + (px / image.width) * vr.w;
+    const sy = vr.y + (py / image.height) * vr.h;
+    return sx >= 0 && sx <= canvas.width && sy >= 0 && sy <= canvas.height;
+  });
+}
+
 // Frame a region of the ORIGINAL image (roi in image px) so it fills as
 // much of the canvas as possible with a small margin. Used when the user
 // has drawn an ROI around the goal and wants to click landmarks precisely
@@ -249,6 +303,13 @@ export function setShowMarkers(v) { showMarkers = v; redraw(); }
 let previewStrips = []; // [{ color, points: [[x,y], ...] }, ...]
 export function setPreviewStrips(strips) { previewStrips = strips || []; redraw(); }
 
+// Drives the guided "alignment check" slider (docs/plan.md 4.3 Step 2):
+// 0 = photo alone, 1 = full-strength overlay, in between fades the strips -
+// a continuous before/after comparison instead of the raw reprojection
+// error number, which becomes a secondary badge.
+let previewOpacity = 1;
+export function setPreviewOpacity(v) { previewOpacity = Math.max(0, Math.min(1, v)); redraw(); }
+
 // Semi-transparent Canny-edge overlay drawn on top of the photo so
 // landmark clicks can snap to visible edges (goal frame, board line,
 // crease outline) regardless of photo colours. Coordinates match the
@@ -266,6 +327,22 @@ let roi = null;                     // { x, y, w, h } in image px
 let roiMode = false;                // true while user is drag-to-define
 let roiDrag = null;                 // { startImg: [x,y] } while dragging
 export function getRoi() { return roi; }
+
+// Lets "just scroll-zoom onto the goal, then Auto-detect" scope detection
+// to what's on screen without the separate explicit ROI-drag gesture -
+// the current view rect, converted back to ORIGINAL image px and clipped
+// to the canvas bounds. Returns null at zoom=1 (whole image, same as no ROI).
+export function getViewRoi() {
+  if (!image || zoom <= MIN_ZOOM) return null;
+  const vr = computeViewRect();
+  const scaleX = vr.w / image.width, scaleY = vr.h / image.height;
+  const x0 = Math.max(0, (0 - vr.x) / scaleX);
+  const x1 = Math.min(image.width, (canvas.width - vr.x) / scaleX);
+  const y0 = Math.max(0, (0 - vr.y) / scaleY);
+  const y1 = Math.min(image.height, (canvas.height - vr.y) / scaleY);
+  if (x1 <= x0 || y1 <= y0) return null;
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
 export function clearRoi() { roi = null; redraw(); }
 export function setRoiMode(on) {
   roiMode = on;
@@ -289,6 +366,7 @@ function redraw() {
   if (edgeOverlayEnabled && edgeOverlay) {
     ctx.drawImage(edgeOverlay, vr.x, vr.y, vr.w, vr.h);
   }
+  ctx.globalAlpha = previewOpacity;
   for (const strip of previewStrips) {
     ctx.strokeStyle = strip.color;
     ctx.lineWidth = 2;
@@ -301,22 +379,32 @@ function redraw() {
     }
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
   ctx.lineWidth = 1;
   if (!showMarkers) return; // locked photo-view: preview strips only, no cyan calibration crosshairs
   ctx.font = '11px Consolas, monospace';
   let i = 0;
-  for (const [, xy] of placed) {
+  for (const [key, xy] of placed) {
     const cx = vr.x + (xy[0] / image.width) * vr.w;
     const cy = vr.y + (xy[1] / image.height) * vr.h;
     i++;
-    ctx.strokeStyle = '#4fe0ff';
-    ctx.fillStyle = '#4fe0ff';
-    ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2); ctx.stroke();
+    const dragging = markerDrag && markerDrag.key === key;
+    ctx.strokeStyle = dragging ? '#ffe14f' : '#4fe0ff';
+    ctx.fillStyle = dragging ? '#ffe14f' : '#4fe0ff';
+    ctx.beginPath(); ctx.arc(cx, cy, dragging ? 7 : 5, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(cx - 9, cy); ctx.lineTo(cx + 9, cy);
     ctx.moveTo(cx, cy - 9); ctx.lineTo(cx, cy + 9);
     ctx.stroke();
-    ctx.fillText(String(i), cx + 8, cy - 8);
+    // Outlined text (dark stroke behind the fill) so the label stays
+    // legible over any photo background, not just dark ones.
+    const label = `#${i} ${labelResolver(key)}`;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    ctx.strokeText(label, cx + 10, cy - 8);
+    ctx.fillStyle = dragging ? '#ffe14f' : '#4fe0ff';
+    ctx.fillText(label, cx + 10, cy - 8);
+    ctx.lineWidth = 1;
   }
   if (roi) {
     const rx = vr.x + (roi.x / image.width) * vr.w;
@@ -403,7 +491,7 @@ export function getPlacedPoints() {
 
 canvas.addEventListener('click', (e) => {
   if (!image || !onClickLandmark) return;
-  if (roiMode || roiDrag || quadJustHit) return; // suppress landmark placement while defining ROI or interacting with the rink outline
+  if (roiMode || roiDrag || quadJustHit || roiJustHit || markerJustHit) return; // suppress landmark placement while defining ROI or interacting with the rink outline / an existing marker
   const vr = computeViewRect();
   const { clientX: cx, clientY: cy } = e;
   if (cx < vr.x || cx > vr.x + vr.w || cy < vr.y || cy > vr.y + vr.h) return;
@@ -446,6 +534,9 @@ canvas.addEventListener('contextmenu', (e) => { if (image) e.preventDefault(); }
 canvas.addEventListener('mousedown', (e) => {
   if (!image) return;
   quadJustHit = false;
+  roiJustHit = false;
+  markerJustHit = false;
+  markerDragCandidate = null;
   if (e.button === 0 && quadEnabled && quad) {
     const [ix, iy] = clientToImage(e.clientX, e.clientY);
     const hit = hitTestQuad(ix, iy);
@@ -456,8 +547,18 @@ canvas.addEventListener('mousedown', (e) => {
       return;
     }
   }
+  if (e.button === 0 && !roiMode && !quadEnabled) {
+    const hitKey = hitTestMarker(e.clientX, e.clientY);
+    if (hitKey) {
+      // Don't commit to a drag yet - wait for actual movement (see mousemove)
+      // so a plain click here still falls through to placing a new landmark.
+      markerDragCandidate = { key: hitKey, startX: e.clientX, startY: e.clientY };
+      return;
+    }
+  }
   if (e.button === 0 && roiMode) {
     e.preventDefault();
+    roiJustHit = true;
     const [ix, iy] = clientToImage(e.clientX, e.clientY);
     roiDrag = { startImg: [ix, iy] };
     roi = { x: ix, y: iy, w: 0, h: 0 };
@@ -469,11 +570,27 @@ canvas.addEventListener('mousedown', (e) => {
   panning = { startX: e.clientX, startY: e.clientY, startPanX: panX, startPanY: panY };
 });
 window.addEventListener('mousemove', (e) => {
+  if (markerDragCandidate && image) {
+    const dx = e.clientX - markerDragCandidate.startX, dy = e.clientY - markerDragCandidate.startY;
+    if (Math.hypot(dx, dy) < 4) return; // not a real drag yet - leave it as a pending click
+    markerDrag = { key: markerDragCandidate.key };
+    markerJustHit = true;
+    markerDragCandidate = null;
+  }
+  if (markerDrag && image) {
+    const [ix, iy] = clientToImage(e.clientX, e.clientY);
+    placed.set(markerDrag.key, [ix, iy]);
+    redraw();
+    return;
+  }
   if (quadDrag && image) {
     const [ix, iy] = clientToImage(e.clientX, e.clientY);
     updateQuadDrag(ix, iy);
     redraw();
     return;
+  }
+  if (!quadDrag && !roiDrag && !panning && image && !quadEnabled && !roiMode) {
+    canvas.style.cursor = hitTestMarker(e.clientX, e.clientY) ? 'grab' : '';
   }
   if (roiDrag && image) {
     const [ix, iy] = clientToImage(e.clientX, e.clientY);
@@ -493,6 +610,19 @@ window.addEventListener('mousemove', (e) => {
   redraw();
 });
 window.addEventListener('mouseup', () => {
+  if (markerDragCandidate) {
+    // Never moved past the threshold - it was a plain click, not a drag.
+    // Leave the marker untouched and let the trailing 'click' event
+    // through normally (it may place a different, newly-armed landmark).
+    markerDragCandidate = null;
+    return;
+  }
+  if (markerDrag) {
+    const key = markerDrag.key;
+    markerDrag = null;
+    if (onMarkerMoved) onMarkerMoved(key, placed.get(key));
+    return;
+  }
   if (quadDrag) { quadDrag = null; return; }
   if (roiDrag) {
     roiDrag = null;

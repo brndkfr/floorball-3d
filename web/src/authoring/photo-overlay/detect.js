@@ -123,7 +123,33 @@ export async function computeEdgeOverlay(image, maxSide = 2048) {
 // from red spectators / ads / referee jerseys outside the goal region.
 export async function detectGoal(image, roi = null) {
   const cv = await loadOpenCV();
-  const { mat: rgba, scale } = imageToMat(cv, image);
+  // With an ROI, crop to it (plus a margin) BEFORE downscaling, instead of
+  // filtering contours after downscaling the WHOLE photo. A zoomed-in ROI
+  // on a large phone photo (e.g. 3072x4080) was getting squeezed down to a
+  // literal handful of pixels by the flat maxSide=1024 whole-image cap -
+  // at that scale the fixed 5x5 morphology kernel erased the (now
+  // wafer-thin) goal frame entirely, leaving only small red
+  // artifacts/reflections to win the aspect-ratio scoring (observed: an
+  // 11x7px downscaled "goal"). Cropping first keeps the goal at a much
+  // higher effective resolution, fixing both the erosion and the
+  // false-positive problem at once - no separate post-hoc ROI-overlap
+  // contour filter needed any more.
+  let srcImage = image, offsetX = 0, offsetY = 0;
+  if (roi) {
+    const marginX = roi.w * 0.25, marginY = roi.h * 0.25;
+    offsetX = Math.max(0, roi.x - marginX);
+    offsetY = Math.max(0, roi.y - marginY);
+    const cropW = Math.min(image.width - offsetX, roi.w + marginX * 2);
+    const cropH = Math.min(image.height - offsetY, roi.h + marginY * 2);
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = Math.max(1, Math.round(cropW));
+    cropCanvas.height = Math.max(1, Math.round(cropH));
+    cropCanvas.getContext('2d').drawImage(
+      image, offsetX, offsetY, cropW, cropH, 0, 0, cropCanvas.width, cropCanvas.height
+    );
+    srcImage = cropCanvas;
+  }
+  const { mat: rgba, scale } = imageToMat(cv, srcImage);
   const rgb = new cv.Mat(), hsv = new cv.Mat();
   cv.cvtColor(rgba, rgb, cv.COLOR_RGBA2RGB);
   cv.cvtColor(rgb, hsv, cv.COLOR_RGB2HSV);
@@ -135,23 +161,18 @@ export async function detectGoal(image, roi = null) {
   cv.morphologyEx(mask, mask, cv.MORPH_CLOSE, kernel);
   cv.morphologyEx(mask, mask, cv.MORPH_OPEN, kernel);
 
-  // ROI in downscaled coords. We filter contours by centroid-inside-ROI
-  // rather than pre-masking the mask, because @techstark/opencv-js's
-  // binding refuses positional cv.Rect construction on some Chromium
-  // builds ("Missing field: 'width'"). Filtering after findContours
-  // sidesteps the whole issue and is just as effective for our purpose.
-  const roiSmall = roi ? {
-    x: roi.x * scale, y: roi.y * scale,
-    w: roi.w * scale, h: roi.h * scale,
-  } : null;
-
   const contours = new cv.MatVector(), hierarchy = new cv.Mat();
-  cv.findContours(mask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+  // RETR_CCOMP (not EXTERNAL): keeps a 2-level hierarchy (shapes + their
+  // holes) so text can be told apart from a real goal frame - see below.
+  cv.findContours(mask, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
+  // hierarchy is a 1xNx4 Mat: [next, previous, firstChild, parent] per contour.
+  const hierData = hierarchy.data32S;
+  const parentOf = (i) => hierData[i * 4 + 3];
 
   let best = null;
-  // With a manual ROI, drop the tiny-area and upper-2/3 heuristics - the
-  // user has already told us where to look.
-  const minArea = roi ? 4 : (mask.rows * mask.cols) * 0.0005;
+  // Relative to the working mat's own area either way - self-scaling
+  // whether or not we cropped, so no more special-cased near-zero floor.
+  const minArea = (mask.rows * mask.cols) * 0.0005;
   // Goal frame is ~1.4x wider than tall (mouth 1.6m x posts 1.15m plus
   // perspective) - anything more than ~2.5:1 is almost certainly a red
   // banner ad rather than the goal frame. Score each candidate by how
@@ -159,21 +180,33 @@ export async function detectGoal(image, roi = null) {
   // so the largest goal-shaped blob wins - not just the largest red blob.
   const IDEAL_ASPECT = 1.4;
   for (let i = 0; i < contours.size(); i++) {
+    if (parentOf(i) !== -1) continue; // a hole (letter stroke, gap), not a candidate shape
     const c = contours.get(i);
     const info = contourAreaRect(cv, c);
     if (info.area < minArea) { c.delete(); continue; }
     const cx = info.rect.center.x, cy = info.rect.center.y;
     const bb = cv.boundingRect(c);
-    if (roiSmall) {
-      const ox = Math.max(0, Math.min(bb.x + bb.width, roiSmall.x + roiSmall.w) - Math.max(bb.x, roiSmall.x));
-      const oy = Math.max(0, Math.min(bb.y + bb.height, roiSmall.y + roiSmall.h) - Math.max(bb.y, roiSmall.y));
-      const overlap = (ox * oy) / Math.max(1, bb.width * bb.height);
-      if (overlap < 0.7) { c.delete(); continue; }
-    } else if (cy > mask.rows * 0.75) {
-      c.delete(); continue;
-    }
+    // Reject stuff in the bottom quarter of frame only when searching the
+    // WHOLE photo (spectators/floor clutter) - meaningless for a tight
+    // goal crop, which legitimately may fill most of its own frame.
+    if (!roi && cy > mask.rows * 0.75) { c.delete(); continue; }
     const aspect = bb.width / Math.max(1, bb.height);
     if (aspect > 3 || aspect < 0.3) { c.delete(); continue; }
+    // Sponsor-banner text (e.g. white lettering on a red board) shows up
+    // as MANY small holes punched into one solid blob under hierarchical
+    // contour detection - a real goal frame has at most one big hole (the
+    // net/mouth interior), never a scatter of small letter-shaped ones.
+    // Reject candidates that look text-laden rather than frame-shaped.
+    let holeCount = 0, maxHoleArea = 0;
+    for (let j = 0; j < contours.size(); j++) {
+      if (parentOf(j) !== i) continue;
+      const hc = contours.get(j);
+      const ha = cv.contourArea(hc);
+      if (ha > maxHoleArea) maxHoleArea = ha;
+      holeCount++;
+      hc.delete();
+    }
+    if (holeCount >= 4 && maxHoleArea < info.area * 0.2) { c.delete(); continue; }
     // Score inversely to aspect-ratio distance from IDEAL_ASPECT (log so
     // that being 2x off matters roughly the same in either direction),
     // multiplied by area so we still prefer bigger goal-shaped blobs
@@ -184,11 +217,34 @@ export async function detectGoal(image, roi = null) {
     else c.delete();
   }
 
-  const result = best
-    ? { corners: orderCorners(best.pts).map(([x, y]) => [x / scale, y / scale]),
-        // bbox in downscaled coords, used by crease detection
-        _bboxSmall: cv.boundingRect(best.contour) }
-    : null;
+  let result = null;
+  if (best) {
+    // `cv.minAreaRect` fits the smallest rectangle enclosing the WHOLE red
+    // blob - at a rounded corner joint (a ball/fillet wider than the
+    // straight tube), that bounding-rect corner sits at the ball's outer
+    // tangent, not its centre, which is the actual world-space corner we
+    // want. Verified via a pixel-level crop test: ~4% of the goal's own
+    // size, consistently biased outward/diagonally away from the frame's
+    // centre. Shrink each corner toward the quad's own centroid to
+    // compensate - a plain average correction, not geometry-perfect, but
+    // corrects the dominant systematic error instead of none at all.
+    const CORNER_INSET_FRAC = 0.07;
+    const cx0 = best.pts.reduce((s, p) => s + p[0], 0) / best.pts.length;
+    const cy0 = best.pts.reduce((s, p) => s + p[1], 0) / best.pts.length;
+    const insetPts = best.pts.map(([x, y]) => [
+      x + (cx0 - x) * CORNER_INSET_FRAC,
+      y + (cy0 - y) * CORNER_INSET_FRAC,
+    ]);
+    const corners = orderCorners(insetPts).map(([x, y]) => [x / scale + offsetX, y / scale + offsetY]);
+    const xs = corners.map((p) => p[0]), ys = corners.map((p) => p[1]);
+    result = {
+      corners,
+      // ORIGINAL image px, always - detectCrease rescales this into its
+      // own working-mat space itself rather than assuming a shared scale
+      // (detectGoal's mat may now be a crop, detectCrease's never is).
+      bbox: { x: Math.min(...xs), y: Math.min(...ys), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) },
+    };
+  }
 
   if (best) best.contour.delete();
   hierarchy.delete(); contours.delete(); mask.delete(); kernel.delete();
@@ -202,25 +258,43 @@ export async function detectGoal(image, roi = null) {
 export async function detectCrease(image, goalResult) {
   if (!goalResult) return null;
   const cv = await loadOpenCV();
-  const { mat: rgba, scale } = imageToMat(cv, image);
+
+  // Crop to the search window (in ORIGINAL image px) BEFORE detecting,
+  // same fix as detectGoal and for the same reason: filtering contours
+  // AFTER running on the whole photo only checked each contour's
+  // CENTROID against the window, not its extent - a big white sponsor
+  // banner (e.g. text merged into one blob by the MORPH_CLOSE below) can
+  // have its centroid land inside the window while its actual corners
+  // sprawl across most of the photo width. Cropping first makes that
+  // impossible: there are no banner pixels left in the working mat.
+  const gb = goalResult.bbox;
+  const win = {
+    x: Math.max(0, gb.x - gb.width * 1.2),
+    y: Math.max(0, gb.y - gb.height * 0.3),
+    w: gb.width * 3.4,
+    h: gb.height * 3.5,
+  };
+  win.w = Math.min(win.w, image.width - win.x);
+  win.h = Math.min(win.h, image.height - win.y);
+  const cropCanvas = document.createElement('canvas');
+  cropCanvas.width = Math.max(1, Math.round(win.w));
+  cropCanvas.height = Math.max(1, Math.round(win.h));
+  cropCanvas.getContext('2d').drawImage(
+    image, win.x, win.y, win.w, win.h, 0, 0, cropCanvas.width, cropCanvas.height
+  );
+
+  const { mat: rgba, scale } = imageToMat(cv, cropCanvas);
   const rgb = new cv.Mat(), hsv = new cv.Mat();
   cv.cvtColor(rgba, rgb, cv.COLOR_RGBA2RGB);
   cv.cvtColor(rgb, hsv, cv.COLOR_RGB2HSV);
 
   const white = maskWhite(cv, hsv);
 
-  // Build a spatial ROI centred on the goal, extended downward + sideways.
-  // Crease depth (4 m) + width (5 m) is ~3x the goal-mouth width in world
-  // units; in screen space we're generous because perspective foreshortens
-  // it a lot. We filter contours by their bounding-box overlap with this
-  // ROI rather than masking, to avoid the same cv.Rect construction bug
-  // that hits detectGoal on some Chromium builds.
-  const g = goalResult._bboxSmall;
-  const searchRoi = {
-    x: Math.max(0, g.x - g.width * 1.2),
-    y: Math.max(0, g.y - g.height * 0.3),
-    w: g.width * 3.4,
-    h: g.height * 3.5,
+  // Goal bbox converted into this crop's own working-mat scale, for the
+  // containment/area scoring below.
+  const g = {
+    x: (gb.x - win.x) * scale, y: (gb.y - win.y) * scale,
+    width: gb.width * scale, height: gb.height * scale,
   };
 
   // Close gaps: crease line is thin (paint), broadcast sharpening leaves
@@ -237,11 +311,6 @@ export async function detectCrease(image, goalResult) {
   for (let i = 0; i < contours.size(); i++) {
     const c = contours.get(i);
     const bb = cv.boundingRect(c);
-    // Skip contours whose centroid falls outside our search ROI - kills
-    // the huge boards/rink contour and any spectator whites.
-    const bcx = bb.x + bb.width / 2, bcy = bb.y + bb.height / 2;
-    if (bcx < searchRoi.x || bcx > searchRoi.x + searchRoi.w ||
-        bcy < searchRoi.y || bcy > searchRoi.y + searchRoi.h) { c.delete(); continue; }
     const overlapX = Math.max(0, Math.min(bb.x + bb.width, g.x + g.width) - Math.max(bb.x, g.x));
     const overlapY = Math.max(0, Math.min(bb.y + bb.height, g.y + g.height) - Math.max(bb.y, g.y));
     const goalArea = g.width * g.height || 1;
@@ -256,7 +325,7 @@ export async function detectCrease(image, goalResult) {
   let corners = null;
   if (best) {
     const info = contourAreaRect(cv, best.contour);
-    corners = orderCorners(info.pts).map(([x, y]) => [x / scale, y / scale]);
+    corners = orderCorners(info.pts).map(([x, y]) => [x / scale + win.x, y / scale + win.y]);
     best.contour.delete();
   }
 

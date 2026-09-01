@@ -10,7 +10,7 @@ import { WORLD_LANDMARKS, LANDMARK_LABELS, MIN_LANDMARKS } from './landmarks.js'
 import { solveCameraPose } from './pnp.js';
 import * as photoCanvas from './photo-canvas.js';
 import { enterPhoto, exitPhoto, isPhoto, fitToPhotoRect, setOverlayOpacity } from './view.js';
-import { detectGoal, detectCrease, computeEdgeOverlay } from './detect.js';
+import { detectGoal, computeEdgeOverlay } from './detect.js';
 import { readFocalLength35mm, focal35mmToHFovDeg } from './exif.js';
 import * as borderMode from './border-mode.js';
 import { RINK_L, HALF_W, GOAL_LINE_FROM_BOARD } from '../../constants.js';
@@ -38,6 +38,7 @@ const rinkFitUseTop = document.getElementById('photoRinkFitUseTop');
 const rinkFitConfirmBtn = document.getElementById('photoRinkFitConfirmBtn');
 const rinkFitCancelBtn = document.getElementById('photoRinkFitCancelBtn');
 const autoDetectBtn = document.getElementById('photoAutoDetectBtn');
+const flipLRBtn = document.getElementById('photoFlipLRBtn');
 const autoDetectEnd = document.getElementById('photoAutoDetectEnd');
 const roiBtn = document.getElementById('photoRoiBtn');
 const autoFovBtn = document.getElementById('photoAutoFovBtn');
@@ -48,6 +49,12 @@ const advancedToggle = document.getElementById('photoAdvancedToggle');
 const advancedPanel = document.getElementById('photoAdvanced');
 const autoBanner = document.getElementById('photoAutoBanner');
 const refineBtn = document.getElementById('photoRefineBtn');
+const alignSlider = document.getElementById('photoAlignSlider');
+const hintPanel = document.getElementById('photoHintPanel');
+const hintText = document.getElementById('photoHintText');
+const hintDiagram = document.getElementById('photoHintDiagram');
+const hintSkipBtn = document.getElementById('photoHintSkipBtn');
+const landmarksDetails = document.getElementById('photoLandmarksDetails');
 
 const fovSlider = document.getElementById('photoFovSlider');
 const fovValue = document.getElementById('photoFovValue');
@@ -180,7 +187,95 @@ function buildList() {
 function armLandmark(key) {
   armedKey = key;
   listEl.querySelectorAll('.photo-landmark-row').forEach((r) => r.classList.toggle('armed', r.dataset.key === key));
+  if (guidedActive) updateHintDisplay(key);
 }
+
+// Guided Step 2 manual fallback (docs/plan.md 4.3): one hint at a time
+// instead of the full 30+ row checklist. A curated 8-point sequence per
+// goal end - mixes floor (crease/post base) and post-top landmarks so the
+// coplanar-set trap (4.2) never happens even if the user only ever
+// follows the hints. The full list stays reachable via the <details>
+// disclosure for anyone who wants to add/adjust further.
+let guidedActive = false;
+let guidedQueue = [];
+let guidedCurrent = null;
+
+function guidedSequence(end) {
+  return [
+    `${end}_creaseNearL`, `${end}_creaseNearR`,
+    `${end}_postL`, `${end}_postR`,
+    `${end}_postTopL`, `${end}_postTopR`,
+    `${end}_boardTangentL`, `${end}_boardTangentR`,
+  ];
+}
+
+// Small top-down rink sketch (world mm mapped to an SVG viewBox) with a
+// highlighted dot at the hinted landmark - cheaper to build correctly than
+// wire up a whole diagram asset, and it's generic over any landmark key.
+function renderHintDiagram(key) {
+  const world = WORLD_LANDMARKS[key];
+  if (!world) { hintDiagram.innerHTML = ''; return; }
+  const [x, , z] = world;
+  const margin = 1500;
+  const vbW = HALF_W * 2 + margin * 2, vbH = RINK_L + margin * 2;
+  const sx = x + HALF_W + margin, sy = z + margin;
+  const goalW = 1600, goalD = 600;
+  hintDiagram.innerHTML = `
+    <svg viewBox="0 0 ${vbW} ${vbH}">
+      <rect x="${margin}" y="${margin}" width="${HALF_W * 2}" height="${RINK_L}" rx="600" ry="600"
+            fill="none" stroke="#4fe0ff" stroke-width="80" opacity="0.6"/>
+      <rect x="${HALF_W + margin - goalW / 2}" y="${margin - goalD / 2}" width="${goalW}" height="${goalD}"
+            fill="none" stroke="#ff8c1a" stroke-width="60"/>
+      <rect x="${HALF_W + margin - goalW / 2}" y="${RINK_L + margin - goalD / 2}" width="${goalW}" height="${goalD}"
+            fill="none" stroke="#ff8c1a" stroke-width="60"/>
+      <circle cx="${sx}" cy="${sy}" r="500" fill="#ffe14f" stroke="#1a120a" stroke-width="60"/>
+    </svg>`;
+}
+
+function updateHintDisplay(key) {
+  hintText.textContent = `Click: ${LANDMARK_LABELS[key] || key}`;
+  renderHintDiagram(key);
+}
+
+function advanceGuided() {
+  guidedCurrent = null;
+  while (guidedQueue.length) {
+    const key = guidedQueue.shift();
+    if (photoCanvas.getPlacedPoints().some((p) => p.key === key)) continue;
+    guidedCurrent = key;
+    const row = listEl.querySelector(`[data-key="${key}"]`);
+    const cb = row?.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = true;
+    armLandmark(key);
+    return;
+  }
+  endGuidedHints();
+}
+
+function startGuidedHints(end) {
+  guidedQueue = guidedSequence(end).filter(
+    (key) => !photoCanvas.getPlacedPoints().some((p) => p.key === key)
+  );
+  guidedActive = true;
+  if (landmarksDetails) landmarksDetails.open = false;
+  hintPanel.style.display = 'block';
+  advanceGuided();
+}
+
+function endGuidedHints() {
+  guidedActive = false;
+  guidedQueue = [];
+  guidedCurrent = null;
+  hintPanel.style.display = 'none';
+}
+
+hintSkipBtn.addEventListener('click', () => { if (guidedActive) advanceGuided(); });
+
+// Opening the full list is the escape hatch to manual/power-user mode -
+// stop steering once the user has taken the wheel themselves.
+landmarksDetails?.addEventListener('toggle', () => {
+  if (landmarksDetails.open && guidedActive) endGuidedHints();
+});
 
 function firstUncheckedUnplaced() {
   const placedKeys = new Set(photoCanvas.getPlacedPoints().map((p) => p.key));
@@ -203,10 +298,19 @@ photoCanvas.setLandmarkClickHandler((imgX, imgY) => {
   row.classList.add('placed');
   row.classList.remove('armed');
   armedKey = null;
-  const next = firstUncheckedUnplaced();
-  if (next) armLandmark(next);
+  if (guidedActive) {
+    advanceGuided();
+  } else {
+    const next = firstUncheckedUnplaced();
+    if (next) armLandmark(next);
+  }
   trySolve();
 });
+
+// Dragging an already-placed marker (photo-canvas.js) nudges its stored
+// pixel position live; only re-solve once the drag ends, not every frame.
+photoCanvas.setMarkerMovedHandler(() => { trySolve(); });
+photoCanvas.setLabelResolver((key) => LANDMARK_LABELS[key] || key);
 
 // Border-mode landmarks are added at runtime (dynamic keys boardTop_N) so
 // they need a bespoke row: no checkbox, just "labelled dot + remove" - and
@@ -252,7 +356,7 @@ borderMode.setOnCommit((key, world, photoXY) => {
 
 borderModeBtn.addEventListener('click', () => {
   const on = !borderMode.isEnabled();
-  if (on) syncBorderFocus();
+  if (on) { syncBorderFocus(); endGuidedHints(); }
   borderMode.setEnabled(on);
   borderModeBtn.textContent = on ? 'Border mode: ON' : 'Border mode: off';
   borderModeBtn.classList.toggle('active', on);
@@ -406,6 +510,9 @@ fileInput.addEventListener('change', async () => {
   rinkFitPanel.style.display = 'none';
   photoCanvas.setPendingMarker(null);
   armedKey = null;
+  endGuidedHints();
+  alignSlider.value = 100;
+  photoCanvas.setPreviewOpacity(1);
   edgesComputed = false;
   edgesToggle.checked = false;
   photoCanvas.setEdgeOverlayEnabled(false);
@@ -426,23 +533,23 @@ fileInput.addEventListener('change', async () => {
   advancedPanel.style.display = 'none';
   advancedToggle.textContent = 'Advanced ▶';
 
-  // Guided Step 2 (docs/plan.md 4.3): try to align automatically before
-  // asking the user to click anything - errors are swallowed since this
-  // just falls through to the existing manual landmark flow either way.
-  try {
-    const end = autoDetectEnd.value === 'B' ? 'goalB' : 'goalA';
-    await detectAndPlace(end);
-  } catch (err) {
-    console.error('auto-align on load failed', err);
-  }
-  const pose = await trySolve();
-  if (pose && pose.reprojErrorPx < 10 && photoCanvas.getPlacedPoints().length >= MIN_LANDMARKS) {
-    autoBanner.style.display = 'block';
-  }
+  // Whole-image auto-detect on load turned out unreliable in practice -
+  // real photos often have other large red objects (sponsor banners,
+  // spectator chairs) competing with the actual goal for the red-mask
+  // detector, with nothing yet narrowing the search. Go straight to
+  // guided hints instead; auto-detect only runs once the user zooms into
+  // the goal themselves via the ROI tool (docs/plan.md 4.3 Step 2 -
+  // see setRoiChangeHandler below), which is the one point we can
+  // actually trust the search is scoped to the right area.
+  startGuidedHints(autoDetectEnd.value === 'B' ? 'goalB' : 'goalA');
 });
 
 opacitySlider.addEventListener('input', () => {
   if (isPhoto()) setOverlayOpacity(Number(opacitySlider.value) / 100);
+});
+
+alignSlider.addEventListener('input', () => {
+  photoCanvas.setPreviewOpacity(Number(alignSlider.value) / 100);
 });
 
 fovSlider.addEventListener('input', () => {
@@ -511,16 +618,23 @@ async function autoPlace(key, imgXY) {
   }
 }
 
-// Core of "Auto-detect goal + crease": finds the goal/crease in the image,
-// solves both L/R screen-to-world mappings, keeps the better one, and
-// places the resulting landmarks. Shared by the manual button and the
-// automatic run-on-load in Step 2 of the guided flow (docs/plan.md 4.3).
+// Core of "Auto-detect goal": finds the goal in the image, solves both
+// L/R screen-to-world mappings, keeps the better one, and places the 4
+// resulting corner landmarks. Deliberately goal-only - crease auto-detect
+// proved unreliable across every real-photo test this session (banner
+// text, goalie occlusion, spectator chairs all confuse it) while the goal
+// frame, once properly ROI-scoped, has been solid. Crease/board/face-off
+// landmarks are left for manual placement. Shared by the manual button
+// and the automatic run after zooming into an ROI (docs/plan.md 4.3).
 async function detectAndPlace(end) {
   if (!photoCanvas.hasPhoto()) return { ok: false, message: 'load a photo first' };
   const image = photoCanvas.getImage();
-  const g = await detectGoal(image, photoCanvas.getRoi());
+  // Explicit ROI-drag wins if set; otherwise scope to whatever's currently
+  // on screen if the user has scroll-zoomed in, so "zoom onto the goal,
+  // then Auto-detect" narrows the search without a separate ROI gesture.
+  const roi = photoCanvas.getRoi() || photoCanvas.getViewRoi();
+  const g = await detectGoal(image, roi);
   if (!g) return { ok: false, message: 'auto-detect: no red goal found (place manually)' };
-  const c = await detectCrease(image, g);
 
   // Screen L/R doesn't determine world L/R (depends on camera side of
   // the rink). Try both mappings and keep whichever gives lower
@@ -529,18 +643,10 @@ async function detectAndPlace(end) {
   const buildKeyed = (swap) => {
     const L = swap ? 'R' : 'L', R = swap ? 'L' : 'R';
     const [tl, tr, br, bl] = g.corners;
-    const kp = [
+    return [
       [`${end}_postTop${L}`, tl], [`${end}_postTop${R}`, tr],
       [`${end}_post${R}`, br],    [`${end}_post${L}`, bl],
     ];
-    if (c) {
-      const [ctl, ctr, cbr, cbl] = c.corners;
-      kp.push(
-        [`${end}_creaseFar${L}`, ctl], [`${end}_creaseFar${R}`, ctr],
-        [`${end}_creaseNear${R}`, cbr], [`${end}_creaseNear${L}`, cbl],
-      );
-    }
-    return kp;
   };
   const size = photoCanvas.getImageSize();
   const intr = currentIntrinsics(size);
@@ -559,15 +665,40 @@ async function detectAndPlace(end) {
     chosenKp = buildKeyed(false);
   }
   for (const [key, xy] of chosenKp) await autoPlace(key, xy);
+  // Safety net: only reset zoom if a placed point would actually be
+  // off-screen (e.g. a very tight ROI) - not expected in the normal case
+  // now that only the 4 goal points get auto-placed.
+  if (!photoCanvas.arePointsVisible(chosenKp.map(([key]) => key))) {
+    photoCanvas.resetView();
+  }
   return {
     ok: true,
     count: chosenKp.length,
-    message: `auto-detect: goal placed${c ? ' + crease' : ''} - review + nudge, then place a couple of board landmarks`,
+    message: 'auto-detect: goal placed - review + nudge, then place crease/board/face-off landmarks manually',
   };
+}
+
+// Runs auto-detect + solve, then either shows the "aligned for you" banner
+// or falls back to guided hints - shared by whichever call site currently
+// triggers auto-align (docs/plan.md 4.3 Step 2: only once the user has
+// zoomed into the goal area, not on file load).
+async function tryAutoAlign(end) {
+  try {
+    await detectAndPlace(end);
+  } catch (err) {
+    console.error('auto-align failed', err);
+  }
+  const pose = await trySolve();
+  if (pose && pose.reprojErrorPx < 10 && photoCanvas.getPlacedPoints().length >= MIN_LANDMARKS) {
+    autoBanner.style.display = 'block';
+  } else {
+    startGuidedHints(end);
+  }
 }
 
 autoDetectBtn.addEventListener('click', async () => {
   if (!photoCanvas.hasPhoto()) { errorEl.textContent = 'load a photo first'; return; }
+  endGuidedHints();
   const end = autoDetectEnd.value === 'B' ? 'goalB' : 'goalA';
   const prev = autoDetectBtn.textContent;
   autoDetectBtn.disabled = true;
@@ -586,6 +717,37 @@ autoDetectBtn.addEventListener('click', async () => {
     autoDetectBtn.disabled = false;
     autoDetectBtn.textContent = prev;
   }
+});
+
+// A goal viewed near head-on is close to bilaterally symmetric, so the L/R
+// swap trial in detectAndPlace can end up choosing near-tied reprojection
+// errors (observed: differing in the 6th decimal place) - no amount of
+// "pick the lower error" reliably resolves that. Swap the KEYS of the 4
+// goal points (pixel positions stay put) so the user can fix a mirrored
+// result in one click instead of re-placing everything by hand.
+flipLRBtn.addEventListener('click', () => {
+  const end = autoDetectEnd.value === 'B' ? 'goalB' : 'goalA';
+  const placedByKey = new Map(photoCanvas.getPlacedPoints().map((p) => [p.key, p.image]));
+  const pairs = [
+    [`${end}_postTopL`, `${end}_postTopR`],
+    [`${end}_postL`, `${end}_postR`],
+  ];
+  let swapped = 0;
+  for (const [a, b] of pairs) {
+    const xyA = placedByKey.get(a), xyB = placedByKey.get(b);
+    if (xyA && xyB) {
+      photoCanvas.placeLandmark(a, xyB);
+      photoCanvas.placeLandmark(b, xyA);
+      swapped++;
+    }
+  }
+  if (swapped === 0) {
+    errorEl.textContent = 'no goal post landmarks placed yet - nothing to flip';
+    errorEl.classList.add('bad');
+    errorEl.classList.remove('ok');
+    return;
+  }
+  trySolve();
 });
 
 autoFovBtn.addEventListener('click', async () => {
@@ -650,7 +812,12 @@ photoCanvas.setRoiChangeHandler((r) => {
   roiBtn.textContent = r ? 'Clear ROI + reset zoom' : 'Draw + zoom to goal region';
   if (r) {
     photoCanvas.zoomToRoi(r);
-    errorEl.textContent = 'zoomed in - click landmarks precisely (double-click photo to zoom back out, single click on photo places the armed landmark)';
+    errorEl.textContent = 'zoomed in - detecting...';
+    // This IS "zoomed into the goal area" (docs/plan.md 4.3 Step 2) - the
+    // one point auto-detect's search window can actually be trusted, so
+    // this is where auto-align now runs (not on file load - see the
+    // fileInput handler above).
+    tryAutoAlign(autoDetectEnd.value === 'B' ? 'goalB' : 'goalA');
   }
 });
 
@@ -684,6 +851,7 @@ function leaveRinkFit() {
 
 rinkFitBtn.addEventListener('click', () => {
   if (!photoCanvas.hasPhoto()) { errorEl.textContent = 'load a photo first'; return; }
+  endGuidedHints();
   syncBorderFocus();
   photoCanvas.setRinkFitEnabled(true);
   rinkFitPanel.style.display = 'block';

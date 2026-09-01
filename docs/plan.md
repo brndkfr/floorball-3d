@@ -51,6 +51,26 @@ around indefinitely.
 logic touched. `Library` is a placeholder ("coming soon"), per the open
 question in section 10.
 
+### Design system
+
+Chosen stack: **Open Props** (spacing/radius/shadow/type tokens) +
+**Shoelace** web components (buttons, tabs, sliders, drawers, alerts -
+framework-agnostic, no build step) + **Radix Colors** (accessible 12-step
+colour scales) for the palette, with a small semantic token layer on top
+(`--surface-1/2/3`, `--accent`, `--team-home`/`--team-away`,
+`--vector-pass`/`--vector-shot`/`--vector-coverage`).
+
+All three are vendored locally under `web/lib/` (same pattern as
+`web/lib/opencv.js`) rather than pulled from a CDN, so the app has no
+runtime dependency on a third-party host. See
+`/memories/repo/design-system-vendoring.md` for the re-vendoring steps and a
+Shoelace self-hosting gotcha (base-path resolution) hit while wiring it up.
+
+A working demo of the shell + tokens + a Mode B stepper screen lives in
+`web/design-sample/` (not part of the shipped app; a visual reference to
+port from). It also demonstrates the chip-anchored popover pattern from
+section 3.3.
+
 ---
 
 ## 3. Mode A - Tactical Planning
@@ -78,6 +98,21 @@ and the 2D reference plan [docs/reference/floorball-board-clone-plan.md](referen
 Those describe a different product (2D clone) but their feature list is a
 useful checklist when building Mode A's UX.
 
+From the design-system exploration (`web/design-sample/`), worth building
+into the real app:
+
+- **Chip-anchored popovers**: a screen-space popover attached to a chip's
+  ground position (player name, ball-carrier badge, quick insight line)
+  instead of a separate side panel - replaces the flat dock's per-chip
+  property editing.
+- **Semantic colour tokens for insight overlays**: named tokens
+  (`--vector-pass`, `--vector-shot`, `--vector-coverage`, `--team-home`,
+  `--team-away`) instead of ad-hoc hex in `trajectory.js`/`coverage.js`, so
+  Mode A and Mode B render insights with the same palette.
+- **Wireframe/contour overlay mode**: a high-contrast outline-only render
+  mode for the rink/goal overlay in Mode B, for photos where a solid
+  overlay is hard to see against similar-coloured backgrounds.
+
 ---
 
 ## 4. Mode B - Photo/Video Analysis
@@ -102,10 +137,22 @@ playback + tracking + interpolation).
 - [exif.js](../web/src/authoring/photo-overlay/exif.js) - reads
   `FocalLengthIn35mmFilm` to seed FOV.
 - Auto-tune FOV sweep with coarse+fine passes.
-- **Step 2 auto-align on load**: `detectGoal`/`detectCrease` run automatically
-  when a photo drops; a "we aligned it for you" banner + Refine button skip
-  the manual flow if reprojection error < 10px on >= 6 points. FOV/k1/edge
-  overlay/border-mode now live behind an "Advanced" accordion.
+- **Step 2 auto-align moved from file-load to zoom-into-goal** (revised
+  this session): `detectGoal`/`detectCrease` no longer run automatically
+  on file drop - whole-image detection proved unreliable in practice (see
+  4.2), routinely picking a sponsor banner or spectator chairs over the
+  actual goal, since nothing yet narrows the search. Auto-align now runs
+  right after the user zooms into the goal via "Draw + zoom to goal
+  region" (`setRoiChangeHandler`), the one point the search window can
+  actually be trusted; a "we aligned it for you" banner + Refine button
+  still skip the manual flow if reprojection error < 10px on >= 6 points.
+  FOV/k1/edge overlay/border-mode live behind an "Advanced" accordion.
+- **Scroll-zoom scopes Auto-detect**: `photoCanvas.getViewRoi()` derives an
+  implicit ROI from the current scroll-zoomed/panned view (in original image
+  px) when no explicit ROI-drag rect is set. "Auto-detect goal + crease"
+  now uses whichever is set, explicit ROI first - so scroll-zooming onto
+  the goal before clicking Auto-detect narrows the search the same way the
+  dedicated ROI-drag tool does, without a separate gesture.
 - **Border-mode minimap zoom**: `setFocusEnd()` zooms the minimap to whichever
   goal end the "detect as" dropdown names, instead of always showing the
   full 40m rink at a tiny scale.
@@ -130,16 +177,110 @@ playback + tracking + interpolation).
   coplanar flag, camera pose - and rink-outline confirms. Inspectable via
   browser tools (`page.evaluate(() => window.__photoOverlayDebugLog)`)
   without needing console access or screenshots.
+- **Guided one-hint-at-a-time manual fallback**: when auto-align doesn't
+  reach < 10px error, a curated 8-point sequence per goal end (crease
+  near-L/R, post base L/R, post-top L/R, board tangent L/R - mixes y=0 and
+  y=1150 so the coplanar trap can't happen even via hints alone) is
+  presented one at a time with an inline top-down SVG diagram highlighting
+  where that point is, auto-advancing on each click. A "can't see this
+  point - skip" button moves to the next hint without placing anything.
+  The full 30+ row checklist is still reachable behind an "All landmarks"
+  `<details>` disclosure, which also ends guided mode if opened (manual
+  override).
+- **Before/after alignment slider**: a 0-100 slider fades the solved
+  preview strips over the photo (0 = photo alone, 100 = full overlay),
+  giving a continuous visual alignment signal instead of only a number.
+  The raw reprojection error text is now a small badge, not the primary UI.
 
 ### 4.2 Known problems
 
+- **Auto-detect on a zoomed ROI used to nuke the goal frame** - fixed.
+  `detectGoal` was always downscaling the WHOLE photo to maxSide=1024
+  before filtering by ROI, so a small ROI on a large phone photo (e.g.
+  3072x4080) squeezed the goal down to a handful of pixels; the fixed 5x5
+  morphology kernel then erased the (now wafer-thin) frame entirely,
+  leaving only a small red artifact to win the aspect-ratio scoring
+  (observed: an 11x7px "goal" from a real 12MP photo). Now crops to the
+  ROI (plus 25% margin) at full resolution *before* downscaling - verified
+  a subsequent detect on a cropped goal recovers a bounding box matching
+  the goal's actual on-screen size almost exactly.
+- **ROI-drag was silently placing the armed landmark at the drag-release
+  point** - fixed. The `click` event fires after `mouseup` already cleared
+  `roiMode`/`roiDrag`, so the click handler's guard never actually
+  suppressed it. Added a `roiJustHit` flag (mirrors the existing
+  `quadJustHit` pattern for the rink-outline tool).
+- **detectCrease's white sponsor-banner text false positive** - fixed with
+  the same crop-before-detect approach: a large white banner blob (e.g.
+  "die Mobiliar" sponsor text merged by the closing morphology) could have
+  its centroid land inside the crease search window while its corners
+  sprawled across nearly the whole photo. Cropping to the window before
+  running the white mask makes that impossible. Goalie-gear occlusion of
+  the actual crease paint remains a real, unsolved hard case (classical CV
+  can't tell white pads from white paint) - manual nudge/skip is still the
+  fallback there.
+- **Auto-detect is now goal-only** - crease auto-detection has been
+  removed entirely (not just gated behind a crop fix). Every real-photo
+  test this session hit a different crease failure mode (banner text,
+  goalie occlusion) while the goal frame, once properly ROI-scoped, was
+  reliable. `detectAndPlace()` only ever places the 4 post corners now;
+  crease/board/face-off landmarks are manual-only.
+- **Goal-only L/R disambiguation is fundamentally unreliable near head-on
+  angles** - confirmed via direct test (not theorized): the two L/R-swap
+  trial solves on the repo's ground-truth photo differed in reprojection
+  error at the 6th decimal place (0.909927... vs 0.909930...), and the
+  "pick lower error" heuristic chose the WRONG (mirrored) one, verified
+  against ground-truth labels baked into the test image. A goal viewed
+  near head-on is close to bilaterally symmetric, so no amount of
+  error-based tie-breaking reliably resolves it - this needs either a
+  second, asymmetric real-world cue (which crease auto-detect could have
+  provided, but that's now removed - see above) or a manual override.
+  Added a **"Flip left/right" button**: swaps the 4 placed goal points'
+  world-space keys (pixel positions unchanged) in one click, instead of
+  re-placing everything by hand when the overlay looks mirrored.
+- **Detected goal corners were biased ~4-7% off the true corner** - fixed.
+  `cv.minAreaRect` fits the smallest rectangle enclosing the whole red
+  blob, including each corner's rounded ball/fillet joint - that
+  bounding-rect corner sits at the ball's outer tangent, not its centre.
+  Verified with a pixel-level crop test (10x zoom, no smoothing) and
+  fixed by shrinking each corner toward the quad's centroid by a tuned
+  7% (`CORNER_INSET_FRAC`), re-verified the same way until the crosshair
+  landed on the joint's visual centre.
+- **Auto-detect fails on broadcast photos** where a red sponsor banner
+  sits directly behind/above the goal - **partially addressed**. The
+  detector was choosing the banner over the actual goal frame (banner is
+  larger/more solid than the thinner, net-occluded frame, so it won on
+  area). Added a hole/hierarchy-based text filter: `cv.RETR_CCOMP` +
+  reading each candidate's child contours lets us reject blobs with many
+  small holes (banner text letters carved out of the solid colour) while
+  still accepting a real goal frame's one big hole (the net/mouth
+  interior). No new dependency - reuses the already-vendored opencv.js;
+  MSER was considered but isn't actually present in this build (checked).
+  Verified no regression on the repo's ground-truth test photo. Not yet
+  re-verified against a real banner-contaminated photo (needs a real
+  phone photo upload, not reproducible with files in the repo) - aspect-
+  ratio scoring alone still isn't sufficient on its own, per the original
+  note; manual clicks remain the fallback if the hole filter doesn't
+  catch a specific banner's font/layout.
+- **Placed landmark markers are now draggable directly on the photo**:
+  click-drag any existing cyan crosshair to nudge its position (position
+  updates live; re-solve fires once on drag release, not per-frame). A
+  drag only counts once the mouse moves past a small threshold - a plain
+  click near an existing marker (common with tightly-clustered points)
+  falls through to normal landmark placement instead of silently grabbing/
+  relocating whatever marker happened to be nearby (a real regression
+  caught and fixed in the same session it was introduced). Markers also
+  show a friendly label (`#3 Goal A - left post (base)`) with an
+  outlined/legible style, not just a bare number.
+- **Auto-detect no longer force-resets zoom on every call** - it only
+  resets if some newly-placed point would actually be off-screen given
+  the current view (`photoCanvas.arePointsVisible()`), instead of always
+  snapping back to the full photo - repeatedly re-running auto-detect
+  while already zoomed into a good view no longer yanks the zoom back
+  each time.
 - **Coplanar landmark trap**: solvePnP has a depth/FOV ambiguity when all
   placed points share a Y coordinate. Auto-tune FOV then converges to
   wrong values (observed: 20° on a mid-focal shot). Mix at least two of
   {floor y=0, post-top y=1150, board-top y=500}. Warning banner is shipped.
-- **Auto-detect fails on broadcast photos** where red LED ads sit behind
-  the red goal. Aspect-ratio scoring helps but isn't sufficient. Manual
-  clicks remain the fallback.
 - **Manual calibration UX is a dev console** - 20+ controls at once, no
   guidance. The stepper redesign in 4.3 addresses this.
 - **Long-baseline point sensitivity**: board/centre-line points ~16-20m from
@@ -150,22 +291,28 @@ playback + tracking + interpolation).
   Neither the coplanar warning nor the per-point error catches this before
   the fact - always re-check the overall reprojection error line after
   adding far points, don't assume more points = better.
-- **Rink-outline tool has no zoom/pan while dragging** - handles must be
-  placed at whatever zoom level `photo-canvas.js` happens to be at, which
-  makes precisely hitting small/far features (like the centre-line board
-  point) hard on a full-photo view. Next step (not yet built): let the user
-  zoom/pan the photo while the rink-outline quad is active, the way
-  landmark clicking already supports via scroll-to-zoom.
+- **Rink-outline tool zoom/pan**: verified working - wheel-zoom and
+  right-click-drag pan are wired at the top level in
+  [photo-canvas.js](../web/src/authoring/photo-overlay/photo-canvas.js),
+  independent of rink-fit mode, and handle hit-test tolerance is
+  scale-invariant (constant ~12 screen px regardless of zoom). No longer a
+  known problem as of this session.
 
 ### 4.3 Target UX (guided stepper)
 
-Four steps, one primary action per step:
+Four steps, one primary action per step. **Step 1 and Step 2 are fully
+shipped**; Steps 3-4 depend on Phase 2/3.
 
 **Step 1 - Photo/Video**: drag-drop area, thumbnail. For video, pick a
 frame to analyze first (per-frame in v1).
 
-**Step 2 - Align**:
-- On load, automatically run `readFocalLength35mm` + `detectGoal` + `detectCrease`.
+**Step 2 - Align** (shipped):
+- On load, seed the FOV slider from `readFocalLength35mm` (EXIF) if
+  present, then go straight to guided hints - `detectGoal`/`detectCrease`
+  do NOT run on the whole image (revised this session; unreliable, see
+  4.2). Auto-detect instead runs automatically once the user zooms into
+  the goal via "Draw + zoom to goal region" - that ROI is what makes the
+  search trustworthy.
 - If reprojection error < 10 px on >= 6 points, skip to Step 3 with a
   "we aligned it for you" banner + "Refine" button.
 - Manual fallback presents **one guided hint at a time** ("Click the
@@ -224,7 +371,7 @@ frame.photo = {
 
 | Phase | Content | Status |
 |-------|---------|--------|
-| 1 | Manual PnP calibration | shipped; guided auto-align (4.3 Step 2), rink-outline quad tool, and debug logging shipped this session. Remaining: rink-outline zoom/pan (4.2), one-hint-at-a-time manual fallback (4.3 Step 2), before/after alignment slider |
+| 1 | Manual PnP calibration | **shipped, all items closed.** Guided auto-align (4.3 Step 2), rink-outline quad tool + zoom/pan (verified already working via wheel/right-drag, independent of quad mode), debug logging, one-hint-at-a-time manual fallback stepper (curated 8-point sequence per goal end, inline top-down SVG diagram, skip button), and a continuous before/after alignment slider (fades preview strips 0-100%, reprojection error demoted to a small badge) |
 | 2 | YOLO player auto-detect | not started |
 | 3 | Insights compute + UI | not started; reuses Mode A modules |
 | 4 | Auto-pose facing (MoveNet / YOLO-Pose) | deferred, Option 2 in 4.3 |

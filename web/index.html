@@ -333,9 +333,19 @@
   .photo-landmark-row.placed { opacity:0.6; }
   .photo-landmark-row .err { font-size:10px; color:#c8c8c8; font-variant-numeric:tabular-nums; }
   .photo-landmark-row .err.worst { color:#ff8080; font-weight:bold; }
-  #photoReprojError { margin-top:8px; font-size:11px; }
+  #photoReprojError {
+    margin-top:4px; font-size:10px; display:inline-block; padding:2px 8px;
+    border-radius:10px; background:rgba(255,255,255,0.08);
+  }
   #photoReprojError.ok { color:#7ee06b; }
   #photoReprojError.bad { color:#ff8080; }
+  .photo-hint-panel {
+    display:none; margin-top:6px; padding:8px; border-radius:6px;
+    border:1px solid var(--hud-accent-dim); background:rgba(79,224,255,0.06);
+  }
+  #photoHintText { font-size:12px; font-weight:bold; color:var(--hud-accent); }
+  #photoHintDiagram svg { width:100%; max-width:150px; display:block; margin:6px auto; }
+  #photoHintSkipBtn { margin-top:2px; }
 
   /* --- App shell: persistent left rail + top bar (docs/plan.md section 2).
      Fixed, unpositioned ancestors of nothing - all existing HUD panels stay
@@ -565,15 +575,28 @@
         <div id="photoBorderModeMount"></div>
       </div>
     </div>
-    <div style="opacity:0.7; margin-top:6px; font-size:11px;">
-      check a landmark below, then click it on the photo (crease corners +
-      post tops give the best fix - avoid an all-floor set). Scroll to zoom
-      in on the photo, right-click-drag to pan, double-click to reset.
+    <div id="photoHintPanel" class="photo-hint-panel" style="display:none;">
+      <div id="photoHintText"></div>
+      <div id="photoHintDiagram"></div>
+      <button id="photoHintSkipBtn" class="dock-btn" style="font-size:10px; padding:2px 6px;">Cannot see this point - skip</button>
     </div>
-    <div id="photoLandmarkList" style="margin-top:6px; max-height:220px; overflow-y:auto;"></div>
+    <div style="margin-top:8px;">
+      <label style="font-size:11px; opacity:0.85; display:block;">alignment check <span style="opacity:0.6;">(0% = photo only, 100% = full overlay)</span></label>
+      <input type="range" id="photoAlignSlider" min="0" max="100" value="100" style="width:100%;">
+    </div>
     <div id="photoReprojError">0/6 landmarks placed</div>
+    <details id="photoLandmarksDetails" style="margin-top:6px;">
+      <summary style="cursor:pointer; font-size:11px; opacity:0.85;">All landmarks (manual pick)</summary>
+      <div style="opacity:0.7; margin-top:6px; font-size:11px;">
+        check a landmark below, then click it on the photo (crease corners +
+        post tops give the best fix - avoid an all-floor set). Scroll to zoom
+        in on the photo, right-click-drag to pan, double-click to reset.
+      </div>
+      <div id="photoLandmarkList" style="margin-top:6px; max-height:220px; overflow-y:auto;"></div>
+    </details>
     <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
-      <button id="photoAutoDetectBtn" class="dock-btn" title="Try to find the goal (red frame) and crease (white paint) automatically. Works best on unoccluded, well-lit photos - manually nudge any misplaced landmark after.">Auto-detect goal + crease</button>
+      <button id="photoAutoDetectBtn" class="dock-btn" title="Try to find the goal (red frame) automatically. Works best on unoccluded, well-lit photos - manually nudge any misplaced landmark after. Tip: scroll-zoom onto the goal first to narrow the search to what's on screen.">Auto-detect goal</button>
+      <button id="photoFlipLRBtn" class="dock-btn" title="Goal-only detection can't always tell world-left from world-right apart (a near head-on goal shot is almost mirror-symmetric) - click this if the overlay looks mirrored after Enter Photo View or in the alignment-check slider.">Flip left/right</button>
       <button id="photoRoiBtn" class="dock-btn" title="Draw a box around the goal - the photo zooms into that box so you can click landmarks precisely. Also constrains auto-detect to the boxed area.">Draw + zoom to goal region</button>
       <label style="font-size:11px; opacity:0.75;">
         detect as: <select id="photoAutoDetectEnd">
