@@ -1,0 +1,50 @@
+/* Semantic aliases over Radix (dark) + Open Props.
+   Rename these; the raw scale steps stay hidden from components. */
+:root {
+  color-scheme: dark;
+
+  /* surfaces (Radix slate-dark scale) */
+  --surface-0: var(--slate-1);
+  --surface-1: var(--slate-2);
+  --surface-2: var(--slate-3);
+  --surface-3: var(--slate-4);
+  --surface-hi: var(--slate-6);
+  --border-1: var(--slate-6);
+  --border-2: var(--slate-7);
+
+  /* text */
+  --text-1: var(--slate-12);
+  --text-2: var(--slate-11);
+  --text-3: var(--slate-10);
+
+  /* accents */
+  --accent: var(--blue-9);
+  --accent-hi: var(--blue-10);
+  --accent-lo: var(--blue-4);
+  --warn: var(--amber-9);
+  --danger: var(--tomato-9);
+
+  /* floorball domain tokens */
+  --team-home: var(--tomato-9);
+  --team-away: var(--amber-9);
+  --vector-pass: var(--lime-10);
+  --vector-shot: var(--amber-10);
+  --vector-coverage: var(--blue-10);
+
+  /* type */
+  --font-display: 600 var(--font-size-5) / 1.15 var(--font-sans);
+  --font-body: 400 var(--font-size-2) / 1.5 var(--font-sans);
+  --font-mono: 400 var(--font-size-1) / 1.4 var(--font-mono);
+
+  /* Shoelace theme overrides so its components use our accent */
+  --sl-color-primary-500: var(--blue-9);
+  --sl-color-primary-600: var(--blue-10);
+  --sl-color-primary-700: var(--blue-11);
+  --sl-color-neutral-0: var(--slate-1);
+  --sl-color-neutral-50: var(--slate-2);
+  --sl-color-neutral-100: var(--slate-3);
+  --sl-color-neutral-950: var(--slate-12);
+  --sl-input-background-color: var(--surface-2);
+  --sl-panel-background-color: var(--surface-1);
+  --sl-panel-border-color: var(--border-1);
+}

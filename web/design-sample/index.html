@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Floorball Studio - design sample</title>
+
+  <link rel="stylesheet" href="../lib/open-props/open-props.min.css" />
+  <link rel="stylesheet" href="../lib/open-props/normalize.min.css" />
+
+  <link rel="stylesheet" href="../lib/radix-colors/blue-dark.css" />
+  <link rel="stylesheet" href="../lib/radix-colors/slate-dark.css" />
+  <link rel="stylesheet" href="../lib/radix-colors/amber-dark.css" />
+  <link rel="stylesheet" href="../lib/radix-colors/tomato-dark.css" />
+  <link rel="stylesheet" href="../lib/radix-colors/lime-dark.css" />
+
+  <link rel="stylesheet" href="../lib/shoelace/themes/dark.css" />
+  <!-- data-shoelace must be an absolute path: the autoloader's dynamic imports
+       resolve relative paths against the chunk file's own URL, not the page's -->
+  <script type="module" src="../lib/shoelace/shoelace-autoloader.js" data-shoelace="/lib/shoelace"></script>
+
+  <link rel="stylesheet" href="./tokens.css" />
+  <link rel="stylesheet" href="./app.css" />
+</head>
+<body class="sl-theme-dark">
+
+  <aside class="rail">
+    <div class="rail__brand">
+      <span class="rail__logo">FS</span>
+      <span class="rail__wordmark">Floorball<br/>Studio</span>
+    </div>
+    <nav class="rail__nav">
+      <button class="rail__item" data-view="plan">
+        <sl-icon name="pencil-square"></sl-icon>
+        <span>Plan</span>
+      </button>
+      <button class="rail__item is-active" data-view="analyze">
+        <sl-icon name="camera-video"></sl-icon>
+        <span>Analyze</span>
+      </button>
+      <button class="rail__item" data-view="library">
+        <sl-icon name="collection"></sl-icon>
+        <span>Library</span>
+      </button>
+    </nav>
+    <div class="rail__foot">
+      <sl-tooltip content="Design tokens">
+        <button class="rail__item" data-view="tokens">
+          <sl-icon name="palette"></sl-icon>
+          <span>Tokens</span>
+        </button>
+      </sl-tooltip>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <div class="topbar__crumbs">
+      <span class="crumb crumb--muted">Analyze</span>
+      <sl-icon name="chevron-right"></sl-icon>
+      <span class="crumb">Vaasa vs Nokian - 12:41</span>
+      <sl-badge variant="neutral" pill>photo</sl-badge>
+    </div>
+    <div class="topbar__actions">
+      <sl-button size="small" variant="default">
+        <sl-icon slot="prefix" name="share"></sl-icon>
+        Share
+      </sl-button>
+      <sl-button size="small" variant="primary">
+        <sl-icon slot="prefix" name="download"></sl-icon>
+        Export
+      </sl-button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="stage__viewport" aria-label="Preview">
+      <div class="viewport__photo">
+        <div class="viewport__court" aria-hidden="true"></div>
+        <div class="viewport__overlay-lines" aria-hidden="true"></div>
+
+        <div class="chip chip--home" style="--x: 32%; --y: 58%">7</div>
+        <div class="chip chip--home" style="--x: 46%; --y: 44%">10</div>
+        <div class="chip chip--home chip--carrier" style="--x: 58%; --y: 62%">
+          9
+          <span class="chip__popover">
+            <span class="chip__popover-title">Player 9 - carrier</span>
+            <span class="chip__popover-row">
+              <sl-icon name="bullseye"></sl-icon> Shot on target
+            </span>
+            <span class="chip__popover-row chip__popover-row--warn">
+              <sl-icon name="exclamation-triangle"></sl-icon> Coverage gap top-left
+            </span>
+          </span>
+        </div>
+        <div class="chip chip--away" style="--x: 66%; --y: 40%">4</div>
+        <div class="chip chip--away" style="--x: 74%; --y: 56%">2</div>
+
+        <svg class="vectors" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <defs>
+            <marker id="arrow-shot" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--vector-shot)"/>
+            </marker>
+            <marker id="arrow-pass" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--vector-pass)"/>
+            </marker>
+          </defs>
+          <path d="M58,62 Q70,40 88,30" stroke="var(--vector-shot)" stroke-width="0.6" fill="none" marker-end="url(#arrow-shot)"/>
+          <path d="M58,62 L46,44" stroke="var(--vector-pass)" stroke-width="0.5" fill="none" marker-end="url(#arrow-pass)" stroke-dasharray="1.4 1"/>
+          <path d="M58,62 L32,58" stroke="var(--vector-pass)" stroke-width="0.5" fill="none" marker-end="url(#arrow-pass)" stroke-dasharray="1.4 1"/>
+        </svg>
+
+        <div class="viewport__badge">
+          <sl-icon name="check-circle"></sl-icon>
+          Aligned - 3.4 px avg, 8 points
+        </div>
+      </div>
+
+      <div class="scrubber">
+        <sl-icon-button name="skip-backward-fill" label="prev"></sl-icon-button>
+        <sl-icon-button name="play-fill" label="play"></sl-icon-button>
+        <sl-icon-button name="skip-forward-fill" label="next"></sl-icon-button>
+        <sl-range min="0" max="100" value="34" style="flex:1"></sl-range>
+        <span class="scrubber__time">00:04 / 00:12</span>
+      </div>
+    </section>
+
+    <aside class="inspector">
+      <sl-tab-group placement="top">
+        <sl-tab slot="nav" panel="align" active>1. Align</sl-tab>
+        <sl-tab slot="nav" panel="players">2. Players</sl-tab>
+        <sl-tab slot="nav" panel="insights">3. Insights</sl-tab>
+
+        <sl-tab-panel name="align">
+          <sl-alert variant="success" open>
+            <sl-icon slot="icon" name="check-circle"></sl-icon>
+            <strong>Auto-aligned.</strong> Reprojection error 3.4 px on 8 points.
+          </sl-alert>
+
+          <div class="field">
+            <label class="field__label">Overlay opacity</label>
+            <sl-range min="0" max="100" value="65"></sl-range>
+          </div>
+
+          <div class="field">
+            <label class="field__label">Compare</label>
+            <sl-button-group label="compare mode">
+              <sl-button size="small">Photo</sl-button>
+              <sl-button size="small" variant="primary">Split</sl-button>
+              <sl-button size="small">Overlay</sl-button>
+            </sl-button-group>
+          </div>
+
+          <div class="field">
+            <label class="field__label">Line style</label>
+            <sl-button-group label="line style">
+              <sl-button size="small" variant="primary"><sl-icon slot="prefix" name="fill"></sl-icon>Solid</sl-button>
+              <sl-button size="small"><sl-icon slot="prefix" name="bounding-box"></sl-icon>Wireframe</sl-button>
+              <sl-button size="small"><sl-icon slot="prefix" name="stars"></sl-icon>High-vis</sl-button>
+            </sl-button-group>
+          </div>
+
+          <sl-details summary="Advanced">
+            <div class="field">
+              <label class="field__label">FOV <span class="field__value">62°</span></label>
+              <sl-range min="20" max="100" value="62"></sl-range>
+            </div>
+            <div class="field">
+              <label class="field__label">k1 distortion <span class="field__value">-0.08</span></label>
+              <sl-range min="-30" max="30" value="-8"></sl-range>
+            </div>
+            <sl-switch>Edge overlay</sl-switch>
+            <sl-switch>Border-mode snap</sl-switch>
+          </sl-details>
+
+          <div class="cta">
+            <sl-button variant="primary" size="large">
+              Continue to players
+              <sl-icon slot="suffix" name="arrow-right"></sl-icon>
+            </sl-button>
+          </div>
+        </sl-tab-panel>
+
+        <sl-tab-panel name="players">
+          <p class="muted">Placeholder - drag chips to correct positions.</p>
+        </sl-tab-panel>
+        <sl-tab-panel name="insights">
+          <p class="muted">Placeholder - shot, coverage, passing alternatives.</p>
+        </sl-tab-panel>
+      </sl-tab-group>
+    </aside>
+  </main>
+
+  <section class="tokens" hidden aria-label="Design tokens">
+    <h2>Design tokens</h2>
+
+    <h3>Semantic surfaces</h3>
+    <div class="swatches">
+      <div class="swatch" style="background:var(--surface-1)">surface-1</div>
+      <div class="swatch" style="background:var(--surface-2)">surface-2</div>
+      <div class="swatch" style="background:var(--surface-3)">surface-3</div>
+      <div class="swatch" style="background:var(--accent)">accent</div>
+      <div class="swatch" style="background:var(--warn)">warn</div>
+      <div class="swatch" style="background:var(--danger)">danger</div>
+    </div>
+
+    <h3>Floorball insight tokens</h3>
+    <div class="swatches">
+      <div class="swatch" style="background:var(--team-home)">team-home</div>
+      <div class="swatch" style="background:var(--team-away);color:#111">team-away</div>
+      <div class="swatch" style="background:var(--vector-pass);color:#111">vector-pass</div>
+      <div class="swatch" style="background:var(--vector-shot)">vector-shot</div>
+      <div class="swatch" style="background:var(--vector-coverage)">vector-coverage</div>
+    </div>
+
+    <h3>Typography</h3>
+    <p style="font: var(--font-display)">Display - Vaasa vs Nokian</p>
+    <p style="font: var(--font-body)">Body - the goalie left the far post uncovered as #9 pulled wide.</p>
+    <p style="font: var(--font-mono)">Mono - reproj 3.42 px / 8 pts</p>
+  </section>
+
+  <script type="module">
+    const rail = document.querySelectorAll('.rail__item');
+    const stage = document.querySelector('.stage');
+    const tokens = document.querySelector('.tokens');
+    rail.forEach(btn => btn.addEventListener('click', () => {
+      rail.forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      const view = btn.dataset.view;
+      const showTokens = view === 'tokens';
+      stage.hidden = showTokens;
+      tokens.hidden = !showTokens;
+    }));
+  </script>
+</body>
+</html>
