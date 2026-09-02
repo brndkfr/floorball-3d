@@ -73,6 +73,76 @@ let markerJustHit = false;      // true only once promoted - suppresses the trai
 let onMarkerMoved = null;  // (key, imgXY) => void, set by photo-overlay.js
 export function setMarkerMovedHandler(fn) { onMarkerMoved = fn; }
 
+// Player chips + ball marker (Phase 2 Step 3, docs/phase-2-plan.md T4).
+// Domain-agnostic like the rest of this module - photo-overlay.js owns the
+// team-colour/world-coordinate meaning, this just draws/drags image px.
+let playerChips = []; // [{ id, imagePx:[x,y], team, isCarrier }]
+let ballMarker = null; // [x,y] image px, or null
+let chipDrag = null;          // { id } once promoted to an actual drag
+let chipDragCandidate = null; // { id, startX, startY }
+let chipJustHit = false;      // suppresses the trailing click while dragging a chip
+let ballDrag = null;
+let ballDragCandidate = null;
+let ballJustHit = false;
+let onPlayerChipMoved = null; // (id, imgXY) => void
+let onBallMoved = null;       // (imgXY) => void
+let ballPlacementMode = false;
+let onBallPlacementClick = null; // (imgX, imgY) => void, fired by a plain click while ballPlacementMode is on
+
+// chip.ring (optional): [[x,y], ...] image px tracing a real-world-radius
+// footprint circle - drawn as an outline around the dot. null/absent falls
+// back to just the dot (e.g. a ring point went behind the camera).
+// chip.outline (optional): [[x,y], ...] a real body-silhouette polygon
+// (segment-player.js's GrabCut result) - only ever set for the currently
+// selected chip, see photo-overlay.js's handleChipSelected.
+export function setPlayerChips(chips) {
+  playerChips = (chips || []).map((c) => ({ ...c, imagePx: [c.imagePx[0], c.imagePx[1]] }));
+  redraw();
+}
+
+// A plain click (not a drag) on a chip toggles its selection - used to
+// gate the expensive on-demand body-outline segmentation to one player at
+// a time instead of running it for every detection automatically.
+let selectedChipId = null;
+let onChipSelected = null; // (id|null) => void
+export function setChipSelectedHandler(fn) { onChipSelected = fn; }
+export function getSelectedChipId() { return selectedChipId; }
+export function setBallMarker(imagePx) {
+  ballMarker = imagePx ? [imagePx[0], imagePx[1]] : null;
+  redraw();
+}
+export function setPlayerChipMovedHandler(fn) { onPlayerChipMoved = fn; }
+export function setBallMovedHandler(fn) { onBallMoved = fn; }
+export function setBallPlacementMode(on) {
+  ballPlacementMode = !!on;
+  canvas.style.cursor = on ? 'crosshair' : '';
+}
+export function isBallPlacementMode() { return ballPlacementMode; }
+export function setBallPlacementClickHandler(fn) { onBallPlacementClick = fn; }
+
+function hitTestChip(clientX, clientY) {
+  if (!image) return null;
+  const vr = computeViewRect();
+  const tol = 13; // fixed screen px, same convention as hitTestMarker
+  let bestId = null, bestDist = Infinity;
+  for (const chip of playerChips) {
+    const [px, py] = chip.imagePx;
+    const cx = vr.x + (px / image.width) * vr.w;
+    const cy = vr.y + (py / image.height) * vr.h;
+    const d = Math.hypot(clientX - cx, clientY - cy);
+    if (d < tol && d < bestDist) { bestDist = d; bestId = chip.id; }
+  }
+  return bestId;
+}
+
+function hitTestBall(clientX, clientY) {
+  if (!image || !ballMarker) return false;
+  const vr = computeViewRect();
+  const cx = vr.x + (ballMarker[0] / image.width) * vr.w;
+  const cy = vr.y + (ballMarker[1] / image.height) * vr.h;
+  return Math.hypot(clientX - cx, clientY - cy) < 10;
+}
+
 // Resolves a landmark key to a friendly display label for the on-photo
 // marker text (e.g. "goalA_postL" -> "Goal A - left post (base)") - kept
 // as an injected callback rather than importing landmarks.js directly, so
@@ -381,6 +451,69 @@ function redraw() {
   }
   ctx.globalAlpha = 1;
   ctx.lineWidth = 1;
+
+  // Player chips + ball (Phase 2 Step 3) - kept visible in locked photo-view
+  // too (like preview strips), since they're the actual result to check.
+  for (const chip of playerChips) {
+    const [px, py] = chip.imagePx;
+    const cx = vr.x + (px / image.width) * vr.w;
+    const cy = vr.y + (py / image.height) * vr.h;
+    const dragging = chipDrag && chipDrag.id === chip.id;
+    const color = chip.team === 'home' ? '#ff6b4a' : chip.team === 'away' ? '#4a9bff' : '#bdbdbd';
+    // Body-silhouette outline (GrabCut result, only computed for the
+    // selected chip) - drawn first, under everything else.
+    if (chip.outline && chip.outline.length > 2) {
+      ctx.strokeStyle = '#ff4fd8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      chip.outline.forEach(([ox, oy], i) => {
+        const sx = vr.x + (ox / image.width) * vr.w;
+        const sy = vr.y + (oy / image.height) * vr.h;
+        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      });
+      ctx.closePath();
+      ctx.stroke();
+    }
+    // World-space footprint circle (foreshortens like a real floor object,
+    // unlike the fixed-screen-px dot) - drawn first so the dot sits on top.
+    if (chip.ring) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = dragging ? 3 : 2;
+      ctx.beginPath();
+      chip.ring.forEach(([rx, ry], i) => {
+        const sx = vr.x + (rx / image.width) * vr.w;
+        const sy = vr.y + (ry / image.height) * vr.h;
+        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      });
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = dragging ? 3 : 2;
+    ctx.beginPath(); ctx.arc(cx, cy, dragging ? 10 : 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    if (chip.isCarrier) {
+      ctx.strokeStyle = '#ffe14f';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, 13, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (chip.id === selectedChipId) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, 16, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  if (ballMarker) {
+    const cx = vr.x + (ballMarker[0] / image.width) * vr.w;
+    const cy = vr.y + (ballMarker[1] / image.height) * vr.h;
+    const dragging = !!ballDrag;
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = dragging ? 3 : 2;
+    ctx.beginPath(); ctx.arc(cx, cy, dragging ? 7 : 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+
   if (!showMarkers) return; // locked photo-view: preview strips only, no cyan calibration crosshairs
   ctx.font = '11px Consolas, monospace';
   let i = 0;
@@ -462,6 +595,9 @@ export async function loadPhoto(file) {
   edgeOverlay = null;
   quad = null;
   quadEnabled = false;
+  playerChips = [];
+  ballMarker = null;
+  ballPlacementMode = false;
   computeBaseRect();
   resetZoom();
   redraw();
@@ -472,6 +608,9 @@ export function clearPhoto() {
   image = null;
   placed.clear();
   previewStrips = [];
+  playerChips = [];
+  ballMarker = null;
+  ballPlacementMode = false;
   canvas.style.display = 'none';
 }
 
@@ -490,14 +629,18 @@ export function getPlacedPoints() {
 }
 
 canvas.addEventListener('click', (e) => {
-  if (!image || !onClickLandmark) return;
-  if (roiMode || roiDrag || quadJustHit || roiJustHit || markerJustHit) return; // suppress landmark placement while defining ROI or interacting with the rink outline / an existing marker
+  if (!image) return;
+  if (roiMode || roiDrag || quadJustHit || roiJustHit || markerJustHit || chipJustHit || ballJustHit) return; // suppress landmark placement while defining ROI or interacting with the rink outline / an existing marker / chip / ball
   const vr = computeViewRect();
   const { clientX: cx, clientY: cy } = e;
   if (cx < vr.x || cx > vr.x + vr.w || cy < vr.y || cy > vr.y + vr.h) return;
   const imgX = ((cx - vr.x) / vr.w) * image.width;
   const imgY = ((cy - vr.y) / vr.h) * image.height;
-  onClickLandmark(imgX, imgY);
+  if (ballPlacementMode) {
+    if (onBallPlacementClick) onBallPlacementClick(imgX, imgY);
+    return;
+  }
+  if (onClickLandmark) onClickLandmark(imgX, imgY);
 });
 
 function clientToImage(clientX, clientY) {
@@ -537,6 +680,10 @@ canvas.addEventListener('mousedown', (e) => {
   roiJustHit = false;
   markerJustHit = false;
   markerDragCandidate = null;
+  chipJustHit = false;
+  chipDragCandidate = null;
+  ballJustHit = false;
+  ballDragCandidate = null;
   if (e.button === 0 && quadEnabled && quad) {
     const [ix, iy] = clientToImage(e.clientX, e.clientY);
     const hit = hitTestQuad(ix, iy);
@@ -544,6 +691,17 @@ canvas.addEventListener('mousedown', (e) => {
       e.preventDefault();
       quadJustHit = true;
       quadDrag = { ...hit, startQuad: cloneQuad(quad), startPointer: { x: ix, y: iy } };
+      return;
+    }
+  }
+  if (e.button === 0 && !roiMode && !quadEnabled && !ballPlacementMode) {
+    if (hitTestBall(e.clientX, e.clientY)) {
+      ballDragCandidate = { startX: e.clientX, startY: e.clientY };
+      return;
+    }
+    const hitChipId = hitTestChip(e.clientX, e.clientY);
+    if (hitChipId != null) {
+      chipDragCandidate = { id: hitChipId, startX: e.clientX, startY: e.clientY };
       return;
     }
   }
@@ -570,6 +728,31 @@ canvas.addEventListener('mousedown', (e) => {
   panning = { startX: e.clientX, startY: e.clientY, startPanX: panX, startPanY: panY };
 });
 window.addEventListener('mousemove', (e) => {
+  if (ballDragCandidate && image) {
+    const dx = e.clientX - ballDragCandidate.startX, dy = e.clientY - ballDragCandidate.startY;
+    if (Math.hypot(dx, dy) < 4) return;
+    ballDrag = {};
+    ballJustHit = true;
+    ballDragCandidate = null;
+  }
+  if (ballDrag && image) {
+    ballMarker = clientToImage(e.clientX, e.clientY);
+    redraw();
+    return;
+  }
+  if (chipDragCandidate && image) {
+    const dx = e.clientX - chipDragCandidate.startX, dy = e.clientY - chipDragCandidate.startY;
+    if (Math.hypot(dx, dy) < 4) return;
+    chipDrag = { id: chipDragCandidate.id };
+    chipJustHit = true;
+    chipDragCandidate = null;
+  }
+  if (chipDrag && image) {
+    const chip = playerChips.find((c) => c.id === chipDrag.id);
+    if (chip) chip.imagePx = clientToImage(e.clientX, e.clientY);
+    redraw();
+    return;
+  }
   if (markerDragCandidate && image) {
     const dx = e.clientX - markerDragCandidate.startX, dy = e.clientY - markerDragCandidate.startY;
     if (Math.hypot(dx, dy) < 4) return; // not a real drag yet - leave it as a pending click
@@ -590,7 +773,7 @@ window.addEventListener('mousemove', (e) => {
     return;
   }
   if (!quadDrag && !roiDrag && !panning && image && !quadEnabled && !roiMode) {
-    canvas.style.cursor = hitTestMarker(e.clientX, e.clientY) ? 'grab' : '';
+    canvas.style.cursor = (hitTestBall(e.clientX, e.clientY) || hitTestChip(e.clientX, e.clientY) != null || hitTestMarker(e.clientX, e.clientY)) ? 'grab' : '';
   }
   if (roiDrag && image) {
     const [ix, iy] = clientToImage(e.clientX, e.clientY);
@@ -610,6 +793,32 @@ window.addEventListener('mousemove', (e) => {
   redraw();
 });
 window.addEventListener('mouseup', () => {
+  if (ballDragCandidate) { ballDragCandidate = null; return; }
+  if (ballDrag) {
+    ballDrag = null;
+    if (onBallMoved) onBallMoved(ballMarker);
+    return;
+  }
+  if (chipDragCandidate) {
+    // Never moved past the threshold - a plain click, not a drag: toggle
+    // selection instead. Reuses chipJustHit to suppress the trailing
+    // native 'click' event's landmark-placement handler, same idea as
+    // markerDragCandidate below.
+    const id = chipDragCandidate.id;
+    chipDragCandidate = null;
+    chipJustHit = true;
+    selectedChipId = selectedChipId === id ? null : id;
+    redraw();
+    if (onChipSelected) onChipSelected(selectedChipId);
+    return;
+  }
+  if (chipDrag) {
+    const id = chipDrag.id;
+    chipDrag = null;
+    const chip = playerChips.find((c) => c.id === id);
+    if (onPlayerChipMoved && chip) onPlayerChipMoved(id, chip.imagePx);
+    return;
+  }
   if (markerDragCandidate) {
     // Never moved past the threshold - it was a plain click, not a drag.
     // Leave the marker untouched and let the trailing 'click' event

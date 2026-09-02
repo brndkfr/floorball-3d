@@ -548,6 +548,10 @@
   </div>
   <div class="hud-body">
     <input type="file" id="photoFileInput" accept="image/*"><br><br>
+    <div id="photoRestoreRow" style="display:none; margin-bottom:8px;">
+      <span id="photoRestoreLabel" style="font-size:11px; opacity:0.7;"></span>
+      <button id="photoRestoreLandmarksBtn" class="dock-btn" style="padding:2px 6px; font-size:10px; margin-left:6px;" title="Re-place the landmarks and camera pose saved from the last time this exact photo was calibrated - saves re-clicking everything after a reload.">Load saved overlay</button>
+    </div>
     <div id="photoAutoBanner" style="display:none; margin-bottom:8px; padding:6px 8px; border:1px solid rgba(126,224,106,0.5); background:rgba(126,224,106,0.1); border-radius:6px; font-size:11px;">
       <span style="color:#7ee06b;">&#10003; We aligned it for you.</span>
       <button id="photoRefineBtn" class="dock-btn" style="padding:2px 6px; font-size:10px; margin-left:6px;">Refine</button>
@@ -618,6 +622,22 @@
         </div>
       </div>
     </div>
+    <details id="photoStep3Details" style="margin-top:8px;">
+      <summary style="cursor:pointer; font-size:11px; opacity:0.85;">Step 3 - Players &amp; ball</summary>
+      <div style="opacity:0.7; margin-top:6px; font-size:11px;">
+        detects player positions from the photo and lets you drag any chip
+        to fix it. Needs a solved camera pose first (reprojection error
+        below 20px).
+      </div>
+      <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">
+        <button id="photoAutoDetectPlayersBtn" class="dock-btn" disabled title="Detect player positions in the photo and place them on the rink floor.">Auto-detect players</button>
+        <button id="photoFlipTeamsBtn" class="dock-btn" disabled title="Swap home/away team colours on every detected player.">Flip teams</button>
+        <button id="photoSetBallBtn" class="dock-btn" disabled title="Click a point on the photo to mark the ball.">Set ball</button>
+        <label style="font-size:11px; margin-top:2px;"><input type="checkbox" id="photoBodyOutlineToggle"> show body outline for selected player</label>
+        <div style="opacity:0.6; font-size:10px;">click a player dot to select it - computes a rough body silhouette on demand (slower, so off by default and one player at a time).</div>
+        <div id="photoStep3Status" style="opacity:0.7; font-size:10px; margin-top:2px;"></div>
+      </div>
+    </details>
   </div>
 </div>
 

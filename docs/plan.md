@@ -372,7 +372,7 @@ frame.photo = {
 | Phase | Content | Status |
 |-------|---------|--------|
 | 1 | Manual PnP calibration | **shipped, all items closed.** Guided auto-align (4.3 Step 2), rink-outline quad tool + zoom/pan (verified already working via wheel/right-drag, independent of quad mode), debug logging, one-hint-at-a-time manual fallback stepper (curated 8-point sequence per goal end, inline top-down SVG diagram, skip button), and a continuous before/after alignment slider (fades preview strips 0-100%, reprojection error demoted to a small badge) |
-| 2 | YOLO player auto-detect | not started |
+| 2 | YOLO player auto-detect | not started; execution spec in [docs/phase-2-plan.md](phase-2-plan.md) |
 | 3 | Insights compute + UI | not started; reuses Mode A modules |
 | 4 | Auto-pose facing (MoveNet / YOLO-Pose) | deferred, Option 2 in 4.3 |
 | 5 | Video wrapper (frame picker, tracking, interpolation) | not started |

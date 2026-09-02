@@ -11,9 +11,15 @@ import { solveCameraPose } from './pnp.js';
 import * as photoCanvas from './photo-canvas.js';
 import { enterPhoto, exitPhoto, isPhoto, fitToPhotoRect, setOverlayOpacity } from './view.js';
 import { detectGoal, computeEdgeOverlay } from './detect.js';
+import { detectPlayers } from './detect-players.js';
+import { segmentPlayer } from './segment-player.js';
+import { backProjectPlayers, backProjectFoot } from './back-project.js';
+import { assignTeams } from './team-cluster.js';
 import { readFocalLength35mm, focal35mmToHFovDeg } from './exif.js';
 import * as borderMode from './border-mode.js';
 import { RINK_L, HALF_W, GOAL_LINE_FROM_BOARD } from '../../constants.js';
+import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from '../chips.js';
+import * as photoCache from './photo-cache.js';
 
 // Structured, in-page debug log (capped) so calibration state can be
 // inspected from devtools/automation at any later point in the session,
@@ -26,6 +32,9 @@ function debugLog(event, data) {
 }
 
 const fileInput = document.getElementById('photoFileInput');
+const restoreRow = document.getElementById('photoRestoreRow');
+const restoreLabel = document.getElementById('photoRestoreLabel');
+const restoreLandmarksBtn = document.getElementById('photoRestoreLandmarksBtn');
 const listEl = document.getElementById('photoLandmarkList');
 const errorEl = document.getElementById('photoReprojError');
 const opacitySlider = document.getElementById('photoOpacity');
@@ -55,6 +64,14 @@ const hintText = document.getElementById('photoHintText');
 const hintDiagram = document.getElementById('photoHintDiagram');
 const hintSkipBtn = document.getElementById('photoHintSkipBtn');
 const landmarksDetails = document.getElementById('photoLandmarksDetails');
+
+const step3Details = document.getElementById('photoStep3Details');
+const autoDetectPlayersBtn = document.getElementById('photoAutoDetectPlayersBtn');
+const flipTeamsBtn = document.getElementById('photoFlipTeamsBtn');
+const setBallBtn = document.getElementById('photoSetBallBtn');
+const bodyOutlineToggle = document.getElementById('photoBodyOutlineToggle');
+const step3Status = document.getElementById('photoStep3Status');
+const STEP3_MAX_REPROJ_ERROR_PX = 20;
 
 const fovSlider = document.getElementById('photoFovSlider');
 const fovValue = document.getElementById('photoFovValue');
@@ -393,6 +410,11 @@ refineBtn.addEventListener('click', () => {
 // actually placed). Only the most recently STARTED call is allowed to
 // touch the DOM/doc.
 let solveSeq = 0;
+// Last successful pose (with its projectWorld closure) - cached so Step 3
+// can re-project frame.photo.players/ball to image px on every chip/ball
+// drag WITHOUT re-running solvePnP (which would visibly lag, see T5 notes
+// in docs/phase-2-plan.md).
+let lastPose = null;
 
 async function trySolve() {
   const seq = ++solveSeq;
@@ -404,6 +426,8 @@ async function trySolve() {
       photoCanvas.setPreviewStrips([]);
       updatePerPointErrors([], []);
       borderMode.setCoplanarWarning(false);
+      lastPose = null;
+      updateStep3Enabled();
       debugLog('trySolve:tooFewPoints', { placed: placed.length, min: MIN_LANDMARKS, keys: placed.map((p) => p.key) });
     }
     return null;
@@ -443,14 +467,37 @@ async function trySolve() {
     photoCamera.position.copy(pose.position);
     photoCamera.quaternion.copy(pose.quaternion);
     photoCamera.fov = pose.fov;
+    // aspect otherwise only gets synced to the photo in fitToPhotoRect(),
+    // which is gated on isPhoto() (post "Enter Photo View") - Step 3's
+    // back-projection runs during calibration too and needs photoCamera's
+    // projection matrix to already match the photo's aspect ratio, or its
+    // THREE-based unproject() disagrees with pose.projectWorld()'s OpenCV
+    // math and chips/ball render far from where they were clicked.
+    photoCamera.aspect = size.w / size.h;
     photoCamera.updateProjectionMatrix();
+    // photoCamera isn't part of the actively-rendered scene graph during
+    // calibration (it only becomes the active camera after "Enter Photo
+    // View"), so THREE never auto-updates its matrixWorld/matrixWorldInverse
+    // from the position/quaternion just set above - unproject()/project()
+    // would silently keep using a stale (identity) matrix without this.
+    photoCamera.updateMatrixWorld(true);
+    lastPose = pose;
 
     const frame = ensureDoc().frames[state.doc.currentFrame];
+    const prevPhoto = frame.photo || {};
     frame.photo = {
       landmarks: placed.map((p) => ({ key: p.key, px: p.image })),
+      imageWH: [size.w, size.h], // "is this the same photo" fingerprint, see restoreSavedOverlay()
       intrinsics,
       camera: { position: pose.position.toArray(), quaternion: pose.quaternion.toArray(), fov: pose.fov },
       reprojErrorPx: pose.reprojErrorPx,
+      // Preserve Step 3 data across re-solves (FOV/k1 tweaks, marker drags) -
+      // trySolve used to overwrite the whole frame.photo object, which would
+      // silently wipe out already-detected players/ball.
+      players: prevPhoto.players,
+      ball: prevPhoto.ball,
+      ballCarrier: prevPhoto.ballCarrier,
+      facingDeg: prevPhoto.facingDeg,
     };
     saveDoc();
     if (isPhoto()) fitToPhotoRect(photoCanvas.getPhotoRect());
@@ -464,12 +511,16 @@ async function trySolve() {
       else allowedGroups.add('board'); // centre*/board* landmarks
     }
     photoCanvas.setPreviewStrips(projectStrips(REFERENCE_STRIPS, pose.projectWorld, size.w, size.h, allowedGroups));
+    updateStep3Enabled();
+    renderPlayersAndBall();
     return pose;
   } catch (err) {
     if (seq !== solveSeq) return null;
     errorEl.textContent = err.message || 'solve failed';
     errorEl.classList.add('bad');
     errorEl.classList.remove('ok');
+    lastPose = null;
+    updateStep3Enabled();
     console.error('[photo-overlay] trySolve failed', err, placed.map((p) => p.key));
     debugLog('trySolve:error', { message: err.message || String(err), keys: placed.map((p) => p.key) });
     return null;
@@ -492,6 +543,7 @@ fileInput.addEventListener('change', async () => {
   const file = fileInput.files?.[0];
   if (!file) return;
   await photoCanvas.loadPhoto(file);
+  photoCache.saveCachedPhoto(file);
   listEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
   listEl.querySelectorAll('.photo-landmark-row').forEach((r) => r.classList.remove('placed', 'armed'));
   // Drop any dynamic board-top landmarks and their rows - they were tied
@@ -517,6 +569,11 @@ fileInput.addEventListener('change', async () => {
   edgesToggle.checked = false;
   photoCanvas.setEdgeOverlayEnabled(false);
   setCalibrating(true);
+  lastPose = null;
+  photoCanvas.setBallPlacementMode(false);
+  setBallBtn.textContent = 'Set ball';
+  step3Status.textContent = '';
+  updateStep3Enabled();
   // Seed FOV slider from EXIF if the file has it - phone photos usually
   // do, WhatsApp / broadcast stills usually don't. Silent fallback keeps
   // whatever the user last had if we can't read it.
@@ -542,6 +599,72 @@ fileInput.addEventListener('change', async () => {
   // see setRoiChangeHandler below), which is the one point we can
   // actually trust the search is scoped to the right area.
   startGuidedHints(autoDetectEnd.value === 'B' ? 'goalB' : 'goalA');
+  checkRestoreAvailable();
+});
+
+// Testing/iteration convenience (kept separate from the doc/localStorage
+// saveDoc() path, see photo-cache.js): frame.photo.landmarks/intrinsics are
+// already saved on every solve, but nothing replayed them onto a freshly
+// (re)loaded photo. imageWH is a lightweight "is this the same photo"
+// fingerprint - if it doesn't match the just-loaded image, skip silently
+// rather than risk applying stale pixel coordinates to a different photo.
+function checkRestoreAvailable() {
+  const saved = state.doc?.frames?.[state.doc.currentFrame]?.photo;
+  const size = photoCanvas.getImageSize();
+  const match = !!(saved?.landmarks?.length && saved.imageWH && size
+    && saved.imageWH[0] === size.w && saved.imageWH[1] === size.h);
+  restoreRow.style.display = match ? 'block' : 'none';
+  if (match) restoreLabel.textContent = `${saved.landmarks.length} saved landmarks available`;
+  return match;
+}
+
+function restoreSavedOverlay() {
+  const saved = state.doc?.frames?.[state.doc.currentFrame]?.photo;
+  if (!saved?.landmarks?.length) return;
+  endGuidedHints();
+  if (saved.intrinsics) {
+    const size = photoCanvas.getImageSize();
+    const hfovDeg = Math.round(2 * Math.atan(size.w / (2 * saved.intrinsics.fx)) * 180 / Math.PI);
+    if (hfovDeg >= Number(fovSlider.min) && hfovDeg <= Number(fovSlider.max)) {
+      fovSlider.value = hfovDeg;
+      fovValue.textContent = hfovDeg + '°';
+    }
+    k1Slider.value = Math.round((saved.intrinsics.k1 || 0) / K1_SCALE);
+    k1Value.textContent = currentK1().toFixed(2);
+  }
+  for (const { key, px } of saved.landmarks) {
+    if (!(key in WORLD_LANDMARKS)) continue; // dynamic boardTop_ keys aren't restorable (world coord lives only in that session's border-mode state)
+    photoCanvas.placeLandmark(key, px);
+    const row = listEl.querySelector(`[data-key="${key}"]`);
+    if (row) {
+      row.classList.add('placed');
+      const cb = row.querySelector('input[type="checkbox"]');
+      if (cb) cb.checked = true;
+    }
+  }
+  trySolve();
+  restoreRow.style.display = 'none';
+}
+
+restoreLandmarksBtn.addEventListener('click', restoreSavedOverlay);
+
+// Auto-load the last calibrated photo from the local IndexedDB cache (if
+// any) so a reload doesn't force re-picking the file via <input> every
+// time - see photo-cache.js. Falls back to the normal empty-panel state
+// (nothing to do) if there's no cached photo or the browser blocks it.
+// Deferred to window 'load': this module is imported (and runs its
+// top-level code) BEFORE authoring/index.js's own top-level await/loadDoc()
+// populate state.doc - reading state.doc any earlier would race against an
+// still-empty placeholder doc and silently "find" no saved landmarks even
+// when they exist.
+window.addEventListener('load', async () => {
+  const cached = await photoCache.loadCachedPhoto();
+  if (!cached) return;
+  await photoCanvas.loadPhoto(cached.blob);
+  setCalibrating(true);
+  if (!checkRestoreAvailable()) {
+    startGuidedHints(autoDetectEnd.value === 'B' ? 'goalB' : 'goalA');
+  }
 });
 
 opacitySlider.addEventListener('input', () => {
@@ -886,4 +1009,221 @@ window.addEventListener('resize', () => {
   if (isPhoto() && photoCanvas.hasPhoto()) fitToPhotoRect(photoCanvas.getPhotoRect());
 });
 
+// Step 3 - Players & ball (Phase 2, docs/phase-2-plan.md T5). Disabled until
+// a usable pose exists (reprojErrorPx below threshold); only re-projects
+// world -> image px on every render (does NOT re-run solvePnP).
+function updateStep3Enabled() {
+  const enabled = !!(lastPose && lastPose.reprojErrorPx < STEP3_MAX_REPROJ_ERROR_PX);
+  autoDetectPlayersBtn.disabled = !enabled;
+  flipTeamsBtn.disabled = !enabled;
+  setBallBtn.disabled = !enabled;
+}
+
+// Ring of image-px points tracing a real-world-radius circle around a floor
+// point (y=0), for the same visual language as the rink chip discs
+// (chips.js's CHIP_RADIUS * CHIP_DISPLAY_SCALE) - drawn as an outline
+// instead of just a fixed-screen-px dot so it foreshortens like a real
+// object on the floor would (bigger/rounder near the camera, a thinner
+// ellipse far away). Returns null if any sample point is behind the camera.
+const FOOTPRINT_RADIUS_MM = CHIP_RADIUS * CHIP_DISPLAY_SCALE;
+const FOOTPRINT_SEGMENTS = 20;
+function footprintRing(worldX, worldZ) {
+  const points = [];
+  for (let i = 0; i < FOOTPRINT_SEGMENTS; i++) {
+    const a = (i / FOOTPRINT_SEGMENTS) * Math.PI * 2;
+    const x = worldX + Math.cos(a) * FOOTPRINT_RADIUS_MM;
+    const z = worldZ + Math.sin(a) * FOOTPRINT_RADIUS_MM;
+    const px = lastPose.projectWorld(x, 0, z);
+    if (!px) return null;
+    points.push(px);
+  }
+  return points;
+}
+
+function renderPlayersAndBall() {
+  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
+  if (!lastPose || !photo) {
+    photoCanvas.setPlayerChips([]);
+    photoCanvas.setBallMarker(null);
+    return;
+  }
+  const chips = [];
+  const selectedId = photoCanvas.getSelectedChipId();
+  for (const p of photo.players || []) {
+    const px = lastPose.projectWorld(p.world[0], p.world[1], p.world[2]);
+    if (!px) continue; // behind camera - shouldn't normally happen post-solve
+    const ring = footprintRing(p.world[0], p.world[2]);
+    const showOutline = bodyOutlineToggle.checked && p.id === selectedId;
+    chips.push({ id: p.id, imagePx: px, team: p.team, isCarrier: p.id === photo.ballCarrier, ring, outline: showOutline ? p.outline : null });
+  }
+  photoCanvas.setPlayerChips(chips);
+  photoCanvas.setBallMarker(photo.ball ? lastPose.projectWorld(photo.ball[0], photo.ball[1], photo.ball[2]) : null);
+}
+
+// Body-silhouette outline (segment-player.js) is expensive (iterative
+// GrabCut), so it only ever runs for the one currently-selected player,
+// on demand, and only while the toggle is on - not automatically for
+// every detection. Cached on the player record once computed so
+// reselecting the same player (or a reload, since it's saved with the
+// rest of frame.photo) doesn't recompute it.
+let segSeq = 0;
+async function handleChipSelected(id) {
+  const seq = ++segSeq;
+  if (id == null || !bodyOutlineToggle.checked) { renderPlayersAndBall(); return; }
+  const frame = state.doc?.frames?.[state.doc.currentFrame];
+  const player = frame?.photo?.players?.find((p) => p.id === id);
+  if (!player?.bbox) { renderPlayersAndBall(); return; }
+  renderPlayersAndBall(); // show the selection ring immediately, outline follows once computed
+  if (player.outline) return; // already cached - renderPlayersAndBall above already picked it up
+  const image = photoCanvas.getImage();
+  if (!image) return;
+  step3Status.textContent = 'computing body outline...';
+  try {
+    const outline = await segmentPlayer(image, player.bbox);
+    if (seq !== segSeq) return; // selection changed again while computing - drop this stale result
+    player.outline = outline || [];
+    saveDoc();
+    step3Status.textContent = outline ? '' : 'could not separate this player from the background';
+    renderPlayersAndBall();
+  } catch (err) {
+    if (seq !== segSeq) return;
+    console.error('[photo-overlay] segmentPlayer failed', err);
+    step3Status.textContent = 'outline failed: ' + (err.message || err);
+  }
+}
+photoCanvas.setChipSelectedHandler(handleChipSelected);
+bodyOutlineToggle.addEventListener('change', () => {
+  if (!bodyOutlineToggle.checked) { renderPlayersAndBall(); return; }
+  handleChipSelected(photoCanvas.getSelectedChipId());
+});
+
+function goalCenterNearestZ(z) {
+  const goalAZ = GOAL_LINE_FROM_BOARD, goalBZ = RINK_L - GOAL_LINE_FROM_BOARD;
+  return Math.abs(z - goalAZ) <= Math.abs(z - goalBZ) ? [0, goalAZ] : [0, goalBZ];
+}
+
+// v1 facing = "point toward the closer goal" (docs/phase-2-plan.md non-goals -
+// real facing-direction ML is Phase 4). ballCarrier = nearest player in xz.
+function updateBallCarrierAndFacing(photo) {
+  const players = photo.players || [];
+  let bestId = null, bestDistSq = Infinity;
+  for (const p of players) {
+    const dx = p.world[0] - photo.ball[0], dz = p.world[2] - photo.ball[2];
+    const d = dx * dx + dz * dz;
+    if (d < bestDistSq) { bestDistSq = d; bestId = p.id; }
+  }
+  photo.ballCarrier = bestId;
+  const [gx, gz] = goalCenterNearestZ(photo.ball[2]);
+  photo.facingDeg = Math.atan2(gx - photo.ball[0], gz - photo.ball[2]) * 180 / Math.PI;
+}
+
+// Bounding box (original image px) of the currently placed landmarks for
+// whichever goal end is selected in "detect as" - players cluster around
+// that goal in a typical shot, so it's used as the search-area seed for
+// detectPlayers' ROI crop (see its own comment for why cropping first
+// matters). Returns null if none of that end's landmarks are placed yet.
+function goalAreaRoi() {
+  const prefix = `goal${autoDetectEnd.value}_`;
+  const points = photoCanvas.getPlacedPoints().filter((p) => p.key.startsWith(prefix));
+  if (points.length === 0) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const { image: [x, y] } of points) {
+    minX = Math.min(minX, x); minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+  }
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+autoDetectPlayersBtn.addEventListener('click', async () => {
+  if (!lastPose) return;
+  const image = photoCanvas.getImage();
+  const size = photoCanvas.getImageSize();
+  if (!image || !size) return;
+  const prevLabel = autoDetectPlayersBtn.textContent;
+  autoDetectPlayersBtn.disabled = true;
+  autoDetectPlayersBtn.textContent = 'Detecting...';
+  const t0 = performance.now();
+  try {
+    const roi = goalAreaRoi();
+    const rawBoxes = await detectPlayers(image, { roi });
+    const teamed = assignTeams(image, rawBoxes);
+    const players = backProjectPlayers(teamed, photoCamera, [size.w, size.h]);
+    const frame = ensureDoc().frames[state.doc.currentFrame];
+    frame.photo.players = players;
+    saveDoc();
+    renderPlayersAndBall();
+    step3Status.textContent = `${players.length} player(s) detected`;
+    debugLog('detectPlayers:step3', {
+      imageWH: [size.w, size.h],
+      roi,
+      rawBoxCount: rawBoxes.length,
+      keptAfterRinkFilter: players.length,
+      teams: players.map((p) => ({ id: p.id, team: p.team })),
+      elapsedMs: Math.round(performance.now() - t0),
+    });
+  } catch (err) {
+    console.error('[photo-overlay] auto-detect players failed', err);
+    step3Status.textContent = 'auto-detect failed: ' + (err.message || err);
+  } finally {
+    autoDetectPlayersBtn.disabled = !lastPose;
+    autoDetectPlayersBtn.textContent = prevLabel;
+  }
+});
+
+flipTeamsBtn.addEventListener('click', () => {
+  const frame = ensureDoc().frames[state.doc.currentFrame];
+  const players = frame.photo?.players;
+  if (!players || players.length === 0) return;
+  frame.photo.players = players.map((p) => ({
+    ...p,
+    team: p.team === 'home' ? 'away' : p.team === 'away' ? 'home' : p.team,
+  }));
+  saveDoc();
+  renderPlayersAndBall();
+});
+
+setBallBtn.addEventListener('click', () => {
+  const on = !photoCanvas.isBallPlacementMode();
+  photoCanvas.setBallPlacementMode(on);
+  setBallBtn.textContent = on ? 'Click photo to place ball...' : 'Set ball';
+});
+
+photoCanvas.setBallPlacementClickHandler((imgX, imgY) => {
+  photoCanvas.setBallPlacementMode(false);
+  setBallBtn.textContent = 'Set ball';
+  const size = photoCanvas.getImageSize();
+  if (!size) return;
+  const world = backProjectFoot(imgX, imgY, photoCamera, [size.w, size.h]);
+  if (!world) { step3Status.textContent = 'clicked above the horizon - try a point lower in the photo'; return; }
+  const frame = ensureDoc().frames[state.doc.currentFrame];
+  frame.photo.ball = world;
+  updateBallCarrierAndFacing(frame.photo);
+  saveDoc();
+  renderPlayersAndBall();
+});
+
+photoCanvas.setPlayerChipMovedHandler((id, imagePx) => {
+  const size = photoCanvas.getImageSize();
+  const world = size ? backProjectFoot(imagePx[0], imagePx[1], photoCamera, [size.w, size.h]) : null;
+  if (!world) { renderPlayersAndBall(); return; } // dragged above the horizon - snap back to last valid position
+  const frame = ensureDoc().frames[state.doc.currentFrame];
+  const player = frame.photo?.players?.find((p) => p.id === id);
+  if (player) player.world = world;
+  saveDoc();
+  renderPlayersAndBall();
+});
+
+photoCanvas.setBallMovedHandler((imagePx) => {
+  const size = photoCanvas.getImageSize();
+  const world = size ? backProjectFoot(imagePx[0], imagePx[1], photoCamera, [size.w, size.h]) : null;
+  if (!world) { renderPlayersAndBall(); return; }
+  const frame = ensureDoc().frames[state.doc.currentFrame];
+  if (!frame.photo) return;
+  frame.photo.ball = world;
+  updateBallCarrierAndFacing(frame.photo);
+  saveDoc();
+  renderPlayersAndBall();
+});
+
+updateStep3Enabled();
 buildList();
