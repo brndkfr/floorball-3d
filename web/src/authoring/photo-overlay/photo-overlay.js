@@ -1430,13 +1430,13 @@ autoAssignGoaliesBtn.addEventListener('click', async () => {
 view3dBtn.addEventListener('click', () => {
   if (isPhotoPreview3D()) {
     exitPhotoPreview3D();
-    view3dBtn.textContent = 'View in 3D';
+    view3dBtn.textContent = 'View in 2D';
     return;
   }
   const frame = state.doc?.frames?.[state.doc.currentFrame];
   if (!frame?.photo) return;
   enterPhotoPreview3D(frame);
-  view3dBtn.textContent = isPhotoPreview3D() ? 'Exit 3D preview' : 'View in 3D';
+  view3dBtn.textContent = isPhotoPreview3D() ? 'Exit 2D preview' : 'View in 2D';
 });
 
 updateStep3Enabled();
