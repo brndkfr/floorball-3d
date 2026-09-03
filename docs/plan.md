@@ -382,7 +382,8 @@ frame.photo = {
 | 1 | Manual PnP calibration | **shipped, all items closed.** Guided auto-align (4.3 Step 2), rink-outline quad tool + zoom/pan (verified already working via wheel/right-drag, independent of quad mode), debug logging, one-hint-at-a-time manual fallback stepper (curated 8-point sequence per goal end, inline top-down SVG diagram, skip button), and a continuous before/after alignment slider (fades preview strips 0-100%, reprojection error demoted to a small badge) |
 | 2 | YOLO player auto-detect | **shipped.** detect-players.js (yolov8n via onnxruntime-web, ROI-scoped to the placed goal landmarks so distant players survive the 640px letterbox), back-project.js (foot pixel -> rink floor world point), team-cluster.js (jersey colour k-means). Chips get a world-space footprint ring, are clickable, and can compute an on-demand body-silhouette outline (segment-player.js, GrabCut) for the selected player. photo-cache.js (IndexedDB) auto-restores the last calibrated photo + a "Load saved overlay" button replays landmarks/pose, so re-testing doesn't require re-calibrating every reload. **Goalie auto-detect (Layer 1)** shipped as `detect-goalie.js` + a rewired "Auto-detect goalies" button: projects a world-space crease box (±2.5m wide, 3m in front + 1m behind the goal line) through the solved camera to get an image ROI per goal end, runs `detectPlayers` with a lower confidence threshold (0.15) on that ROI, keeps only candidates whose back-projected foot sits inside the same crease box, then either reuses the nearest existing chip within 1.2m (dedupes the case where Step 3 already caught the goalie) or appends a new chip flagged `role: 'goalie'`. Per-team convention: home = goal A, away = goal B (user can flip via "Flip teams" or the dropdowns). Falls back to the previous "nearest own-team chip to that goal" heuristic if Layer 1 finds nothing, and records source + confidence in `photo.goalies.autoDetected`. Follow-ups not yet done: no manual add-a-chip for missed players, no per-chip team toggle (only global "Flip teams"), no filtering beyond the rink-extent check for in-rink referees, **Layer 2 classical-CV goalie fallback** (non-red non-white blob inside the projected goal mouth, for the case where YOLO on the crease ROI still returns nothing - e.g. very heavy pad occlusion / extreme camera angle), no visual distinction for goalie chips beyond the team colour. |
 | 3 | Insights compute + UI | **shipped.** `insights.js` (pure compute: shot verdict, coverage grid, pass corridors - shared with Mode A), `goalie-proxy.js` (upright cylinder+box, the raycast target for coverage), `insights-overlay.js` (Step 4 recompute + projection to image px), photo-canvas overlay setters (`setShotLines`/`setCoverageOverlay`/`setPassLines`/`setAngleBadge`) with the layered draw order from the phase-3 plan, target-goal picker + per-team goalie dropdowns + insights readout (angle / dist / coverage % / clear passes), and `preview-3d.js` "View in 3D" toggle that drops lightweight preview chips + goalie proxies into the top-down camera without mutating `state.doc`. Deferred: shot/coverage colour tokens are still ad-hoc hex (semantic tokens listed in §3.3), no "convert this photo to a Mode-A play" bridge, no persisted derived insight numbers (recomputed on demand). |
-| 4 | Auto-pose facing (MoveNet / YOLO-Pose) | deferred, Option 2 in 4.3 |
+| 3.5 | Manual facing "nose" (Phase-4 stop-gap) | **shipped.** Draggable yellow arrow on the ball carrier + each designated goalie chip; drag back-projects to a floor point and stores an angle as `player.facingDeg`, which overrides the auto default (carrier: face nearest goal from ball; goalie: face ball if placed, else face out from own goal). `preview-3d.js`'s goalie proxy honours the override. **Not yet wired into insight math**: coverage/raycast still models a symmetric goalie fan, so changing the nose is currently visual only. Next steps: (a) feed `player.facingDeg` into `goalie-proxy.js` / coverage rays so the wedge tilts with stance, (b) add a "Reset facing" affordance when a chip with a manual override is selected. |
+| 4 | Auto-pose facing (MoveNet / YOLO-Pose) | deferred, Option 2 in 4.3. Will seed `player.facingDeg` from shoulder/hip keypoints; manual override from 3.5 still wins. |
 | 5 | Video wrapper (frame picker, tracking, interpolation) | not started |
 
 ---
@@ -442,7 +443,25 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
   Inspiration only - different product.
 - **Backend, accounts, cloud sync**: static site only.
 - **Auto-pose (Phase 4)** until Phase 2 is done; drag-to-adjust facing is
-  the v1 approach.
+  the v1 approach - shipped as Phase 3.5 (manual "nose" on carrier + goalie
+  chips, `player.facingDeg` override; see §4.5).
+- **Phase 3.5 follow-ups (recorded so we don't forget)**:
+  - Feed `player.facingDeg` into `goalie-proxy.js` orientation + the coverage
+    raycast so the goalie fan tilts with stance (currently symmetric - the
+    nose is purely visual today).
+  - "Reset facing" affordance on a selected chip that has a manual override
+    (clears `player.facingDeg`, reverts to auto).
+  - Consider a facing arrow / stance indicator on non-carrier/non-goalie
+    chips once Phase 4 has a confidence score to attach.
+- **Auto-detect / calibration follow-ups still open**:
+  - Whole-image auto-detect false positives on red spectator chairs and
+    sponsor banners winning over the actual goal.
+  - Occluded-goalie detection (kneeling white gear against white ice) -
+    likely not fixable classically, needs Phase 4 pose cues.
+  - Auto-disambiguate L/R symmetric goal solves (currently manual "Flip
+    left/right" button).
+  - Cosmetic: chip labels sometimes overlap landmark labels in cluttered
+    photos.
 
 ---
 
