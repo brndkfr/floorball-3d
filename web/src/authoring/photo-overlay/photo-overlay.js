@@ -1078,11 +1078,47 @@ function renderPlayersAndBall() {
     if (!px) continue; // behind camera - shouldn't normally happen post-solve
     const ring = footprintRing(p.world[0], p.world[2]);
     const showOutline = bodyOutlineToggle.checked && p.id === selectedId;
-    chips.push({ id: p.id, imagePx: px, team: p.team, isCarrier: p.id === photo.ballCarrier, ring, outline: showOutline ? p.outline : null, label: labels.get(p.id) });
+    const facingDeg = effectiveFacingDeg(p, photo);
+    let facingImagePx = null;
+    if (facingDeg != null) {
+      const tip = facingTipWorld(p.world, facingDeg);
+      facingImagePx = lastPose.projectWorld(tip[0], tip[1], tip[2]);
+    }
+    chips.push({ id: p.id, imagePx: px, team: p.team, isCarrier: p.id === photo.ballCarrier, ring, outline: showOutline ? p.outline : null, label: labels.get(p.id), facingImagePx });
   }
   photoCanvas.setPlayerChips(chips);
   photoCanvas.setBallMarker(photo.ball ? lastPose.projectWorld(photo.ball[0], photo.ball[1], photo.ball[2]) : null);
   updateStep4();
+}
+
+// Draggable facing "nose" (Phase 3.5 polish, docs/plan.md 9 Deferred -
+// v1 stop-gap until Phase 4 ML pose lands). Shown only for the ball
+// carrier + designated goalies; other chips have no meaningful default.
+// Convention matches updateBallCarrierAndFacing(): facingDeg = atan2(dx, dz),
+// 0° points down +z, 90° points down +x.
+const FACING_TIP_DISTANCE_MM = 1200;
+function facingTipWorld(playerWorld, facingDeg) {
+  const rad = facingDeg * Math.PI / 180;
+  return [
+    playerWorld[0] + Math.sin(rad) * FACING_TIP_DISTANCE_MM,
+    0,
+    playerWorld[2] + Math.cos(rad) * FACING_TIP_DISTANCE_MM,
+  ];
+}
+function effectiveFacingDeg(player, photo) {
+  if (player.facingDeg != null) return player.facingDeg;
+  if (player.role === 'goalie') {
+    if (photo?.ball) {
+      return Math.atan2(photo.ball[0] - player.world[0], photo.ball[2] - player.world[2]) * 180 / Math.PI;
+    }
+    // No ball placed yet: face out from own goal toward rink centre.
+    // Home defends goal A (low z), away defends goal B (high z) - see the
+    // auto-assign goalies comment for the convention.
+    const targetZ = player.team === 'home' ? RINK_L : 0;
+    return Math.atan2(-player.world[0], targetZ - player.world[2]) * 180 / Math.PI;
+  }
+  if (player.id === photo?.ballCarrier && photo?.facingDeg != null) return photo.facingDeg;
+  return null;
 }
 
 // Compute display labels per player, recomputed on every render so team
@@ -1330,6 +1366,21 @@ photoCanvas.setPlayerChipMovedHandler((id, imagePx) => {
   const frame = ensureDoc().frames[state.doc.currentFrame];
   const player = frame.photo?.players?.find((p) => p.id === id);
   if (player) player.world = world;
+  saveDoc();
+  renderPlayersAndBall();
+});
+
+photoCanvas.setChipFacingMovedHandler((id, tipImgXY) => {
+  const size = photoCanvas.getImageSize();
+  const tipWorld = size ? backProjectFoot(tipImgXY[0], tipImgXY[1], photoCamera, [size.w, size.h]) : null;
+  if (!tipWorld) { renderPlayersAndBall(); return; }
+  const frame = ensureDoc().frames[state.doc.currentFrame];
+  const player = frame.photo?.players?.find((p) => p.id === id);
+  if (!player) return;
+  const dx = tipWorld[0] - player.world[0];
+  const dz = tipWorld[2] - player.world[2];
+  if (dx * dx + dz * dz < 1) { renderPlayersAndBall(); return; } // dropped on top of the chip: keep prior angle
+  player.facingDeg = Math.atan2(dx, dz) * 180 / Math.PI;
   saveDoc();
   renderPlayersAndBall();
 });

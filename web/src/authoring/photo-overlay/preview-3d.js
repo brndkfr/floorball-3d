@@ -112,7 +112,7 @@ export function enterPhotoPreview3D(frame) {
   for (const id of goalieIds) {
     const chip = photo.players.find((p) => p.id === id);
     if (!chip) continue;
-    const proxy = createGoalieProxy(new THREE.Vector3().fromArray(chip.world), 0);
+    const proxy = createGoalieProxy(new THREE.Vector3().fromArray(chip.world), chip.facingDeg ?? 0);
     proxy.userData.previewOwned = true;
     previewGroup.add(proxy);
   }

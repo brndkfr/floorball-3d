@@ -84,7 +84,14 @@ let chipJustHit = false;      // suppresses the trailing click while dragging a 
 let ballDrag = null;
 let ballDragCandidate = null;
 let ballJustHit = false;
+// Facing-arrow ("nose") drag: mirrors chipDrag but moves chip.facingImagePx
+// instead of chip.imagePx, so the user can adjust the ball carrier's shot
+// direction and each goalie's stance angle directly on the photo.
+let facingDrag = null;
+let facingDragCandidate = null;
+let facingJustHit = false;
 let onPlayerChipMoved = null; // (id, imgXY) => void
+let onChipFacingMoved = null; // (id, tipImgXY) => void
 let onBallMoved = null;       // (imgXY) => void
 let ballPlacementMode = false;
 let onBallPlacementClick = null; // (imgX, imgY) => void, fired by a plain click while ballPlacementMode is on
@@ -116,6 +123,19 @@ export function setPlayerChips(chips) {
   redraw();
 }
 
+// Debug-only accessor for automation tests - lets a Playwright probe fetch
+// current chip screen positions (including the facing tip) without racing
+// with the canvas paint. Not consumed anywhere in the app.
+export function __debugGetChips() {
+  if (!image) return [];
+  const vr = computeViewRect();
+  return playerChips.map((c) => ({
+    id: c.id, team: c.team, isCarrier: !!c.isCarrier,
+    canvasPx: [vr.x + (c.imagePx[0] / image.width) * vr.w, vr.y + (c.imagePx[1] / image.height) * vr.h],
+    facingCanvasPx: c.facingImagePx ? [vr.x + (c.facingImagePx[0] / image.width) * vr.w, vr.y + (c.facingImagePx[1] / image.height) * vr.h] : null,
+  }));
+}
+
 // A plain click (not a drag) on a chip toggles its selection - used to
 // gate the expensive on-demand body-outline segmentation to one player at
 // a time instead of running it for every detection automatically.
@@ -128,6 +148,7 @@ export function setBallMarker(imagePx) {
   redraw();
 }
 export function setPlayerChipMovedHandler(fn) { onPlayerChipMoved = fn; }
+export function setChipFacingMovedHandler(fn) { onChipFacingMoved = fn; }
 export function setBallMovedHandler(fn) { onBallMoved = fn; }
 export function setBallPlacementMode(on) {
   ballPlacementMode = !!on;
@@ -163,6 +184,22 @@ function hitTestBall(clientX, clientY) {
   const cx = vr.x + (ballMarker[0] / image.width) * vr.w;
   const cy = vr.y + (ballMarker[1] / image.height) * vr.h;
   return Math.hypot(clientX - cx, clientY - cy) < 10;
+}
+
+function hitTestChipFacing(clientX, clientY) {
+  if (!image) return null;
+  const vr = computeViewRect();
+  const tol = 11;
+  let bestId = null, bestDist = Infinity;
+  for (const chip of playerChips) {
+    if (!chip.facingImagePx) continue;
+    const [px, py] = chip.facingImagePx;
+    const cx = vr.x + (px / image.width) * vr.w;
+    const cy = vr.y + (py / image.height) * vr.h;
+    const d = Math.hypot(clientX - cx, clientY - cy);
+    if (d < tol && d < bestDist) { bestDist = d; bestId = chip.id; }
+  }
+  return bestId;
 }
 
 // Resolves a landmark key to a friendly display label for the on-photo
@@ -579,6 +616,24 @@ function redraw() {
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(cx, cy, 16, 0, Math.PI * 2); ctx.stroke();
     }
+    // Facing "nose" - line from chip centre to a draggable tip, marking
+    // the ball carrier's shot direction / a goalie's stance angle. Only
+    // rendered when photo-overlay.js supplies chip.facingImagePx.
+    if (chip.facingImagePx) {
+      const [fpx, fpy] = chip.facingImagePx;
+      const fx = vr.x + (fpx / image.width) * vr.w;
+      const fy = vr.y + (fpy / image.height) * vr.h;
+      const dragging = facingDrag && facingDrag.id === chip.id;
+      ctx.save();
+      ctx.strokeStyle = '#ffe14f';
+      ctx.lineWidth = dragging ? 3 : 2;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(fx, fy); ctx.stroke();
+      ctx.fillStyle = '#ffe14f';
+      ctx.strokeStyle = '#111';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(fx, fy, dragging ? 6 : 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
     if (chip.label) {
       ctx.save();
       ctx.font = 'bold 11px system-ui, sans-serif';
@@ -730,7 +785,7 @@ export function getPlacedPoints() {
 
 canvas.addEventListener('click', (e) => {
   if (!image) return;
-  if (roiMode || roiDrag || quadJustHit || roiJustHit || markerJustHit || chipJustHit || ballJustHit) return; // suppress landmark placement while defining ROI or interacting with the rink outline / an existing marker / chip / ball
+  if (roiMode || roiDrag || quadJustHit || roiJustHit || markerJustHit || chipJustHit || ballJustHit || facingJustHit) return; // suppress landmark placement while defining ROI or interacting with the rink outline / an existing marker / chip / ball / facing nose
   const vr = computeViewRect();
   const { clientX: cx, clientY: cy } = e;
   if (cx < vr.x || cx > vr.x + vr.w || cy < vr.y || cy > vr.y + vr.h) return;
@@ -788,6 +843,8 @@ canvas.addEventListener('mousedown', (e) => {
   chipDragCandidate = null;
   ballJustHit = false;
   ballDragCandidate = null;
+  facingJustHit = false;
+  facingDragCandidate = null;
   if (e.button === 0 && quadEnabled && quad) {
     const [ix, iy] = clientToImage(e.clientX, e.clientY);
     const hit = hitTestQuad(ix, iy);
@@ -799,6 +856,11 @@ canvas.addEventListener('mousedown', (e) => {
     }
   }
   if (e.button === 0 && !roiMode && !quadEnabled && !ballPlacementMode && !addPlayerMode) {
+    const hitFacingId = hitTestChipFacing(e.clientX, e.clientY);
+    if (hitFacingId != null) {
+      facingDragCandidate = { id: hitFacingId, startX: e.clientX, startY: e.clientY };
+      return;
+    }
     if (hitTestBall(e.clientX, e.clientY)) {
       ballDragCandidate = { startX: e.clientX, startY: e.clientY };
       return;
@@ -832,6 +894,19 @@ canvas.addEventListener('mousedown', (e) => {
   panning = { startX: e.clientX, startY: e.clientY, startPanX: panX, startPanY: panY };
 });
 window.addEventListener('mousemove', (e) => {
+  if (facingDragCandidate && image) {
+    const dx = e.clientX - facingDragCandidate.startX, dy = e.clientY - facingDragCandidate.startY;
+    if (Math.hypot(dx, dy) < 4) return;
+    facingDrag = { id: facingDragCandidate.id };
+    facingJustHit = true;
+    facingDragCandidate = null;
+  }
+  if (facingDrag && image) {
+    const chip = playerChips.find((c) => c.id === facingDrag.id);
+    if (chip) chip.facingImagePx = clientToImage(e.clientX, e.clientY);
+    redraw();
+    return;
+  }
   if (ballDragCandidate && image) {
     const dx = e.clientX - ballDragCandidate.startX, dy = e.clientY - ballDragCandidate.startY;
     if (Math.hypot(dx, dy) < 4) return;
@@ -877,7 +952,7 @@ window.addEventListener('mousemove', (e) => {
     return;
   }
   if (!quadDrag && !roiDrag && !panning && image && !quadEnabled && !roiMode) {
-    canvas.style.cursor = (hitTestBall(e.clientX, e.clientY) || hitTestChip(e.clientX, e.clientY) != null || hitTestMarker(e.clientX, e.clientY)) ? 'grab' : '';
+    canvas.style.cursor = (hitTestChipFacing(e.clientX, e.clientY) != null || hitTestBall(e.clientX, e.clientY) || hitTestChip(e.clientX, e.clientY) != null || hitTestMarker(e.clientX, e.clientY)) ? 'grab' : '';
   }
   if (roiDrag && image) {
     const [ix, iy] = clientToImage(e.clientX, e.clientY);
@@ -897,6 +972,14 @@ window.addEventListener('mousemove', (e) => {
   redraw();
 });
 window.addEventListener('mouseup', () => {
+  if (facingDragCandidate) { facingDragCandidate = null; return; }
+  if (facingDrag) {
+    const id = facingDrag.id;
+    facingDrag = null;
+    const chip = playerChips.find((c) => c.id === id);
+    if (onChipFacingMoved && chip) onChipFacingMoved(id, chip.facingImagePx);
+    return;
+  }
   if (ballDragCandidate) { ballDragCandidate = null; return; }
   if (ballDrag) {
     ballDrag = null;
