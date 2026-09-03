@@ -635,7 +635,30 @@
         <button id="photoSetBallBtn" class="dock-btn" disabled title="Click a point on the photo to mark the ball.">Set ball</button>
         <label style="font-size:11px; margin-top:2px;"><input type="checkbox" id="photoBodyOutlineToggle"> show body outline for selected player</label>
         <div style="opacity:0.6; font-size:10px;">click a player dot to select it - computes a rough body silhouette on demand (slower, so off by default and one player at a time).</div>
+        <div style="display:flex; gap:4px; margin-top:2px;">
+          <button id="photoSetTeamHomeBtn" class="dock-btn" disabled style="flex:1; padding:2px 6px; font-size:10px;" title="Set the selected player's team.">Set: Home</button>
+          <button id="photoSetTeamAwayBtn" class="dock-btn" disabled style="flex:1; padding:2px 6px; font-size:10px;" title="Set the selected player's team.">Set: Away</button>
+        </div>
         <div id="photoStep3Status" style="opacity:0.7; font-size:10px; margin-top:2px;"></div>
+      </div>
+    </details>
+    <details id="photoStep4Details" style="margin-top:8px;">
+      <summary style="cursor:pointer; font-size:11px; opacity:0.85;">Step 4 - Insights</summary>
+      <div style="opacity:0.7; margin-top:6px; font-size:11px;">
+        shot angle, coverage and passing options derived from the ball/player
+        positions above. Needs a solved camera pose and a placed ball first.
+      </div>
+      <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">
+        <fieldset id="photoTargetGoalFieldset" disabled style="border:1px solid #444; border-radius:4px; padding:4px 6px; font-size:11px;">
+          <legend style="font-size:10px; opacity:0.75; padding:0 4px;">target goal</legend>
+          <label style="margin-right:8px;"><input type="radio" name="photoTargetGoal" id="photoTargetGoalA" value="A"> Goal A</label>
+          <label><input type="radio" name="photoTargetGoal" id="photoTargetGoalB" value="B"> Goal B</label>
+        </fieldset>
+        <label style="font-size:11px;">home goalie: <select id="photoGoalieHome" disabled></select></label>
+        <label style="font-size:11px;">away goalie: <select id="photoGoalieAway" disabled></select></label>
+        <button id="photoAutoAssignGoaliesBtn" class="dock-btn" disabled title="Detect goalies inside each goal's crease with YOLO, appending a chip if the general Step 3 pass missed the goalie. Falls back to the nearest own-team chip if detection fails.">Auto-detect goalies</button>
+        <div id="photoInsightsReadout" style="opacity:0.7; font-size:10px; margin-top:2px;">-</div>
+        <button id="photoView3dBtn" class="dock-btn" disabled title="Preview the reconstructed positions in the 3D top-down view.">View in 3D</button>
       </div>
     </details>
   </div>

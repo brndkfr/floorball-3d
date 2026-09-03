@@ -89,6 +89,20 @@ let onBallMoved = null;       // (imgXY) => void
 let ballPlacementMode = false;
 let onBallPlacementClick = null; // (imgX, imgY) => void, fired by a plain click while ballPlacementMode is on
 
+// Phase-3 insight overlays (docs/phase-3-plan.md T4/T6) - image-px only,
+// world->px projection stays in insights-overlay.js so this module stays
+// domain-agnostic (same discipline as the labelResolver pattern).
+let shotLines = null;     // { corners:[{px1,px2}]*4, centre:{px1,px2}, colorKey } | null
+let coverageOverlay = null; // { corners:[tl,tr,bl,br], grid:Float32Array, cols, rows } | null
+let passLines = null;     // [{ fromPx, toPx, clear }] | null
+let angleBadge = null;    // angleDeg (number) | null - drawn near the ball marker
+const SHOT_LINE_COLORS = { open: '#ff3b30', 'blocked-off': '#ffd21a', 'blocked-centred': '#2ecc55' };
+
+export function setShotLines(lines) { shotLines = lines || null; redraw(); }
+export function setCoverageOverlay(cov) { coverageOverlay = cov || null; redraw(); }
+export function setPassLines(lines) { passLines = lines || null; redraw(); }
+export function setAngleBadge(angleDeg) { angleBadge = angleDeg != null ? angleDeg : null; redraw(); }
+
 // chip.ring (optional): [[x,y], ...] image px tracing a real-world-radius
 // footprint circle - drawn as an outline around the dot. null/absent falls
 // back to just the dot (e.g. a ring point went behind the camera).
@@ -452,7 +466,62 @@ function redraw() {
   ctx.globalAlpha = 1;
   ctx.lineWidth = 1;
 
-  // Player chips + ball (Phase 2 Step 3) - kept visible in locked photo-view
+  // Coverage heatmap (Phase 3) - low-opacity red/green fill per grid cell,
+  // corners already projected to image px by insights-overlay.js.
+  if (coverageOverlay) {
+    const { corners, grid, cols, rows } = coverageOverlay;
+    const vcols = cols + 1;
+    const toCanvas = ([px, py]) => [vr.x + (px / image.width) * vr.w, vr.y + (py / image.height) * vr.h];
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const v00 = r * vcols + c, v10 = v00 + 1, v01 = v00 + vcols, v11 = v01 + 1;
+        const mean = (grid[v00] + grid[v10] + grid[v01] + grid[v11]) / 4;
+        ctx.fillStyle = mean >= 0.5 ? '#26d940' : '#e0261a';
+        const [tlx, tly] = toCanvas(corners[v00]);
+        const [trx] = toCanvas(corners[v10]);
+        const [, bly] = toCanvas(corners[v01]);
+        ctx.fillRect(tlx, tly, trx - tlx, bly - tly);
+      }
+    }
+    ctx.restore();
+  }
+
+  // Pass corridors (Phase 3) - drawn under the shot line so the shot line
+  // reads as the primary cue.
+  if (passLines) {
+    for (const p of passLines) {
+      const [fx, fy] = [vr.x + (p.fromPx[0] / image.width) * vr.w, vr.y + (p.fromPx[1] / image.height) * vr.h];
+      const [tx, ty] = [vr.x + (p.toPx[0] / image.width) * vr.w, vr.y + (p.toPx[1] / image.height) * vr.h];
+      ctx.strokeStyle = p.clear ? '#2ecc55' : '#ff3b30';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.fillStyle = p.clear ? '#2ecc55' : '#ff3b30';
+      ctx.beginPath(); ctx.arc(tx, ty, 5, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Shot lines (Phase 3) - drawn above pass lines so it isn't visually
+  // lost in a fan of pass lines.
+  if (shotLines) {
+    ctx.strokeStyle = SHOT_LINE_COLORS[shotLines.colorKey] || SHOT_LINE_COLORS.open;
+    ctx.lineWidth = 2;
+    for (const { px1, px2 } of shotLines.corners) {
+      const [x1, y1] = [vr.x + (px1[0] / image.width) * vr.w, vr.y + (px1[1] / image.height) * vr.h];
+      const [x2, y2] = [vr.x + (px2[0] / image.width) * vr.w, vr.y + (px2[1] / image.height) * vr.h];
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+    const { px1, px2 } = shotLines.centre;
+    const [x1, y1] = [vr.x + (px1[0] / image.width) * vr.w, vr.y + (px1[1] / image.height) * vr.h];
+    const [x2, y2] = [vr.x + (px2[0] / image.width) * vr.w, vr.y + (px2[1] / image.height) * vr.h];
+    ctx.save();
+    ctx.setLineDash([8, 6]);
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.lineWidth = 1;
   // too (like preview strips), since they're the actual result to check.
   for (const chip of playerChips) {
     const [px, py] = chip.imagePx;
@@ -511,6 +580,15 @@ function redraw() {
     ctx.strokeStyle = '#111';
     ctx.lineWidth = dragging ? 3 : 2;
     ctx.beginPath(); ctx.arc(cx, cy, dragging ? 7 : 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    if (angleBadge != null) {
+      const label = `${Math.round(angleBadge)}°`;
+      ctx.font = 'bold 13px Consolas, monospace';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      ctx.strokeText(label, cx + 10, cy + 18);
+      ctx.fillStyle = '#ffe14f';
+      ctx.fillText(label, cx + 10, cy + 18);
+    }
   }
   ctx.lineWidth = 1;
 

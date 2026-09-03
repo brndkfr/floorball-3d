@@ -3,6 +3,7 @@ import { GOAL_MOUTH_CORNERS_LOCAL, GOAL_CENTER_LOCAL } from './constants.js';
 import { state, getBallWorldCenter } from './state.js';
 import { scene } from './scene.js';
 import { selectObject } from './selection.js';
+import { shotVerdict, shotLineXAtZ } from './insights.js';
 
 // --- ball-to-goal trajectory lines ---
 const trajectoryCheckbox = document.getElementById('trajectoryCheckbox');
@@ -58,36 +59,16 @@ scene.add(shootingLine);
 const SHOT_OPEN_COLOR = new THREE.Color(0xff3b30);
 const SHOT_BLOCKED_OFFCENTER_COLOR = new THREE.Color(0xffd21a);
 const SHOT_BLOCKED_CENTERED_COLOR = new THREE.Color(0x2ecc55);
-const GOALIE_CENTERED_THRESHOLD = 200; // mm of lateral (X) offset still counted as "centred" - an estimate, not a sourced number
-
-const shootingLineRaycaster = new THREE.Raycaster();
-const shotDirScratch = new THREE.Vector3();
-
-// Where does the ball->goalCenter line sit in X at a given Z? (linear
-// interpolation along the line) - shared by the colour check and the
-// "align goalie to shot line" button, so both agree on the same target.
-function shotLineXAtZ(ballCenter, goalCenter, z) {
-  const dz = goalCenter.z - ballCenter.z;
-  if (Math.abs(dz) < 1e-6) return ballCenter.x; // degenerate: ball and goal centre share a Z, no meaningful line
-  const t = (z - ballCenter.z) / dz;
-  return ballCenter.x + t * (goalCenter.x - ballCenter.x);
-}
+const SHOT_LINE_COLOR_BY_KEY = {
+  open: SHOT_OPEN_COLOR,
+  'blocked-off': SHOT_BLOCKED_OFFCENTER_COLOR,
+  'blocked-centred': SHOT_BLOCKED_CENTERED_COLOR,
+};
 
 function computeShotLineColor(ballCenter, goalCenter) {
-  if (!state.goalieGroup || !state.goalieGroup.visible) return SHOT_OPEN_COLOR;
-
-  const toGoal = shotDirScratch.copy(goalCenter).sub(ballCenter);
-  const dist = toGoal.length();
-  if (dist < 1) return SHOT_OPEN_COLOR;
-
-  shootingLineRaycaster.set(ballCenter, toGoal.clone().normalize());
-  shootingLineRaycaster.far = dist - 1;
-  if (shootingLineRaycaster.intersectObject(state.goalieGroup, true).length === 0) return SHOT_OPEN_COLOR;
-
-  const lineX = shotLineXAtZ(ballCenter, goalCenter, state.goalieGroup.position.z);
-  const lateralOffset = Math.abs(state.goalieGroup.position.x - lineX);
-
-  return lateralOffset <= GOALIE_CENTERED_THRESHOLD ? SHOT_BLOCKED_CENTERED_COLOR : SHOT_BLOCKED_OFFCENTER_COLOR;
+  const goalieMesh = state.goalieGroup && state.goalieGroup.visible ? state.goalieGroup : null;
+  const { lineColor } = shotVerdict({ ballWorld: ballCenter, goalCenterWorld: goalCenter, goalieMesh });
+  return SHOT_LINE_COLOR_BY_KEY[lineColor];
 }
 
 const trajectoryScratchCorner = new THREE.Vector3();

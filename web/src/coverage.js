@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { camera } from './scene.js';
+import { coverageGrid } from './insights.js';
 
 // --- goal coverage: what fraction of the goal mouth does the goalie block? ---
 // Samples a grid of points across the goal opening; for each, casts a ray
@@ -49,17 +50,12 @@ coverageMesh.position.set(0, 0, 2); // just off the goal mouth plane, avoids z-f
 coverageMesh.visible = false;
 coverageMesh.frustumCulled = false; // reparented between goals + defensive, same reasoning as trajectory.js's lines
 
-const coverageRaycaster = new THREE.Raycaster();
-
 // Raycasting 221 samples against a 10k-triangle detailed goalie mesh every
 // single animation frame (60/sec) regardless of whether anything moved was
 // the single largest per-frame cost in the app. Nothing here needs to be
 // recomputed unless the ball, the target goal, or the goalie's identity/
 // pose/visibility actually changed since the last frame - so track that
 // and skip the raycasting pass entirely on unchanged frames.
-const blockedAt = new Float32Array(COVERAGE_VERTEX_COUNT); // 0 = open, 1 = blocked, per grid vertex, reused every call
-const coverageScratchPt = new THREE.Vector3();
-const coverageScratchDir = new THREE.Vector3();
 const lastCoverageState = {
   ballX: NaN, ballY: NaN, ballZ: NaN, targetGoal: null,
   goalieRef: null, goalieX: NaN, goalieY: NaN, goalieZ: NaN, goalieRotY: NaN, goalieVisible: null,
@@ -99,36 +95,15 @@ export function updateCoverage(ballCenter) {
 
   if (!coverageInputsChanged(ballCenter)) return; // nothing moved - reuse the colors/percentage from last pass
 
+  const goalieMesh = state.goalieGroup && state.goalieGroup.visible ? state.goalieGroup : null;
+  const { blockedAt, pctBlocked } = coverageGrid({ ballWorld: ballCenter, targetGoalGroup: state.targetGoal, goalieMesh });
   for (let i = 0; i < COVERAGE_VERTEX_COUNT; i++) {
-    coverageScratchPt.set(coveragePositions[i * 3], coveragePositions[i * 3 + 1], coveragePositions[i * 3 + 2]);
-    const worldPt = state.targetGoal.localToWorld(coverageScratchPt);
-
-    let blocked = 0;
-    if (ballCenter && state.goalieGroup && state.goalieGroup.visible) {
-      coverageScratchDir.copy(worldPt).sub(ballCenter);
-      const dist = coverageScratchDir.length();
-      coverageScratchDir.normalize();
-      coverageRaycaster.set(ballCenter, coverageScratchDir);
-      coverageRaycaster.far = dist - 1;
-      if (coverageRaycaster.intersectObject(state.goalieGroup, true).length > 0) blocked = 1;
-    }
-    blockedAt[i] = blocked;
-    const color = blocked ? [0.15, 0.85, 0.25] : [0.85, 0.15, 0.15];
+    const color = blockedAt[i] ? [0.15, 0.85, 0.25] : [0.85, 0.15, 0.15];
     coverageColors.set(color, i * 3);
   }
   coverageGeometry.attributes.color.needsUpdate = true;
 
-  // % blocked = mean of each cell's 4 corner samples, so a cell straddling
-  // the covered/open boundary contributes fractionally instead of an
-  // all-or-nothing vote - matches the smooth-shaded look above.
-  let blockedArea = 0;
-  for (let r = 0; r < COVERAGE_ROWS; r++) {
-    for (let c = 0; c < COVERAGE_COLS; c++) {
-      const v00 = r * COVERAGE_VCOLS + c, v10 = v00 + 1, v01 = v00 + COVERAGE_VCOLS, v11 = v01 + 1;
-      blockedArea += (blockedAt[v00] + blockedAt[v10] + blockedAt[v01] + blockedAt[v11]) / 4;
-    }
-  }
-  state.currentCoveragePct = Math.round((blockedArea / (COVERAGE_COLS * COVERAGE_ROWS)) * 100);
+  state.currentCoveragePct = Math.round(pctBlocked);
   coveragePctEl.textContent = `${state.currentCoveragePct}% blocked`;
 }
 

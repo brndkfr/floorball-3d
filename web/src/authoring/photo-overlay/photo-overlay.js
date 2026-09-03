@@ -12,6 +12,7 @@ import * as photoCanvas from './photo-canvas.js';
 import { enterPhoto, exitPhoto, isPhoto, fitToPhotoRect, setOverlayOpacity } from './view.js';
 import { detectGoal, computeEdgeOverlay } from './detect.js';
 import { detectPlayers } from './detect-players.js';
+import { detectGoalieForEnd } from './detect-goalie.js';
 import { segmentPlayer } from './segment-player.js';
 import { backProjectPlayers, backProjectFoot } from './back-project.js';
 import { assignTeams } from './team-cluster.js';
@@ -20,6 +21,8 @@ import * as borderMode from './border-mode.js';
 import { RINK_L, HALF_W, GOAL_LINE_FROM_BOARD } from '../../constants.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from '../chips.js';
 import * as photoCache from './photo-cache.js';
+import { recomputeInsights } from './insights-overlay.js';
+import { enterPhotoPreview3D, exitPhotoPreview3D, isPhotoPreview3D } from './preview-3d.js';
 
 // Structured, in-page debug log (capped) so calibration state can be
 // inspected from devtools/automation at any later point in the session,
@@ -72,6 +75,18 @@ const setBallBtn = document.getElementById('photoSetBallBtn');
 const bodyOutlineToggle = document.getElementById('photoBodyOutlineToggle');
 const step3Status = document.getElementById('photoStep3Status');
 const STEP3_MAX_REPROJ_ERROR_PX = 20;
+const setTeamHomeBtn = document.getElementById('photoSetTeamHomeBtn');
+const setTeamAwayBtn = document.getElementById('photoSetTeamAwayBtn');
+
+const step4Details = document.getElementById('photoStep4Details');
+const targetGoalFieldset = document.getElementById('photoTargetGoalFieldset');
+const targetGoalARadio = document.getElementById('photoTargetGoalA');
+const targetGoalBRadio = document.getElementById('photoTargetGoalB');
+const goalieHomeSelect = document.getElementById('photoGoalieHome');
+const goalieAwaySelect = document.getElementById('photoGoalieAway');
+const autoAssignGoaliesBtn = document.getElementById('photoAutoAssignGoaliesBtn');
+const insightsReadout = document.getElementById('photoInsightsReadout');
+const view3dBtn = document.getElementById('photoView3dBtn');
 
 const fovSlider = document.getElementById('photoFovSlider');
 const fovValue = document.getElementById('photoFovValue');
@@ -415,6 +430,7 @@ let solveSeq = 0;
 // drag WITHOUT re-running solvePnP (which would visibly lag, see T5 notes
 // in docs/phase-2-plan.md).
 let lastPose = null;
+export function getLastPose() { return lastPose; }
 
 async function trySolve() {
   const seq = ++solveSeq;
@@ -498,6 +514,8 @@ async function trySolve() {
       ball: prevPhoto.ball,
       ballCarrier: prevPhoto.ballCarrier,
       facingDeg: prevPhoto.facingDeg,
+      targetGoal: prevPhoto.targetGoal ?? null,
+      goalies: prevPhoto.goalies ?? { home: null, away: null },
     };
     saveDoc();
     if (isPhoto()) fitToPhotoRect(photoCanvas.getPhotoRect());
@@ -1058,6 +1076,7 @@ function renderPlayersAndBall() {
   }
   photoCanvas.setPlayerChips(chips);
   photoCanvas.setBallMarker(photo.ball ? lastPose.projectWorld(photo.ball[0], photo.ball[1], photo.ball[2]) : null);
+  updateStep4();
 }
 
 // Body-silhouette outline (segment-player.js) is expensive (iterative
@@ -1069,6 +1088,8 @@ function renderPlayersAndBall() {
 let segSeq = 0;
 async function handleChipSelected(id) {
   const seq = ++segSeq;
+  setTeamHomeBtn.disabled = id == null;
+  setTeamAwayBtn.disabled = id == null;
   if (id == null || !bodyOutlineToggle.checked) { renderPlayersAndBall(); return; }
   const frame = state.doc?.frames?.[state.doc.currentFrame];
   const player = frame?.photo?.players?.find((p) => p.id === id);
@@ -1097,9 +1118,32 @@ bodyOutlineToggle.addEventListener('change', () => {
   handleChipSelected(photoCanvas.getSelectedChipId());
 });
 
+// Per-player team override - "Flip teams" above swaps everyone at once;
+// this fixes one mis-clustered chip (team-cluster.js's jersey-colour guess
+// is not always right) without touching the rest.
+function setSelectedChipTeam(team) {
+  const id = photoCanvas.getSelectedChipId();
+  if (id == null) return;
+  const frame = state.doc?.frames?.[state.doc.currentFrame];
+  const player = frame?.photo?.players?.find((p) => p.id === id);
+  if (!player) return;
+  player.team = team;
+  saveDoc();
+  renderPlayersAndBall();
+}
+setTeamHomeBtn.addEventListener('click', () => setSelectedChipTeam('home'));
+setTeamAwayBtn.addEventListener('click', () => setSelectedChipTeam('away'));
+
 function goalCenterNearestZ(z) {
   const goalAZ = GOAL_LINE_FROM_BOARD, goalBZ = RINK_L - GOAL_LINE_FROM_BOARD;
   return Math.abs(z - goalAZ) <= Math.abs(z - goalBZ) ? [0, goalAZ] : [0, goalBZ];
+}
+
+// Which goal end ('A'|'B') is nearest a given Z - used both for the
+// carrier's default facing (Phase 2) and Step 4's default targetGoal.
+function nearestGoalLetter(z) {
+  const goalAZ = GOAL_LINE_FROM_BOARD, goalBZ = RINK_L - GOAL_LINE_FROM_BOARD;
+  return Math.abs(z - goalAZ) <= Math.abs(z - goalBZ) ? 'A' : 'B';
 }
 
 // v1 facing = "point toward the closer goal" (docs/phase-2-plan.md non-goals -
@@ -1225,5 +1269,176 @@ photoCanvas.setBallMovedHandler((imagePx) => {
   renderPlayersAndBall();
 });
 
+// Step 4 - Insights (Phase 3, docs/phase-3-plan.md T5). Disabled until a
+// usable pose exists AND the ball is placed (Phase-2 prerequisites).
+function goalieOptionsHtml(players, team, selectedId) {
+  const opts = ['<option value="">-</option>'];
+  for (const p of players) {
+    if (p.team !== team) continue;
+    opts.push(`<option value="${p.id}"${p.id === selectedId ? ' selected' : ''}>#${p.id}</option>`);
+  }
+  return opts.join('');
+}
+
+function updateStep4() {
+  const frame = state.doc?.frames?.[state.doc.currentFrame];
+  const photo = frame?.photo;
+  const enabled = !!(lastPose && lastPose.reprojErrorPx < STEP3_MAX_REPROJ_ERROR_PX && photo?.ball);
+  targetGoalFieldset.disabled = !enabled;
+  goalieHomeSelect.disabled = !enabled;
+  goalieAwaySelect.disabled = !enabled;
+  autoAssignGoaliesBtn.disabled = !enabled;
+  view3dBtn.disabled = !enabled;
+  if (!enabled) {
+    insightsReadout.textContent = '-';
+    return;
+  }
+
+  if (photo.targetGoal == null) {
+    photo.targetGoal = nearestGoalLetter(photo.ball[2]);
+    saveDoc();
+  }
+  targetGoalARadio.checked = photo.targetGoal === 'A';
+  targetGoalBRadio.checked = photo.targetGoal === 'B';
+
+  const players = photo.players || [];
+  const goalies = photo.goalies || (photo.goalies = { home: null, away: null });
+  goalieHomeSelect.innerHTML = goalieOptionsHtml(players, 'home', goalies.home);
+  goalieAwaySelect.innerHTML = goalieOptionsHtml(players, 'away', goalies.away);
+
+  const result = recomputeInsights();
+  if (!result) { insightsReadout.textContent = 'place a ball and pick a target goal to see insights'; return; }
+  const { shot, coveragePct, passes } = result;
+  const clearCount = passes.filter((p) => p.clear).length;
+  insightsReadout.textContent = `angle: ${Math.round(shot.angleDeg)}° · dist: ${Math.round(shot.distance)}mm · `
+    + `coverage: ${coveragePct != null ? Math.round(coveragePct) + '%' : '-'} · `
+    + `clear passes: ${clearCount}/${passes.length}`;
+}
+
+function setTargetGoal(letter) {
+  const frame = ensureDoc().frames[state.doc.currentFrame];
+  if (!frame.photo) return;
+  frame.photo.targetGoal = letter;
+  saveDoc();
+  updateStep4();
+}
+targetGoalARadio.addEventListener('change', () => { if (targetGoalARadio.checked) setTargetGoal('A'); });
+targetGoalBRadio.addEventListener('change', () => { if (targetGoalBRadio.checked) setTargetGoal('B'); });
+
+function setGoalie(team, idText) {
+  const frame = ensureDoc().frames[state.doc.currentFrame];
+  if (!frame.photo) return;
+  const id = idText === '' ? null : Number(idText);
+  frame.photo.goalies = { ...(frame.photo.goalies || { home: null, away: null }), [team]: id };
+  saveDoc();
+  updateStep4();
+}
+goalieHomeSelect.addEventListener('change', () => setGoalie('home', goalieHomeSelect.value));
+goalieAwaySelect.addEventListener('change', () => setGoalie('away', goalieAwaySelect.value));
+
+// Layer 1: run YOLO a second time scoped to each goal's crease box at a
+// lower threshold (goalies are heavily occluded by the frame/net/pads and
+// the Step 3 pass often misses them). Layer 2 (classical-CV blob-in-mouth
+// fallback) is deferred; if Layer 1 finds nothing at a goal end we fall
+// back to the previous "nearest own-team chip to that goal" heuristic so
+// this button never regresses on frames where the general pass already
+// caught the goalie.
+autoAssignGoaliesBtn.addEventListener('click', async () => {
+  const frame = ensureDoc().frames[state.doc.currentFrame];
+  const photo = frame.photo;
+  if (!photo || !lastPose) return;
+  const image = photoCanvas.getImage();
+  const size = photoCanvas.getImageSize();
+  if (!image || !size) return;
+
+  const prevLabel = autoAssignGoaliesBtn.textContent;
+  autoAssignGoaliesBtn.disabled = true;
+  autoAssignGoaliesBtn.textContent = 'Detecting goalies...';
+  const t0 = performance.now();
+  try {
+    const players = photo.players || (photo.players = []);
+    const nextId = () => players.reduce((m, p) => Math.max(m, p.id), -1) + 1;
+
+    const goalies = { home: null, away: null };
+    const autoDetected = { home: null, away: null };
+    // Convention: home defends goal A, away defends goal B. The user can
+    // flip via the existing "Flip teams" button or the per-team dropdowns.
+    for (const [end, team] of [['A', 'home'], ['B', 'away']]) {
+      // eslint-disable-next-line no-await-in-loop -- one ORT WASM run at a time
+      const detected = await detectGoalieForEnd(image, lastPose, photoCamera, [size.w, size.h], end, {
+        existingPlayers: players,
+      });
+      if (detected) {
+        let chipId = detected.existingPlayerId;
+        if (chipId == null) {
+          chipId = nextId();
+          players.push({
+            id: chipId,
+            world: detected.foot,
+            team,
+            role: 'goalie',
+            bbox: detected.bbox,
+          });
+        } else {
+          const p = players.find((pl) => pl.id === chipId);
+          if (p) { p.team = team; p.role = 'goalie'; }
+        }
+        goalies[team] = chipId;
+        autoDetected[team] = { chipId, source: 'yolo', confidence: detected.score };
+        continue;
+      }
+      // Layer 1 miss - fall back to nearest own-team chip to this goal.
+      const gz = end === 'A' ? GOAL_LINE_FROM_BOARD : RINK_L - GOAL_LINE_FROM_BOARD;
+      let bestId = null, bestDistSq = Infinity;
+      for (const p of players) {
+        if (p.team !== team) continue;
+        const dx = p.world[0], dz = p.world[2] - gz;
+        const d = dx * dx + dz * dz;
+        if (d < bestDistSq) { bestDistSq = d; bestId = p.id; }
+      }
+      goalies[team] = bestId;
+      autoDetected[team] = bestId != null ? { chipId: bestId, source: 'nearest', confidence: null } : null;
+    }
+    photo.goalies = { ...goalies, autoDetected };
+    saveDoc();
+    renderPlayersAndBall();
+    updateStep4();
+    // updateStep4 has already rewritten insightsReadout with the shot/coverage
+    // line; append a compact goalie status so the user sees what happened.
+    const parts = ['home', 'away'].map((t) => {
+      const a = autoDetected[t];
+      if (!a) return `${t}: none`;
+      if (a.source === 'yolo') return `${t}: #${a.chipId} (yolo ${a.confidence.toFixed(2)})`;
+      return `${t}: #${a.chipId} (nearest chip)`;
+    });
+    insightsReadout.textContent = `goalies · ${parts.join(' · ')}`;
+    debugLog('autoAssignGoalies', {
+      autoDetected,
+      goalies,
+      playerCount: players.length,
+      elapsedMs: Math.round(performance.now() - t0),
+    });
+  } catch (err) {
+    console.error('[photo-overlay] auto-detect goalies failed', err);
+    insightsReadout.textContent = 'auto-detect goalies failed: ' + (err.message || err);
+  } finally {
+    autoAssignGoaliesBtn.disabled = false;
+    autoAssignGoaliesBtn.textContent = prevLabel;
+  }
+});
+
+view3dBtn.addEventListener('click', () => {
+  if (isPhotoPreview3D()) {
+    exitPhotoPreview3D();
+    view3dBtn.textContent = 'View in 3D';
+    return;
+  }
+  const frame = state.doc?.frames?.[state.doc.currentFrame];
+  if (!frame?.photo) return;
+  enterPhotoPreview3D(frame);
+  view3dBtn.textContent = isPhotoPreview3D() ? 'Exit 3D preview' : 'View in 3D';
+});
+
 updateStep3Enabled();
+updateStep4();
 buildList();
