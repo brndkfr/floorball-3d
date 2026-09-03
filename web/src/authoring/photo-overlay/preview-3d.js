@@ -9,7 +9,7 @@
 // lightweight preview meshes directly into a private group and removes
 // them on exit; state.doc is untouched (T7 acceptance criterion).
 import * as THREE from 'three';
-import { scene } from '../../scene.js';
+import { scene, renderer } from '../../scene.js';
 import { state } from '../../state.js';
 import { CHIP_HEIGHT, CHIP_RADIUS, CHIP_DISPLAY_SCALE } from '../chips.js';
 import { enterTopDown, exitTopDown, isTopDown } from '../topdown-camera.js';
@@ -20,6 +20,12 @@ const TEAM_COLORS = { home: 0x2fbf4e, away: 0xd94b2f };
 let previewGroup = null;
 let savedBallPos = null;
 let savedTargetGoal = null;
+// Photo-mode state we override so the 3D preview is actually visible:
+// during Step 4, setCalibrating(true) hides the WebGL canvas and the
+// photo-canvas + fitToPhotoRect may have letterboxed its inline styles.
+let savedCanvasStyle = null;
+let savedPhotoCanvasDisplay = null;
+let savedSceneBackground = null;
 
 function makeNumberSprite(number) {
   const size = 128;
@@ -121,11 +127,49 @@ export function enterPhotoPreview3D(frame) {
     state.targetGoal = photo.targetGoal === 'B' ? state.goalInstances[1] : state.goalInstances[0];
   }
 
+  // Force the WebGL canvas visible + full-window and hide the photo
+  // canvas; otherwise the caller's Step-4 setCalibrating(true) state
+  // leaves the 3D scene invisible under the photo overlay.
+  const domEl = renderer.domElement;
+  savedCanvasStyle = {
+    display: domEl.style.display,
+    position: domEl.style.position,
+    left: domEl.style.left,
+    top: domEl.style.top,
+    width: domEl.style.width,
+    height: domEl.style.height,
+    opacity: domEl.style.opacity,
+    pointerEvents: domEl.style.pointerEvents,
+  };
+  domEl.style.display = '';
+  domEl.style.position = 'relative';
+  domEl.style.left = '';
+  domEl.style.top = '';
+  domEl.style.width = '';
+  domEl.style.height = '';
+  domEl.style.opacity = '';
+  domEl.style.pointerEvents = 'auto';
+  const photoCanvasEl = document.getElementById('photo-canvas');
+  if (photoCanvasEl) {
+    savedPhotoCanvasDisplay = photoCanvasEl.style.display;
+    photoCanvasEl.style.display = 'none';
+  }
+  // scene.background is nulled during isPhoto() so the renderer stays
+  // transparent over the photo - restore a solid clear for the preview.
+  savedSceneBackground = scene.background;
+  if (!scene.background) scene.background = new THREE.Color(0x0f1116);
+  renderer.setClearColor(0x0f1116, 1);
+  // Re-run scene.js's own window-resize handler to restore full-window
+  // renderer sizing / aspect after fitToPhotoRect may have shrunk it.
+  window.dispatchEvent(new Event('resize'));
+
   if (!isTopDown()) enterTopDown();
 }
 
 export function exitPhotoPreview3D() {
   if (!previewGroup) return;
+  if (isTopDown()) exitTopDown();
+
   scene.remove(previewGroup);
   disposeGroup(previewGroup);
   previewGroup = null;
@@ -136,5 +180,20 @@ export function exitPhotoPreview3D() {
   state.targetGoal = savedTargetGoal;
   savedTargetGoal = null;
 
-  if (isTopDown()) exitTopDown();
+  const domEl = renderer.domElement;
+  if (savedCanvasStyle) {
+    for (const [k, v] of Object.entries(savedCanvasStyle)) domEl.style[k] = v;
+    savedCanvasStyle = null;
+  }
+  const photoCanvasEl = document.getElementById('photo-canvas');
+  if (photoCanvasEl && savedPhotoCanvasDisplay !== null) {
+    photoCanvasEl.style.display = savedPhotoCanvasDisplay;
+    savedPhotoCanvasDisplay = null;
+  }
+  if (savedSceneBackground !== null) {
+    scene.background = savedSceneBackground;
+    savedSceneBackground = null;
+  }
+  renderer.setClearColor(0x000000, 1);
+  window.dispatchEvent(new Event('resize'));
 }
