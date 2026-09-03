@@ -77,6 +77,9 @@ const step3Status = document.getElementById('photoStep3Status');
 const STEP3_MAX_REPROJ_ERROR_PX = 20;
 const setTeamHomeBtn = document.getElementById('photoSetTeamHomeBtn');
 const setTeamAwayBtn = document.getElementById('photoSetTeamAwayBtn');
+const deletePlayerBtn = document.getElementById('photoDeletePlayerBtn');
+const addPlayerHomeBtn = document.getElementById('photoAddPlayerHomeBtn');
+const addPlayerAwayBtn = document.getElementById('photoAddPlayerAwayBtn');
 
 const step4Details = document.getElementById('photoStep4Details');
 const targetGoalFieldset = document.getElementById('photoTargetGoalFieldset');
@@ -1035,6 +1038,8 @@ function updateStep3Enabled() {
   autoDetectPlayersBtn.disabled = !enabled;
   flipTeamsBtn.disabled = !enabled;
   setBallBtn.disabled = !enabled;
+  addPlayerHomeBtn.disabled = !enabled;
+  addPlayerAwayBtn.disabled = !enabled;
 }
 
 // Ring of image-px points tracing a real-world-radius circle around a floor
@@ -1067,16 +1072,38 @@ function renderPlayersAndBall() {
   }
   const chips = [];
   const selectedId = photoCanvas.getSelectedChipId();
+  const labels = computePlayerLabels(photo.players || []);
   for (const p of photo.players || []) {
     const px = lastPose.projectWorld(p.world[0], p.world[1], p.world[2]);
     if (!px) continue; // behind camera - shouldn't normally happen post-solve
     const ring = footprintRing(p.world[0], p.world[2]);
     const showOutline = bodyOutlineToggle.checked && p.id === selectedId;
-    chips.push({ id: p.id, imagePx: px, team: p.team, isCarrier: p.id === photo.ballCarrier, ring, outline: showOutline ? p.outline : null });
+    chips.push({ id: p.id, imagePx: px, team: p.team, isCarrier: p.id === photo.ballCarrier, ring, outline: showOutline ? p.outline : null, label: labels.get(p.id) });
   }
   photoCanvas.setPlayerChips(chips);
   photoCanvas.setBallMarker(photo.ball ? lastPose.projectWorld(photo.ball[0], photo.ball[1], photo.ball[2]) : null);
   updateStep4();
+}
+
+// Compute display labels per player, recomputed on every render so team
+// changes / role changes / manual placements re-number immediately without
+// touching the persisted `frame.photo.players`.
+function computePlayerLabels(players) {
+  const labels = new Map();
+  const teamCounters = { home: 0, away: 0 };
+  const sorted = [...players].sort((a, b) => a.id - b.id);
+  for (const p of sorted) {
+    if (p.role === 'goalie') {
+      const end = Math.abs(p.world[2] - GOAL_LINE_FROM_BOARD) <= Math.abs(p.world[2] - (RINK_L - GOAL_LINE_FROM_BOARD)) ? 'A' : 'B';
+      labels.set(p.id, `Goalie ${end}`);
+      continue;
+    }
+    const teamKey = p.team === 'home' ? 'A' : p.team === 'away' ? 'B' : '?';
+    if (teamKey === '?') { labels.set(p.id, `#${p.id}`); continue; }
+    teamCounters[p.team] += 1;
+    labels.set(p.id, `Team ${teamKey} #${teamCounters[p.team]}`);
+  }
+  return labels;
 }
 
 // Body-silhouette outline (segment-player.js) is expensive (iterative
@@ -1090,6 +1117,7 @@ async function handleChipSelected(id) {
   const seq = ++segSeq;
   setTeamHomeBtn.disabled = id == null;
   setTeamAwayBtn.disabled = id == null;
+  deletePlayerBtn.disabled = id == null;
   if (id == null || !bodyOutlineToggle.checked) { renderPlayersAndBall(); return; }
   const frame = state.doc?.frames?.[state.doc.currentFrame];
   const player = frame?.photo?.players?.find((p) => p.id === id);
@@ -1133,6 +1161,55 @@ function setSelectedChipTeam(team) {
 }
 setTeamHomeBtn.addEventListener('click', () => setSelectedChipTeam('home'));
 setTeamAwayBtn.addEventListener('click', () => setSelectedChipTeam('away'));
+
+function deleteSelectedChip() {
+  const id = photoCanvas.getSelectedChipId();
+  if (id == null) return;
+  const frame = state.doc?.frames?.[state.doc.currentFrame];
+  const photo = frame?.photo;
+  if (!photo?.players) return;
+  photo.players = photo.players.filter((p) => p.id !== id);
+  if (photo.ballCarrier === id) photo.ballCarrier = null;
+  if (photo.goalies) {
+    if (photo.goalies.home === id) photo.goalies.home = null;
+    if (photo.goalies.away === id) photo.goalies.away = null;
+  }
+  photoCanvas.setChipSelectedHandler && photoCanvas.setChipSelectedHandler(handleChipSelected);
+  saveDoc();
+  handleChipSelected(null);
+  renderPlayersAndBall();
+}
+deletePlayerBtn.addEventListener('click', deleteSelectedChip);
+
+function beginAddPlayer(team) {
+  const current = photoCanvas.isAddPlayerMode();
+  const already = current && addPlayerHomeBtn.textContent.startsWith('Click') && team === 'home'
+    || current && addPlayerAwayBtn.textContent.startsWith('Click') && team === 'away';
+  photoCanvas.setAddPlayerMode(already ? null : team);
+  updateAddPlayerButtonLabels(already ? null : team);
+}
+function updateAddPlayerButtonLabels(activeTeam = null) {
+  addPlayerHomeBtn.textContent = activeTeam === 'home' ? 'Click photo to place home player...' : 'Add home player';
+  addPlayerAwayBtn.textContent = activeTeam === 'away' ? 'Click photo to place away player...' : 'Add away player';
+}
+addPlayerHomeBtn.addEventListener('click', () => beginAddPlayer('home'));
+addPlayerAwayBtn.addEventListener('click', () => beginAddPlayer('away'));
+
+photoCanvas.setAddPlayerClickHandler((team, imgX, imgY) => {
+  photoCanvas.setAddPlayerMode(null);
+  updateAddPlayerButtonLabels(null);
+  const size = photoCanvas.getImageSize();
+  if (!size) return;
+  const world = backProjectFoot(imgX, imgY, photoCamera, [size.w, size.h]);
+  if (!world) { step3Status.textContent = 'clicked above the horizon - try a point lower in the photo'; return; }
+  const frame = ensureDoc().frames[state.doc.currentFrame];
+  const photo = frame.photo || (frame.photo = { landmarks: [], players: [] });
+  const players = photo.players || (photo.players = []);
+  const nextId = players.reduce((m, p) => Math.max(m, p.id), -1) + 1;
+  players.push({ id: nextId, world, team, bbox: null });
+  saveDoc();
+  renderPlayersAndBall();
+});
 
 function goalCenterNearestZ(z) {
   const goalAZ = GOAL_LINE_FROM_BOARD, goalBZ = RINK_L - GOAL_LINE_FROM_BOARD;

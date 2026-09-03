@@ -88,6 +88,8 @@ let onPlayerChipMoved = null; // (id, imgXY) => void
 let onBallMoved = null;       // (imgXY) => void
 let ballPlacementMode = false;
 let onBallPlacementClick = null; // (imgX, imgY) => void, fired by a plain click while ballPlacementMode is on
+let addPlayerMode = null;        // 'home' | 'away' | null
+let onAddPlayerClick = null;     // (team, imgX, imgY) => void
 
 // Phase-3 insight overlays (docs/phase-3-plan.md T4/T6) - image-px only,
 // world->px projection stays in insights-overlay.js so this module stays
@@ -133,6 +135,12 @@ export function setBallPlacementMode(on) {
 }
 export function isBallPlacementMode() { return ballPlacementMode; }
 export function setBallPlacementClickHandler(fn) { onBallPlacementClick = fn; }
+export function setAddPlayerMode(team) {
+  addPlayerMode = (team === 'home' || team === 'away') ? team : null;
+  canvas.style.cursor = addPlayerMode ? 'crosshair' : '';
+}
+export function isAddPlayerMode() { return !!addPlayerMode; }
+export function setAddPlayerClickHandler(fn) { onAddPlayerClick = fn; }
 
 function hitTestChip(clientX, clientY) {
   if (!image) return null;
@@ -571,6 +579,18 @@ function redraw() {
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(cx, cy, 16, 0, Math.PI * 2); ctx.stroke();
     }
+    if (chip.label) {
+      ctx.save();
+      ctx.font = 'bold 11px system-ui, sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillStyle = color;
+      const lx = cx + 12, ly = cy - 12;
+      ctx.strokeText(chip.label, lx, ly);
+      ctx.fillText(chip.label, lx, ly);
+      ctx.restore();
+    }
   }
   if (ballMarker) {
     const cx = vr.x + (ballMarker[0] / image.width) * vr.w;
@@ -676,6 +696,7 @@ export async function loadPhoto(file) {
   playerChips = [];
   ballMarker = null;
   ballPlacementMode = false;
+  addPlayerMode = null;
   computeBaseRect();
   resetZoom();
   redraw();
@@ -689,6 +710,7 @@ export function clearPhoto() {
   playerChips = [];
   ballMarker = null;
   ballPlacementMode = false;
+  addPlayerMode = null;
   canvas.style.display = 'none';
 }
 
@@ -716,6 +738,10 @@ canvas.addEventListener('click', (e) => {
   const imgY = ((cy - vr.y) / vr.h) * image.height;
   if (ballPlacementMode) {
     if (onBallPlacementClick) onBallPlacementClick(imgX, imgY);
+    return;
+  }
+  if (addPlayerMode) {
+    if (onAddPlayerClick) onAddPlayerClick(addPlayerMode, imgX, imgY);
     return;
   }
   if (onClickLandmark) onClickLandmark(imgX, imgY);
@@ -772,7 +798,7 @@ canvas.addEventListener('mousedown', (e) => {
       return;
     }
   }
-  if (e.button === 0 && !roiMode && !quadEnabled && !ballPlacementMode) {
+  if (e.button === 0 && !roiMode && !quadEnabled && !ballPlacementMode && !addPlayerMode) {
     if (hitTestBall(e.clientX, e.clientY)) {
       ballDragCandidate = { startX: e.clientX, startY: e.clientY };
       return;
