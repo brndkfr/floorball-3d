@@ -134,13 +134,18 @@ Shipped from the design-sample exploration:
   - Tool number-hotkeys (1-5) deliberately NOT added yet - `1..9` are already
     playback-speed hotkeys in timeline.js. Follow-up if we ever settle on a
     letter-based tool hotkey scheme.
+- **Semantic colour tokens for insight overlays**
+  ([tokens.js](../web/src/tokens.js), [tokens.css](../web/src/tokens.css)):
+  named tokens for team colours, shot-line states (open / blocked-off /
+  blocked-centred), coverage-grid states (open / blocked), and vector
+  overlays (trajectory / pass / shot). [coverage.js](../web/src/coverage.js)
+  and [trajectory.js](../web/src/trajectory.js) switched off ad-hoc hex
+  literals onto the tokens; Mode B chips + preview-3d.js already pull team
+  colours from the same source, so both modes now render the same colours
+  for the same concepts.
 
 Still on the backlog from that exploration:
 
-- **Semantic colour tokens for insight overlays**: named tokens
-  (`--vector-pass`, `--vector-shot`, `--vector-coverage`, `--team-home`,
-  `--team-away`) instead of ad-hoc hex in `trajectory.js`/`coverage.js`, so
-  Mode A and Mode B render insights with the same palette.
 - **Wireframe/contour overlay mode**: a high-contrast outline-only render
   mode for the rink/goal overlay in Mode B, for photos where a solid
   overlay is hard to see against similar-coloured backgrounds.
