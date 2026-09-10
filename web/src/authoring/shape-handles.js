@@ -1,13 +1,14 @@
-// Edit handles for the selected zone shape. Mirrors path-handles.js's
-// pattern (raycast against handle meshes, drag to mutate, save+push
-// history on end). Handles live in a scene-level THREE.Group and follow
-// selection changes via onSelectionChanged.
+// Edit handles for the selected shape (zones + arrows). Mirrors
+// path-handles.js's pattern (raycast against handle meshes, drag to
+// mutate, save+push history on end). Handles live in a scene-level
+// THREE.Group and follow selection changes via onSelectionChanged.
 //
 // Handle layout per kind:
 //   rect      - 4 corners + 4 edge midpoints
 //   circle    - 4 cardinal points on the circumference (any drags radius)
 //   triangle  - 3 vertex handles (arbitrary triangle after first drag)
 //   polygon   - 1 handle per point (freehand)
+//   arrow     - 1 handle per point (drag to reshape, extend, or curve)
 
 import * as THREE from 'three';
 import { state } from '../state.js';
@@ -97,21 +98,30 @@ function polygonHandlePositions(s) {
   return (s.points || []).map((p, i) => ({ role: 'point', index: i, x: p.x, z: p.z }));
 }
 
+function arrowHandlePositions(s) {
+  return (s.points || []).map((p, i) => ({ role: 'point', index: i, x: p.x, z: p.z }));
+}
+
 function build() {
   disposeHandles();
   currentShapeId = null;
   const sel = state.selected;
   const shape = shapeDataFor(sel);
-  if (!shape || shape.type !== 'zone' || !isTopDown() || state.activeTool) {
+  if (!shape || !isTopDown() || state.activeTool) {
+    group.visible = false;
+    return;
+  }
+  if (shape.type !== 'zone' && shape.type !== 'arrow') {
     group.visible = false;
     return;
   }
   currentShapeId = shape.id;
-  const kind = shape.kind || 'polygon';
+  const kind = shape.type === 'arrow' ? 'arrow' : (shape.kind || 'polygon');
   let positions;
   if (kind === 'rect') positions = rectHandlePositions(shape);
   else if (kind === 'circle') positions = circleHandlePositions(shape);
   else if (kind === 'triangle') positions = triangleHandlePositions(shape);
+  else if (kind === 'arrow') positions = arrowHandlePositions(shape);
   else positions = polygonHandlePositions(shape);
 
   for (const p of positions) {
@@ -203,6 +213,9 @@ function applyDrag(worldX, worldZ) {
     s.points[t.index] = { x: worldX, z: worldZ };
     // Invalidate parametric fields so a future kind-check sees "custom".
     delete s.x; delete s.z; delete s.w; delete s.h;
+  } else if (t.kind === 'arrow') {
+    const s = dragShape;
+    if (s.points && s.points[t.index]) s.points[t.index] = { x: worldX, z: worldZ };
   } else {
     // polygon
     const s = dragShape;
@@ -226,6 +239,7 @@ export function onDragMove(event) {
   const positions = t.kind === 'rect' ? rectHandlePositions(dragShape)
     : t.kind === 'circle' ? circleHandlePositions(dragShape)
     : t.kind === 'triangle' ? triangleHandlePositions(dragShape)
+    : t.kind === 'arrow' ? arrowHandlePositions(dragShape)
     : polygonHandlePositions(dragShape);
   for (const h of handleMeshes) {
     const match = positions.find((pp) => pp.role === h.role && pp.index === h.index);

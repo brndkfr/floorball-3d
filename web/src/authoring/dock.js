@@ -13,7 +13,7 @@ import { saveDoc, saveNamedSlot, loadNamedSlot, listSlots, deleteSlot, downloadD
 import { encodeShareUrl } from './share.js';
 import { undo, redo, pushHistory } from './history.js';
 import { enterTopDown, exitTopDown, isTopDown } from './topdown-camera.js';
-import { startDrawing, cancelDrawing, handleFloorClick, tryCommitZone, drawPointCount } from './draw-tool.js';
+import { startDrawing, cancelDrawing, handleFloorClick, tryCommitZone, tryCommitArrow, drawPointCount } from './draw-tool.js';
 import { snapToNearestDot } from './faceoff-snap.js';
 
 const dockEl = document.getElementById('dock');
@@ -30,7 +30,7 @@ const palette = document.getElementById('dockPalette');
 const statusEl = document.getElementById('dockStatus');
 const shapeButtons = dockEl.querySelectorAll('[data-dock-tool]');   // arrow, zone, text
 
-const SHAPE_TOOLS = new Set(['arrow', 'zone', 'zone-rect', 'zone-circle', 'zone-triangle', 'text']);
+const SHAPE_TOOLS = new Set(['arrow', 'arrow-curved', 'zone', 'zone-rect', 'zone-circle', 'zone-triangle', 'text']);
 const PALETTE_COLORS = ['#ffb347', '#ff5b5b', '#5bd1ff', '#7ee06b', '#c07bff', '#ffffff', '#1a120a'];
 
 // --- state helpers ----------------------------------------------------
@@ -63,6 +63,12 @@ function refreshStatus() {
   let msg = `Team ${t} - next #${n}`;
   if (tool === 'chip') msg = `chip tool - click the rink to drop Team ${t} #${n} (Esc to exit)`;
   else if (tool === 'arrow') msg = 'arrow tool - click start point, then end point (Esc to exit)';
+  else if (tool === 'arrow-curved') {
+    const n = drawPointCount();
+    if (n === 0) msg = 'curved arrow - click waypoints; press Enter, double-click or right-click to finish (Esc to exit)';
+    else if (n === 1) msg = 'curved arrow - click more waypoints; press Enter / double-click / right-click to finish';
+    else msg = `curved arrow - ${n} waypoints; press Enter or double-click to finish (Esc to exit)`;
+  }
   else if (tool === 'zone') {
     const n = drawPointCount();
     if (n === 0) msg = 'zone tool - click corners of the area (Esc to exit)';
@@ -280,6 +286,9 @@ window.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && state.activeTool === 'zone') {
     if (tryCommitZone()) { event.preventDefault(); refreshStatus(); return; }
   }
+  if (event.key === 'Enter' && state.activeTool === 'arrow-curved') {
+    if (tryCommitArrow()) { event.preventDefault(); refreshStatus(); return; }
+  }
   if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
     event.preventDefault();
     undo();
@@ -314,6 +323,7 @@ export function handleFloorClickForTool(worldPoint) {
 
 window.addEventListener('dblclick', () => {
   if (state.activeTool === 'zone' && tryCommitZone()) refreshStatus();
+  else if (state.activeTool === 'arrow-curved' && tryCommitArrow()) refreshStatus();
 });
 
 // --- color palette ----------------------------------------------------

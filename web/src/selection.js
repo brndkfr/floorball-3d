@@ -7,7 +7,7 @@ import { chipDataFor, persistChipPosition, scheduleHistoryPush } from './authori
 import * as pathHandles from './authoring/path-handles.js';
 import * as shapeHandles from './authoring/shape-handles.js';
 import { shapeDataFor } from './authoring/shapes.js';
-import { setPointerHint, isPrimitiveTool, beginPrimitiveDrag, updatePrimitiveDrag, commitPrimitiveDrag, cancelPrimitiveDrag } from './authoring/draw-tool.js';
+import { setPointerHint, isPrimitiveTool, beginPrimitiveDrag, updatePrimitiveDrag, commitPrimitiveDrag, cancelPrimitiveDrag, tryCommitArrow } from './authoring/draw-tool.js';
 import { isTopDown } from './authoring/topdown-camera.js';
 
 // --- coordinate readout: hover to preview, click to pin a coordinate ---
@@ -371,7 +371,10 @@ function handleLeftClick(event, prehitObj) {
 
 function handleRightClick(event) {
   // 1) Cancel active tool (game-standard "right-click cancels build order").
+  //    Exception: curved-arrow tool with >= 2 points committed treats
+  //    right-click as "finish this arrow" (analogous to Enter / double-click).
   if (state.activeTool) {
+    if (state.activeTool === 'arrow-curved' && tryCommitArrow()) return;
     activateTool(null);
     return;
   }

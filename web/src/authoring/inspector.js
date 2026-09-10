@@ -83,6 +83,104 @@ function renderShape(shape) {
     body.appendChild(row);
   }
 
+  if (shape.type === 'arrow') {
+    const labelRow = document.createElement('div');
+    labelRow.className = 'ins-row';
+    const ll = document.createElement('span');
+    ll.className = 'ins-label';
+    ll.textContent = 'Label';
+    labelRow.appendChild(ll);
+    const li = document.createElement('input');
+    li.type = 'text';
+    li.placeholder = 'e.g. Pass';
+    li.value = shape.label || '';
+    li.maxLength = 40;
+    li.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+    li.addEventListener('input', () => {
+      updateShapeLabel(shape.id, li.value);
+    });
+    li.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') li.blur();
+      e.stopPropagation();
+    });
+    labelRow.appendChild(li);
+    body.appendChild(labelRow);
+
+    const row = document.createElement('div');
+    row.className = 'ins-row';
+    const label = document.createElement('span');
+    label.className = 'ins-label';
+    label.textContent = 'Width';
+    row.appendChild(label);
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = '20'; input.max = '240'; input.step = '10';
+    input.value = String(shape.width ?? 80);
+    input.style.cssText = 'flex:1;';
+    input.addEventListener('input', () => {
+      updateShape(shape.id, { width: parseInt(input.value, 10) });
+    });
+    row.appendChild(input);
+    body.appendChild(row);
+
+    const shaftRow = document.createElement('div');
+    shaftRow.className = 'ins-row';
+    const shaftL = document.createElement('span');
+    shaftL.className = 'ins-label';
+    shaftL.textContent = 'Shaft';
+    shaftRow.appendChild(shaftL);
+    const shaftSel = document.createElement('select');
+    shaftSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+    for (const opt of ['solid', 'dashed', 'dotted']) {
+      const o = document.createElement('option');
+      o.value = opt; o.textContent = opt;
+      shaftSel.appendChild(o);
+    }
+    shaftSel.value = shape.shaftStyle || 'solid';
+    shaftSel.addEventListener('change', () => {
+      updateShape(shape.id, { shaftStyle: shaftSel.value });
+    });
+    shaftRow.appendChild(shaftSel);
+    body.appendChild(shaftRow);
+
+    const headRow = document.createElement('div');
+    headRow.className = 'ins-row';
+    const headL = document.createElement('span');
+    headL.className = 'ins-label';
+    headL.textContent = 'Head';
+    headRow.appendChild(headL);
+    const headSel = document.createElement('select');
+    headSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+    for (const opt of ['filled', 'open', 'none']) {
+      const o = document.createElement('option');
+      o.value = opt; o.textContent = opt;
+      headSel.appendChild(o);
+    }
+    headSel.value = shape.headStyle || 'filled';
+    headSel.addEventListener('change', () => {
+      updateShape(shape.id, { headStyle: headSel.value });
+    });
+    headRow.appendChild(headSel);
+    body.appendChild(headRow);
+
+    if ((shape.points?.length ?? 0) >= 3) {
+      const smoothRow = document.createElement('div');
+      smoothRow.className = 'ins-row';
+      const smoothL = document.createElement('span');
+      smoothL.className = 'ins-label';
+      smoothL.textContent = 'Smooth';
+      smoothRow.appendChild(smoothL);
+      const smoothIn = document.createElement('input');
+      smoothIn.type = 'checkbox';
+      smoothIn.checked = shape.smooth !== false;
+      smoothIn.addEventListener('change', () => {
+        updateShape(shape.id, { smooth: smoothIn.checked });
+      });
+      smoothRow.appendChild(smoothIn);
+      body.appendChild(smoothRow);
+    }
+  }
+
   if (shape.type === 'zone') {
     const labelRow = document.createElement('div');
     labelRow.className = 'ins-row';

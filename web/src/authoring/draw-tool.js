@@ -3,7 +3,8 @@
 // handleFloorClickForTool). Ghost preview follows the cursor between clicks.
 //
 // A2 supports:
-//   arrow  - 2 clicks (start, end), auto-commits on the 2nd
+//   arrow         - 2 clicks (start, end), auto-commits on the 2nd (straight)
+//   arrow-curved  - N clicks; Enter / double-click / right-click commits (>=2)
 //   zone   - N clicks, close by clicking near point 0 (>= 3 points), or Enter
 //   text   - 1 click -> inline <input> at the click point, Enter commits
 //
@@ -41,7 +42,8 @@ function clearPreview() {
 
 function makeShapeDraft(tool, points, extras = {}) {
   const color = state.drawColor || '#ffb347';
-  if (tool === 'arrow') return { type: 'arrow', color, width: 60, points };
+  if (tool === 'arrow') return { type: 'arrow', color, width: 80, points, shaftStyle: 'solid', headStyle: 'filled', smooth: false };
+  if (tool === 'arrow-curved') return { type: 'arrow', color, width: 80, points, shaftStyle: 'solid', headStyle: 'filled', smooth: true };
   if (tool === 'zone') return { type: 'zone', kind: 'polygon', color, opacity: 0.3, points };
   if (tool === 'text') return { type: 'text', color, x: extras.x, z: extras.z, text: extras.text || '', size: 1000 };
   return null;
@@ -165,7 +167,9 @@ export function updateDrawPreview() {
     scene.add(previewObj);
     return;
   }
-  const points = [ds.points[0], { x: cursor.x, z: cursor.z }];
+  const points = (ds.tool === 'arrow' || ds.tool === 'arrow-curved')
+    ? [...ds.points, { x: cursor.x, z: cursor.z }]
+    : [ds.points[0], { x: cursor.x, z: cursor.z }];
   const draft = makeShapeDraft(ds.tool, points);
   if (!draft) return;
   const obj = buildShapeObject(draft, { ghost: true });
@@ -206,6 +210,10 @@ export function handleFloorClick(worldPoint) {
     if (ds.points.length >= 2) commitCurrent();
     return true;
   }
+  if (ds.tool === 'arrow-curved') {
+    ds.points.push(p);
+    return true;
+  }
   if (ds.tool === 'zone') {
     // clicking near point 0 with >= 3 points closes the polygon
     if (ds.points.length >= 3) {
@@ -237,6 +245,16 @@ function commitCurrent() {
 export function tryCommitZone() {
   const ds = state.drawState;
   if (!ds || ds.tool !== 'zone' || ds.points.length < 3) return false;
+  commitCurrent();
+  return true;
+}
+
+// Commit the in-progress arrow (>= 2 points). Called from Enter,
+// double-click, or right-click while the arrow / arrow-curved tool is active.
+export function tryCommitArrow() {
+  const ds = state.drawState;
+  if (!ds || (ds.tool !== 'arrow' && ds.tool !== 'arrow-curved')) return false;
+  if (ds.points.length < 2) return false;
   commitCurrent();
   return true;
 }
