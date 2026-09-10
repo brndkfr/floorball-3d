@@ -604,7 +604,9 @@ export function addShape(shape) {
   return shape.id;
 }
 
-export function removeShape(id) {
+// pushHistory=false lets a bulk caller (multi-select delete) push a single
+// combined history entry instead of one per shape.
+export function removeShape(id, pushHistory = true) {
   const doc = ensureDoc();
   const idx = doc.scheme.shapes?.findIndex((s) => s.id === id) ?? -1;
   if (idx < 0) return;
@@ -618,7 +620,7 @@ export function removeShape(id) {
   }
   saveDoc();
   document.dispatchEvent(new CustomEvent('layers:dirty'));
-  import('./history.js').then((h) => h.pushHistory());
+  if (pushHistory) import('./history.js').then((h) => h.pushHistory());
 }
 
 export function setShapeHidden(id, hidden) {
@@ -730,6 +732,48 @@ function disposeObject(obj) {
     obj.material?.map?.dispose?.();
     obj.material?.dispose?.();
   }
+}
+
+// Shift every world-space coordinate a shape carries by (dx, dz) mm. Covers
+// all representations: freehand / arrow `points`, rect + triangle bbox
+// (`x,z,w,h`), circle centre (`cx,cz`), and text anchor (`x,z`). Size fields
+// (`w,h,r`) are left alone - only positions move.
+function translateShapeCoords(shape, dx, dz) {
+  if (Array.isArray(shape.points)) {
+    for (const p of shape.points) { p.x += dx; p.z += dz; }
+  }
+  if (typeof shape.x === 'number') shape.x += dx;
+  if (typeof shape.z === 'number') shape.z += dz;
+  if (typeof shape.cx === 'number') shape.cx += dx;
+  if (typeof shape.cz === 'number') shape.cz += dz;
+}
+
+// Batch-translate several shapes by (dx, dz) and rebuild their objects in one
+// pass: a single saveDoc + layers:dirty, and NO history push - the caller
+// owns history so a mixed chip + shape drag collapses to one undo step.
+// Returns Map<shapeId, newObject3D> so a multi-selection can re-bind to the
+// freshly built objects (attachShape creates new Object3D instances).
+export function translateShapes(ids, dx, dz) {
+  const doc = ensureDoc();
+  const remap = new Map();
+  if (!dx && !dz) return remap;
+  for (const id of ids) {
+    const shape = doc.scheme.shapes?.find((s) => s.id === id);
+    if (!shape) continue;
+    translateShapeCoords(shape, dx, dz);
+    const oi = state.shapeObjects.findIndex((o) => o.userData.shape && o.userData.shape.id === id);
+    if (oi >= 0) {
+      const old = state.shapeObjects[oi];
+      old.parent?.remove(old);
+      disposeObject(old);
+      state.shapeObjects.splice(oi, 1);
+    }
+    const obj = attachShape(shape);
+    if (obj) remap.set(id, obj);
+  }
+  saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
+  return remap;
 }
 
 // Called from authoring/index.js (initial load) and history.js (undo/redo).

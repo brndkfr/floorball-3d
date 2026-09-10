@@ -23,6 +23,19 @@ if (body) {
 
 function render(sel) {
   body.innerHTML = '';
+
+  if (state.selectedSet.length > 1) {
+    const heading = document.createElement('div');
+    heading.className = 'ins-heading';
+    heading.textContent = `${state.selectedSet.length} items selected`;
+    body.appendChild(heading);
+    const hint = document.createElement('div');
+    hint.className = 'ins-empty';
+    hint.textContent = 'Use the bulk bar to reteam or delete. Right-click the floor to move the whole formation.';
+    body.appendChild(hint);
+    return;
+  }
+
   if (!sel) {
     const empty = document.createElement('div');
     empty.className = 'ins-empty';

@@ -106,17 +106,19 @@ window.addEventListener('keydown', (event) => {
     deselectAll();
     return;
   }
-  if ((event.key === 'Delete' || event.key === 'Backspace') && state.chipGroups.includes(state.selected)) {
-    const chip = state.selected;
+  if ((event.key === 'Delete' || event.key === 'Backspace') && state.selectedSet.length) {
+    const chipIds = [];
+    const shapeIds = [];
+    for (const o of state.selectedSet) {
+      if (state.chipGroups.includes(o) && o.userData.chip) chipIds.push(o.userData.chip.id);
+      else if (state.shapeObjects.includes(o) && o.userData.shape) shapeIds.push(o.userData.shape.id);
+    }
+    if (!chipIds.length && !shapeIds.length) return;
     deselectAll();
-    removeChip(chip.userData.chip.id);
-    event.preventDefault();
-    return;
-  }
-  if ((event.key === 'Delete' || event.key === 'Backspace') && state.shapeObjects.includes(state.selected)) {
-    const shape = state.selected;
-    deselectAll();
-    removeShape(shape.userData.shape.id);
+    for (const id of chipIds) removeChip(id, false);
+    for (const id of shapeIds) removeShape(id, false);
+    // One combined history snapshot for the whole multi-delete.
+    import('./authoring/history.js').then((h) => h.pushHistory());
     event.preventDefault();
     return;
   }

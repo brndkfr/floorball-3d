@@ -56,7 +56,8 @@ let dragTarget = null;   // 'im1' | 'im2' | null
 
 // Public entry: call whenever selection changes.
 export function refreshForSelection() {
-  currentChipId = state.selected?.userData?.chip?.id || null;
+  // Path editing is a single-chip concern - suppress it during a multi-select.
+  currentChipId = state.selectedSet.length > 1 ? null : (state.selected?.userData?.chip?.id || null);
   hideIfInvalid();
 }
 

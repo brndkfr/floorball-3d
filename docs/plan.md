@@ -201,8 +201,8 @@ Still on the backlog from that exploration:
 - **[A-BACK-005]** [open] **Wireframe/contour overlay mode**: a high-contrast
   outline-only render mode for the rink/goal overlay in Mode B, for photos
   where a solid overlay is hard to see against similar-coloured backgrounds.
-- **[A-BACK-006]** [blocked-by: A-BACK-007] **Choreograph mode** (frame-
-  recording UX). Right-click today is a "move-command in the current frame" -
+- **[A-BACK-006]** [open] **Choreograph mode** (frame-
+  recording UX). (Was blocked-by A-BACK-007; that prereq shipped.) Right-click today is a "move-command in the current frame" -
   semantically identical to drag-move, just a different gesture. Users
   wanting a game-like "record my play" workflow will hit a mental-model
   conflict because the doc's frames + bezier paths already ARE the recording.
@@ -227,11 +227,37 @@ Still on the backlog from that exploration:
   over. This gives the "record" feel without the per-click frame explosion.
   Depends on multi-select being solved first (currently only single chip
   selection) - otherwise the modal cycle is still per-chip.
-- **[A-BACK-007]** [open] **Marquee (box) multi-select**. The real gap for
-  formation authoring: drag on empty floor selects every chip inside the
-  rectangle. Every mutation (delete, updateTeam, move, right-click move-
-  command) then has to accept a set, not a single object. Prereq for
-  Choreograph mode above.
+- **[A-BACK-007]** [shipped] **Marquee (box) multi-select**. Left-drag on
+  empty top-down floor draws a rubber-band rect (`#marqueeRect`); every chip
+  whose projected position lands inside is selected (shapes too when the
+  "shapes" toggle in the Layers panel header is on - persisted to
+  localStorage, **on by default** as of the mixed-drag work below; uncheck
+  for pure formation authoring). Shift-drag unions with the current
+  selection; Shift-click toggles one chip/shape in or out. `state.selectedSet`
+  (array) holds the selection, `state.selected` stays as the primary (last
+  added) for single-selection consumers. Rings are pooled one-per-object;
+  path-handles / shape-handles / the chip popover suppress themselves when
+  >1 is selected. Mutations made set-aware: delete (`controls.js`, one
+  combined history entry via new `pushHistory=false` param on
+  `removeChip`/`removeShape`), left-drag-move (whole set translates by the
+  drag delta), and right-click move-command (**Option A**: formation
+  translated so its centroid lands on the click point, relative offsets
+  preserved). Bulk bar (`#chipBulkBar`, fixed bottom-centre) replaces the
+  single-chip popover for >1 chip: "N players" + T1/T2 + Delete.
+  `history.js`'s `apply()` now deselects before rebuilding so no stale ring
+  survives an undo. Prereq for Choreograph mode (A-BACK-006), now unblocked.
+  **Mixed-type drag (this session):** the old chip-only `chip-drag` mode is
+  now a generic `obj-drag` - left-drag (or right-click move-command) on any
+  selected object body translates the whole selection, chips *and* shapes
+  (arrows / zones / text) together. Chips move via their Object3D position as
+  before; shapes bake world coords into geometry, so during the drag they
+  only get a transform offset and their doc coords (`points`, rect/triangle
+  `x,z`, circle `cx,cz`, text `x,z`) are rewritten in one batch on release
+  via `shapes.js`'s new `translateShapes(ids, dx, dz)` (single saveDoc, no
+  own history push - the caller's `scheduleHistoryPush` makes the mixed drag
+  one undo step). `translateShapes` returns `Map<id, newObj>` so the
+  selection re-binds to the rebuilt objects. `buildShapeHighlight` folds in
+  `obj.position` so the yellow outline tracks a live drag.
 - **Move-command polish**. The RTS-style right-click currently teleports
   the chip / ball / goalie to the click point. Two cheap wins on top:
   1. **[A-BACK-008]** [shipped] *"Go here" flash marker* at the click point (a

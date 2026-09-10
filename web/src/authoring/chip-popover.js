@@ -10,7 +10,7 @@
 
 import * as THREE from 'three';
 import { state } from '../state.js';
-import { onSelectionChanged, deselectAll } from '../selection.js';
+import { onSelectionChanged, deselectAll, selectedChips } from '../selection.js';
 import { chipDataFor, removeChip, updateChipTeam, updateChipLabel, updateChipRole, ROLES, TEAM_COLORS, CHIP_HEIGHT, CHIP_DISPLAY_SCALE } from './chips.js';
 import { drawRoleGlyph } from './role-icons.js';
 
@@ -18,6 +18,15 @@ const root = document.createElement('div');
 root.id = 'chipPopover';
 root.style.display = 'none';
 document.body.appendChild(root);
+
+// Bulk bar: shown instead of the single-chip popover when >1 chip is
+// selected (marquee multi-select). Fixed bottom-centre, no per-frame anchor.
+const bulkRoot = document.createElement('div');
+bulkRoot.id = 'chipBulkBar';
+bulkRoot.style.display = 'none';
+document.body.appendChild(bulkRoot);
+bulkRoot.addEventListener('pointerdown', (e) => e.stopPropagation());
+bulkRoot.addEventListener('pointerup', (e) => e.stopPropagation());
 
 let currentChipGroup = null;
 let currentChipData = null;
@@ -27,6 +36,13 @@ const worldPos = new THREE.Vector3();
 const screenPos = new THREE.Vector3();
 
 onSelectionChanged((sel) => {
+  const chips = selectedChips();
+  if (chips.length > 1) {
+    hide();
+    renderBulk(chips);
+    return;
+  }
+  hideBulk();
   const chip = chipDataFor(sel);
   if (chip) {
     currentChipGroup = sel;
@@ -38,6 +54,44 @@ onSelectionChanged((sel) => {
     hide();
   }
 });
+
+function hideBulk() { bulkRoot.style.display = 'none'; }
+
+function renderBulk(chips) {
+  bulkRoot.innerHTML = '';
+  const count = document.createElement('span');
+  count.className = 'bulk-count';
+  count.textContent = `${chips.length} players`;
+  bulkRoot.appendChild(count);
+
+  for (const team of [1, 2]) {
+    const btn = document.createElement('button');
+    btn.className = 'bulk-btn';
+    btn.style.setProperty('--team-color', teamColorCss(team));
+    btn.textContent = `T${team}`;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const ids = chips.map((g) => chipDataFor(g)?.id).filter(Boolean);
+      ids.forEach((id, i) => updateChipTeam(id, team, i === ids.length - 1));
+      renderBulk(selectedChips());
+    });
+    bulkRoot.appendChild(btn);
+  }
+
+  const del = document.createElement('button');
+  del.className = 'bulk-btn danger';
+  del.textContent = 'Delete';
+  del.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const ids = chips.map((g) => chipDataFor(g)?.id).filter(Boolean);
+    deselectAll();
+    ids.forEach((id) => removeChip(id, false));
+    import('./history.js').then((h) => h.pushHistory());
+  });
+  bulkRoot.appendChild(del);
+
+  bulkRoot.style.display = 'flex';
+}
 
 function show() {
   root.style.display = 'block';

@@ -21,7 +21,9 @@ export const state = {
   activeGoalieKey: null,
 
   // selection.js
-  selected: null, // the currently selected THREE.Object3D, or null
+  selected: null,      // the "primary" selected Object3D (last added to the set), or null
+  selectedSet: [],     // every selected Object3D; single-select keeps this at length 0 or 1
+  marqueeIncludesShapes: true, // marquee also grabs shapes/zones/arrows/text, not just chips (opt-out in the Layers panel)
 
   // trajectory.js
   targetGoal: null,

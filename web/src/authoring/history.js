@@ -23,6 +23,9 @@ export function pushHistory() {
 }
 
 function apply(snap) {
+  // Selection holds live Object3D refs that rebuildFromDoc() is about to
+  // dispose; drop it first so no stale ring / popover survives the rebuild.
+  import('../selection.js').then((s) => s.deselectAll());
   state.doc = structuredClone(snap);
   rebuildFromDoc();
   rebuildShapesFromDoc();

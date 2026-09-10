@@ -107,7 +107,8 @@ function build() {
   currentShapeId = null;
   const sel = state.selected;
   const shape = shapeDataFor(sel);
-  if (!shape || !isTopDown() || state.activeTool) {
+  // Edit handles are a single-shape concern - hide them during a multi-select.
+  if (!shape || state.selectedSet.length > 1 || !isTopDown() || state.activeTool) {
     group.visible = false;
     return;
   }

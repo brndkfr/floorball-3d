@@ -27,6 +27,21 @@ if (root) {
     localStorage.setItem(STORAGE_KEY, root.classList.contains('collapsed') ? '1' : '0');
   });
 
+  // Marquee-scope toggle: whether a box-select drag also grabs shapes, not
+  // just chips. On by default (select-everything is the common case); uncheck
+  // it for pure formation authoring where only chips should be swept up.
+  const marqueeToggle = document.getElementById('marqueeShapesToggle');
+  const MARQUEE_KEY = 'floorball3d.marquee.includeShapes';
+  if (marqueeToggle) {
+    const on = localStorage.getItem(MARQUEE_KEY) !== '0';
+    marqueeToggle.checked = on;
+    state.marqueeIncludesShapes = on;
+    marqueeToggle.addEventListener('change', () => {
+      state.marqueeIncludesShapes = marqueeToggle.checked;
+      localStorage.setItem(MARQUEE_KEY, marqueeToggle.checked ? '1' : '0');
+    });
+  }
+
   document.addEventListener('layers:dirty', render);
   onSelectionChanged(render);
   // Initial render after the DOM is wired; chips/shapes may still be

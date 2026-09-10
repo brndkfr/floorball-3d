@@ -237,7 +237,9 @@ export function spawnChip({ team, x, z, number, angle = 0, pushHistory = true })
   return id;
 }
 
-export function removeChip(id) {
+// pushHistory=false lets a bulk caller (multi-select delete) suppress the
+// per-chip history snapshot and push exactly one entry itself afterwards.
+export function removeChip(id, pushHistory = true) {
   const doc = ensureDoc();
   if (!doc.scheme.players[id]) return;
   delete doc.scheme.players[id];
@@ -250,10 +252,10 @@ export function removeChip(id) {
   }
   saveDoc();
   document.dispatchEvent(new CustomEvent('layers:dirty'));
-  import('./history.js').then((h) => h.pushHistory());
+  if (pushHistory) import('./history.js').then((h) => h.pushHistory());
 }
 
-export function updateChipTeam(id, team) {
+export function updateChipTeam(id, team, pushHistory = true) {
   const doc = ensureDoc();
   const player = doc.scheme.players[id];
   if (!player || player.team === team) return;
@@ -267,7 +269,7 @@ export function updateChipTeam(id, team) {
   }
   saveDoc();
   document.dispatchEvent(new CustomEvent('layers:dirty'));
-  import('./history.js').then((h) => h.pushHistory());
+  if (pushHistory) import('./history.js').then((h) => h.pushHistory());
 }
 
 export function updateChipLabel(id, label) {
