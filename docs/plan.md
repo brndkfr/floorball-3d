@@ -664,9 +664,25 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
   "nose" on carrier + goalie chips, `player.facingDeg` override; see §4.5).
   Superseded by `B-PHASE-005`.
 - **Phase 3.5 follow-ups (recorded so we don't forget)**:
-  - **[B-BACK-001]** [open] Feed `player.facingDeg` into `goalie-proxy.js`
-    orientation + the coverage raycast so the goalie fan tilts with stance
-    (currently symmetric - the nose is purely visual today).
+  - **[B-BACK-001]** [shipped] Feed `player.facingDeg` into `goalie-proxy.js`
+    orientation + the coverage raycast so the goalie fan tilts with stance.
+    Already wired end to end: `goalie-proxy.js` applies
+    `group.rotation.y = degToRad(facingDeg)` to an anisotropic body
+    (`WIDTH 760` lateral vs `DEPTH 300`), `insights-overlay.js` +
+    `preview-3d.js` build the proxy with
+    `effectiveFacingDeg(goalieChip, photo)` and call `updateMatrixWorld(true)`
+    before handing it to `insights.shotVerdict` / `insights.coverageGrid`,
+    and Mode A's `coverage.js` raycasts the real rotated detailed goalie OBJ
+    (`state.goalieGroup.rotation.y`, tracked in its dirty-check as `grot`).
+    Verified with a Playwright probe against a live scene goal: as the
+    goalie facing sweeps 0-360 deg the blocked-coverage fraction swings
+    ~25% -> ~69%, squared-up-to-the-ball blocks the most, side-on stances
+    sit at the minimum (that ~44 pp gap *is* the facing effect), and the
+    per-quadrant distribution shifts with the stance. Inherent limitation
+    left as-is: pure geometric occlusion by a rigid proxy is ~180 deg
+    symmetric (facing the shooter vs. facing away blocks the same solid
+    angle) - modelling "facing away = worse save" would need a
+    non-geometric awareness penalty, deliberately not added.
   - **[B-BACK-002]** [open] "Reset facing" affordance on a selected chip
     that has a manual override (clears `player.facingDeg`, reverts to auto).
   - **[B-BACK-003]** [open] Consider a facing arrow / stance indicator on
