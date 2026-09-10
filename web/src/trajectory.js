@@ -4,6 +4,7 @@ import { state, getBallWorldCenter } from './state.js';
 import { scene } from './scene.js';
 import { selectObject } from './selection.js';
 import { shotVerdict, shotLineXAtZ } from './insights.js';
+import { VECTOR_TRAJECTORY, SHOT_LINE_TOKENS } from './tokens.js';
 
 // --- ball-to-goal trajectory lines ---
 const trajectoryCheckbox = document.getElementById('trajectoryCheckbox');
@@ -12,7 +13,7 @@ const trajectoryGeometry = new THREE.BufferGeometry();
 trajectoryGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(GOAL_MOUTH_CORNERS_LOCAL.length * 2 * 3), 3));
 const trajectoryLines = new THREE.LineSegments(
   trajectoryGeometry,
-  new THREE.LineBasicMaterial({ color: 0xffe066 })
+  new THREE.LineBasicMaterial({ color: VECTOR_TRAJECTORY.hex })
 );
 trajectoryLines.visible = false;
 // We mutate the position buffer directly every frame (needsUpdate = true
@@ -56,9 +57,9 @@ scene.add(shootingLine);
 // and matches how goalies are actually coached (slide sideways to the shot
 // line at whatever depth you've chosen), so the align button below can
 // reach it exactly.
-const SHOT_OPEN_COLOR = new THREE.Color(0xff3b30);
-const SHOT_BLOCKED_OFFCENTER_COLOR = new THREE.Color(0xffd21a);
-const SHOT_BLOCKED_CENTERED_COLOR = new THREE.Color(0x2ecc55);
+const SHOT_OPEN_COLOR = new THREE.Color(SHOT_LINE_TOKENS.open.hex);
+const SHOT_BLOCKED_OFFCENTER_COLOR = new THREE.Color(SHOT_LINE_TOKENS['blocked-off'].hex);
+const SHOT_BLOCKED_CENTERED_COLOR = new THREE.Color(SHOT_LINE_TOKENS['blocked-centred'].hex);
 const SHOT_LINE_COLOR_BY_KEY = {
   open: SHOT_OPEN_COLOR,
   'blocked-off': SHOT_BLOCKED_OFFCENTER_COLOR,

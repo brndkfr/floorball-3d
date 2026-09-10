@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import { camera } from './scene.js';
 import { coverageGrid } from './insights.js';
+import { VECTOR_COVERAGE_BLOCKED, VECTOR_COVERAGE_OPEN } from './tokens.js';
 
 // --- goal coverage: what fraction of the goal mouth does the goalie block? ---
 // Samples a grid of points across the goal opening; for each, casts a ray
@@ -97,9 +98,11 @@ export function updateCoverage(ballCenter) {
 
   const goalieMesh = state.goalieGroup && state.goalieGroup.visible ? state.goalieGroup : null;
   const { blockedAt, pctBlocked } = coverageGrid({ ballWorld: ballCenter, targetGoalGroup: state.targetGoal, goalieMesh });
+  const blockedColor = new THREE.Color(VECTOR_COVERAGE_BLOCKED.hex);
+  const openColor = new THREE.Color(VECTOR_COVERAGE_OPEN.hex);
   for (let i = 0; i < COVERAGE_VERTEX_COUNT; i++) {
-    const color = blockedAt[i] ? [0.15, 0.85, 0.25] : [0.85, 0.15, 0.15];
-    coverageColors.set(color, i * 3);
+    const c = blockedAt[i] ? blockedColor : openColor;
+    coverageColors.set([c.r, c.g, c.b], i * 3);
   }
   coverageGeometry.attributes.color.needsUpdate = true;
 

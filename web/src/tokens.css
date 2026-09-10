@@ -1,0 +1,18 @@
+/* Semantic colour tokens - CSS mirror of web/src/tokens.js. Kept in sync
+   by hand; if you change a value in one, change it in the other. */
+:root {
+  --team-home: #2fbf4e;
+  --team-away: #d94b2f;
+
+  --vector-shot-open: #ff3b30;
+  --vector-shot-blocked-off: #ffd21a;
+  --vector-shot-blocked-centred: #2ecc55;
+
+  --vector-pass-clear: var(--vector-shot-blocked-centred);
+  --vector-pass-blocked: var(--vector-shot-open);
+
+  --vector-coverage-blocked: var(--vector-shot-blocked-centred);
+  --vector-coverage-open: var(--vector-shot-open);
+
+  --vector-trajectory: #ffe066;
+}
