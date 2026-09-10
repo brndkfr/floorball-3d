@@ -100,6 +100,32 @@ A working demo of the shell + tokens + a Mode B stepper screen lives in
 port from). It also demonstrates the chip-anchored popover pattern from
 section 3.3.
 
+### Visual direction exploration (design canvas)
+
+A full-fidelity mockup canvas exploring the "ne plus ultra" minimalist
+look lives as a Claude Design artifact:
+<https://claude.ai/code/artifact/2272914e-271a-4f2b-a083-59dc8ce8e377>
+(source `.dc.html` artboards are kept in the session scratchpad, not the
+repo). Three directions, 8 screens each (Foundations, Plan single-select,
+Plan multi-select, first-run, Analyze step 2 / step 4, Library, phone):
+
+- **Broadcast / matchday sport** - *chosen.* Deep-ink stage, one
+  electric-blue action colour (`#2E6BFF`) that never doubles as a team
+  colour, domain green/red intact, IBM Plex Mono for every measurement,
+  flat surfaces + hairline borders, a single 3px accent motif (active tab
+  underline / panel-heading cap / selection ring). No glow, blur or
+  angled corners - the deliberate break from today's tactical-HUD look.
+- **Instrument** - cold technical (Linear / DAW): matte neutral greys,
+  a cold mint accent used only on live elements, 1px rules, dense
+  controls, no display face.
+- **Chalk & Court** - warm editorial: bone paper, burnt-orange accent,
+  Space Grotesk display, borderless panels, warm-charcoal dark mode.
+
+Fixed across all three: the rink renders as a **blue surface with solid
+black boards** and white markings; only the surrounding chrome changes.
+This canvas is a design target to port toward, not shipped UI - the
+Open Props + Shoelace + Radix stack above still stands.
+
 ---
 
 ## 3. Mode A - Tactical Planning
