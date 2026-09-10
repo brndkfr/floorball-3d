@@ -308,6 +308,11 @@ export function setChipHidden(id, hidden) {
   if (next) player.hidden = true; else delete player.hidden;
   const group = state.chipGroups.find((g) => g.userData.chip && g.userData.chip.id === id);
   if (group) group.visible = !next;
+  // Drop selection when hiding the selected chip so its ring + popover
+  // don't float over the now-invisible disc.
+  if (next && state.selected === group) {
+    import('../selection.js').then((s) => s.deselectAll());
+  }
   saveDoc();
   document.dispatchEvent(new CustomEvent('layers:dirty'));
   import('./history.js').then((h) => h.pushHistory());

@@ -9,7 +9,7 @@
 import { state } from '../state.js';
 import { onSelectionChanged, deselectAll, labelFor } from '../selection.js';
 import { chipDataFor } from './chips.js';
-import { shapeDataFor, removeShape, updateShape } from './shapes.js';
+import { shapeDataFor, removeShape, updateShape, updateShapeLabel } from './shapes.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
 // not here; the Inspector still handles shapes / text / read-only labels.
@@ -96,8 +96,8 @@ function renderShape(shape) {
     li.value = shape.label || '';
     li.maxLength = 40;
     li.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
-    li.addEventListener('change', () => {
-      updateShape(shape.id, { label: li.value });
+    li.addEventListener('input', () => {
+      updateShapeLabel(shape.id, li.value);
     });
     li.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') li.blur();

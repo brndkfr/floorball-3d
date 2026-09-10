@@ -315,9 +315,64 @@ export function setShapeHidden(id, hidden) {
   if (next) shape.hidden = true; else delete shape.hidden;
   const obj = state.shapeObjects.find((o) => o.userData.shape && o.userData.shape.id === id);
   if (obj) obj.visible = !next;
+  // When hiding the currently-selected shape, drop the selection: the
+  // yellow highlight + edit handles live outside the shape's Object3D
+  // graph and would otherwise stay visible over an "invisible" shape.
+  if (next && state.selected === obj) {
+    import('../selection.js').then((s) => s.deselectAll());
+  }
   saveDoc();
   document.dispatchEvent(new CustomEvent('layers:dirty'));
   import('./history.js').then((h) => h.pushHistory());
+}
+
+// Fast-path label edit for zones: mutates the doc + swaps just the label
+// child so the inspector's text input keeps focus while the user types.
+// Falls back to a full updateShape rebuild if the shape's current object
+// isn't a Group yet (i.e. label was empty before).
+export function updateShapeLabel(id, label) {
+  const doc = ensureDoc();
+  const shape = doc.scheme.shapes?.find((s) => s.id === id);
+  if (!shape || shape.type !== 'zone') return;
+  const trimmed = (label ?? '').trim();
+  const next = trimmed ? trimmed.slice(0, 40) : undefined;
+  if ((shape.label || undefined) === next) return;
+  if (next === undefined) delete shape.label; else shape.label = next;
+
+  const obj = state.shapeObjects.find((o) => o.userData.shape && o.userData.shape.id === id);
+  const isGroup = obj?.type === 'Group';
+  if (!isGroup) {
+    // Needs a rebuild to introduce (or drop) the wrapping Group.
+    updateShape(id, {});
+    return;
+  }
+  // Remove the existing label child (if any) and add a fresh one.
+  const oldLabel = obj.children.find((c) => c.userData.isZoneLabel);
+  if (oldLabel) {
+    obj.remove(oldLabel);
+    oldLabel.geometry?.dispose?.();
+    oldLabel.material?.map?.dispose?.();
+    oldLabel.material?.dispose?.();
+  }
+  if (next) {
+    const color = new THREE.Color(shape.color || '#ffb347');
+    const label3d = makeZoneLabelPlane(shape, color);
+    if (label3d) obj.add(label3d);
+  }
+  saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
+  // Debounced-ish history push so a stream of keystrokes doesn't spam
+  // the undo stack with one snapshot per character.
+  scheduleLabelHistoryPush();
+}
+
+let labelHistoryTimer = null;
+function scheduleLabelHistoryPush() {
+  if (labelHistoryTimer) clearTimeout(labelHistoryTimer);
+  labelHistoryTimer = setTimeout(() => {
+    labelHistoryTimer = null;
+    import('./history.js').then((h) => h.pushHistory());
+  }, 400);
 }
 
 // Replace the object for `id` in-place: mutate the doc shape, remove the
