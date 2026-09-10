@@ -462,7 +462,81 @@
     margin-left:4px; vertical-align:middle;
   }
 
-  /* --- Chip-anchored popover: floats above the selected chip. Position
+  /* --- Layers panel: outline of everything the current frame contains.
+     Sits below the Inspector on the right rail. Same visual language. */
+  #layersPanel {
+    position:absolute; top:430px; right:12px; z-index:14;
+    width:220px; max-height:45vh; display:flex; flex-direction:column;
+    padding:10px 12px;
+    background:var(--hud-bg); color:#dff9ff;
+    border:1px solid var(--hud-accent-dim);
+    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
+    font-family:var(--hud-font); font-size:12px;
+    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    backdrop-filter:blur(2px);
+  }
+  #layersPanel .lp-head {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:8px;
+  }
+  #layersPanel .lp-title {
+    font-size:11px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.08em;
+  }
+  #layersPanel .lp-toggle {
+    background:transparent; border:none; color:var(--hud-accent);
+    cursor:pointer; font-size:14px; line-height:1; padding:0 4px;
+  }
+  #layersPanel .lp-toggle:hover { color:#fff; }
+  #layersPanel.collapsed .lp-body { display:none; }
+  #layersPanel .lp-body { overflow-y:auto; padding-right:2px; }
+  #layersPanel .lp-empty { opacity:0.7; font-size:11px; line-height:1.5; }
+  #layersPanel .lp-section { margin-bottom:6px; }
+  #layersPanel .lp-section-head {
+    font-size:10px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.05em; cursor:pointer; user-select:none;
+    padding:3px 0; border-bottom:1px solid rgba(79,224,255,0.15);
+  }
+  #layersPanel .lp-section-head::before {
+    content:'\25BE'; display:inline-block; width:12px;
+  }
+  #layersPanel .lp-section.collapsed .lp-section-head::before { content:'\25B8'; }
+  #layersPanel .lp-section.collapsed .lp-section-body { display:none; }
+  #layersPanel .lp-row {
+    display:flex; align-items:center; gap:6px;
+    padding:3px 4px; cursor:pointer;
+    border-radius:3px;
+  }
+  #layersPanel .lp-row:hover { background:rgba(79,224,255,0.1); }
+  #layersPanel .lp-row.selected {
+    background:rgba(79,224,255,0.2);
+    box-shadow:inset 0 0 0 1px var(--hud-accent);
+  }
+  #layersPanel .lp-eye {
+    background:transparent; border:none; color:#dff9ff;
+    cursor:pointer; padding:0; width:16px; font-size:11px; line-height:1;
+    opacity:0.85;
+  }
+  #layersPanel .lp-eye:hover { opacity:1; color:var(--hud-accent); }
+  #layersPanel .lp-swatch {
+    display:inline-block; width:12px; height:12px; border-radius:50%;
+    border:1px solid rgba(255,255,255,0.35);
+    flex-shrink:0;
+  }
+  #layersPanel .lp-name {
+    flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    font-size:11px;
+  }
+  #layersPanel .lp-role-badge {
+    display:inline-block; width:14px; height:14px; line-height:14px;
+    text-align:center; font-size:9px; font-weight:bold;
+    color:#fff; border-radius:50%; flex-shrink:0;
+  }
+  #layersPanel .lp-role-badge[data-role="defender"] { background:#3b5bdb; }
+  #layersPanel .lp-role-badge[data-role="center"] { background:#7048e8; }
+  #layersPanel .lp-role-badge[data-role="wing"] { background:#0ca678; }
+
+  /* Hide the dock's tool buttons - they now live in #toolPalette. Leaves
      comes from chip-popover.js's screen-space projection. transform
      translates the anchor point (bottom-centre) to the chip's top. */
   #chipPopover {
@@ -516,6 +590,26 @@
     background:var(--team-color, #ffb347); color:#0a0d0f;
     border-color:var(--team-color, #ffb347);
   }
+  #chipPopover .pop-role-row { gap:4px; }
+  #chipPopover .pop-role-btn {
+    flex:1; height:32px; border-radius:4px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.25);
+    background:rgba(79,224,255,0.05); color:#dff9ff;
+    font-family:inherit; font-size:10px; letter-spacing:0.04em;
+    padding:2px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #chipPopover .pop-role-btn:hover { background:rgba(79,224,255,0.15); }
+  #chipPopover .pop-role-btn canvas { display:block; }
+  #chipPopover .pop-role-btn[data-role="defender"].active {
+    background:rgba(59,91,219,0.3); border-color:#3b5bdb;
+  }
+  #chipPopover .pop-role-btn[data-role="center"].active {
+    background:rgba(112,72,232,0.3); border-color:#7048e8;
+  }
+  #chipPopover .pop-role-btn[data-role="wing"].active {
+    background:rgba(12,166,120,0.3); border-color:#0ca678;
+  }
   #chipPopover .pop-btn {
     width:100%; height:24px; border-radius:4px; cursor:pointer;
     border:1px solid rgba(79,224,255,0.35);
@@ -557,6 +651,13 @@
 <div id="inspector" data-view="plan">
   <div class="ins-title">Inspector</div>
   <div id="inspectorBody"><div class="ins-empty">Nothing selected. Click a chip, shape, ball, goalie or goal - or use a tool from the palette.</div></div>
+</div>
+<div id="layersPanel" data-view="plan">
+  <div class="lp-head">
+    <span class="lp-title">Layers</span>
+    <button class="lp-toggle" title="Collapse/expand">&minus;</button>
+  </div>
+  <div class="lp-body"></div>
 </div>
 <canvas id="photo-canvas"></canvas>
 <div id="info" class="hud-panel" data-view="plan">

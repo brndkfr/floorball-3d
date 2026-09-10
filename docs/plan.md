@@ -146,6 +146,12 @@ Shipped from the design-sample exploration:
 
 Still on the backlog from that exploration:
 
+- **Layers panel enhancements** (shipped: right-rail panel with per-row eye
+  toggles for chips + shapes, click-to-select, section + panel collapse
+  persisted). Follow-ups: inline rename of chip labels + shape names
+  directly from the panel row (currently rename lives only in the chip
+  popover / shape inspector); drag-to-reorder within a section to influence
+  the shape `layer` group; right-click row -> Delete.
 - **Wireframe/contour overlay mode**: a high-contrast outline-only render
   mode for the rink/goal overlay in Mode B, for photos where a solid
   overlay is hard to see against similar-coloured backgrounds.

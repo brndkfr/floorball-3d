@@ -154,6 +154,7 @@ function attachShape(shape) {
   const obj = buildShapeObject(shape);
   if (!obj) return null;
   obj.userData.shape = { id: shape.id, type: shape.type };
+  obj.visible = !shape.hidden;
   layerGroups[layerFor(shape)].add(obj);
   state.shapeObjects.push(obj);
   return obj;
@@ -166,6 +167,7 @@ export function addShape(shape) {
   doc.scheme.shapes.push(shape);
   attachShape(shape);
   saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
   import('./history.js').then((h) => h.pushHistory());
   return shape.id;
 }
@@ -183,6 +185,21 @@ export function removeShape(id) {
     state.shapeObjects.splice(oi, 1);
   }
   saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
+  import('./history.js').then((h) => h.pushHistory());
+}
+
+export function setShapeHidden(id, hidden) {
+  const doc = ensureDoc();
+  const shape = doc.scheme.shapes?.find((s) => s.id === id);
+  if (!shape) return;
+  const next = !!hidden;
+  if (!!shape.hidden === next) return;
+  if (next) shape.hidden = true; else delete shape.hidden;
+  const obj = state.shapeObjects.find((o) => o.userData.shape && o.userData.shape.id === id);
+  if (obj) obj.visible = !next;
+  saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
   import('./history.js').then((h) => h.pushHistory());
 }
 
@@ -204,6 +221,7 @@ export function updateShape(id, patch) {
   }
   const obj = attachShape(shape);
   saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
   import('./history.js').then((h) => h.pushHistory());
   if (wasSelected && obj) {
     import('../selection.js').then((s) => s.selectObject(obj));
@@ -238,6 +256,7 @@ export function rebuildShapesFromDoc() {
   const doc = ensureDoc();
   const shapes = doc.scheme.shapes || [];
   for (const s of shapes) attachShape(s);
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
 }
 
 // --- helpers used by draw-tool.js and dock.js -------------------------

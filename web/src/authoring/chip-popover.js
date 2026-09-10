@@ -11,7 +11,8 @@
 import * as THREE from 'three';
 import { state } from '../state.js';
 import { onSelectionChanged, deselectAll } from '../selection.js';
-import { chipDataFor, removeChip, updateChipTeam, updateChipLabel, TEAM_COLORS, CHIP_HEIGHT, CHIP_DISPLAY_SCALE } from './chips.js';
+import { chipDataFor, removeChip, updateChipTeam, updateChipLabel, updateChipRole, ROLES, TEAM_COLORS, CHIP_HEIGHT, CHIP_DISPLAY_SCALE } from './chips.js';
+import { drawRoleGlyph } from './role-icons.js';
 
 const root = document.createElement('div');
 root.id = 'chipPopover';
@@ -161,6 +162,32 @@ function render() {
     row.appendChild(btn);
   }
   root.appendChild(row);
+
+  const roleRow = document.createElement('div');
+  roleRow.className = 'pop-row pop-role-row';
+  const roleLabels = { defender: 'Defender', center: 'Center', wing: 'Wing' };
+  for (const role of ROLES) {
+    const btn = document.createElement('button');
+    btn.className = 'pop-role-btn' + (chip.role === role ? ' active' : '');
+    btn.dataset.role = role;
+    btn.title = roleLabels[role];
+    // Canvas icon at 2x for DPI, downscaled with CSS.
+    const iconSize = 24;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = iconSize * 2;
+    canvas.style.width = canvas.style.height = iconSize + 'px';
+    drawRoleGlyph(canvas.getContext('2d'), role, iconSize * 2, { withBackground: chip.role === role });
+    btn.appendChild(canvas);
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const next = chip.role === role ? null : role;
+      updateChipRole(chip.id, next);
+      chip.role = next || undefined;
+      render();
+    });
+    roleRow.appendChild(btn);
+  }
+  root.appendChild(roleRow);
 
   const del = document.createElement('button');
   del.className = 'pop-btn danger';

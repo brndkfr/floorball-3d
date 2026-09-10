@@ -17,6 +17,7 @@ import { loaded, failed } from '../status.js';
 import { TEAM_HOME, TEAM_AWAY } from '../tokens.js';
 import { ensureDoc, newId } from './doc.js';
 import { saveDoc } from './storage.js';
+import { drawRoleGlyph } from './role-icons.js';
 
 export const CHIP_HEIGHT = 20;   // matches generate_player_chip.py
 export const CHIP_RADIUS = 100;  // matches generate_player_chip.py
@@ -75,7 +76,9 @@ chipMtl.load(
   (err) => failed('player_chip.mtl', err),
 );
 
-// --- number sprite ----------------------------------------------------
+// --- sprites: number / label / role icon ------------------------------
+
+export const ROLES = ['defender', 'center', 'wing'];
 
 function makeNumberSprite(number) {
   const size = 128;
@@ -104,6 +107,83 @@ function makeNumberSprite(number) {
   return sprite;
 }
 
+function makeLabelSprite(text) {
+  const font = 'bold 64px system-ui, sans-serif';
+  const measure = document.createElement('canvas').getContext('2d');
+  measure.font = font;
+  const padding = 24;
+  const height = 96;
+  const textWidth = Math.ceil(measure.measureText(text || ' ').width);
+  const width = Math.max(height, textWidth + padding * 2);
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.font = font;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+  ctx.lineWidth = 6;
+  ctx.strokeText(text, width / 2, height / 2 + 2);
+  ctx.fillText(text, width / 2, height / 2 + 2);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.anisotropy = 4;
+  const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
+  const sprite = new THREE.Sprite(material);
+  sprite.renderOrder = 1;
+  // Same on-disc height as the number sprite (~110 mm), width scales.
+  const worldHeight = 110;
+  sprite.scale.set(worldHeight * (width / height), worldHeight, 1);
+  sprite.position.set(0, CHIP_HEIGHT + 10, 0);
+  return sprite;
+}
+
+function makeRoleSprite(role) {
+  if (!ROLES.includes(role)) return null;
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  drawRoleGlyph(ctx, role, size, { withBackground: true });
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.anisotropy = 4;
+  const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
+  const sprite = new THREE.Sprite(material);
+  sprite.renderOrder = 2;
+  // Small badge floating above the chip so the disc + label stay unobstructed.
+  const badge = 70;
+  sprite.scale.set(badge, badge, 1);
+  sprite.position.set(0, CHIP_HEIGHT + 130, 0);
+  return sprite;
+}
+
+// Rebuild the number-or-label + role-icon child sprites for a chip group
+// in-place. Cheap enough to call on every label / role edit.
+function refreshChipSprites(group, player) {
+  const old = group.userData.sprites;
+  if (old) {
+    for (const s of old) {
+      group.remove(s);
+      s.material?.map?.dispose?.();
+      s.material?.dispose?.();
+    }
+  }
+  const sprites = [];
+  const trimmed = player.label?.trim();
+  const primary = trimmed ? makeLabelSprite(trimmed) : makeNumberSprite(player.number);
+  group.add(primary);
+  sprites.push(primary);
+  if (player.role) {
+    const role = makeRoleSprite(player.role);
+    if (role) {
+      group.add(role);
+      sprites.push(role);
+    }
+  }
+  group.userData.sprites = sprites;
+}
+
 // --- spawn / remove ---------------------------------------------------
 
 function spawnChipMesh(player) {
@@ -117,9 +197,9 @@ function spawnChipMesh(player) {
   });
   group.position.set(player.x, 0, player.z);
   group.rotation.y = player.angle || 0;
-  const sprite = makeNumberSprite(player.number);
-  group.add(sprite);
   group.userData.chip = { id: player.id };  // let selection.js find the record
+  group.visible = !player.hidden;
+  refreshChipSprites(group, player);
   state.chipsRoot.add(group);
   state.chipGroups.push(group);
 
@@ -149,6 +229,7 @@ export function spawnChip({ team, x, z, number, angle = 0, pushHistory = true })
   doc.scheme.players[id] = player;
   if (chipPrototype) spawnChipMesh(player); else pendingRebuilds.push(player);
   saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
   if (pushHistory) {
     // late import to avoid a circular dep: history.js imports from chips.js
     import('./history.js').then((h) => h.pushHistory());
@@ -168,6 +249,7 @@ export function removeChip(id) {
     disposeGroup(group);
   }
   saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
   import('./history.js').then((h) => h.pushHistory());
 }
 
@@ -184,6 +266,7 @@ export function updateChipTeam(id, team) {
     });
   }
   saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
   import('./history.js').then((h) => h.pushHistory());
 }
 
@@ -195,7 +278,38 @@ export function updateChipLabel(id, label) {
   const next = trimmed ? trimmed.slice(0, 32) : undefined;
   if (player.label === next) return;
   if (next === undefined) delete player.label; else player.label = next;
+  const group = state.chipGroups.find((g) => g.userData.chip && g.userData.chip.id === id);
+  if (group) refreshChipSprites(group, player);
   saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
+  import('./history.js').then((h) => h.pushHistory());
+}
+
+export function updateChipRole(id, role) {
+  const doc = ensureDoc();
+  const player = doc.scheme.players[id];
+  if (!player) return;
+  const next = ROLES.includes(role) ? role : undefined;
+  if ((player.role || undefined) === next) return;
+  if (next === undefined) delete player.role; else player.role = next;
+  const group = state.chipGroups.find((g) => g.userData.chip && g.userData.chip.id === id);
+  if (group) refreshChipSprites(group, player);
+  saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
+  import('./history.js').then((h) => h.pushHistory());
+}
+
+export function setChipHidden(id, hidden) {
+  const doc = ensureDoc();
+  const player = doc.scheme.players[id];
+  if (!player) return;
+  const next = !!hidden;
+  if (!!player.hidden === next) return;
+  if (next) player.hidden = true; else delete player.hidden;
+  const group = state.chipGroups.find((g) => g.userData.chip && g.userData.chip.id === id);
+  if (group) group.visible = !next;
+  saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
   import('./history.js').then((h) => h.pushHistory());
 }
 
@@ -270,6 +384,7 @@ export function rebuildFromDoc() {
   for (const player of Object.values(doc.scheme.players)) {
     if (chipPrototype) spawnChipMesh(player); else pendingRebuilds.push(player);
   }
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
 }
 
 // --- per-frame animation update ---------------------------------------
