@@ -80,6 +80,7 @@ const STEP3_MAX_REPROJ_ERROR_PX = 20;
 const setTeamHomeBtn = document.getElementById('photoSetTeamHomeBtn');
 const setTeamAwayBtn = document.getElementById('photoSetTeamAwayBtn');
 const deletePlayerBtn = document.getElementById('photoDeletePlayerBtn');
+const clearSelFacingBtn = document.getElementById('photoClearSelFacingBtn');
 const addPlayerHomeBtn = document.getElementById('photoAddPlayerHomeBtn');
 const addPlayerAwayBtn = document.getElementById('photoAddPlayerAwayBtn');
 const estimateFacingsBtn = document.getElementById('photoEstimateFacingsBtn');
@@ -1168,6 +1169,9 @@ async function handleChipSelected(id) {
   setTeamHomeBtn.disabled = id == null;
   setTeamAwayBtn.disabled = id == null;
   deletePlayerBtn.disabled = id == null;
+  const selForFacing = id == null ? null
+    : state.doc?.frames?.[state.doc.currentFrame]?.photo?.players?.find((p) => p.id === id);
+  clearSelFacingBtn.disabled = selForFacing?.facingDeg == null;
   if (id == null || !bodyOutlineToggle.checked) { renderPlayersAndBall(); return; }
   const frame = state.doc?.frames?.[state.doc.currentFrame];
   const player = frame?.photo?.players?.find((p) => p.id === id);
@@ -1230,6 +1234,26 @@ function deleteSelectedChip() {
   renderPlayersAndBall();
 }
 deletePlayerBtn.addEventListener('click', deleteSelectedChip);
+
+// Per-chip facing reset - the "Reset facing" button in Step 4 only clears
+// the ball carrier + designated goalies; this clears whichever single chip
+// is selected (handy for undoing one bad pose-seeded arrow among many).
+function clearSelectedChipFacing() {
+  const id = photoCanvas.getSelectedChipId();
+  if (id == null) return;
+  const frame = state.doc?.frames?.[state.doc.currentFrame];
+  const player = frame?.photo?.players?.find((p) => p.id === id);
+  if (!player || player.facingDeg == null) return;
+  delete player.facingDeg;
+  delete player.facingSource;
+  delete player.facingCue;
+  delete player.facingQuality;
+  saveDoc();
+  clearSelFacingBtn.disabled = true;
+  renderPlayersAndBall();
+  updateStep4(); // recompute insights + refresh the Step-4 "Reset facing" button
+}
+clearSelFacingBtn.addEventListener('click', clearSelectedChipFacing);
 
 function beginAddPlayer(team) {
   const current = photoCanvas.isAddPlayerMode();
@@ -1571,6 +1595,7 @@ photoCanvas.setChipFacingMovedHandler((id, tipImgXY) => {
   delete player.facingCue;
   delete player.facingQuality;
   saveDoc();
+  if (photoCanvas.getSelectedChipId() === id) clearSelFacingBtn.disabled = false;
   renderPlayersAndBall();
 });
 

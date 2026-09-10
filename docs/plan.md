@@ -683,8 +683,16 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
     symmetric (facing the shooter vs. facing away blocks the same solid
     angle) - modelling "facing away = worse save" would need a
     non-geometric awareness penalty, deliberately not added.
-  - **[B-BACK-002]** [open] "Reset facing" affordance on a selected chip
-    that has a manual override (clears `player.facingDeg`, reverts to auto).
+  - **[B-BACK-002]** [shipped] Per-chip "Clear facing" button
+    (`#photoClearSelFacingBtn`, next to Delete selected player). The Step-4
+    "Reset facing" button only clears the ball carrier + designated
+    goalies; this clears whichever single chip is selected - `facingDeg`,
+    `facingSource`, `facingCue`, `facingQuality` - reverting it to the auto
+    default, then re-runs `updateStep4()` so insights + the Step-4 button
+    refresh. Enabled only while the selected chip has `facingDeg != null`
+    (any source: manual drag or pose seed); `handleChipSelected()` sets its
+    disabled state and a manual facing drag on the selected chip flips it
+    on live.
   - **[B-BACK-003]** [open] Consider a facing arrow / stance indicator on
     non-carrier/non-goalie chips once Phase 4 has a confidence score to
     attach.
