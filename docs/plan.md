@@ -87,8 +87,8 @@ export. Data model is `state.doc` v2 with a per-frame `scheme` accessor
 
 - **2D-first authoring surface**. The current 2D view is a preview of 3D
   interactions, not a native 2D UX like tactical-board.com.
-- **Tool palette + inline property panel** instead of the current flat dock.
-- **Frame thumbnails** on the timeline.
+- **Frame thumbnails** on the timeline (per-frame top-down snapshot of chips
+  + shapes; needs invalidation + caching so it isn't re-rendered every tick).
 - **Named projects in a Library** (currently one persisted doc).
 
 ### 3.3 Backlog
@@ -98,13 +98,45 @@ and the 2D reference plan [docs/reference/floorball-board-clone-plan.md](referen
 Those describe a different product (2D clone) but their feature list is a
 useful checklist when building Mode A's UX.
 
-From the design-system exploration (`web/design-sample/`), worth building
-into the real app:
+Shipped from the design-sample exploration:
 
-- **Chip-anchored popovers**: a screen-space popover attached to a chip's
-  ground position (player name, ball-carrier badge, quick insight line)
-  instead of a separate side panel - replaces the flat dock's per-chip
-  property editing.
+- **Left tool palette + right Inspector** (2D-native authoring surface, first
+  cut): 5-button vertical palette (Select / Chip / Arrow / Zone / Text) driving
+  `state.activeTool`, and a selection-driven Inspector for shape colour /
+  text / read-only labels. Chip stamp/arrow/zone/text buttons hidden from the
+  bottom dock (kept in the DOM so keyboard/Esc/status wiring keeps working).
+- **Chip-anchored popover** ([chip-popover.js](../web/src/authoring/chip-popover.js)):
+  when a chip is selected, a floating card with `Player #N` + T1/T2 + Delete
+  glues itself to the chip's screen-space position (self-driven rAF loop,
+  clamps to viewport edges, hides when behind camera). Replaces the
+  Inspector's chip UI - the Inspector now just shows a short hint for chip
+  selections. Collapsed by default (label pill + chevron); expanding reveals
+  an editable label input (persisted as `player.label`), the T1/T2 buttons,
+  and Delete.
+- **RTS-style input model** (Plan mode). One dedicated verb per mouse
+  button, no more click-vs-drag threshold heuristic. See
+  [selection.js](../web/src/selection.js) and [controls.js](../web/src/controls.js):
+  - Left-click: select an object (chip / shape / ball / goalie / goal);
+    empty-floor click deselects, or places with the active tool.
+  - Left-drag on a chip: move that chip under the cursor (grab-and-drag;
+    the chip becomes selected as the drag starts).
+  - Right-click on empty floor: move-command - the selected chip / ball /
+    goalie walks to the click point (top-down only; ambiguous in 3D).
+  - Right-click while a tool is active: cancel the tool.
+  - Right-drag / middle-drag: pan the top-down camera (topdown-camera.js).
+  - Wheel: zoom.
+  - Arrows / WASD: pan the camera. Never move the selected item - that's
+    mouse-only now. In 3D perspective they still walk relative to look yaw.
+  - Q / E while goalie selected: rotate goalie (Shift = fine).
+  - Del / Backspace: delete selected chip or shape. Ctrl+Z / Ctrl+Y:
+    undo / redo (already in dock.js). Tab / Shift+Tab: cycle selection.
+  - Left-drag in 3D still turns the perspective camera; not touched.
+  - Tool number-hotkeys (1-5) deliberately NOT added yet - `1..9` are already
+    playback-speed hotkeys in timeline.js. Follow-up if we ever settle on a
+    letter-based tool hotkey scheme.
+
+Still on the backlog from that exploration:
+
 - **Semantic colour tokens for insight overlays**: named tokens
   (`--vector-pass`, `--vector-shot`, `--vector-coverage`, `--team-home`,
   `--team-away`) instead of ad-hoc hex in `trajectory.js`/`coverage.js`, so
@@ -112,6 +144,56 @@ into the real app:
 - **Wireframe/contour overlay mode**: a high-contrast outline-only render
   mode for the rink/goal overlay in Mode B, for photos where a solid
   overlay is hard to see against similar-coloured backgrounds.
+- **Choreograph mode** (frame-recording UX). Right-click today is a
+  "move-command in the current frame" - semantically identical to drag-move,
+  just a different gesture. Users wanting a game-like "record my play"
+  workflow will hit a mental-model conflict because the doc's frames + bezier
+  paths already ARE the recording. Four interpretations exist, all with
+  tradeoffs:
+  1. *Move-command in current frame* (shipped). Cheap, safe, redundant with
+     drag.
+  2. *Right-click auto-creates the next frame.* Feels game-like, but 5-player
+     floorball formations move simultaneously; per-chip right-clicks would
+     explode frame count and can't express "all five run at once."
+  3. *Right-click drops a bezier waypoint on the current segment.* Turns
+     straight runs into curves without new frames. Forces the path model to
+     become a variable-length list of sub-segments (playback interpolation,
+     path-handles, serialization all shift).
+  4. *Real-time record mode with a REC button.* Playback runs at 1x while
+     the user right-clicks each chip's next position; positions are stamped
+     at the current playback time. New authoring paradigm layered on top of
+     the frame model.
+  Preferred future direction (not planned yet): modal "Choreograph frame N+1"
+  toggle where all chips are pinned to frame N; left-click to arm a chip,
+  right-click to set its endpoint; click **Commit** to bake exactly one new
+  frame containing all armed chips' new positions. Un-armed chips carry
+  over. This gives the "record" feel without the per-click frame explosion.
+  Depends on multi-select being solved first (currently only single chip
+  selection) - otherwise the modal cycle is still per-chip.
+- **Marquee (box) multi-select**. The real gap for formation authoring:
+  drag on empty floor selects every chip inside the rectangle. Every
+  mutation (delete, updateTeam, move, right-click move-command) then has
+  to accept a set, not a single object. Prereq for Choreograph mode above.
+- **Move-command polish**. The RTS-style right-click currently teleports
+  the chip / ball / goalie to the click point. Two cheap wins on top:
+  1. *"Go here" flash marker* at the click point (a brief expanding ring,
+     same idiom as the chip-drop animation in `chips.js`) so the gesture
+     has a visible receipt.
+  2. *Walk animation* - tween the chip's position over ~200-400 ms instead
+     of teleporting, so a move-command feels like a unit moving, not
+     teleporting. Needs the tween to be interruptible (a second right-click
+     mid-walk redirects to the new target) and to not fight playback
+     interpolation (skip the tween when playback is running - playback owns
+     positions then).
+- **Persistent in-scene chip labels**. Today the chip's `player.label`
+  ("Wing", "Michael") only shows in the popover when the chip is selected.
+  Rendering the label as a small floating text sprite above the chip (like
+  the number sprite in `chips.js`, but text and only when label is set)
+  would let a coach scan a formation without clicking each chip. Needs a
+  visibility toggle (labels get noisy on 10 chips + shapes + zones), and
+  the sprite's screen-space size should stay legible across zoom levels in
+  top-down - the number sprite already handles this pattern, so it's mostly
+  a re-use.
 
 ---
 
@@ -382,8 +464,8 @@ frame.photo = {
 | 1 | Manual PnP calibration | **shipped, all items closed.** Guided auto-align (4.3 Step 2), rink-outline quad tool + zoom/pan (verified already working via wheel/right-drag, independent of quad mode), debug logging, one-hint-at-a-time manual fallback stepper (curated 8-point sequence per goal end, inline top-down SVG diagram, skip button), and a continuous before/after alignment slider (fades preview strips 0-100%, reprojection error demoted to a small badge) |
 | 2 | YOLO player auto-detect | **shipped.** detect-players.js (yolov8n via onnxruntime-web, ROI-scoped to the placed goal landmarks so distant players survive the 640px letterbox), back-project.js (foot pixel -> rink floor world point), team-cluster.js (jersey colour k-means). Chips get a world-space footprint ring, are clickable, and can compute an on-demand body-silhouette outline (segment-player.js, GrabCut) for the selected player. photo-cache.js (IndexedDB) auto-restores the last calibrated photo + a "Load saved overlay" button replays landmarks/pose, so re-testing doesn't require re-calibrating every reload. **Goalie auto-detect (Layer 1)** shipped as `detect-goalie.js` + a rewired "Auto-detect goalies" button: projects a world-space crease box (±2.5m wide, 3m in front + 1m behind the goal line) through the solved camera to get an image ROI per goal end, runs `detectPlayers` with a lower confidence threshold (0.15) on that ROI, keeps only candidates whose back-projected foot sits inside the same crease box, then either reuses the nearest existing chip within 1.2m (dedupes the case where Step 3 already caught the goalie) or appends a new chip flagged `role: 'goalie'`. Per-team convention: home = goal A, away = goal B (user can flip via "Flip teams" or the dropdowns). Falls back to the previous "nearest own-team chip to that goal" heuristic if Layer 1 finds nothing, and records source + confidence in `photo.goalies.autoDetected`. Follow-ups not yet done: no manual add-a-chip for missed players, no per-chip team toggle (only global "Flip teams"), no filtering beyond the rink-extent check for in-rink referees, **Layer 2 classical-CV goalie fallback** (non-red non-white blob inside the projected goal mouth, for the case where YOLO on the crease ROI still returns nothing - e.g. very heavy pad occlusion / extreme camera angle), no visual distinction for goalie chips beyond the team colour. |
 | 3 | Insights compute + UI | **shipped.** `insights.js` (pure compute: shot verdict, coverage grid, pass corridors - shared with Mode A), `goalie-proxy.js` (upright cylinder+box, the raycast target for coverage), `insights-overlay.js` (Step 4 recompute + projection to image px), photo-canvas overlay setters (`setShotLines`/`setCoverageOverlay`/`setPassLines`/`setAngleBadge`) with the layered draw order from the phase-3 plan, target-goal picker + per-team goalie dropdowns + insights readout (angle / dist / coverage % / clear passes), and `preview-3d.js` "View in 3D" toggle that drops lightweight preview chips + goalie proxies into the top-down camera without mutating `state.doc`. Deferred: shot/coverage colour tokens are still ad-hoc hex (semantic tokens listed in §3.3), no "convert this photo to a Mode-A play" bridge, no persisted derived insight numbers (recomputed on demand). |
-| 3.5 | Manual facing "nose" (Phase-4 stop-gap) | **shipped.** Draggable yellow arrow on the ball carrier + each designated goalie chip; drag back-projects to a floor point and stores an angle as `player.facingDeg`, which overrides the auto default (carrier: face nearest goal from ball; goalie: face ball if placed, else face out from own goal). `preview-3d.js`'s goalie proxy honours the override. **Not yet wired into insight math**: coverage/raycast still models a symmetric goalie fan, so changing the nose is currently visual only. Next steps: (a) feed `player.facingDeg` into `goalie-proxy.js` / coverage rays so the wedge tilts with stance, (b) add a "Reset facing" affordance when a chip with a manual override is selected. |
-| 4 | Auto-pose facing (MoveNet / YOLO-Pose) | deferred, Option 2 in 4.3. Will seed `player.facingDeg` from shoulder/hip keypoints; manual override from 3.5 still wins. |
+| 3.5 | Manual facing "nose" (Phase-4 stop-gap) | **shipped.** Draggable yellow arrow on the ball carrier + each designated goalie chip; drag back-projects to a floor point and stores an angle as `player.facingDeg`, which overrides the auto default (carrier: face nearest goal from ball; goalie: face ball if placed, else face out from own goal). `preview-3d.js`'s goalie proxy and `insights-overlay.js`'s raycast target both honour the effective facing (override or auto default) via the shared `effectiveFacingDeg()` helper exported from `photo-overlay.js` - the goalie proxy box is anisotropic (WIDTH=760, DEPTH=300), so rotating it actually changes which coverage/shot rays get blocked. A "Reset facing" button clears the override on the carrier + designated goalies in one click (disabled when nothing to reset). |
+| 4 | Auto-pose facing (MoveNet / YOLO-Pose) | **shipped.** Vendored `web/lib/models/yolov8n-pose.onnx` (13.5 MB fp32, exported via a throwaway ultralytics venv per memory item #34). New `detect-pose.js` (mirrors `detect-players.js`; decodes the [1,56,8400] output into 17 COCO keypoints per box), `matchPoseToPlayers()` (IoU>=0.3 to existing Step-3 chips, so team assignments + goalie roles survive), and `facing-from-pose.js` (back-projects both shoulders onto a horizontal plane at 1400mm and the nose at 1650mm, computes the shoulder-line perpendicular in world XZ, then picks the sign that puts the nose on the "front" side). New "Estimate facings (pose)" button in Step 3 runs one pose pass ROI-scoped to `goalAreaRoi()` and seeds `player.facingDeg` for every chip whose facing isn't already manually overridden - `facingSource: 'pose'` is stored alongside so future UI can distinguish auto-seeded from manual. Verified with synthetic keypoints against a fixture camera: facings of 0°, 180°, and 90° round-tripped exactly through the projection + back-projection + shoulder-perpendicular math. Manual override from Phase 3.5 still wins on every recompute path (`effectiveFacingDeg` returns `player.facingDeg` first, regardless of source). |
 | 5 | Video wrapper (frame picker, tracking, interpolation) | not started |
 
 ---

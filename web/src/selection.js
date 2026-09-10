@@ -2,12 +2,12 @@ import * as THREE from 'three';
 import { HALF_W, GRID_TILE_SIZE, GRID_N_COLS, GRID_N_ROWS } from './constants.js';
 import { state } from './state.js';
 import { scene, camera, renderer, setCameraLook } from './scene.js';
-import { handleFloorClickForTool } from './authoring/dock.js';
+import { handleFloorClickForTool, activateTool } from './authoring/dock.js';
 import { chipDataFor, persistChipPosition, scheduleHistoryPush } from './authoring/chips.js';
 import * as pathHandles from './authoring/path-handles.js';
-import { removeShape } from './authoring/shapes.js';
 import { shapeDataFor } from './authoring/shapes.js';
 import { setPointerHint } from './authoring/draw-tool.js';
+import { isTopDown } from './authoring/topdown-camera.js';
 
 // --- coordinate readout: hover to preview, click to pin a coordinate ---
 const coordXEl = document.getElementById('coordX');
@@ -35,7 +35,8 @@ export function pointerToWorld(event) {
   return raycaster.ray.intersectPlane(floorPlane, hitPoint) ? hitPoint : null;
 }
 
-// --- selection + ball placement ---
+// --- selection ring + shape highlight ---------------------------------
+
 const selectedLabelEl = document.getElementById('selectedLabel');
 
 const selectionRing = new THREE.Mesh(
@@ -46,9 +47,6 @@ selectionRing.rotation.x = -Math.PI / 2;
 selectionRing.visible = false;
 scene.add(selectionRing);
 
-// Separate highlight for shapes (arrows/zones/text): traces the actual
-// perimeter of the shape rather than a bounding-box ring, so a zone reads
-// as "this zone is selected" not "something in this area is selected".
 let shapeHighlight = null;
 
 function clearShapeHighlight() {
@@ -119,6 +117,7 @@ export function selectObject(obj) {
       scene.add(shapeHighlight);
       selectionRing.visible = false;
       selectedLabelEl.textContent = labelFor(obj);
+      notifySelection();
       return;
     }
     // text sprite (or unbuildable) - fall through to the bounding-box ring
@@ -133,6 +132,7 @@ export function selectObject(obj) {
   selectedLabelEl.textContent = labelFor(obj);
   pathHandles.refreshForSelection();
   pathHandles.rebuild();
+  notifySelection();
 }
 
 export function deselectAll() {
@@ -142,18 +142,65 @@ export function deselectAll() {
   selectedLabelEl.textContent = '-';
   pathHandles.refreshForSelection();
   pathHandles.rebuild();
+  notifySelection();
 }
 
-// pointerdown/pointerup with a movement threshold, instead of the native
-// 'click' event, so we can tell a genuine click (select/place) apart from a
-// look-drag (hold + drag to turn the camera) - both start as a plain
-// mousedown on the canvas, and only the total movement distinguishes them.
-let downX = 0, downY = 0;
-let isLooking = false;
-let lastLookX = 0, lastLookY = 0;
-let isDraggingChip = false;   // set when a chip is selected in 2D and the user starts dragging
-const CLICK_MOVE_THRESHOLD = 5; // pixels
-const LOOK_SENSITIVITY = 0.0035; // radians per pixel of drag
+const selectionSubs = new Set();
+export function onSelectionChanged(cb) { selectionSubs.add(cb); return () => selectionSubs.delete(cb); }
+function notifySelection() { for (const cb of selectionSubs) { try { cb(state.selected); } catch (e) { console.error(e); } } }
+
+// --- input model (RTS-style, dedicated verbs per button) --------------
+//
+// LMB    = select / drag-move a chip / place with active tool.
+// LMB-drag in 3D perspective still turns the camera (walking view). In 2D
+//         top-down there is no camera yaw, so LMB never turns anything.
+// RMB    = move-command (selected chip / ball / goalie walks to click point)
+//         or cancel active tool. Right-DRAG is pan and is owned entirely
+//         by topdown-camera.js.
+// MMB    = pan (topdown-camera.js).
+// Wheel  = zoom (topdown-camera.js).
+// Keyboard = camera pan / tool hotkeys / goalie rotate (controls.js).
+
+const DRAG_THRESHOLD = 5; // px of movement before a press is considered a drag
+const LOOK_SENSITIVITY = 0.0035; // radians per pixel of 3D look-drag
+
+// Left-button state; null when the button isn't down.
+let lmb = null;   // { downX, downY, lastX, lastY, hit, mode }
+// modes: 'idle' | 'chip-drag' | 'look' | 'path-handle'
+
+// Right-button state; null when the button isn't down.
+let rmb = null;   // { downX, downY }
+
+function selectablesUnderCursor(event) {
+  mouseNDC.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouseNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouseNDC, state.activeCamera);
+  const selectables = [...state.goalInstances, ...state.chipGroups, ...state.shapeObjects];
+  if (state.ballGroup) selectables.push(state.ballGroup);
+  if (state.goalieGroup) selectables.push(state.goalieGroup);
+  const hits = raycaster.intersectObjects(selectables, true);
+  if (!hits.length) return null;
+  let obj = hits[0].object;
+  while (obj.parent && !selectables.includes(obj)) obj = obj.parent;
+  return obj;
+}
+
+function chipUnderCursor(event) {
+  if (!state.chipGroups.length) return null;
+  mouseNDC.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouseNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouseNDC, state.activeCamera);
+  const hits = raycaster.intersectObjects(state.chipGroups, true);
+  if (!hits.length) return null;
+  let obj = hits[0].object;
+  while (obj.parent && !state.chipGroups.includes(obj)) obj = obj.parent;
+  return obj;
+}
+
+function commitTargetGoal(obj) {
+  state.targetGoal = obj;
+  targetGoalLabelEl.textContent = labelFor(obj);
+}
 
 renderer.domElement.addEventListener('pointermove', (event) => {
   const p = pointerToWorld(event);
@@ -164,132 +211,158 @@ renderer.domElement.addEventListener('pointermove', (event) => {
   }
   setPointerHint(p);
 
-  // Bezier control-point drag has highest priority.
   if (pathHandles.isDragging()) { pathHandles.onDragMove(event); return; }
+  if (!lmb) return;
 
-  // 2D drag: while a chip is selected and the pointer moves past the click
-  // threshold, slide the chip under the cursor instead of look-dragging.
-  if (isLooking && !state.activeTool && state.chipGroups.includes(state.selected)
-      && state.activeCamera !== camera
-      && (isDraggingChip || Math.hypot(event.clientX - downX, event.clientY - downY) > CLICK_MOVE_THRESHOLD)) {
-    isDraggingChip = true;
-    if (p) {
-      state.selected.position.x = p.x;
-      state.selected.position.z = p.z;
-      selectObject(state.selected);
-    }
+  const moved = Math.hypot(event.clientX - lmb.downX, event.clientY - lmb.downY) > DRAG_THRESHOLD;
+
+  // 3D perspective: left-drag turns the camera (no tool active, walking view).
+  if (lmb.mode === 'look' || (lmb.mode === 'idle' && moved && state.activeCamera === camera && !state.activeTool)) {
+    lmb.mode = 'look';
+    setCameraLook(
+      state.camYaw - (event.clientX - lmb.lastX) * LOOK_SENSITIVITY,
+      state.camPitch - (event.clientY - lmb.lastY) * LOOK_SENSITIVITY,
+    );
+    lmb.lastX = event.clientX;
+    lmb.lastY = event.clientY;
     return;
   }
 
-  if (isLooking) {
-    // Look-drag is meaningful only for the perspective camera. In top-down
-    // authoring mode the drag drives pan (handled in topdown-camera.js);
-    // don't secretly rotate the parked perspective camera in the background.
-    if (state.activeCamera === camera) {
-      setCameraLook(state.camYaw - (event.clientX - lastLookX) * LOOK_SENSITIVITY, state.camPitch - (event.clientY - lastLookY) * LOOK_SENSITIVITY);
+  // 2D top-down: left-drag on a chip moves that chip.
+  if (lmb.mode === 'chip-drag' || (lmb.mode === 'idle' && moved && lmb.hit && state.chipGroups.includes(lmb.hit) && isTopDown() && !state.activeTool)) {
+    if (lmb.mode !== 'chip-drag') {
+      selectObject(lmb.hit);
+      lmb.mode = 'chip-drag';
     }
-    lastLookX = event.clientX;
-    lastLookY = event.clientY;
+    if (p) {
+      lmb.hit.position.x = p.x;
+      lmb.hit.position.z = p.z;
+      selectObject(lmb.hit); // refresh ring under the moved chip
+    }
+    return;
   }
 });
 
 renderer.domElement.addEventListener('pointerdown', (event) => {
-  downX = event.clientX;
-  downY = event.clientY;
-  isLooking = true;
-  isDraggingChip = false;
-  lastLookX = event.clientX;
-  lastLookY = event.clientY;
-  // Path handles win over everything: check first, capture pointer if hit.
-  if (pathHandles.tryStartDrag(event)) { isLooking = false; }
+  // Right button: track for click-vs-drag. The pan-drag itself is wired in
+  // topdown-camera.js; we only care about clicks (no-move releases).
+  if (event.button === 2) {
+    rmb = { downX: event.clientX, downY: event.clientY };
+    return;
+  }
+  if (event.button !== 0) return;
+
+  // Path-handle drag wins over everything else while it's active.
+  if (pathHandles.tryStartDrag(event)) {
+    lmb = { downX: event.clientX, downY: event.clientY, lastX: event.clientX, lastY: event.clientY, mode: 'path-handle', hit: null };
+    return;
+  }
+
+  lmb = {
+    downX: event.clientX,
+    downY: event.clientY,
+    lastX: event.clientX,
+    lastY: event.clientY,
+    hit: null,
+    mode: 'idle',
+  };
+
+  // Pre-hit-test so pointermove knows whether a drag should be a chip-drag,
+  // and so pointerup can toggle selection without a second raycast.
+  if (!state.activeTool || state.activeTool === 'chip') {
+    lmb.hit = chipUnderCursor(event) || selectablesUnderCursor(event);
+  }
 });
 
 window.addEventListener('pointerup', (event) => {
-  isLooking = false;
-  if (pathHandles.isDragging()) { pathHandles.endDrag(); return; }
-  if (isDraggingChip) {
-    isDraggingChip = false;
+  // Right-button up: if it wasn't a pan-drag, treat as a right-click command.
+  if (event.button === 2 && rmb) {
+    const moved = Math.hypot(event.clientX - rmb.downX, event.clientY - rmb.downY) > DRAG_THRESHOLD;
+    rmb = null;
+    if (moved) return;
+    handleRightClick(event);
+    return;
+  }
+
+  if (event.button !== 0 || !lmb) return;
+
+  const captured = lmb;
+  lmb = null;
+
+  if (captured.mode === 'path-handle') {
+    if (pathHandles.isDragging()) pathHandles.endDrag();
+    return;
+  }
+  if (captured.mode === 'chip-drag') {
     persistChipPosition(state.selected);
     scheduleHistoryPush();
     return;
   }
-  const dx = event.clientX - downX;
-  const dy = event.clientY - downY;
-  // Shape / chip tools: user is placing points, not looking around. Skip
-  // the look-drag threshold so click-across-the-rink still commits.
-  if (!state.activeTool && Math.hypot(dx, dy) > CLICK_MOVE_THRESHOLD) return;
+  if (captured.mode === 'look') return;   // just finished turning the camera
 
-  mouseNDC.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouseNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
-  raycaster.setFromCamera(mouseNDC, state.activeCamera);
+  // Genuine click - tiny wobble still counts as click.
+  const moved = Math.hypot(event.clientX - captured.downX, event.clientY - captured.downY) > DRAG_THRESHOLD;
+  if (moved) return;
 
-  // When an authoring tool is active, the tool wins - except the Chip
-  // tool checks first for an existing chip under the pointer and selects
-  // it (so you can grab / delete / move stacked players instead of piling
-  // more on top). Shape tools always commit their point regardless.
+  handleLeftClick(event, captured.hit);
+});
+
+function handleLeftClick(event, prehitObj) {
+  const p = pointerToWorld(event);
+
+  // Tool active: place / stamp / draw. Except: with the chip stamp, a click
+  // ON an existing chip selects it instead of stacking a new one on top.
   if (state.activeTool) {
-    if (state.activeTool === 'chip' && state.chipGroups.length) {
-      const chipHits = raycaster.intersectObjects(state.chipGroups, true);
-      if (chipHits.length > 0) {
-        let obj = chipHits[0].object;
-        while (obj.parent && !state.chipGroups.includes(obj)) obj = obj.parent;
-        if (state.selected === obj) deselectAll(); else selectObject(obj);
-        return;
-      }
+    if (state.activeTool === 'chip' && prehitObj && state.chipGroups.includes(prehitObj)) {
+      if (state.selected === prehitObj) deselectAll(); else selectObject(prehitObj);
+      return;
     }
-    const p = pointerToWorld(event);
     if (!p) return;
     coordClickEl.textContent = `x=${p.x.toFixed(0)}, z=${p.z.toFixed(0)} (tile ${tileLabelFor(p.x, p.z)})`;
     handleFloorClickForTool(p);
     return;
   }
 
-  const selectables = [...state.goalInstances, ...state.chipGroups, ...state.shapeObjects];
-  if (state.ballGroup) selectables.push(state.ballGroup);
-  if (state.goalieGroup) selectables.push(state.goalieGroup);
-
-  const hits = raycaster.intersectObjects(selectables, true);
-  if (hits.length > 0) {
-    let obj = hits[0].object;
-    while (obj.parent && !selectables.includes(obj)) obj = obj.parent;
-    if (state.goalInstances.includes(obj)) {
-      // clicking a goal always (re)designates it as the trajectory target,
-      // independent of the selection ring toggle below - so you can pick a
-      // goal once, then freely select/move the ball without losing it
-      state.targetGoal = obj;
-      targetGoalLabelEl.textContent = labelFor(obj);
-    }
-    if (state.selected === obj) {
-      deselectAll();
-    } else {
-      selectObject(obj);
-    }
+  // Hit a selectable: toggle selection. Goals also (re)set the target goal.
+  const obj = prehitObj || selectablesUnderCursor(event);
+  if (obj) {
+    if (state.goalInstances.includes(obj)) commitTargetGoal(obj);
+    if (state.selected === obj) deselectAll(); else selectObject(obj);
     return;
   }
 
+  // Empty floor click, no tool: deselect. Ball / goalie no longer teleport
+  // on left click - use right-click (move command) or drag instead.
+  if (p) coordClickEl.textContent = `x=${p.x.toFixed(0)}, z=${p.z.toFixed(0)} (tile ${tileLabelFor(p.x, p.z)})`;
+  if (state.selected) deselectAll();
+}
+
+function handleRightClick(event) {
+  // 1) Cancel active tool (game-standard "right-click cancels build order").
+  if (state.activeTool) {
+    activateTool(null);
+    return;
+  }
+
+  // 2) Move-command on the selected chip / ball / goalie. Works in both 2D
+  //    top-down and 3D perspective: the raycast against the floor plane is
+  //    well-defined in either camera - only the visual "arc of the throw"
+  //    would be more intuitive in top-down.
   const p = pointerToWorld(event);
   if (!p) return;
-  coordClickEl.textContent = `x=${p.x.toFixed(0)}, z=${p.z.toFixed(0)} (tile ${tileLabelFor(p.x, p.z)})`;
-
-  // Tool mode wins over "move the selected thing" - clicking the rink while
-  // the chip stamp is active drops a new chip regardless of what's selected.
-  if (handleFloorClickForTool(p)) return;
-
-  if (state.selected === state.ballGroup) {
-    state.ballGroup.position.x = p.x;
-    state.ballGroup.position.z = p.z;
-    selectObject(state.ballGroup); // refresh the ring position under the moved ball
-  } else if (state.selected === state.goalieGroup) {
-    state.goalieGroup.position.x = p.x;
-    state.goalieGroup.position.z = p.z;
-    selectObject(state.goalieGroup); // refresh the ring position under the moved goalie
-  } else if (state.chipGroups.includes(state.selected)) {
-    state.selected.position.x = p.x;
-    state.selected.position.z = p.z;
-    persistChipPosition(state.selected);
+  const sel = state.selected;
+  if (state.chipGroups.includes(sel)) {
+    sel.position.x = p.x;
+    sel.position.z = p.z;
+    persistChipPosition(sel);
     scheduleHistoryPush();
-    selectObject(state.selected); // refresh the ring position under the moved chip
-    state.goalieGroup.position.z = p.z;
-    selectObject(state.goalieGroup); // refresh the ring position under the moved goalie
+    selectObject(sel);
+  } else if (sel === state.ballGroup || sel === state.goalieGroup) {
+    sel.position.x = p.x;
+    sel.position.z = p.z;
+    selectObject(sel);
   }
-});
+}
+
+// Suppress the browser context menu on the canvas so right-click is ours.
+renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());

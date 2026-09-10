@@ -24,26 +24,37 @@ overlay.innerHTML = `
       <button data-x="close" style="background:transparent; color:#f7e6cf; border:1px solid rgba(255,179,71,0.35); border-radius:6px; padding:2px 10px; font-family:inherit; cursor:pointer;">Close (Esc)</button>
     </div>
     <div style="display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:12px;">
-      <b style="color:#ffb347; grid-column:1/-1; margin-top:6px;">Navigation</b>
-      <kbd>drag</kbd><span>look around (3D) &middot; right-drag pans in 2D</span>
+      <b style="color:#ffb347; grid-column:1/-1; margin-top:6px;">2D Plan mode (RTS controls)</b>
+      <kbd>left-click</kbd><span>select object &middot; on empty floor = deselect (or place with active tool)</span>
+      <kbd>left-drag chip</kbd><span>move that chip under the cursor</span>
+      <kbd>right-click floor</kbd><span>move-command: selected chip / ball / goalie walks there</span>
+      <kbd>right-click tool</kbd><span>cancel the active tool (chip stamp, arrow, zone, text)</span>
+      <kbd>right-drag / middle-drag</kbd><span>pan the top-down camera</span>
       <kbd>scroll</kbd><span>zoom in / out</span>
-      <kbd>WASD / arrows</kbd><span>walk when nothing selected &middot; move when a chip / ball / goalie is selected</span>
-      <kbd>Q / E</kbd><span>rotate the selected goalie</span>
+      <kbd>WASD / arrows</kbd><span>pan camera (never moves the selected item)</span>
+
+      <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">3D walking view</b>
+      <kbd>left-drag</kbd><span>look around (first-person)</span>
+      <kbd>WASD / arrows</kbd><span>walk relative to look direction</span>
+      <kbd>scroll</kbd><span>zoom / dolly</span>
+
+      <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Selection &amp; edit</b>
+      <kbd>Q / E</kbd><span>rotate the selected goalie (Shift = fine)</span>
       <kbd>Tab / Shift+Tab</kbd><span>cycle selection</span>
-      <kbd>Esc</kbd><span>deselect / exit tool</span>
-      <kbd>Del</kbd><span>remove selected chip</span>
+      <kbd>Esc</kbd><span>cancel active tool &middot; second press = deselect</span>
+      <kbd>Del / Backspace</kbd><span>remove selected chip or shape</span>
+
+      <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Tool hotkeys</b>
+      <span style="grid-column:1/-1; font-size:11px; opacity:0.7;">Click the tool palette on the left. Number-key hotkeys are reserved for playback speed.</span>
 
       <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Authoring dock</b>
       <kbd>3D / 2D</kbd><span>toggle first-person and top-down camera</span>
       <kbd>T1 / T2</kbd><span>flip active team (chip color)</span>
-      <kbd>Chip</kbd><span>drop players &middot; click an existing chip to select it (snap to face-off dots on by default)</span>
-      <kbd>Arrow / Zone / Text</kbd><span>draw tactical markers &middot; Enter or double-click closes a zone</span>
       <kbd>color swatch</kbd><span>pick color for next shape or the selected shape</span>
 
       <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Timeline &amp; playback</b>
       <kbd>Space</kbd><span>play / pause</span>
       <kbd>, / .</kbd><span>step to previous / next keyframe</span>
-      <kbd>1..9</kbd><span>playback speed</span>
       <kbd>R</kbd><span>toggle loop</span>
       <kbd>+</kbd><span>append a new keyframe (copy of current)</span>
       <kbd>&#9744;</kbd><span>set / clear a camera keyframe on that frame</span>

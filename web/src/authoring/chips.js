@@ -14,6 +14,7 @@ import { CACHE_BUST } from '../constants.js';
 import { state } from '../state.js';
 import { scene } from '../scene.js';
 import { loaded, failed } from '../status.js';
+import { TEAM_HOME, TEAM_AWAY } from '../tokens.js';
 import { ensureDoc, newId } from './doc.js';
 import { saveDoc } from './storage.js';
 
@@ -28,9 +29,10 @@ export const CHIP_DISPLAY_SCALE = 5;
 
 // Two team colours, distinct from the cyan analytical HUD accent and from
 // the amber authoring accent so a chip on screen never blurs into UI chrome.
+// Values come from web/src/tokens.js so Mode B chips + preview-3d.js match.
 export const TEAM_COLORS = {
-  1: 0x2fbf4e, // green
-  2: 0xd94b2f, // red
+  1: TEAM_HOME.hex,
+  2: TEAM_AWAY.hex,
 };
 
 // prototype loaded once from the OBJ; every chip is a fresh clone
@@ -165,6 +167,34 @@ export function removeChip(id) {
     state.chipGroups.splice(i, 1);
     disposeGroup(group);
   }
+  saveDoc();
+  import('./history.js').then((h) => h.pushHistory());
+}
+
+export function updateChipTeam(id, team) {
+  const doc = ensureDoc();
+  const player = doc.scheme.players[id];
+  if (!player || player.team === team) return;
+  player.team = team;
+  const group = state.chipGroups.find((g) => g.userData.chip && g.userData.chip.id === id);
+  if (group) {
+    group.userData.chip = player;
+    group.traverse((child) => {
+      if (child.isMesh && child.material?.color) child.material.color.setHex(TEAM_COLORS[team] || 0x888888);
+    });
+  }
+  saveDoc();
+  import('./history.js').then((h) => h.pushHistory());
+}
+
+export function updateChipLabel(id, label) {
+  const doc = ensureDoc();
+  const player = doc.scheme.players[id];
+  if (!player) return;
+  const trimmed = (label ?? '').trim();
+  const next = trimmed ? trimmed.slice(0, 32) : undefined;
+  if (player.label === next) return;
+  if (next === undefined) delete player.label; else player.label = next;
   saveDoc();
   import('./history.js').then((h) => h.pushHistory());
 }

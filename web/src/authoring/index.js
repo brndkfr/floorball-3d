@@ -13,6 +13,9 @@ import { rebuildShapesFromDoc } from './shapes.js';
 import { initHistory } from './history.js';
 import { initFaceoffSnapToggle } from './faceoff-snap.js';
 import './dock.js';       // side-effect: wires up the DOM
+import './tool-palette.js'; // side-effect: wires up the left tool palette
+import './inspector.js';    // side-effect: wires up the right inspector panel
+import './chip-popover.js'; // side-effect: wires up the chip-anchored popover
 import './timeline.js';   // side-effect: wires up the timeline UI
 import './photo-overlay/photo-overlay.js'; // side-effect: wires up the photo overlay panel
 

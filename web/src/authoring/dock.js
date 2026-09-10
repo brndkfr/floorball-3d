@@ -49,7 +49,12 @@ function setActiveTool(tool) {
   document.body.classList.toggle('tool-active', !!tool);
   document.body.classList.toggle('tool-chip', tool === 'chip');
   refreshStatus();
+  for (const cb of toolSubs) { try { cb(state.activeTool); } catch (e) { console.error(e); } }
 }
+
+const toolSubs = new Set();
+export function onToolChanged(cb) { toolSubs.add(cb); return () => toolSubs.delete(cb); }
+export function activateTool(tool) { setActiveTool(tool); }
 
 function refreshStatus() {
   const t = state.currentTeam;

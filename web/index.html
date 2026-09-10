@@ -383,7 +383,161 @@
     background:rgba(6,14,18,0.94); color:#dff9ff;
     font-family:var(--hud-font); font-size:13px; letter-spacing:0.04em;
   }
+
+  /* --- Tool palette: vertical strip of tools, Mode A only. Consolidates
+     the tool buttons that used to live in the bottom dock so the dock
+     can be a status/frame area later. */
+  #toolPalette {
+    position:absolute; top:50%; left:64px; z-index:14;
+    transform:translateY(-50%);
+    display:flex; flex-direction:column; gap:6px;
+    padding:8px; background:rgba(20,16,10,0.78);
+    border:1px solid rgba(255,179,71,0.45); border-radius:12px;
+    font-family:var(--hud-font);
+    box-shadow:0 6px 24px rgba(0,0,0,0.35);
+    backdrop-filter:blur(4px);
+  }
+  #toolPalette button {
+    width:56px; height:52px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:2px;
+    border:1px solid rgba(255,179,71,0.35);
+    background:rgba(255,179,71,0.08);
+    color:#f7e6cf; font-family:inherit; font-size:10px;
+    text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;
+    border-radius:8px;
+  }
+  #toolPalette button:hover { background:rgba(255,179,71,0.22); }
+  #toolPalette button.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
+  #toolPalette .tp-glyph { font-size:20px; line-height:1; }
+
+  /* --- Inspector: selection-driven props panel on the right. */
+  #inspector {
+    position:absolute; top:220px; right:12px; z-index:14;
+    width:220px; padding:10px 12px;
+    background:var(--hud-bg); color:#dff9ff;
+    border:1px solid var(--hud-accent-dim);
+    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
+    font-family:var(--hud-font); font-size:12px;
+    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    backdrop-filter:blur(2px);
+  }
+  #inspector .ins-title {
+    font-size:11px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.08em; margin-bottom:8px;
+  }
+  #inspector .ins-heading { font-size:14px; margin-bottom:10px; color:#ffffff; }
+  #inspector .ins-empty { opacity:0.7; font-size:11px; line-height:1.5; }
+  #inspector .ins-row { margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  #inspector .ins-label {
+    font-size:10px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.05em; min-width:44px;
+  }
+  #inspector .ins-team-btn {
+    flex:1; height:26px; border-radius:5px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.35);
+    background:rgba(79,224,255,0.08); color:#dff9ff;
+    font-family:inherit; font-size:11px; letter-spacing:0.04em;
+  }
+  #inspector .ins-team-btn.active {
+    background:var(--team-color, #ffb347); color:#0a0d0f;
+    border-color:var(--team-color, #ffb347);
+  }
+  #inspector .ins-btn {
+    width:100%; height:28px; border-radius:5px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.35);
+    background:rgba(79,224,255,0.08); color:#dff9ff;
+    font-family:inherit; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.06em; margin-top:4px;
+  }
+  #inspector .ins-btn:hover { background:rgba(79,224,255,0.22); }
+  #inspector .ins-btn.danger {
+    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1);
+    color:#ffb0b0;
+  }
+  #inspector .ins-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
+  #inspector .ins-swatch {
+    display:inline-block; width:16px; height:16px; border-radius:50%;
+    background:var(--shape-color, #ffb347);
+    border:1px solid rgba(255,255,255,0.5);
+    margin-left:4px; vertical-align:middle;
+  }
+
+  /* --- Chip-anchored popover: floats above the selected chip. Position
+     comes from chip-popover.js's screen-space projection. transform
+     translates the anchor point (bottom-centre) to the chip's top. */
+  #chipPopover {
+    position:absolute; z-index:20;
+    transform:translate(-50%, calc(-100% - 10px));
+    min-width:120px; padding:6px 8px;
+    background:var(--hud-bg); color:#dff9ff;
+    border:1px solid var(--hud-accent-dim);
+    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px rgba(79,224,255,0.15);
+    font-family:var(--hud-font); font-size:12px;
+    clip-path:polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    pointer-events:auto;
+  }
+  #chipPopover.collapsed { min-width:0; padding:4px 8px; }
+  #chipPopover .pop-header {
+    display:flex; align-items:center; gap:8px;
+    cursor:pointer; user-select:none;
+  }
+  #chipPopover .pop-title {
+    font-size:12px; color:#ffffff; letter-spacing:0.04em;
+    flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    max-width:180px;
+  }
+  #chipPopover .pop-chevron {
+    background:transparent; border:none; color:var(--hud-accent);
+    font-size:10px; cursor:pointer; padding:2px 4px;
+    line-height:1;
+  }
+  #chipPopover .pop-chevron:hover { color:#ffffff; }
+  #chipPopover .pop-label-row { margin-top:6px; }
+  #chipPopover .pop-label-input {
+    width:100%; box-sizing:border-box; height:24px;
+    background:rgba(79,224,255,0.08);
+    border:1px solid rgba(79,224,255,0.35);
+    color:#dff9ff; padding:2px 6px;
+    font-family:inherit; font-size:11px;
+    border-radius:4px;
+  }
+  #chipPopover .pop-label-input:focus {
+    outline:none; border-color:var(--hud-accent);
+    background:rgba(79,224,255,0.14);
+  }
+  #chipPopover .pop-row { display:flex; gap:6px; margin-top:6px; }
+  #chipPopover .pop-team-btn {
+    flex:1; height:24px; border-radius:4px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.35);
+    background:rgba(79,224,255,0.08); color:#dff9ff;
+    font-family:inherit; font-size:11px; letter-spacing:0.04em;
+  }
+  #chipPopover .pop-team-btn.active {
+    background:var(--team-color, #ffb347); color:#0a0d0f;
+    border-color:var(--team-color, #ffb347);
+  }
+  #chipPopover .pop-btn {
+    width:100%; height:24px; border-radius:4px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.35);
+    background:rgba(79,224,255,0.08); color:#dff9ff;
+    font-family:inherit; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.06em; margin-top:6px;
+  }
+  #chipPopover .pop-btn.danger {
+    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1);
+    color:#ffb0b0;
+  }
+  #chipPopover .pop-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
+
+  /* Hide the dock's tool buttons - they now live in #toolPalette. Leaves
+     view/rotate/team/color/overflow. Kept in the DOM so their existing
+     click wiring keeps working (Esc, keyboard shortcuts, etc.) and any
+     other module reading them still finds them. */
+  #dock [data-dock="chip"],
+  #dock [data-dock-tool],
+  #dock .dock-sep { display:none; }
 </style>
+<link rel="stylesheet" href="./src/tokens.css">
 </head>
 <body>
 <div id="appTopbar">Floorball Studio</div>
@@ -393,6 +547,17 @@
   <button data-mode="library" title="Library: saved projects">Library</button>
 </div>
 <div id="libraryView">Library - coming soon</div>
+<div id="toolPalette" data-view="plan">
+  <button data-tool="" title="Select (Esc)" class="active"><span class="tp-glyph">&#8598;</span>Select</button>
+  <button data-tool="chip" title="Chip stamp - click the rink to drop a player"><span class="tp-glyph">&#9679;</span>Chip</button>
+  <button data-tool="arrow" title="Arrow - click start then end"><span class="tp-glyph">&#8594;</span>Arrow</button>
+  <button data-tool="zone" title="Zone - click corners, click near start to close"><span class="tp-glyph">&#9711;</span>Zone</button>
+  <button data-tool="text" title="Text - click to place a label"><span class="tp-glyph">T</span>Text</button>
+</div>
+<div id="inspector" data-view="plan">
+  <div class="ins-title">Inspector</div>
+  <div id="inspectorBody"><div class="ins-empty">Nothing selected. Click a chip, shape, ball, goalie or goal - or use a tool from the palette.</div></div>
+</div>
 <canvas id="photo-canvas"></canvas>
 <div id="info" class="hud-panel" data-view="plan">
   <div class="hud-header">
@@ -402,13 +567,16 @@
   <div class="hud-body">
     Board, markings and two 160&times;115&nbsp;cm goals, per IFF SPCR&nbsp;011 /
     SP-METHOD&nbsp;1506 and the Rules of the Game 2026.<br>
-    Drag = look around (first-person) &middot; Scroll = zoom<br>
-    Nothing selected: Arrows/WASD = walk the field<br>
-    Tab / Shift+Tab = cycle selection &middot; Esc = deselect<br>
-    Selected: Arrows/WASD = move ball, goalie or chip &middot; Q/E = rotate goalie<br>
-    Goalie only: hold Shift while moving/rotating for finer control<br>
-    Authoring dock (bottom): click <b>Chip</b>, then click the rink to drop a player. <b>Del</b> removes the selected chip.<br>
-    Shape tools: <b>Arrow</b> (2 clicks), <b>Zone</b> (N clicks + click near start to close), <b>Text</b> (click, type, Enter). Toggle <b>2D / 3D</b> on the dock; every tool works in both views.
+    <b>2D Plan mode (RTS controls):</b> Left-click = select &middot; Left-drag chip = move &middot;
+    Right-click floor = move-command to selected chip / ball / goalie &middot;
+    Right-drag / middle-drag = pan &middot; Wheel = zoom &middot;
+    Arrows / WASD = pan the camera<br>
+    <b>3D walking view:</b> Left-drag = look around &middot; Scroll = zoom &middot;
+    Arrows / WASD = walk<br>
+    <b>Shared:</b> Tab / Shift+Tab = cycle selection &middot; Esc = cancel tool / deselect &middot;
+    Del = delete selected chip or shape &middot; Q/E = rotate goalie when selected
+    (Shift for fine control) &middot; Ctrl+Z / Ctrl+Y = undo / redo<br>
+    Tools live in the left palette. Right-click cancels the active tool.
     <div id="layers">
       <div class="layer-row"><label><input type="checkbox" id="rinkCheckbox" checked> Rink (board + markings)</label></div>
       <div class="layer-row"><label><input type="checkbox" id="goalsCheckbox" checked> Goals</label></div>
@@ -537,7 +705,7 @@
     <span class="label">selected:</span> <span id="selectedLabel">-</span><br>
     <span class="label">trajectory target:</span> <span id="targetGoalLabel">-</span>
     <div style="opacity:0.7; margin-top:4px; font-family:system-ui, sans-serif; font-size:11px;">
-      click (or Tab to) the ball, goalie or a<br>goal to select it - then click the floor,<br>or use arrows/WASD, to move it freely.<br>Goalie only: Q/E rotates it manually.
+      Click (or Tab to) select. Drag a chip to move it,<br>or right-click to move-command the selected<br>ball / goalie / chip. Q/E rotates the goalie.
     </div>
   </div>
 </div>
@@ -644,7 +812,18 @@
           <button id="photoAddPlayerHomeBtn" class="dock-btn" disabled style="flex:1; padding:2px 6px; font-size:10px;" title="Click a point on the photo to add a new home-team player at that floor location.">Add home player</button>
           <button id="photoAddPlayerAwayBtn" class="dock-btn" disabled style="flex:1; padding:2px 6px; font-size:10px;" title="Click a point on the photo to add a new away-team player at that floor location.">Add away player</button>
         </div>
+        <button id="photoEstimateFacingsBtn" class="dock-btn" disabled title="Run YOLOv8n-Pose on the photo, then seed each player's facing arrow from their shoulder/nose keypoints. Players with a manual facing override (Phase 3.5) are left untouched.">Estimate facings (pose)</button>
         <div id="photoStep3Status" style="opacity:0.7; font-size:10px; margin-top:2px;"></div>
+        <label style="font-size:11px; display:flex; gap:4px; align-items:center; margin-top:6px;" title="Turn on to capture ground-truth corrections when you drag chips, facing arrows, or the ball. The pre-correction position is preserved as a grey ghost on the photo; the corrected value is marked in green. Use 'Copy feedback JSON' to export the deltas.">
+          <input type="checkbox" id="photoFeedbackToggle"> Feedback mode
+        </label>
+        <div id="photoFeedbackControls" style="display:none; flex-direction:column; gap:4px;">
+          <div style="display:flex; gap:4px;">
+            <button id="photoCopyFeedbackBtn" class="dock-btn" style="flex:1; padding:2px 6px; font-size:10px;" title="Copy the recorded corrections (player positions, facings, ball) to the clipboard as JSON.">Copy JSON</button>
+            <button id="photoClearFeedbackBtn" class="dock-btn" style="flex:1; padding:2px 6px; font-size:10px;" title="Discard all captured corrections in the current frame and revert positions/facings/ball to their pre-correction (original) values. Use this to reset before re-running pose.">Clear</button>
+          </div>
+          <div id="photoFeedbackStatus" style="opacity:0.7; font-size:10px;">no corrections yet</div>
+        </div>
       </div>
     </details>
     <details id="photoStep4Details" style="margin-top:8px;">
@@ -662,6 +841,7 @@
         <label style="font-size:11px;">home goalie: <select id="photoGoalieHome" disabled></select></label>
         <label style="font-size:11px;">away goalie: <select id="photoGoalieAway" disabled></select></label>
         <button id="photoAutoAssignGoaliesBtn" class="dock-btn" disabled title="Detect goalies inside each goal's crease with YOLO, appending a chip if the general Step 3 pass missed the goalie. Falls back to the nearest own-team chip if detection fails.">Auto-detect goalies</button>
+        <button id="photoResetFacingBtn" class="dock-btn" disabled title="Clear the manual facing arrow override on the ball carrier and designated goalies. Reverts to the auto default (carrier: face nearest goal from the ball; goalie: face the ball, else face out from their own goal).">Reset facing</button>
         <div id="photoInsightsReadout" style="opacity:0.7; font-size:10px; margin-top:2px;">-</div>
         <button id="photoView3dBtn" class="dock-btn" disabled title="Preview the reconstructed positions in the top-down 2D view.">View in 2D</button>
       </div>

@@ -1,23 +1,32 @@
 import * as THREE from 'three';
-import { HALF_W, RINK_L, BALL_RADIUS } from './constants.js';
+import { HALF_W, RINK_L } from './constants.js';
 import { state } from './state.js';
-import { camera } from './scene.js';
+import { camera, topDownCamera } from './scene.js';
 import { selectObject, deselectAll, labelFor } from './selection.js';
-import { persistChipPosition, scheduleHistoryPush, removeChip, CHIP_RADIUS } from './authoring/chips.js';
+import { removeChip } from './authoring/chips.js';
 import { removeShape } from './authoring/shapes.js';
+import { isTopDown } from './authoring/topdown-camera.js';
 
 const targetGoalLabelEl = document.getElementById('targetGoalLabel');
 
-// --- keyboard controls: arrow keys/WASD move the selected ball, Escape
-// deselects, Tab/Shift+Tab cycles selection - game-style input on top of
-// the mouse-driven selection/placement in selection.js ---
+// --- keyboard input: RTS-style camera pan + selection edit. Arrows / WASD
+// never move the currently-selected chip / ball / goalie any more; those
+// move via mouse-drag or right-click. Keyboard drives the camera only.
+// Delete removes the selection, Q/E rotates the goalie when it's the
+// current selection, Tab cycles.
+
 const clock = new THREE.Clock();
 const keysPressed = new Set();
-const BALL_SPEED = 4000; // mm/second
-const BALL_RADIUS_FOR_CLAMP = BALL_RADIUS; // same value, see state.js's getBallWorldCenter() comment
-const WALK_SPEED = 2500; // mm/second, first-person camera walking
-const WALK_BOUNDARY_MARGIN = 3000; // mm past the boards you're still allowed to walk
+const WALK_SPEED = 2500;              // mm/second, first-person perspective camera
+const WALK_BOUNDARY_MARGIN = 3000;    // mm past the boards you can still walk
+const TOPDOWN_PAN_SPEED = 12000;      // mm/second at zoom=1; scaled inversely so pans feel constant on screen
+const TOPDOWN_BOUNDARY_MARGIN = 30000;
+const GOALIE_ROTATE_SPEED = 2.2;      // radians/second
+const GOALIE_FINE_FACTOR = 0.2;       // hold Shift to fine-tune goalie rotate
+
 const MOVE_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'q', 'e', 'Q', 'E'];
+
+let shiftHeld = false;
 
 function cycleSelection(direction) {
   const cycle = [state.ballGroup, state.goalieGroup, ...state.goalInstances, ...state.chipGroups].filter(Boolean);
@@ -31,117 +40,90 @@ function cycleSelection(direction) {
   }
 }
 
-// Goalie movement is fully free - no line-lock, no clamp beyond the rink
-// itself, same control feel as the ball. Rotation is manual too (Q/E) rather
-// than auto-facing the ball, so the two don't fight over control each frame.
-const GOALIE_SPEED = 3000; // mm/second
-const GOALIE_RADIUS_FOR_CLAMP = 400; // rough footprint half-width, keeps it off the boards
-const GOALIE_ROTATE_SPEED = 2.2; // radians/second
-const GOALIE_FINE_FACTOR = 0.2; // hold Shift to move/rotate the goalie at this fraction of normal speed
-let shiftHeld = false;
-
 function handleKeyboardMovement(dt) {
-  // Shape tools take over the click surface; suspend WASD walking so the
-  // perspective camera doesn't drift while the user is authoring top-down.
-  if (state.activeTool === 'arrow' || state.activeTool === 'zone' || state.activeTool === 'text') return;
-  const ballGroup = state.ballGroup, goalieGroup = state.goalieGroup;
-  if (state.selected === ballGroup && ballGroup) {
-    let dx = 0, dz = 0;
-    // Signs match the camera's default forward (+Z)/right (-X) directions
-    // (see forwardX/rightX below) - not raw world axes - so Up/Right feel
-    // like "away from"/"to the right of" the viewer at the default view.
-    if (keysPressed.has('ArrowUp') || keysPressed.has('w') || keysPressed.has('W')) dz += 1;
-    if (keysPressed.has('ArrowDown') || keysPressed.has('s') || keysPressed.has('S')) dz -= 1;
-    if (keysPressed.has('ArrowLeft') || keysPressed.has('a') || keysPressed.has('A')) dx += 1;
-    if (keysPressed.has('ArrowRight') || keysPressed.has('d') || keysPressed.has('D')) dx -= 1;
-    if (dx === 0 && dz === 0) return;
-    const len = Math.hypot(dx, dz);
-    const dist = BALL_SPEED * dt;
-    ballGroup.position.x = THREE.MathUtils.clamp(ballGroup.position.x + (dx / len) * dist, -HALF_W + BALL_RADIUS_FOR_CLAMP, HALF_W - BALL_RADIUS_FOR_CLAMP);
-    ballGroup.position.z = THREE.MathUtils.clamp(ballGroup.position.z + (dz / len) * dist, BALL_RADIUS_FOR_CLAMP, RINK_L - BALL_RADIUS_FOR_CLAMP);
-    selectObject(ballGroup); // keep the ring (and coordinate readout logic) following
-  } else if (state.selected === goalieGroup && goalieGroup) {
-    let dx = 0, dz = 0;
-    // Same forward(+Z)/right(-X) convention as the ball block above.
-    if (keysPressed.has('ArrowUp') || keysPressed.has('w') || keysPressed.has('W')) dz += 1;
-    if (keysPressed.has('ArrowDown') || keysPressed.has('s') || keysPressed.has('S')) dz -= 1;
-    if (keysPressed.has('ArrowLeft') || keysPressed.has('a') || keysPressed.has('A')) dx += 1;
-    if (keysPressed.has('ArrowRight') || keysPressed.has('d') || keysPressed.has('D')) dx -= 1;
-    if (dx !== 0 || dz !== 0) {
-      const len = Math.hypot(dx, dz);
-      const dist = GOALIE_SPEED * (shiftHeld ? GOALIE_FINE_FACTOR : 1) * dt;
-      goalieGroup.position.x = THREE.MathUtils.clamp(goalieGroup.position.x + (dx / len) * dist, -HALF_W + GOALIE_RADIUS_FOR_CLAMP, HALF_W - GOALIE_RADIUS_FOR_CLAMP);
-      goalieGroup.position.z = THREE.MathUtils.clamp(goalieGroup.position.z + (dz / len) * dist, GOALIE_RADIUS_FOR_CLAMP, RINK_L - GOALIE_RADIUS_FOR_CLAMP);
-      selectObject(goalieGroup); // keep the ring following
-    }
+  // Q/E rotate goalie when goalie is selected. This is the only "act on
+  // the selected item" keyboard verb that survives; positional movement is
+  // mouse-only.
+  const goalie = state.goalieGroup;
+  if (goalie && state.selected === goalie) {
     let rot = 0;
     if (keysPressed.has('q') || keysPressed.has('Q')) rot -= 1;
     if (keysPressed.has('e') || keysPressed.has('E')) rot += 1;
-    if (rot !== 0) goalieGroup.rotation.y += rot * GOALIE_ROTATE_SPEED * (shiftHeld ? GOALIE_FINE_FACTOR : 1) * dt;
-  } else if (state.chipGroups.includes(state.selected)) {
-    // Chip movement: same forward(+Z)/right(-X) convention as ball/goalie.
-    let dx = 0, dz = 0;
-    if (keysPressed.has('ArrowUp') || keysPressed.has('w') || keysPressed.has('W')) dz += 1;
-    if (keysPressed.has('ArrowDown') || keysPressed.has('s') || keysPressed.has('S')) dz -= 1;
-    if (keysPressed.has('ArrowLeft') || keysPressed.has('a') || keysPressed.has('A')) dx += 1;
-    if (keysPressed.has('ArrowRight') || keysPressed.has('d') || keysPressed.has('D')) dx -= 1;
-    if (dx === 0 && dz === 0) return;
-    const chip = state.selected;
-    const len = Math.hypot(dx, dz);
-    const dist = BALL_SPEED * (shiftHeld ? GOALIE_FINE_FACTOR : 1) * dt;
-    chip.position.x = THREE.MathUtils.clamp(chip.position.x + (dx / len) * dist, -HALF_W + CHIP_RADIUS, HALF_W - CHIP_RADIUS);
-    chip.position.z = THREE.MathUtils.clamp(chip.position.z + (dz / len) * dist, CHIP_RADIUS, RINK_L - CHIP_RADIUS);
-    persistChipPosition(chip);
-    scheduleHistoryPush();
-    selectObject(chip);
-  } else {
-    // nothing selected - WASD/arrows walk the camera instead (first-person
-    // exploration). Forward/right are derived from the current look yaw, so
-    // movement is always relative to where you're facing, not world axes.
-    // Skip entirely if a non-walk camera (top-down, photo-lock) is active -
-    // walking would silently drag the perspective camera off-screen while
-    // a different camera is being viewed.
-    if (state.activeCamera !== camera) return;
-    let f = 0, r = 0;
-    if (keysPressed.has('ArrowUp') || keysPressed.has('w') || keysPressed.has('W')) f += 1;
-    if (keysPressed.has('ArrowDown') || keysPressed.has('s') || keysPressed.has('S')) f -= 1;
-    if (keysPressed.has('ArrowRight') || keysPressed.has('d') || keysPressed.has('D')) r += 1;
-    if (keysPressed.has('ArrowLeft') || keysPressed.has('a') || keysPressed.has('A')) r -= 1;
-    if (f === 0 && r === 0) return;
-    const len = Math.hypot(f, r);
-    const dist = (WALK_SPEED * dt) / len;
+    if (rot !== 0) goalie.rotation.y += rot * GOALIE_ROTATE_SPEED * (shiftHeld ? GOALIE_FINE_FACTOR : 1) * dt;
+  }
+
+  // Arrows / WASD pan the camera. In 2D top-down we shift the ortho camera
+  // in world XZ; in 3D perspective we walk relative to the current look yaw.
+  let f = 0, r = 0;
+  if (keysPressed.has('ArrowUp') || keysPressed.has('w') || keysPressed.has('W')) f += 1;
+  if (keysPressed.has('ArrowDown') || keysPressed.has('s') || keysPressed.has('S')) f -= 1;
+  if (keysPressed.has('ArrowRight') || keysPressed.has('d') || keysPressed.has('D')) r += 1;
+  if (keysPressed.has('ArrowLeft') || keysPressed.has('a') || keysPressed.has('A')) r -= 1;
+  if (f === 0 && r === 0) return;
+  const len = Math.hypot(f, r);
+  const nf = f / len, nr = r / len;
+
+  if (isTopDown()) {
+    // Divide by zoom so a pan gesture always moves the same amount on
+    // SCREEN regardless of how zoomed-in the top-down view is.
+    const dist = (TOPDOWN_PAN_SPEED * dt) / Math.max(topDownCamera.zoom, 0.25);
+    topDownCamera.position.x = THREE.MathUtils.clamp(topDownCamera.position.x + nr * dist, -HALF_W - TOPDOWN_BOUNDARY_MARGIN, HALF_W + TOPDOWN_BOUNDARY_MARGIN);
+    // top-down camera's up is world -Z (see scene.js), so "forward on screen"
+    // = -Z in world for the default rotation. Negate f accordingly.
+    topDownCamera.position.z = THREE.MathUtils.clamp(topDownCamera.position.z - nf * dist, -TOPDOWN_BOUNDARY_MARGIN, RINK_L + TOPDOWN_BOUNDARY_MARGIN);
+    return;
+  }
+
+  if (state.activeCamera === camera) {
+    const dist = WALK_SPEED * dt;
     const forwardX = Math.sin(state.camYaw), forwardZ = Math.cos(state.camYaw);
     // Right must be derived from the camera's ACTUAL applied rotation
     // (camYaw + PI, see scene.js's setCameraLook), not naively from camYaw
-    // alone - that PI offset flips the apparent left/right too. This was
-    // the bug: the previous formula used camYaw directly and ended up
-    // pointing left.
+    // alone - that PI offset flips the apparent left/right too.
     const rightX = -Math.cos(state.camYaw), rightZ = Math.sin(state.camYaw);
-    camera.position.x = THREE.MathUtils.clamp(camera.position.x + (forwardX * f + rightX * r) * dist, -HALF_W - WALK_BOUNDARY_MARGIN, HALF_W + WALK_BOUNDARY_MARGIN);
-    camera.position.z = THREE.MathUtils.clamp(camera.position.z + (forwardZ * f + rightZ * r) * dist, -WALK_BOUNDARY_MARGIN, RINK_L + WALK_BOUNDARY_MARGIN);
+    camera.position.x = THREE.MathUtils.clamp(camera.position.x + (forwardX * nf + rightX * nr) * dist, -HALF_W - WALK_BOUNDARY_MARGIN, HALF_W + WALK_BOUNDARY_MARGIN);
+    camera.position.z = THREE.MathUtils.clamp(camera.position.z + (forwardZ * nf + rightZ * nr) * dist, -WALK_BOUNDARY_MARGIN, RINK_L + WALK_BOUNDARY_MARGIN);
   }
 }
 
 window.addEventListener('keydown', (event) => {
+  // Skip everything while a text field is focused so typing a chip label
+  // doesn't drop chip stamps or delete the chip.
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
   if (event.key === 'Shift') shiftHeld = true;
   if (MOVE_KEYS.includes(event.key)) {
     keysPressed.add(event.key);
     event.preventDefault();
-  } else if (event.key === 'Escape') {
+    return;
+  }
+  if (event.key === 'Escape') {
+    // Staged escape: dock.js's own Esc listener cancels an active tool.
+    // Only deselect if no tool was active (this leg fires on the *next*
+    // Esc press, or if there was never a tool to begin with).
+    if (state.activeTool) return;
     deselectAll();
-  } else if ((event.key === 'Delete' || event.key === 'Backspace') && state.chipGroups.includes(state.selected)) {
+    return;
+  }
+  if ((event.key === 'Delete' || event.key === 'Backspace') && state.chipGroups.includes(state.selected)) {
     const chip = state.selected;
     deselectAll();
     removeChip(chip.userData.chip.id);
     event.preventDefault();
-  } else if ((event.key === 'Delete' || event.key === 'Backspace') && state.shapeObjects.includes(state.selected)) {
+    return;
+  }
+  if ((event.key === 'Delete' || event.key === 'Backspace') && state.shapeObjects.includes(state.selected)) {
     const shape = state.selected;
     deselectAll();
     removeShape(shape.userData.shape.id);
     event.preventDefault();
-  } else if (event.key === 'Tab' && document.activeElement.tagName !== 'INPUT') {
+    return;
+  }
+  if (event.key === 'Tab') {
     event.preventDefault();
     cycleSelection(event.shiftKey ? -1 : 1);
+    return;
   }
 });
 
