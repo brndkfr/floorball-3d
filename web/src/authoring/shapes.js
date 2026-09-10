@@ -151,6 +151,72 @@ function makeTextSprite(text, color) {
   return sprite;
 }
 
+// Build a floor-plane label mesh for a zone: text canvas texture on a
+// PlaneGeometry laid flat above the zone fill. Centre / size derived
+// from the zone's own geometry so a resize automatically reflows the label.
+function makeZoneLabelPlane(shape, color) {
+  const text = shape.label?.trim();
+  if (!text) return null;
+
+  // Bounding box + centroid of the zone in world XZ.
+  const pts = shape.points || [];
+  if (!pts.length) return null;
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const p of pts) {
+    if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+    if (p.z < minZ) minZ = p.z; if (p.z > maxZ) maxZ = p.z;
+  }
+  const bboxW = maxX - minX, bboxH = maxZ - minZ;
+  let cx, cz;
+  if (shape.kind === 'circle') { cx = shape.cx; cz = shape.cz; }
+  else if (shape.kind === 'triangle') {
+    cx = pts.reduce((a, p) => a + p.x, 0) / pts.length;
+    cz = pts.reduce((a, p) => a + p.z, 0) / pts.length;
+  } else {
+    cx = (minX + maxX) / 2; cz = (minZ + maxZ) / 2;
+  }
+
+  // Canvas: measure the text so long labels don't clip.
+  const font = 'bold 120px system-ui, sans-serif';
+  const measureCanvas = document.createElement('canvas');
+  const mctx = measureCanvas.getContext('2d');
+  mctx.font = font;
+  const textWidth = Math.ceil(mctx.measureText(text).width);
+  const canvasH = 160;
+  const canvasW = Math.max(canvasH, textWidth + 40);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvasW;
+  canvas.height = canvasH;
+  const ctx = canvas.getContext('2d');
+  ctx.font = font;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#' + color.getHexString();
+  ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+  ctx.lineWidth = 10;
+  ctx.strokeText(text, canvasW / 2, canvasH / 2);
+  ctx.fillText(text, canvasW / 2, canvasH / 2);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.anisotropy = 4;
+  texture.needsUpdate = true;
+
+  // Fit the plane to the zone: width = 70% of bbox min-side, then keep
+  // canvas aspect. Clamped so tiny zones still show something and huge
+  // zones don't produce absurd walls of text.
+  const targetSide = Math.max(600, Math.min(bboxW, bboxH) * 0.7);
+  const planeH = Math.min(4000, targetSide);
+  const planeW = planeH * (canvasW / canvasH);
+
+  const geom = new THREE.PlaneGeometry(planeW, planeH);
+  const mat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.rotation.x = -Math.PI / 2;                 // lay flat on the floor
+  mesh.position.set(cx, SHAPE_Y + 2, cz);         // just above the zone fill
+  mesh.renderOrder = 2;
+  mesh.userData.isZoneLabel = true;
+  return mesh;
+}
+
 // --- shape -> Object3D ------------------------------------------------
 
 // Build the visual Object3D for a shape doc entry. Also used by draw-tool.js
@@ -169,7 +235,19 @@ export function buildShapeObject(shape, { ghost = false } = {}) {
     const g = buildZoneGeometry(shape.points);
     if (!g) return null;
     const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
-    return new THREE.Mesh(g, m);
+    const fill = new THREE.Mesh(g, m);
+    if (!ghost && shape.label?.trim()) {
+      const label = makeZoneLabelPlane(shape, color);
+      if (label) {
+        // Use a group so selection.js's shape lookup still finds the id via
+        // userData on the outer object; the label is a passive child.
+        const group = new THREE.Group();
+        group.add(fill);
+        group.add(label);
+        return group;
+      }
+    }
+    return fill;
   }
   if (shape.type === 'text') {
     const sprite = makeTextSprite(shape.text || '', '#' + color.getHexString());

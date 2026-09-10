@@ -170,7 +170,9 @@ if (root) {
       name.className = 'lp-name';
       name.textContent = shape.type === 'text'
         ? (shape.text?.trim() || 'Text')
-        : `${shape.type[0].toUpperCase()}${shape.type.slice(1)}`;
+        : (shape.type === 'zone' && shape.label?.trim())
+          ? shape.label.trim()
+          : `${shape.type[0].toUpperCase()}${shape.type.slice(1)}`;
       row.appendChild(name);
 
       row.addEventListener('click', () => {

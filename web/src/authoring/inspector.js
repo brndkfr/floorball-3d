@@ -84,6 +84,28 @@ function renderShape(shape) {
   }
 
   if (shape.type === 'zone') {
+    const labelRow = document.createElement('div');
+    labelRow.className = 'ins-row';
+    const ll = document.createElement('span');
+    ll.className = 'ins-label';
+    ll.textContent = 'Label';
+    labelRow.appendChild(ll);
+    const li = document.createElement('input');
+    li.type = 'text';
+    li.placeholder = 'e.g. Pocket';
+    li.value = shape.label || '';
+    li.maxLength = 40;
+    li.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+    li.addEventListener('change', () => {
+      updateShape(shape.id, { label: li.value });
+    });
+    li.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') li.blur();
+      e.stopPropagation();
+    });
+    labelRow.appendChild(li);
+    body.appendChild(labelRow);
+
     const row = document.createElement('div');
     row.className = 'ins-row';
     const label = document.createElement('span');
