@@ -200,12 +200,20 @@ function makeZoneLabelPlane(shape, color) {
   texture.anisotropy = 4;
   texture.needsUpdate = true;
 
-  // Fit the plane to the zone: width = 70% of bbox min-side, then keep
-  // canvas aspect. Clamped so tiny zones still show something and huge
-  // zones don't produce absurd walls of text.
-  const targetSide = Math.max(600, Math.min(bboxW, bboxH) * 0.7);
-  const planeH = Math.min(4000, targetSide);
-  const planeW = planeH * (canvasW / canvasH);
+  // Fit-both: pick the largest planeW x planeH that (a) preserves the
+  // canvas aspect ratio and (b) fits inside 90% of the zone bbox on both
+  // axes. Long labels in narrow zones shrink (potentially to unreadable);
+  // in that case the user's fix is either to shorten the label or to
+  // enlarge the zone. Multi-line wrap + auto-rotate are on the backlog.
+  const maxW = Math.max(200, bboxW * 0.9);
+  const maxH = Math.max(200, bboxH * 0.9);
+  const aspect = canvasW / canvasH;
+  let planeW = maxW;
+  let planeH = planeW / aspect;
+  if (planeH > maxH) {
+    planeH = maxH;
+    planeW = planeH * aspect;
+  }
 
   const geom = new THREE.PlaneGeometry(planeW, planeH);
   const mat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide });

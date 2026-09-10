@@ -152,6 +152,18 @@ Still on the backlog from that exploration:
   directly from the panel row (currently rename lives only in the chip
   popover / shape inspector); drag-to-reorder within a section to influence
   the shape `layer` group; right-click row -> Delete.
+- **Zone label typography follow-ups** (shipped: Inspector Label input,
+  floor-plane text sprite laid flat inside the zone, fit-both aspect-
+  preserved autosize so long labels never overflow the zone bbox).
+  Follow-ups:
+  1. *Multi-line wrap.* Long labels in narrow zones currently shrink to a
+     single tiny line; wrap on word boundaries first, then autosize, so
+     "grindcore zone" becomes two readable lines in a tall zone.
+  2. *Auto-rotate for tall zones.* When `bboxH > bboxW * 1.5`, render the
+     label rotated 90 deg so vertical zones read comfortably.
+  3. *User overrides in the Inspector.* Explicit Size slider (mm),
+     rotation buttons (0/90/-90), and weight toggle (Regular/Bold) that
+     override the autofit when the user wants a specific look.
 - **Wireframe/contour overlay mode**: a high-contrast outline-only render
   mode for the rink/goal overlay in Mode B, for photos where a solid
   overlay is hard to see against similar-coloured backgrounds.
