@@ -9,6 +9,13 @@
 // what view.js sizes the locked-in WebGL overlay to - while the zoom/pan
 // state only affects the interactive calibration view below.
 
+import {
+  TEAM_HOME, TEAM_AWAY,
+  SHOT_LINE_TOKENS,
+  VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED,
+  VECTOR_COVERAGE_BLOCKED, VECTOR_COVERAGE_OPEN,
+} from '../../tokens.js';
+
 const canvas = document.getElementById('photo-canvas');
 const ctx = canvas.getContext('2d');
 
@@ -78,6 +85,7 @@ export function setMarkerMovedHandler(fn) { onMarkerMoved = fn; }
 // team-colour/world-coordinate meaning, this just draws/drags image px.
 let playerChips = []; // [{ id, imagePx:[x,y], team, isCarrier }]
 let ballMarker = null; // [x,y] image px, or null
+let ballGhost = null;  // [x,y] image px of the ball's pre-correction position when feedback mode captured a move, or null
 let chipDrag = null;          // { id } once promoted to an actual drag
 let chipDragCandidate = null; // { id, startX, startY }
 let chipJustHit = false;      // suppresses the trailing click while dragging a chip
@@ -105,7 +113,11 @@ let shotLines = null;     // { corners:[{px1,px2}]*4, centre:{px1,px2}, colorKey
 let coverageOverlay = null; // { corners:[tl,tr,bl,br], grid:Float32Array, cols, rows } | null
 let passLines = null;     // [{ fromPx, toPx, clear }] | null
 let angleBadge = null;    // angleDeg (number) | null - drawn near the ball marker
-const SHOT_LINE_COLORS = { open: '#ff3b30', 'blocked-off': '#ffd21a', 'blocked-centred': '#2ecc55' };
+const SHOT_LINE_COLORS = {
+  open: SHOT_LINE_TOKENS.open.css,
+  'blocked-off': SHOT_LINE_TOKENS['blocked-off'].css,
+  'blocked-centred': SHOT_LINE_TOKENS['blocked-centred'].css,
+};
 
 export function setShotLines(lines) { shotLines = lines || null; redraw(); }
 export function setCoverageOverlay(cov) { coverageOverlay = cov || null; redraw(); }
@@ -145,6 +157,10 @@ export function setChipSelectedHandler(fn) { onChipSelected = fn; }
 export function getSelectedChipId() { return selectedChipId; }
 export function setBallMarker(imagePx) {
   ballMarker = imagePx ? [imagePx[0], imagePx[1]] : null;
+  redraw();
+}
+export function setBallGhost(imagePx) {
+  ballGhost = imagePx ? [imagePx[0], imagePx[1]] : null;
   redraw();
 }
 export function setPlayerChipMovedHandler(fn) { onPlayerChipMoved = fn; }
@@ -523,7 +539,7 @@ function redraw() {
       for (let c = 0; c < cols; c++) {
         const v00 = r * vcols + c, v10 = v00 + 1, v01 = v00 + vcols, v11 = v01 + 1;
         const mean = (grid[v00] + grid[v10] + grid[v01] + grid[v11]) / 4;
-        ctx.fillStyle = mean >= 0.5 ? '#26d940' : '#e0261a';
+        ctx.fillStyle = mean >= 0.5 ? VECTOR_COVERAGE_BLOCKED.css : VECTOR_COVERAGE_OPEN.css;
         const [tlx, tly] = toCanvas(corners[v00]);
         const [trx] = toCanvas(corners[v10]);
         const [, bly] = toCanvas(corners[v01]);
@@ -539,10 +555,10 @@ function redraw() {
     for (const p of passLines) {
       const [fx, fy] = [vr.x + (p.fromPx[0] / image.width) * vr.w, vr.y + (p.fromPx[1] / image.height) * vr.h];
       const [tx, ty] = [vr.x + (p.toPx[0] / image.width) * vr.w, vr.y + (p.toPx[1] / image.height) * vr.h];
-      ctx.strokeStyle = p.clear ? '#2ecc55' : '#ff3b30';
+      ctx.strokeStyle = p.clear ? VECTOR_PASS_CLEAR.css : VECTOR_PASS_BLOCKED.css;
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(tx, ty); ctx.stroke();
-      ctx.fillStyle = p.clear ? '#2ecc55' : '#ff3b30';
+      ctx.fillStyle = p.clear ? VECTOR_PASS_CLEAR.css : VECTOR_PASS_BLOCKED.css;
       ctx.beginPath(); ctx.arc(tx, ty, 5, 0, Math.PI * 2); ctx.fill();
     }
   }
@@ -573,7 +589,37 @@ function redraw() {
     const cx = vr.x + (px / image.width) * vr.w;
     const cy = vr.y + (py / image.height) * vr.h;
     const dragging = chipDrag && chipDrag.id === chip.id;
-    const color = chip.team === 'home' ? '#ff6b4a' : chip.team === 'away' ? '#4a9bff' : '#bdbdbd';
+    const color = chip.team === 'home' ? TEAM_HOME.css : chip.team === 'away' ? TEAM_AWAY.css : '#bdbdbd';
+    // Ghost (feedback mode): render the pre-correction chip position and/or
+    // facing arrow in dim grey, connected by a dashed line to the live one.
+    if (chip.ghost) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(180,180,180,0.85)';
+      ctx.fillStyle = 'rgba(180,180,180,0.55)';
+      if (chip.ghost.imagePx) {
+        const [gx, gy] = chip.ghost.imagePx;
+        const gxs = vr.x + (gx / image.width) * vr.w;
+        const gys = vr.y + (gy / image.height) * vr.h;
+        ctx.beginPath(); ctx.arc(gxs, gys, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(gxs, gys); ctx.lineTo(cx, cy); ctx.stroke();
+        ctx.setLineDash([]);
+        if (chip.ghost.facingImagePx) {
+          const [gfx, gfy] = chip.ghost.facingImagePx;
+          const gfxs = vr.x + (gfx / image.width) * vr.w;
+          const gfys = vr.y + (gfy / image.height) * vr.h;
+          ctx.beginPath(); ctx.moveTo(gxs, gys); ctx.lineTo(gfxs, gfys); ctx.stroke();
+          ctx.beginPath(); ctx.arc(gfxs, gfys, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        }
+      } else if (chip.ghost.facingImagePx) {
+        const [gfx, gfy] = chip.ghost.facingImagePx;
+        const gfxs = vr.x + (gfx / image.width) * vr.w;
+        const gfys = vr.y + (gfy / image.height) * vr.h;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(gfxs, gfys); ctx.stroke();
+        ctx.beginPath(); ctx.arc(gfxs, gfys, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
+      ctx.restore();
+    }
     // Body-silhouette outline (GrabCut result, only computed for the
     // selected chip) - drawn first, under everything else.
     if (chip.outline && chip.outline.length > 2) {
@@ -616,6 +662,13 @@ function redraw() {
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(cx, cy, 16, 0, Math.PI * 2); ctx.stroke();
     }
+    // "Corrected" ring: bright green outline around any chip that has
+    // ground-truth feedback recorded on it (feedback mode).
+    if (chip.corrected) {
+      ctx.strokeStyle = '#3ddc84';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, 19, 0, Math.PI * 2); ctx.stroke();
+    }
     // Facing "nose" - line from chip centre to a draggable tip, marking
     // the ball carrier's shot direction / a goalie's stance angle. Only
     // rendered when photo-overlay.js supplies chip.facingImagePx.
@@ -624,11 +677,12 @@ function redraw() {
       const fx = vr.x + (fpx / image.width) * vr.w;
       const fy = vr.y + (fpy / image.height) * vr.h;
       const dragging = facingDrag && facingDrag.id === chip.id;
+      const noseColor = chip.corrected ? '#3ddc84' : '#ffe14f';
       ctx.save();
-      ctx.strokeStyle = '#ffe14f';
+      ctx.strokeStyle = noseColor;
       ctx.lineWidth = dragging ? 3 : 2;
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(fx, fy); ctx.stroke();
-      ctx.fillStyle = '#ffe14f';
+      ctx.fillStyle = noseColor;
       ctx.strokeStyle = '#111';
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(fx, fy, dragging ? 6 : 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
@@ -650,8 +704,19 @@ function redraw() {
   if (ballMarker) {
     const cx = vr.x + (ballMarker[0] / image.width) * vr.w;
     const cy = vr.y + (ballMarker[1] / image.height) * vr.h;
+    if (ballGhost) {
+      const gx = vr.x + (ballGhost[0] / image.width) * vr.w;
+      const gy = vr.y + (ballGhost[1] / image.height) * vr.h;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(180,180,180,0.85)';
+      ctx.fillStyle = 'rgba(180,180,180,0.55)';
+      ctx.beginPath(); ctx.arc(gx, gy, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(cx, cy); ctx.stroke();
+      ctx.restore();
+    }
     const dragging = !!ballDrag;
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = ballGhost ? '#3ddc84' : '#ffffff';
     ctx.strokeStyle = '#111';
     ctx.lineWidth = dragging ? 3 : 2;
     ctx.beginPath(); ctx.arc(cx, cy, dragging ? 7 : 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();

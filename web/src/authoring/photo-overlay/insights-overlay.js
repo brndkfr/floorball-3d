@@ -3,7 +3,7 @@ import { state } from '../../state.js';
 import { GOAL_CENTER_LOCAL, GOAL_MOUTH_CORNERS_LOCAL } from '../../constants.js';
 import * as insights from '../../insights.js';
 import * as photoCanvas from './photo-canvas.js';
-import { getLastPose } from './photo-overlay.js';
+import { getLastPose, effectiveFacingDeg } from './photo-overlay.js';
 import { createGoalieProxy } from './goalie-proxy.js';
 
 // Mode-B Step 4 wiring: reads frame.photo, calls insights.js, projects the
@@ -84,7 +84,7 @@ export function recomputeInsights() {
   const defendingTeam = carrier?.team === 'home' ? 'away' : 'home';
   const goalieId = photo.goalies?.[defendingTeam];
   const goalieChip = goalieId != null ? (photo.players || []).find((p) => p.id === goalieId) : null;
-  const goalieMesh = goalieChip ? createGoalieProxy(new THREE.Vector3().fromArray(goalieChip.world), 0) : null;
+  const goalieMesh = goalieChip ? createGoalieProxy(new THREE.Vector3().fromArray(goalieChip.world), effectiveFacingDeg(goalieChip, photo) ?? 0) : null;
   // Transient proxy is never added to the scene graph, so THREE never
   // auto-computes its matrixWorld - raycasting against it before this call
   // would silently use the identity transform (same trap as photoCamera,

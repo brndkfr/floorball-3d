@@ -14,8 +14,10 @@ import { state } from '../../state.js';
 import { CHIP_HEIGHT, CHIP_RADIUS, CHIP_DISPLAY_SCALE } from '../chips.js';
 import { enterTopDown, exitTopDown, isTopDown } from '../topdown-camera.js';
 import { createGoalieProxy } from './goalie-proxy.js';
+import { effectiveFacingDeg } from './photo-overlay.js';
+import { TEAM_HOME, TEAM_AWAY } from '../../tokens.js';
 
-const TEAM_COLORS = { home: 0x2fbf4e, away: 0xd94b2f };
+const TEAM_COLORS = { home: TEAM_HOME.hex, away: TEAM_AWAY.hex };
 
 let previewGroup = null;
 let savedBallPos = null;
@@ -112,7 +114,7 @@ export function enterPhotoPreview3D(frame) {
   for (const id of goalieIds) {
     const chip = photo.players.find((p) => p.id === id);
     if (!chip) continue;
-    const proxy = createGoalieProxy(new THREE.Vector3().fromArray(chip.world), chip.facingDeg ?? 0);
+    const proxy = createGoalieProxy(new THREE.Vector3().fromArray(chip.world), effectiveFacingDeg(chip, photo) ?? 0);
     proxy.userData.previewOwned = true;
     previewGroup.add(proxy);
   }

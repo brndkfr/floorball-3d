@@ -12,6 +12,8 @@ import * as photoCanvas from './photo-canvas.js';
 import { enterPhoto, exitPhoto, isPhoto, fitToPhotoRect, setOverlayOpacity } from './view.js';
 import { detectGoal, computeEdgeOverlay } from './detect.js';
 import { detectPlayers } from './detect-players.js';
+import { detectPose, matchPoseToPlayers, detectPoseInBoxes } from './detect-pose.js';
+import { facingFromKeypoints } from './facing-from-pose.js';
 import { detectGoalieForEnd } from './detect-goalie.js';
 import { segmentPlayer } from './segment-player.js';
 import { backProjectPlayers, backProjectFoot } from './back-project.js';
@@ -80,7 +82,12 @@ const setTeamAwayBtn = document.getElementById('photoSetTeamAwayBtn');
 const deletePlayerBtn = document.getElementById('photoDeletePlayerBtn');
 const addPlayerHomeBtn = document.getElementById('photoAddPlayerHomeBtn');
 const addPlayerAwayBtn = document.getElementById('photoAddPlayerAwayBtn');
-
+const estimateFacingsBtn = document.getElementById('photoEstimateFacingsBtn');
+const feedbackToggle = document.getElementById('photoFeedbackToggle');
+const feedbackControls = document.getElementById('photoFeedbackControls');
+const copyFeedbackBtn = document.getElementById('photoCopyFeedbackBtn');
+const clearFeedbackBtn = document.getElementById('photoClearFeedbackBtn');
+const feedbackStatus = document.getElementById('photoFeedbackStatus');
 const step4Details = document.getElementById('photoStep4Details');
 const targetGoalFieldset = document.getElementById('photoTargetGoalFieldset');
 const targetGoalARadio = document.getElementById('photoTargetGoalA');
@@ -88,6 +95,7 @@ const targetGoalBRadio = document.getElementById('photoTargetGoalB');
 const goalieHomeSelect = document.getElementById('photoGoalieHome');
 const goalieAwaySelect = document.getElementById('photoGoalieAway');
 const autoAssignGoaliesBtn = document.getElementById('photoAutoAssignGoaliesBtn');
+const resetFacingBtn = document.getElementById('photoResetFacingBtn');
 const insightsReadout = document.getElementById('photoInsightsReadout');
 const view3dBtn = document.getElementById('photoView3dBtn');
 
@@ -669,24 +677,10 @@ function restoreSavedOverlay() {
 
 restoreLandmarksBtn.addEventListener('click', restoreSavedOverlay);
 
-// Auto-load the last calibrated photo from the local IndexedDB cache (if
-// any) so a reload doesn't force re-picking the file via <input> every
-// time - see photo-cache.js. Falls back to the normal empty-panel state
-// (nothing to do) if there's no cached photo or the browser blocks it.
-// Deferred to window 'load': this module is imported (and runs its
-// top-level code) BEFORE authoring/index.js's own top-level await/loadDoc()
-// populate state.doc - reading state.doc any earlier would race against an
-// still-empty placeholder doc and silently "find" no saved landmarks even
-// when they exist.
-window.addEventListener('load', async () => {
-  const cached = await photoCache.loadCachedPhoto();
-  if (!cached) return;
-  await photoCanvas.loadPhoto(cached.blob);
-  setCalibrating(true);
-  if (!checkRestoreAvailable()) {
-    startGuidedHints(autoDetectEnd.value === 'B' ? 'goalB' : 'goalA');
-  }
-});
+// Auto-load of the last cached photo was removed - it hijacked Plan mode
+// on every reload. The cache is still populated on solve, and the "Load
+// saved overlay" button (Step 2) still replays saved landmarks + pose
+// once the user re-picks the same photo file in Step 1.
 
 opacitySlider.addEventListener('input', () => {
   if (isPhoto()) setOverlayOpacity(Number(opacitySlider.value) / 100);
@@ -1040,6 +1034,9 @@ function updateStep3Enabled() {
   setBallBtn.disabled = !enabled;
   addPlayerHomeBtn.disabled = !enabled;
   addPlayerAwayBtn.disabled = !enabled;
+  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
+  const hasPlayers = !!(photo?.players && photo.players.length);
+  estimateFacingsBtn.disabled = !enabled || !hasPlayers;
 }
 
 // Ring of image-px points tracing a real-world-radius circle around a floor
@@ -1084,11 +1081,28 @@ function renderPlayersAndBall() {
       const tip = facingTipWorld(p.world, facingDeg);
       facingImagePx = lastPose.projectWorld(tip[0], tip[1], tip[2]);
     }
-    chips.push({ id: p.id, imagePx: px, team: p.team, isCarrier: p.id === photo.ballCarrier, ring, outline: showOutline ? p.outline : null, label: labels.get(p.id), facingImagePx });
+    let ghost = null;
+    if (p.feedback) {
+      ghost = {};
+      if (p.feedback.origWorld) {
+        const gpx = lastPose.projectWorld(p.feedback.origWorld[0], p.feedback.origWorld[1], p.feedback.origWorld[2]);
+        if (gpx) ghost.imagePx = gpx;
+      }
+      if (p.feedback.origFacingDeg != null) {
+        const origPos = p.feedback.origWorld || p.world;
+        const tip = facingTipWorld(origPos, p.feedback.origFacingDeg);
+        const gtx = lastPose.projectWorld(tip[0], tip[1], tip[2]);
+        if (gtx) ghost.facingImagePx = gtx;
+      }
+    }
+    chips.push({ id: p.id, imagePx: px, team: p.team, isCarrier: p.id === photo.ballCarrier, ring, outline: showOutline ? p.outline : null, label: labels.get(p.id), facingImagePx, ghost, corrected: !!p.feedback });
   }
   photoCanvas.setPlayerChips(chips);
   photoCanvas.setBallMarker(photo.ball ? lastPose.projectWorld(photo.ball[0], photo.ball[1], photo.ball[2]) : null);
+  const ballGhostWorld = photo.ballFeedback?.origWorld;
+  photoCanvas.setBallGhost(ballGhostWorld ? lastPose.projectWorld(ballGhostWorld[0], ballGhostWorld[1], ballGhostWorld[2]) : null);
   updateStep4();
+  updateFeedbackStatus();
 }
 
 // Draggable facing "nose" (Phase 3.5 polish, docs/plan.md 9 Deferred -
@@ -1105,7 +1119,7 @@ function facingTipWorld(playerWorld, facingDeg) {
     playerWorld[2] + Math.cos(rad) * FACING_TIP_DISTANCE_MM,
   ];
 }
-function effectiveFacingDeg(player, photo) {
+export function effectiveFacingDeg(player, photo) {
   if (player.facingDeg != null) return player.facingDeg;
   if (player.role === 'goalie') {
     if (photo?.ball) {
@@ -1309,6 +1323,7 @@ autoDetectPlayersBtn.addEventListener('click', async () => {
     frame.photo.players = players;
     saveDoc();
     renderPlayersAndBall();
+    updateStep3Enabled();
     step3Status.textContent = `${players.length} player(s) detected`;
     debugLog('detectPlayers:step3', {
       imageWH: [size.w, size.h],
@@ -1339,6 +1354,61 @@ flipTeamsBtn.addEventListener('click', () => {
   renderPlayersAndBall();
 });
 
+estimateFacingsBtn.addEventListener('click', async () => {
+  if (!lastPose) return;
+  const image = photoCanvas.getImage();
+  const size = photoCanvas.getImageSize();
+  if (!image || !size) return;
+  const frame = ensureDoc().frames[state.doc.currentFrame];
+  const players = frame.photo?.players;
+  if (!players?.length) return;
+
+  const prevLabel = estimateFacingsBtn.textContent;
+  estimateFacingsBtn.disabled = true;
+  estimateFacingsBtn.textContent = 'Estimating...';
+  const t0 = performance.now();
+  try {
+    // Top-down pose: one inference per existing player bbox so each
+    // player fills the 640x640 tensor, instead of a single whole-image
+    // pass that shrinks distant players below the model's usable
+    // keypoint scale (same crop-first pattern as detect.js / memory #16).
+    const matches = await detectPoseInBoxes(image, players);
+    const seeded = [], skipped = [];
+    for (const p of players) {
+      // A pose-seeded value from a prior click is refreshable; a true
+      // manual drag (facingSource unset by the drag handler) is locked.
+      if (p.facingDeg != null && p.facingSource !== 'pose') { skipped.push({ id: p.id, reason: 'manual override' }); continue; }
+      const detection = matches.get(p.id);
+      if (!detection) { skipped.push({ id: p.id, reason: 'no pose match' }); continue; }
+      const result = facingFromKeypoints(detection.keypoints, photoCamera, [size.w, size.h]);
+      if (!result) { skipped.push({ id: p.id, reason: 'low-confidence pose' }); continue; }
+      p.facingDeg = result.facingDeg;
+      p.facingSource = 'pose';
+      p.facingQuality = result.quality;
+      p.facingCue = result.cue;
+      seeded.push({ id: p.id, facingDeg: Math.round(result.facingDeg), quality: +result.quality.toFixed(2), cue: result.cue });
+    }
+    saveDoc();
+    renderPlayersAndBall();
+    updateStep4();
+    step3Status.textContent = `pose: seeded ${seeded.length}, skipped ${skipped.length}`;
+    debugLog('estimateFacings', {
+      imageWH: [size.w, size.h],
+      matched: matches.size,
+      seeded,
+      skipped,
+      elapsedMs: Math.round(performance.now() - t0),
+    });
+  } catch (err) {
+    console.error('[photo-overlay] estimate facings failed', err);
+    step3Status.textContent = 'estimate facings failed: ' + (err.message || err);
+  } finally {
+    estimateFacingsBtn.disabled = false;
+    estimateFacingsBtn.textContent = prevLabel;
+    updateStep3Enabled();
+  }
+});
+
 setBallBtn.addEventListener('click', () => {
   const on = !photoCanvas.isBallPlacementMode();
   photoCanvas.setBallPlacementMode(on);
@@ -1359,13 +1429,128 @@ photoCanvas.setBallPlacementClickHandler((imgX, imgY) => {
   renderPlayersAndBall();
 });
 
+// Feedback mode (validation aid): when on, dragging a chip / facing arrow /
+// ball snapshots the pre-correction value into the persistent doc so it
+// can be exported as JSON later. The pre-correction position renders as a
+// grey ghost on the photo, the corrected value gets a green marker.
+let feedbackMode = false;
+function snapshotPlayerPos(player) {
+  if (!feedbackMode) return;
+  player.feedback = player.feedback || {};
+  if (!('origWorld' in player.feedback)) {
+    player.feedback.origWorld = player.world.slice();
+    player.feedback.correctedAt = player.feedback.correctedAt || new Date().toISOString();
+  }
+}
+function snapshotPlayerFacing(player, photo) {
+  if (!feedbackMode) return;
+  player.feedback = player.feedback || {};
+  if (!('origFacingDeg' in player.feedback)) {
+    player.feedback.origFacingDeg = effectiveFacingDeg(player, photo);
+    player.feedback.origFacingSource = player.facingSource || (player.facingDeg != null ? 'manual' : 'auto');
+    if (player.facingCue != null) player.feedback.origFacingCue = player.facingCue;
+    if (player.facingQuality != null) player.feedback.origFacingQuality = player.facingQuality;
+    player.feedback.correctedAt = player.feedback.correctedAt || new Date().toISOString();
+  }
+}
+function snapshotBall(photo) {
+  if (!feedbackMode) return;
+  if (!photo.ballFeedback) {
+    photo.ballFeedback = { origWorld: photo.ball ? photo.ball.slice() : null, correctedAt: new Date().toISOString() };
+  }
+}
+function updateFeedbackStatus() {
+  if (!feedbackStatus) return;
+  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
+  if (!photo) { feedbackStatus.textContent = 'no photo loaded'; return; }
+  const n = (photo.players || []).filter((p) => p.feedback).length + (photo.ballFeedback ? 1 : 0);
+  feedbackStatus.textContent = n ? `${n} correction(s) captured` : 'no corrections yet';
+}
+feedbackToggle.addEventListener('change', () => {
+  feedbackMode = feedbackToggle.checked;
+  feedbackControls.style.display = feedbackMode ? 'flex' : 'none';
+  updateFeedbackStatus();
+});
+copyFeedbackBtn.addEventListener('click', async () => {
+  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
+  if (!photo) return;
+  const size = photoCanvas.getImageSize();
+  const corrections = (photo.players || []).filter((p) => p.feedback).map((p) => ({
+    playerId: p.id,
+    team: p.team,
+    role: p.role || null,
+    position: p.feedback.origWorld ? { orig: p.feedback.origWorld, corrected: p.world } : null,
+    facing: 'origFacingDeg' in p.feedback ? {
+      orig: p.feedback.origFacingDeg,
+      origSource: p.feedback.origFacingSource,
+      origCue: p.feedback.origFacingCue ?? null,
+      origQuality: p.feedback.origFacingQuality != null ? +p.feedback.origFacingQuality.toFixed(2) : null,
+      corrected: effectiveFacingDeg(p, photo),
+      correctedSource: p.facingSource || (p.facingDeg != null ? 'manual' : 'auto'),
+    } : null,
+    correctedAt: p.feedback.correctedAt,
+  }));
+  const ball = photo.ballFeedback ? {
+    orig: photo.ballFeedback.origWorld,
+    corrected: photo.ball || null,
+    correctedAt: photo.ballFeedback.correctedAt,
+  } : null;
+  const payload = {
+    frame: state.doc.currentFrame,
+    imageSize: size ? [size.w, size.h] : null,
+    reprojErrorPx: photo.reprojErrorPx ?? null,
+    corrections,
+    ball,
+  };
+  const text = JSON.stringify(payload, null, 2);
+  try {
+    await navigator.clipboard.writeText(text);
+    feedbackStatus.textContent = `copied ${corrections.length + (ball ? 1 : 0)} correction(s) to clipboard`;
+  } catch (err) {
+    console.log('[photo-overlay] feedback JSON (clipboard failed):\n' + text);
+    feedbackStatus.textContent = 'clipboard failed - JSON logged to console';
+  }
+});
+clearFeedbackBtn.addEventListener('click', () => {
+  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
+  if (!photo) return;
+  // Restore pre-correction values so pose re-runs cleanly and the diagnostic
+  // fields (facingCue/facingQuality) don't get stranded on manual overrides.
+  for (const p of photo.players || []) {
+    if (!p.feedback) continue;
+    if (p.feedback.origWorld) p.world = p.feedback.origWorld.slice();
+    if ('origFacingDeg' in p.feedback) {
+      if (p.feedback.origFacingSource === 'auto' || p.feedback.origFacingDeg == null) {
+        delete p.facingDeg;
+        delete p.facingSource;
+      } else {
+        p.facingDeg = p.feedback.origFacingDeg;
+        p.facingSource = p.feedback.origFacingSource;
+      }
+      if (p.feedback.origFacingCue != null) p.facingCue = p.feedback.origFacingCue; else delete p.facingCue;
+      if (p.feedback.origFacingQuality != null) p.facingQuality = p.feedback.origFacingQuality; else delete p.facingQuality;
+    }
+    delete p.feedback;
+  }
+  if (photo.ballFeedback) {
+    if (photo.ballFeedback.origWorld) photo.ball = photo.ballFeedback.origWorld.slice();
+    else delete photo.ball;
+    delete photo.ballFeedback;
+  }
+  saveDoc();
+  renderPlayersAndBall();
+});
+
 photoCanvas.setPlayerChipMovedHandler((id, imagePx) => {
   const size = photoCanvas.getImageSize();
   const world = size ? backProjectFoot(imagePx[0], imagePx[1], photoCamera, [size.w, size.h]) : null;
   if (!world) { renderPlayersAndBall(); return; } // dragged above the horizon - snap back to last valid position
   const frame = ensureDoc().frames[state.doc.currentFrame];
   const player = frame.photo?.players?.find((p) => p.id === id);
-  if (player) player.world = world;
+  if (player) {
+    snapshotPlayerPos(player);
+    player.world = world;
+  }
   saveDoc();
   renderPlayersAndBall();
 });
@@ -1380,7 +1565,11 @@ photoCanvas.setChipFacingMovedHandler((id, tipImgXY) => {
   const dx = tipWorld[0] - player.world[0];
   const dz = tipWorld[2] - player.world[2];
   if (dx * dx + dz * dz < 1) { renderPlayersAndBall(); return; } // dropped on top of the chip: keep prior angle
+  snapshotPlayerFacing(player, frame.photo);
   player.facingDeg = Math.atan2(dx, dz) * 180 / Math.PI;
+  player.facingSource = 'manual';
+  delete player.facingCue;
+  delete player.facingQuality;
   saveDoc();
   renderPlayersAndBall();
 });
@@ -1391,6 +1580,7 @@ photoCanvas.setBallMovedHandler((imagePx) => {
   if (!world) { renderPlayersAndBall(); return; }
   const frame = ensureDoc().frames[state.doc.currentFrame];
   if (!frame.photo) return;
+  snapshotBall(frame.photo);
   frame.photo.ball = world;
   updateBallCarrierAndFacing(frame.photo);
   saveDoc();
@@ -1418,6 +1608,7 @@ function updateStep4() {
   autoAssignGoaliesBtn.disabled = !enabled;
   view3dBtn.disabled = !enabled;
   if (!enabled) {
+    resetFacingBtn.disabled = true;
     insightsReadout.textContent = '-';
     return;
   }
@@ -1433,6 +1624,10 @@ function updateStep4() {
   const goalies = photo.goalies || (photo.goalies = { home: null, away: null });
   goalieHomeSelect.innerHTML = goalieOptionsHtml(players, 'home', goalies.home);
   goalieAwaySelect.innerHTML = goalieOptionsHtml(players, 'away', goalies.away);
+
+  const overrideIds = new Set([photo.ballCarrier, goalies.home, goalies.away].filter((v) => v != null));
+  const hasOverride = players.some((p) => overrideIds.has(p.id) && p.facingDeg != null);
+  resetFacingBtn.disabled = !hasOverride;
 
   const result = recomputeInsights();
   if (!result) { insightsReadout.textContent = 'place a ball and pick a target goal to see insights'; return; }
@@ -1565,6 +1760,26 @@ view3dBtn.addEventListener('click', () => {
   if (!frame?.photo) return;
   enterPhotoPreview3D(frame);
   view3dBtn.textContent = isPhotoPreview3D() ? 'Exit 2D preview' : 'View in 2D';
+});
+
+resetFacingBtn.addEventListener('click', () => {
+  const frame = ensureDoc().frames[state.doc.currentFrame];
+  const photo = frame?.photo;
+  if (!photo?.players) return;
+  const goalies = photo.goalies || {};
+  const overrideIds = new Set([photo.ballCarrier, goalies.home, goalies.away].filter((v) => v != null));
+  let changed = false;
+  for (const p of photo.players) {
+    if (overrideIds.has(p.id) && p.facingDeg != null) {
+      delete p.facingDeg;
+      delete p.facingSource;
+      changed = true;
+    }
+  }
+  if (!changed) return;
+  saveDoc();
+  renderPlayersAndBall();
+  updateStep4();
 });
 
 updateStep3Enabled();
