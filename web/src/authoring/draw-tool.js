@@ -6,15 +6,24 @@
 //   arrow  - 2 clicks (start, end), auto-commits on the 2nd
 //   zone   - N clicks, close by clicking near point 0 (>= 3 points), or Enter
 //   text   - 1 click -> inline <input> at the click point, Enter commits
+//
+// Zone primitives (rect / circle / triangle) use a drag pipeline instead of
+// discrete clicks: begin/update/commit called from selection.js's lmb
+// tracker. A short drag (or a single click) still commits with a small
+// default size, so pure-clicks aren't a dead end.
 
 import * as THREE from 'three';
 import { state } from '../state.js';
 import { scene } from '../scene.js';
 import { pointerToWorld } from '../selection.js';
-import { buildShapeObject, addShape } from './shapes.js';
+import { buildShapeObject, addShape, rebuildZonePoints } from './shapes.js';
 
 const ZONE_CLOSE_TOLERANCE = 500;   // mm - click within this of point 0 closes the zone
 const PREVIEW_Y = 8;                // above SHAPE_Y so preview never z-fights with committed shapes
+const PRIMITIVE_MIN_SIZE = 400;     // mm - below this, a drag-then-release commits at DEFAULT_SIZE instead
+const PRIMITIVE_DEFAULT_SIZE = 3000; // mm - single-click size for rect/triangle side, circle diameter
+const PRIMITIVE_TOOLS = new Set(['zone-rect', 'zone-circle', 'zone-triangle']);
+export function isPrimitiveTool(tool) { return PRIMITIVE_TOOLS.has(tool); }
 
 let previewObj = null;
 let lastPointerWorld = null;
@@ -33,8 +42,40 @@ function clearPreview() {
 function makeShapeDraft(tool, points, extras = {}) {
   const color = state.drawColor || '#ffb347';
   if (tool === 'arrow') return { type: 'arrow', color, width: 60, points };
-  if (tool === 'zone') return { type: 'zone', color, opacity: 0.3, points };
+  if (tool === 'zone') return { type: 'zone', kind: 'polygon', color, opacity: 0.3, points };
   if (tool === 'text') return { type: 'text', color, x: extras.x, z: extras.z, text: extras.text || '', size: 1000 };
+  return null;
+}
+
+// Build a primitive-kind zone from two world points (drag start + current).
+// The single-click case (start ~= end) is handled by the caller passing an
+// expanded end point so we always get a sane bbox.
+function makePrimitiveDraft(tool, start, end) {
+  const color = state.drawColor || '#ffb347';
+  const minX = Math.min(start.x, end.x);
+  const maxX = Math.max(start.x, end.x);
+  const minZ = Math.min(start.z, end.z);
+  const maxZ = Math.max(start.z, end.z);
+  const w = maxX - minX;
+  const h = maxZ - minZ;
+  const cx = (minX + maxX) / 2;
+  const cz = (minZ + maxZ) / 2;
+  if (tool === 'zone-rect') {
+    const shape = { type: 'zone', kind: 'rect', color, opacity: 0.3, x: minX, z: minZ, w, h };
+    rebuildZonePoints(shape);
+    return shape;
+  }
+  if (tool === 'zone-circle') {
+    const r = Math.max(w, h) / 2;
+    const shape = { type: 'zone', kind: 'circle', color, opacity: 0.3, cx, cz, r };
+    rebuildZonePoints(shape);
+    return shape;
+  }
+  if (tool === 'zone-triangle') {
+    const shape = { type: 'zone', kind: 'triangle', color, opacity: 0.3, x: minX, z: minZ, w, h };
+    rebuildZonePoints(shape);
+    return shape;
+  }
   return null;
 }
 
@@ -101,7 +142,21 @@ function buildZonePreview(committedPoints, cursor) {
 // from the current in-progress points + the last known pointer position.
 export function updateDrawPreview() {
   const ds = state.drawState;
-  if (!ds || !ds.points.length) return;
+  if (!ds) return;
+  // Primitive drag mode: preview built from drag.start + drag.cur, not from
+  // committed points. If the drag hasn't started yet, no preview.
+  if (isPrimitiveTool(ds.tool)) {
+    if (!ds.drag) return;
+    clearPreview();
+    const draft = makePrimitiveDraft(ds.tool, ds.drag.start, ds.drag.cur);
+    if (!draft) return;
+    const obj = buildShapeObject(draft, { ghost: true });
+    if (!obj) return;
+    previewObj = obj;
+    scene.add(previewObj);
+    return;
+  }
+  if (!ds.points.length) return;
   const cursor = lastPointerWorld;
   if (!cursor) return;
   clearPreview();
@@ -188,6 +243,61 @@ export function tryCommitZone() {
 
 export function drawPointCount() {
   return state.drawState?.points?.length ?? 0;
+}
+
+// --- primitive drag pipeline (rect / circle / triangle) --------------
+// Called from selection.js's lmb handler when a primitive tool is active.
+// The whole "click without drag -> commit a small default-sized primitive
+// at the click point" convenience is handled here so single-clickers don't
+// hit a dead end.
+
+export function beginPrimitiveDrag(worldPoint) {
+  const ds = state.drawState;
+  if (!ds || !isPrimitiveTool(ds.tool)) return;
+  ds.drag = {
+    start: { x: worldPoint.x, z: worldPoint.z },
+    cur: { x: worldPoint.x, z: worldPoint.z },
+  };
+}
+
+export function updatePrimitiveDrag(worldPoint) {
+  const ds = state.drawState;
+  if (!ds?.drag || !isPrimitiveTool(ds.tool)) return;
+  ds.drag.cur = { x: worldPoint.x, z: worldPoint.z };
+}
+
+// Returns true if a shape was committed. Caller (selection.js) uses the
+// return only to decide whether to short-circuit its own click handler -
+// today we always commit (single-click -> default-size primitive), so the
+// caller never falls through to selection logic while a primitive tool is
+// active.
+export function commitPrimitiveDrag() {
+  const ds = state.drawState;
+  if (!ds || !isPrimitiveTool(ds.tool)) return false;
+  const drag = ds.drag;
+  ds.drag = null;
+  clearPreview();
+  if (!drag) return false;
+  let end = drag.cur;
+  const dx = Math.abs(drag.cur.x - drag.start.x);
+  const dz = Math.abs(drag.cur.z - drag.start.z);
+  if (dx < PRIMITIVE_MIN_SIZE && dz < PRIMITIVE_MIN_SIZE) {
+    // Treat as a click -> commit a default-sized primitive centred on the
+    // click point instead of leaving the user with nothing.
+    const half = PRIMITIVE_DEFAULT_SIZE / 2;
+    drag.start = { x: drag.start.x - half, z: drag.start.z - half };
+    end = { x: drag.start.x + PRIMITIVE_DEFAULT_SIZE, z: drag.start.z + PRIMITIVE_DEFAULT_SIZE };
+  }
+  const draft = makePrimitiveDraft(ds.tool, drag.start, end);
+  if (draft) addShape(draft);
+  return true;
+}
+
+export function cancelPrimitiveDrag() {
+  const ds = state.drawState;
+  if (!ds) return;
+  ds.drag = null;
+  clearPreview();
 }
 
 // --- text input popover -----------------------------------------------

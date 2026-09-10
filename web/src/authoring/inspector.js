@@ -60,7 +60,9 @@ function render(sel) {
 function renderShape(shape) {
   const heading = document.createElement('div');
   heading.className = 'ins-heading';
-  heading.textContent = shape.type.charAt(0).toUpperCase() + shape.type.slice(1);
+  const kindLabel = shape.type === 'zone' && shape.kind && shape.kind !== 'polygon'
+    ? ` (${shape.kind})` : '';
+  heading.textContent = shape.type.charAt(0).toUpperCase() + shape.type.slice(1) + kindLabel;
   body.appendChild(heading);
 
   if (shape.type !== 'text') {
@@ -76,6 +78,25 @@ function renderShape(shape) {
     input.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
     input.addEventListener('input', () => {
       updateShape(shape.id, { color: input.value });
+    });
+    row.appendChild(input);
+    body.appendChild(row);
+  }
+
+  if (shape.type === 'zone') {
+    const row = document.createElement('div');
+    row.className = 'ins-row';
+    const label = document.createElement('span');
+    label.className = 'ins-label';
+    label.textContent = 'Opacity';
+    row.appendChild(label);
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = '0.05'; input.max = '0.8'; input.step = '0.05';
+    input.value = String(shape.opacity ?? 0.3);
+    input.style.cssText = 'flex:1;';
+    input.addEventListener('input', () => {
+      updateShape(shape.id, { opacity: parseFloat(input.value) });
     });
     row.appendChild(input);
     body.appendChild(row);

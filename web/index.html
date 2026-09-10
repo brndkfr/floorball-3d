@@ -410,6 +410,29 @@
   #toolPalette button.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
   #toolPalette .tp-glyph { font-size:20px; line-height:1; }
 
+  /* --- Palette submenu: hover the Zone group to open a right-side flyout
+     with the shape sub-tools. Kept as pure CSS hover so no JS state to
+     manage - selection is a normal button click that runs the same
+     activateTool path. */
+  #toolPalette .tp-group { position:relative; }
+  #toolPalette .tp-group > button { position:relative; padding-right:14px; }
+  #toolPalette .tp-caret {
+    position:absolute; right:4px; top:50%; transform:translateY(-50%);
+    font-size:9px; opacity:0.7;
+  }
+  #toolPalette .tp-submenu {
+    position:absolute; left:calc(100% + 6px); top:0;
+    display:none; flex-direction:column; gap:4px;
+    padding:6px; background:rgba(20,16,10,0.94);
+    border:1px solid rgba(255,179,71,0.45); border-radius:10px;
+    box-shadow:0 6px 24px rgba(0,0,0,0.4);
+  }
+  #toolPalette .tp-group:hover .tp-submenu,
+  #toolPalette .tp-submenu:hover { display:flex; }
+  #toolPalette .tp-submenu button {
+    width:76px; height:44px; font-size:9px;
+  }
+
   /* --- Inspector: selection-driven props panel on the right. */
   #inspector {
     position:absolute; top:220px; right:12px; z-index:14;
@@ -645,7 +668,15 @@
   <button data-tool="" title="Select (Esc)" class="active"><span class="tp-glyph">&#8598;</span>Select</button>
   <button data-tool="chip" title="Chip stamp - click the rink to drop a player"><span class="tp-glyph">&#9679;</span>Chip</button>
   <button data-tool="arrow" title="Arrow - click start then end"><span class="tp-glyph">&#8594;</span>Arrow</button>
-  <button data-tool="zone" title="Zone - click corners, click near start to close"><span class="tp-glyph">&#9711;</span>Zone</button>
+  <div class="tp-group">
+    <button data-tool="zone" title="Zone (freehand polygon) - hover for shapes"><span class="tp-glyph">&#9711;</span>Zone<span class="tp-caret">&#9656;</span></button>
+    <div class="tp-submenu" role="menu">
+      <button data-tool="zone" title="Freehand polygon"><span class="tp-glyph">&#11040;</span>Freehand</button>
+      <button data-tool="zone-rect" title="Rectangle (drag)"><span class="tp-glyph">&#9645;</span>Rect</button>
+      <button data-tool="zone-circle" title="Circle (drag)"><span class="tp-glyph">&#9711;</span>Circle</button>
+      <button data-tool="zone-triangle" title="Triangle (drag)"><span class="tp-glyph">&#9651;</span>Triangle</button>
+    </div>
+  </div>
   <button data-tool="text" title="Text - click to place a label"><span class="tp-glyph">T</span>Text</button>
 </div>
 <div id="inspector" data-view="plan">

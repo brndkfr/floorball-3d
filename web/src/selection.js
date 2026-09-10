@@ -5,8 +5,9 @@ import { scene, camera, renderer, setCameraLook } from './scene.js';
 import { handleFloorClickForTool, activateTool } from './authoring/dock.js';
 import { chipDataFor, persistChipPosition, scheduleHistoryPush } from './authoring/chips.js';
 import * as pathHandles from './authoring/path-handles.js';
+import * as shapeHandles from './authoring/shape-handles.js';
 import { shapeDataFor } from './authoring/shapes.js';
-import { setPointerHint } from './authoring/draw-tool.js';
+import { setPointerHint, isPrimitiveTool, beginPrimitiveDrag, updatePrimitiveDrag, commitPrimitiveDrag, cancelPrimitiveDrag } from './authoring/draw-tool.js';
 import { isTopDown } from './authoring/topdown-camera.js';
 
 // --- coordinate readout: hover to preview, click to pin a coordinate ---
@@ -212,7 +213,15 @@ renderer.domElement.addEventListener('pointermove', (event) => {
   setPointerHint(p);
 
   if (pathHandles.isDragging()) { pathHandles.onDragMove(event); return; }
+  if (shapeHandles.isDragging()) { shapeHandles.onDragMove(event); return; }
   if (!lmb) return;
+
+  // Primitive-tool drag: continuous update, no threshold - the ghost preview
+  // starts at the click point and grows with the cursor.
+  if (lmb.mode === 'shape-drag') {
+    if (p) updatePrimitiveDrag(p);
+    return;
+  }
 
   const moved = Math.hypot(event.clientX - lmb.downX, event.clientY - lmb.downY) > DRAG_THRESHOLD;
 
@@ -257,6 +266,11 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
     lmb = { downX: event.clientX, downY: event.clientY, lastX: event.clientX, lastY: event.clientY, mode: 'path-handle', hit: null };
     return;
   }
+  // Shape edit-handle drag (zone corners / edges / vertices).
+  if (shapeHandles.tryStartDrag(event)) {
+    lmb = { downX: event.clientX, downY: event.clientY, lastX: event.clientX, lastY: event.clientY, mode: 'shape-handle', hit: null };
+    return;
+  }
 
   lmb = {
     downX: event.clientX,
@@ -266,6 +280,16 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
     hit: null,
     mode: 'idle',
   };
+
+  // Primitive shape tool (rect/circle/triangle) - start a drag immediately.
+  if (isPrimitiveTool(state.activeTool)) {
+    const p = pointerToWorld(event);
+    if (p) {
+      beginPrimitiveDrag(p);
+      lmb.mode = 'shape-drag';
+    }
+    return;
+  }
 
   // Pre-hit-test so pointermove knows whether a drag should be a chip-drag,
   // and so pointerup can toggle selection without a second raycast.
@@ -291,6 +315,14 @@ window.addEventListener('pointerup', (event) => {
 
   if (captured.mode === 'path-handle') {
     if (pathHandles.isDragging()) pathHandles.endDrag();
+    return;
+  }
+  if (captured.mode === 'shape-handle') {
+    if (shapeHandles.isDragging()) shapeHandles.endDrag();
+    return;
+  }
+  if (captured.mode === 'shape-drag') {
+    commitPrimitiveDrag();
     return;
   }
   if (captured.mode === 'chip-drag') {

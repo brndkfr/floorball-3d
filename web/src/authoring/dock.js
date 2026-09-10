@@ -30,7 +30,7 @@ const palette = document.getElementById('dockPalette');
 const statusEl = document.getElementById('dockStatus');
 const shapeButtons = dockEl.querySelectorAll('[data-dock-tool]');   // arrow, zone, text
 
-const SHAPE_TOOLS = new Set(['arrow', 'zone', 'text']);
+const SHAPE_TOOLS = new Set(['arrow', 'zone', 'zone-rect', 'zone-circle', 'zone-triangle', 'text']);
 const PALETTE_COLORS = ['#ffb347', '#ff5b5b', '#5bd1ff', '#7ee06b', '#c07bff', '#ffffff', '#1a120a'];
 
 // --- state helpers ----------------------------------------------------
@@ -70,6 +70,9 @@ function refreshStatus() {
     else msg = `zone tool - ${n} corners; press Enter or double-click to finish (Esc to exit)`;
   }
   else if (tool === 'text') msg = 'text tool - click the rink where the label should go (Esc to exit)';
+  else if (tool === 'zone-rect') msg = 'rectangle - drag on the rink to draw (or click for a default size, Esc to exit)';
+  else if (tool === 'zone-circle') msg = 'circle - drag on the rink to draw (or click for a default size, Esc to exit)';
+  else if (tool === 'zone-triangle') msg = 'triangle - drag on the rink to draw (or click for a default size, Esc to exit)';
   statusEl.textContent = msg;
   teamBtn.style.setProperty('--team-color', '#' + TEAM_COLORS[t].toString(16).padStart(6, '0'));
   teamBtn.textContent = `T${t}`;

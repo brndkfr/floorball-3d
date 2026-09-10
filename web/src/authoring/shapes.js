@@ -80,6 +80,45 @@ function buildZoneGeometry(points) {
   return g;
 }
 
+// Rebuild `points` for a primitive-kind zone from its parametric fields.
+// Kept as an exported helper so shape-handles.js can call it after a drag
+// mutation before writing back to the doc. Circles get 48 vertices - fine
+// for both rendering and the coverage/trajectory math (they don't consume
+// zone points).
+const CIRCLE_SEGMENTS = 48;
+export function rebuildZonePoints(shape) {
+  if (!shape) return;
+  const kind = shape.kind || 'polygon';
+  if (kind === 'rect') {
+    const { x = 0, z = 0, w = 0, h = 0 } = shape;
+    shape.points = [
+      { x, z },
+      { x: x + w, z },
+      { x: x + w, z: z + h },
+      { x, z: z + h },
+    ];
+  } else if (kind === 'circle') {
+    const { cx = 0, cz = 0, r = 0 } = shape;
+    const pts = [];
+    for (let i = 0; i < CIRCLE_SEGMENTS; i++) {
+      const t = (i / CIRCLE_SEGMENTS) * Math.PI * 2;
+      pts.push({ x: cx + Math.cos(t) * r, z: cz + Math.sin(t) * r });
+    }
+    shape.points = pts;
+  } else if (kind === 'triangle') {
+    // Isoceles pointing "up" (toward -z) inscribed in { x,z,w,h }. Apex
+    // handles are stored explicitly so a rotated triangle only needs to
+    // update `points` and can drop back to arbitrary-triangle semantics.
+    const { x = 0, z = 0, w = 0, h = 0 } = shape;
+    shape.points = [
+      { x: x + w / 2, z },        // apex top
+      { x: x + w, z: z + h },     // base right
+      { x, z: z + h },            // base left
+    ];
+  }
+  // polygon: caller manages points directly.
+}
+
 function makeTextSprite(text, color) {
   const font = 'bold 96px system-ui, sans-serif';
   const padding = 24;
