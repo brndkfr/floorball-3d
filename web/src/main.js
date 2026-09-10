@@ -15,6 +15,7 @@ import './help.js';
 import { updateChipAnimations } from './authoring/index.js';
 import { updateDrawPreview } from './authoring/draw-tool.js';
 import { tickPlayback } from './authoring/playback.js';
+import { updateMoveMarkers } from './authoring/move-marker.js';
 
 initHud();
 
@@ -23,6 +24,7 @@ function animate() {
   const dt = clock.getDelta();
   handleKeyboardMovement(dt);
   updateChipAnimations(dt);
+  updateMoveMarkers(dt);
   updateDrawPreview();
   tickPlayback(dt * 1000);
   const ballCenter = getBallWorldCenter(); // computed once, shared by both calls below

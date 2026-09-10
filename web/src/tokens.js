@@ -37,6 +37,24 @@ export const VECTOR_COVERAGE_OPEN = VECTOR_SHOT_OPEN;
 // Trajectory rays from ball to goal-mouth corners.
 export const VECTOR_TRAJECTORY = pair(0xffe066);
 
+// Semantic arrow roles for authoring in Mode A: pass / shot / run. Set via
+// the Inspector 'Role' dropdown. Chosen to be recognisable at a glance and
+// consistent with the shot/pass tokens above (green for pass = clear intent,
+// red for shot = attack, yellow-amber for run = neutral movement).
+export const VECTOR_ARROW_PASS = VECTOR_SHOT_BLOCKED_CENTRED;   // green
+export const VECTOR_ARROW_SHOT = VECTOR_SHOT_OPEN;              // red
+export const VECTOR_ARROW_RUN  = pair(0xffb347);                // amber
+
+export const ARROW_ROLE_TOKENS = {
+  pass: VECTOR_ARROW_PASS,
+  shot: VECTOR_ARROW_SHOT,
+  run:  VECTOR_ARROW_RUN,
+};
+
+export function arrowRoleColor(role) {
+  return ARROW_ROLE_TOKENS[role]?.css ?? null;
+}
+
 // Look up a shot-verdict token by the key returned from insights.shotVerdict().
 export const SHOT_LINE_TOKENS = {
   open: VECTOR_SHOT_OPEN,

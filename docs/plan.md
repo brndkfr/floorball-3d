@@ -187,14 +187,14 @@ Still on the backlog from that exploration:
   floor-plane text sprite laid flat inside the zone, fit-both aspect-
   preserved autosize so long labels never overflow the zone bbox).
   Follow-ups:
-  1. **[A-BACK-002]** [open] *Multi-line wrap.* Long labels in narrow zones
+  1. **[A-BACK-002]** [shipped] *Multi-line wrap.* Long labels in narrow zones
      currently shrink to a single tiny line; wrap on word boundaries first,
      then autosize, so "grindcore zone" becomes two readable lines in a
      tall zone.
-  2. **[A-BACK-003]** [open] *Auto-rotate for tall zones.* When
+  2. **[A-BACK-003]** [shipped] *Auto-rotate for tall zones.* When
      `bboxH > bboxW * 1.5`, render the label rotated 90 deg so vertical
      zones read comfortably.
-  3. **[A-BACK-004]** [open] *User overrides in the Inspector.* Explicit
+  3. **[A-BACK-004]** [shipped] *User overrides in the Inspector.* Explicit
      Size slider (mm), rotation buttons (0/90/-90), and weight toggle
      (Regular/Bold) that override the autofit when the user wants a specific
      look.
@@ -234,7 +234,7 @@ Still on the backlog from that exploration:
   Choreograph mode above.
 - **Move-command polish**. The RTS-style right-click currently teleports
   the chip / ball / goalie to the click point. Two cheap wins on top:
-  1. **[A-BACK-008]** [open] *"Go here" flash marker* at the click point (a
+  1. **[A-BACK-008]** [shipped] *"Go here" flash marker* at the click point (a
      brief expanding ring, same idiom as the chip-drop animation in
      `chips.js`) so the gesture has a visible receipt.
   2. **[A-BACK-009]** [open] *Walk animation* - tween the chip's position
@@ -273,7 +273,7 @@ Still on the backlog from that exploration:
   4. **[A-BACK-011d]** [shipped] *Draggable endpoints + head-size handle* on
      the selected arrow. Reuses the `path-handles.js` pattern from chip
      paths (screen-space-sized handles, drag updates `shape.points`).
-  5. **[A-BACK-011e]** [open] *Semantic arrow types* (pass / shot / run)
+  5. **[A-BACK-011e]** [shipped] *Semantic arrow types* (pass / shot / run)
      auto-coloured from `tokens.js` (`--vector-pass`/`--vector-shot`/
      `--vector-run`?). Stored as `shape.role`; colour derived, user can
      still override.

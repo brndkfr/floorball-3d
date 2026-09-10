@@ -320,14 +320,47 @@ function makeTextSprite(text, color) {
   return sprite;
 }
 
+// Word-wrap `text` into up to `maxLines` lines, each fitting within `maxPx`
+// (measured with the given canvas context). Overflowing words are kept
+// whole (no mid-word breaks); a stray very-long word may still exceed maxPx.
+function wrapLines(ctx, text, maxPx, maxLines) {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return [''];
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const trial = cur ? cur + ' ' + w : w;
+    if (ctx.measureText(trial).width <= maxPx || !cur) {
+      cur = trial;
+    } else {
+      lines.push(cur);
+      cur = w;
+      if (lines.length >= maxLines - 1) break;
+    }
+  }
+  if (cur) lines.push(cur);
+  // Any remaining words after the loop hit the last line (may overflow).
+  const consumed = lines.reduce((a, l) => a + l.split(/\s+/).length, 0);
+  if (consumed < words.length) {
+    lines[lines.length - 1] = lines[lines.length - 1] + ' ' + words.slice(consumed).join(' ');
+  }
+  return lines;
+}
+
 // Build a floor-plane label mesh for a zone: text canvas texture on a
 // PlaneGeometry laid flat above the zone fill. Centre / size derived
 // from the zone's own geometry so a resize automatically reflows the label.
+//
+// Typography per shape (all optional):
+//   shape.labelBold      - true => bold (default), false => regular
+//   shape.labelRotation  - 0 | 90 | -90 (deg); overrides auto-rotate
+//   shape.labelSize      - mm; overrides autofit
+//   otherwise: auto-rotate 90 deg for tall zones (bboxH > bboxW*1.5),
+//   word-wrap onto up to 3 lines, and fit-both autosize into 90% of bbox.
 function makeZoneLabelPlane(shape, color) {
   const text = shape.label?.trim();
   if (!text) return null;
 
-  // Bounding box + centroid of the zone in world XZ.
   const pts = shape.points || [];
   if (!pts.length) return null;
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
@@ -345,17 +378,58 @@ function makeZoneLabelPlane(shape, color) {
     cx = (minX + maxX) / 2; cz = (minZ + maxZ) / 2;
   }
 
-  // Canvas: measure the text so long labels don't clip.
-  const font = 'bold 120px system-ui, sans-serif';
+  // Auto-rotate: for tall (narrow) zones, run the label vertically so it
+  // fills the long axis. User rotation override wins over auto.
+  const userRot = shape.labelRotation;
+  const rotDeg = userRot === 0 || userRot === 90 || userRot === -90
+    ? userRot
+    : (bboxH > bboxW * 1.5 ? 90 : 0);
+  // For the wrap+fit maths, swap the bbox axes when rotating 90 deg so
+  // "along the text baseline" points along the zone's long axis.
+  const alongPx = (rotDeg === 90 || rotDeg === -90) ? bboxH : bboxW;
+  const acrossPx = (rotDeg === 90 || rotDeg === -90) ? bboxW : bboxH;
+
+  const weight = shape.labelBold === false ? '' : 'bold ';
+  const font = `${weight}120px system-ui, sans-serif`;
   const measureCanvas = document.createElement('canvas');
   const mctx = measureCanvas.getContext('2d');
   mctx.font = font;
-  const textWidth = Math.ceil(mctx.measureText(text).width);
-  const canvasH = 160;
-  const canvasW = Math.max(canvasH, textWidth + 40);
+
+  // Multi-line wrap: try 1, then 2, then 3 lines and pick the layout with
+  // the largest resulting plane. Wrap at 92% of the along-axis to leave
+  // padding.
+  const wrapBudgetPx = 4000;    // canvas-space cap; scaled to world at the end
+  let best = null;
+  for (const maxLines of [1, 2, 3]) {
+    const lines = wrapLines(mctx, text, wrapBudgetPx, maxLines);
+    const widest = Math.max(...lines.map((l) => mctx.measureText(l).width));
+    const canvasH = 160 * lines.length + 40;   // ~120px line + margin
+    const canvasW = Math.max(canvasH, widest + 60);
+    // Fit plane to bbox: 90% of along/across; preserve aspect.
+    const maxAlong = Math.max(200, alongPx * 0.9);
+    const maxAcross = Math.max(200, acrossPx * 0.9);
+    const aspect = canvasW / canvasH;
+    let planeAlong = maxAlong;
+    let planeAcross = planeAlong / aspect;
+    if (planeAcross > maxAcross) {
+      planeAcross = maxAcross;
+      planeAlong = planeAcross * aspect;
+    }
+    if (!best || planeAlong * planeAcross > best.area) {
+      best = { lines, canvasW, canvasH, planeAlong, planeAcross, area: planeAlong * planeAcross };
+    }
+  }
+
+  // User size override: fix planeAlong; recompute planeAcross from aspect.
+  if (typeof shape.labelSize === 'number' && shape.labelSize > 100) {
+    const aspect = best.canvasW / best.canvasH;
+    best.planeAlong = shape.labelSize;
+    best.planeAcross = best.planeAlong / aspect;
+  }
+
   const canvas = document.createElement('canvas');
-  canvas.width = canvasW;
-  canvas.height = canvasH;
+  canvas.width = best.canvasW;
+  canvas.height = best.canvasH;
   const ctx = canvas.getContext('2d');
   ctx.font = font;
   ctx.textAlign = 'center';
@@ -363,32 +437,22 @@ function makeZoneLabelPlane(shape, color) {
   ctx.fillStyle = '#' + color.getHexString();
   ctx.strokeStyle = 'rgba(0,0,0,0.85)';
   ctx.lineWidth = 10;
-  ctx.strokeText(text, canvasW / 2, canvasH / 2);
-  ctx.fillText(text, canvasW / 2, canvasH / 2);
+  const lineH = best.canvasH / best.lines.length;
+  for (let i = 0; i < best.lines.length; i++) {
+    const y = lineH * i + lineH / 2;
+    ctx.strokeText(best.lines[i], best.canvasW / 2, y);
+    ctx.fillText(best.lines[i], best.canvasW / 2, y);
+  }
   const texture = new THREE.CanvasTexture(canvas);
   texture.anisotropy = 4;
   texture.needsUpdate = true;
 
-  // Fit-both: pick the largest planeW x planeH that (a) preserves the
-  // canvas aspect ratio and (b) fits inside 90% of the zone bbox on both
-  // axes. Long labels in narrow zones shrink (potentially to unreadable);
-  // in that case the user's fix is either to shorten the label or to
-  // enlarge the zone. Multi-line wrap + auto-rotate are on the backlog.
-  const maxW = Math.max(200, bboxW * 0.9);
-  const maxH = Math.max(200, bboxH * 0.9);
-  const aspect = canvasW / canvasH;
-  let planeW = maxW;
-  let planeH = planeW / aspect;
-  if (planeH > maxH) {
-    planeH = maxH;
-    planeW = planeH * aspect;
-  }
-
-  const geom = new THREE.PlaneGeometry(planeW, planeH);
+  const geom = new THREE.PlaneGeometry(best.planeAlong, best.planeAcross);
   const mat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(geom, mat);
-  mesh.rotation.x = -Math.PI / 2;                 // lay flat on the floor
-  mesh.position.set(cx, SHAPE_Y + 2, cz);         // just above the zone fill
+  mesh.rotation.x = -Math.PI / 2;
+  if (rotDeg) mesh.rotation.z = -(rotDeg * Math.PI / 180);
+  mesh.position.set(cx, SHAPE_Y + 2, cz);
   mesh.renderOrder = 2;
   mesh.userData.isZoneLabel = true;
   return mesh;
@@ -527,6 +591,11 @@ export function addShape(shape) {
   const doc = ensureDoc();
   if (!doc.scheme.shapes) doc.scheme.shapes = [];
   if (!shape.id) shape.id = newId('s');
+  // Primitive zones (rect/circle/triangle) may arrive with just parametric
+  // fields; make sure `points` is populated so buildShapeObject can render.
+  if (shape.type === 'zone' && shape.kind && shape.kind !== 'polygon' && !shape.points) {
+    rebuildZonePoints(shape);
+  }
   doc.scheme.shapes.push(shape);
   attachShape(shape);
   saveDoc();

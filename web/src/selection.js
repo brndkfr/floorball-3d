@@ -8,6 +8,7 @@ import * as pathHandles from './authoring/path-handles.js';
 import * as shapeHandles from './authoring/shape-handles.js';
 import { shapeDataFor } from './authoring/shapes.js';
 import { setPointerHint, isPrimitiveTool, beginPrimitiveDrag, updatePrimitiveDrag, commitPrimitiveDrag, cancelPrimitiveDrag, tryCommitArrow } from './authoring/draw-tool.js';
+import { spawnMoveMarker } from './authoring/move-marker.js';
 import { isTopDown } from './authoring/topdown-camera.js';
 
 // --- coordinate readout: hover to preview, click to pin a coordinate ---
@@ -392,10 +393,12 @@ function handleRightClick(event) {
     persistChipPosition(sel);
     scheduleHistoryPush();
     selectObject(sel);
+    spawnMoveMarker(p.x, p.z);
   } else if (sel === state.ballGroup || sel === state.goalieGroup) {
     sel.position.x = p.x;
     sel.position.z = p.z;
     selectObject(sel);
+    spawnMoveMarker(p.x, p.z);
   }
 }
 

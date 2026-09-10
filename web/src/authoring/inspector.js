@@ -10,6 +10,7 @@ import { state } from '../state.js';
 import { onSelectionChanged, deselectAll, labelFor } from '../selection.js';
 import { chipDataFor } from './chips.js';
 import { shapeDataFor, removeShape, updateShape, updateShapeLabel } from './shapes.js';
+import { arrowRoleColor } from '../tokens.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
 // not here; the Inspector still handles shapes / text / read-only labels.
@@ -84,6 +85,30 @@ function renderShape(shape) {
   }
 
   if (shape.type === 'arrow') {
+    const roleRow = document.createElement('div');
+    roleRow.className = 'ins-row';
+    const rl = document.createElement('span');
+    rl.className = 'ins-label';
+    rl.textContent = 'Role';
+    roleRow.appendChild(rl);
+    const roleSel = document.createElement('select');
+    roleSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+    for (const opt of [{ v: '', t: 'custom' }, { v: 'pass', t: 'Pass' }, { v: 'shot', t: 'Shot' }, { v: 'run', t: 'Run' }]) {
+      const o = document.createElement('option');
+      o.value = opt.v; o.textContent = opt.t;
+      roleSel.appendChild(o);
+    }
+    roleSel.value = shape.role || '';
+    roleSel.addEventListener('change', () => {
+      const role = roleSel.value || undefined;
+      const patch = { role };
+      const roleColor = role ? arrowRoleColor(role) : null;
+      if (roleColor) patch.color = roleColor;
+      updateShape(shape.id, patch);
+    });
+    roleRow.appendChild(roleSel);
+    body.appendChild(roleRow);
+
     const labelRow = document.createElement('div');
     labelRow.className = 'ins-row';
     const ll = document.createElement('span');
@@ -220,6 +245,65 @@ function renderShape(shape) {
     });
     row.appendChild(input);
     body.appendChild(row);
+
+    if (shape.label && shape.label.trim()) {
+      const sizeRow = document.createElement('div');
+      sizeRow.className = 'ins-row';
+      const sl = document.createElement('span');
+      sl.className = 'ins-label';
+      sl.textContent = 'Text size';
+      sizeRow.appendChild(sl);
+      const sInp = document.createElement('input');
+      sInp.type = 'range';
+      sInp.min = '0'; sInp.max = '8000'; sInp.step = '100';
+      sInp.value = String(shape.labelSize ?? 0);
+      sInp.title = '0 = auto-fit; drag to override';
+      sInp.style.cssText = 'flex:1;';
+      sInp.addEventListener('input', () => {
+        const v = parseInt(sInp.value, 10);
+        updateShape(shape.id, { labelSize: v > 0 ? v : undefined });
+      });
+      sizeRow.appendChild(sInp);
+      body.appendChild(sizeRow);
+
+      const rotRow = document.createElement('div');
+      rotRow.className = 'ins-row';
+      const rl = document.createElement('span');
+      rl.className = 'ins-label';
+      rl.textContent = 'Rotation';
+      rotRow.appendChild(rl);
+      const rotSel = document.createElement('select');
+      rotSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+      for (const o of [{ v: 'auto', t: 'auto' }, { v: '0', t: '0°' }, { v: '90', t: '90°' }, { v: '-90', t: '-90°' }]) {
+        const opt = document.createElement('option'); opt.value = o.v; opt.textContent = o.t;
+        rotSel.appendChild(opt);
+      }
+      rotSel.value = shape.labelRotation === 0 ? '0'
+        : shape.labelRotation === 90 ? '90'
+        : shape.labelRotation === -90 ? '-90'
+        : 'auto';
+      rotSel.addEventListener('change', () => {
+        const v = rotSel.value === 'auto' ? undefined : parseInt(rotSel.value, 10);
+        updateShape(shape.id, { labelRotation: v });
+      });
+      rotRow.appendChild(rotSel);
+      body.appendChild(rotRow);
+
+      const boldRow = document.createElement('div');
+      boldRow.className = 'ins-row';
+      const bl = document.createElement('span');
+      bl.className = 'ins-label';
+      bl.textContent = 'Bold';
+      boldRow.appendChild(bl);
+      const boldIn = document.createElement('input');
+      boldIn.type = 'checkbox';
+      boldIn.checked = shape.labelBold !== false;
+      boldIn.addEventListener('change', () => {
+        updateShape(shape.id, { labelBold: boldIn.checked });
+      });
+      boldRow.appendChild(boldIn);
+      body.appendChild(boldRow);
+    }
   }
 
   if (shape.type === 'text' && shape.text != null) {
