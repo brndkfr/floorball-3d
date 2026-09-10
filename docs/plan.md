@@ -263,12 +263,26 @@ Still on the backlog from that exploration:
   1. **[A-BACK-008]** [shipped] *"Go here" flash marker* at the click point (a
      brief expanding ring, same idiom as the chip-drop animation in
      `chips.js`) so the gesture has a visible receipt.
-  2. **[A-BACK-009]** [open] *Walk animation* - tween the chip's position
-     over ~200-400 ms instead of teleporting, so a move-command feels like
-     a unit moving, not teleporting. Needs the tween to be interruptible
-     (a second right-click mid-walk redirects to the new target) and to
-     not fight playback interpolation (skip the tween when playback is
-     running - playback owns positions then).
+  2. **[A-BACK-009]** [shipped] *Walk animation* - the right-click
+     move-command now eases the chip / ball / goalie (and every chip in a
+     multi-select move) from its old position to the target over 0.28 s
+     (ease-out-cubic) instead of teleporting. New
+     [walk-tween.js](../web/src/authoring/walk-tween.js), ticked from
+     `main.js`'s `animate()`. The Doc stays authoritative: the
+     move-command writes the destination into the doc + mesh immediately
+     (so playback / export / serialization see the final position at
+     once), and the tween only delays the *visual* arrival by driving the
+     Object3D's rendered `position`. Interruptible - `startWalk` re-bases
+     from the current rendered position when the same object is
+     redirected. Playback-safe - `startWalk` is a no-op while
+     `state.playback.playing`, and any in-flight walk is snapped to its
+     end. Robust - a per-frame divergence check (rendered pos vs. what the
+     tween last set) abandons the walk if a drag / keyboard move / undo
+     rebuild takes over the object, `dt` is clamped to 1/30 s so a
+     backgrounded-tab frame spike can't skip the whole walk, and
+     `history.js`'s `apply()` calls `finishAllWalks()` before disposing
+     meshes. Selection ring(s) follow via a `setWalkTickCallback`
+     (`applySelectionVisuals`) so no circular import with selection.js.
 - **[A-BACK-010]** [open] **Persistent in-scene chip labels**. Today the
   chip's `player.label` ("Wing", "Michael") only shows in the popover when
   the chip is selected. Rendering the label as a small floating text sprite

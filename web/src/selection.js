@@ -9,6 +9,7 @@ import * as shapeHandles from './authoring/shape-handles.js';
 import { shapeDataFor, translateShapes } from './authoring/shapes.js';
 import { setPointerHint, isPrimitiveTool, beginPrimitiveDrag, updatePrimitiveDrag, commitPrimitiveDrag, cancelPrimitiveDrag, tryCommitArrow } from './authoring/draw-tool.js';
 import { spawnMoveMarker } from './authoring/move-marker.js';
+import { startWalk, setWalkTickCallback } from './authoring/walk-tween.js';
 import { isTopDown } from './authoring/topdown-camera.js';
 
 // --- coordinate readout: hover to preview, click to pin a coordinate ---
@@ -157,6 +158,9 @@ export function applySelectionVisuals() {
   pathHandles.refreshForSelection();
   pathHandles.rebuild();
 }
+
+// Keep the yellow ring(s) glued to objects while a walk-tween eases them.
+setWalkTickCallback(applySelectionVisuals);
 
 // Replace the selection with exactly `obj` (or clear it when null).
 export function selectObject(obj) {
@@ -580,9 +584,11 @@ function handleRightClick(event) {
     const dx = p.x - cx, dz = p.z - cz;
     for (const o of dragObjs) {
       if (state.chipGroups.includes(o)) {
+        const fromX = o.position.x, fromZ = o.position.z;
         o.position.x += dx;
         o.position.z += dz;
         persistChipPosition(o);
+        startWalk(o, fromX, fromZ, o.position.x, o.position.z);
       }
     }
     const shapeIds = dragObjs.filter((o) => state.shapeObjects.includes(o))
@@ -603,15 +609,19 @@ function handleRightClick(event) {
 
   const sel = state.selected;
   if (state.chipGroups.includes(sel)) {
+    const fromX = sel.position.x, fromZ = sel.position.z;
     sel.position.x = p.x;
     sel.position.z = p.z;
     persistChipPosition(sel);
     scheduleHistoryPush();
+    startWalk(sel, fromX, fromZ, p.x, p.z);   // snaps sel back to (fromX,fromZ)
     selectObject(sel);
     spawnMoveMarker(p.x, p.z);
   } else if (sel === state.ballGroup || sel === state.goalieGroup) {
+    const fromX = sel.position.x, fromZ = sel.position.z;
     sel.position.x = p.x;
     sel.position.z = p.z;
+    startWalk(sel, fromX, fromZ, p.x, p.z);
     selectObject(sel);
     spawnMoveMarker(p.x, p.z);
   }

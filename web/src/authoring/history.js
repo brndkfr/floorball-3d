@@ -26,6 +26,8 @@ function apply(snap) {
   // Selection holds live Object3D refs that rebuildFromDoc() is about to
   // dispose; drop it first so no stale ring / popover survives the rebuild.
   import('../selection.js').then((s) => s.deselectAll());
+  // Any in-flight walk-tween points at an Object3D about to be disposed.
+  import('./walk-tween.js').then((w) => w.finishAllWalks());
   state.doc = structuredClone(snap);
   rebuildFromDoc();
   rebuildShapesFromDoc();
