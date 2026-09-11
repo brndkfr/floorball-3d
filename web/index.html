@@ -38,7 +38,7 @@
   .hud-panel .hud-body { margin-top:8px; }
   .hud-panel.collapsed .hud-body { display:none; }
 
-  #info { top:52px; left:64px; font-size:12px; line-height:1.5; max-width:340px; }
+  #info { top:52px; left:150px; font-size:12px; line-height:1.5; max-width:340px; }
   #info a { color:var(--hud-accent); }
 
   #status {
@@ -554,6 +554,20 @@
     flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     font-size:11px;
   }
+  #layersPanel .lp-name-input {
+    flex:1; min-width:0; height:18px; padding:0 4px; font-size:11px;
+    font-family:inherit; color:#dff9ff;
+    background:rgba(79,224,255,0.12);
+    border:1px solid var(--hud-accent-dim); border-radius:3px; outline:none;
+  }
+  #layersPanel .lp-name-input:focus { border-color:var(--hud-accent); background:rgba(79,224,255,0.2); }
+  #layersPanel .lp-trash {
+    background:transparent; border:none; color:#dff9ff;
+    cursor:pointer; padding:0; width:14px; font-size:12px; line-height:1;
+    opacity:0; flex-shrink:0;
+  }
+  #layersPanel .lp-row:hover .lp-trash { opacity:0.6; }
+  #layersPanel .lp-trash:hover { opacity:1 !important; color:#ffb0b0; }
   #layersPanel .lp-role-badge {
     display:inline-block; width:14px; height:14px; line-height:14px;
     text-align:center; font-size:9px; font-weight:bold;

@@ -216,12 +216,18 @@ Shipped from the design-sample exploration:
 
 Still on the backlog from that exploration:
 
-- **[A-BACK-001]** [open] **Layers panel enhancements** (shipped: right-rail
+- **[A-BACK-001]** [in-progress] **Layers panel enhancements** (shipped: right-rail
   panel with per-row eye toggles for chips + shapes, click-to-select, section
-  + panel collapse persisted). Follow-ups: inline rename of chip labels +
-  shape names directly from the panel row (currently rename lives only in
-  the chip popover / shape inspector); drag-to-reorder within a section to
-  influence the shape `layer` group; right-click row -> Delete.
+  + panel collapse persisted; **inline rename** of chip labels + shape names
+  via double-click on the row's name (Enter / blur commits, Esc cancels);
+  **row Delete** via a hover-visible trash button on every row and a
+  **right-click row context** shortcut, both routed through `removeChip` /
+  `removeShape` with a `deselectAll()` guard when the target row is the
+  current selection). Also this session: fixed an info-panel / tool-palette
+  overlap (`#info` shifted from `left:64` -> `left:150` so it clears the
+  vertical tool palette that also anchors at `left:64`). Follow-ups still
+  open: drag-to-reorder within a section to influence the shape `layer`
+  group (chips too, via re-inserting keys into `doc.scheme.players`).
 - **Zone label typography follow-ups** (shipped: Inspector Label input,
   floor-plane text sprite laid flat inside the zone, fit-both aspect-
   preserved autosize so long labels never overflow the zone bbox).

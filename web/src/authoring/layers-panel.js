@@ -8,9 +8,9 @@
 
 import { state } from '../state.js';
 import { ensureDoc } from './doc.js';
-import { chipDataFor, setChipHidden, TEAM_COLORS, setLabelsVisible } from './chips.js';
-import { shapeDataFor, setShapeHidden } from './shapes.js';
-import { onSelectionChanged, selectObject } from '../selection.js';
+import { chipDataFor, setChipHidden, TEAM_COLORS, setLabelsVisible, updateChipLabel, removeChip } from './chips.js';
+import { shapeDataFor, setShapeHidden, updateShapeLabel, updateShape, removeShape } from './shapes.js';
+import { onSelectionChanged, selectObject, deselectAll } from '../selection.js';
 
 const root = document.getElementById('layersPanel');
 if (root) {
@@ -154,7 +154,14 @@ if (root) {
 
       const name = document.createElement('span');
       name.className = 'lp-name';
-      name.textContent = (player.label && player.label.trim()) || `#${player.number}`;
+      const displayName = (player.label && player.label.trim()) || `#${player.number}`;
+      name.textContent = displayName;
+      name.title = 'Double-click to rename';
+      attachInlineRename(name, row, {
+        current: (player.label && player.label.trim()) || '',
+        placeholder: `#${player.number}`,
+        commit: (v) => updateChipLabel(player.id, v),
+      });
       row.appendChild(name);
 
       if (player.role) {
@@ -166,9 +173,15 @@ if (root) {
         row.appendChild(badge);
       }
 
+      row.appendChild(makeTrash(() => deleteChip(player.id)));
+
       row.addEventListener('click', () => {
         const group = state.chipGroups.find((g) => g.userData.chip && g.userData.chip.id === player.id);
         if (group) selectObject(group);
+      });
+      row.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        deleteChip(player.id);
       });
       return row;
     };
@@ -197,18 +210,92 @@ if (root) {
 
       const name = document.createElement('span');
       name.className = 'lp-name';
-      name.textContent = shape.type === 'text'
+      const defaultTypeName = `${shape.type[0].toUpperCase()}${shape.type.slice(1)}`;
+      const displayName = shape.type === 'text'
         ? (shape.text?.trim() || 'Text')
-        : (shape.type === 'zone' && shape.label?.trim())
-          ? shape.label.trim()
-          : `${shape.type[0].toUpperCase()}${shape.type.slice(1)}`;
+        : (shape.label?.trim() || defaultTypeName);
+      name.textContent = displayName;
+      name.title = 'Double-click to rename';
+      attachInlineRename(name, row, {
+        current: shape.type === 'text' ? (shape.text || '') : (shape.label || ''),
+        placeholder: defaultTypeName,
+        commit: (v) => {
+          if (shape.type === 'text') updateShape(shape.id, { text: v.trim() || 'Text' });
+          else updateShapeLabel(shape.id, v);
+        },
+      });
       row.appendChild(name);
+
+      row.appendChild(makeTrash(() => deleteShape(shape.id)));
 
       row.addEventListener('click', () => {
         const obj = state.shapeObjects.find((o) => o.userData.shape && o.userData.shape.id === shape.id);
         if (obj) selectObject(obj);
       });
+      row.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        deleteShape(shape.id);
+      });
       return row;
     };
+  }
+
+  function makeTrash(onDelete) {
+    const btn = document.createElement('button');
+    btn.className = 'lp-trash';
+    btn.title = 'Delete (or right-click row)';
+    btn.textContent = '\u2715';
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onDelete();
+    });
+    return btn;
+  }
+
+  function deleteChip(id) {
+    const group = state.chipGroups.find((g) => g.userData.chip?.id === id);
+    if (group && state.selected === group) deselectAll();
+    removeChip(id);
+  }
+
+  function deleteShape(id) {
+    const obj = state.shapeObjects.find((o) => o.userData.shape?.id === id);
+    if (obj && state.selected === obj) deselectAll();
+    removeShape(id);
+  }
+
+  // Turn a name span into a double-click-to-edit inline input. Enter or
+  // blur commits, Esc cancels. Commit calls the chip/shape mutator, which
+  // fires `layers:dirty` and re-renders the row from doc state.
+  function attachInlineRename(span, row, { current, placeholder, commit }) {
+    span.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const input = document.createElement('input');
+      input.className = 'lp-name-input';
+      input.type = 'text';
+      input.value = current;
+      input.placeholder = placeholder;
+      input.maxLength = 32;
+      row.replaceChild(input, span);
+      input.focus();
+      input.select();
+      let done = false;
+      const finish = (save) => {
+        if (done) return;
+        done = true;
+        if (save) commit(input.value);
+        // If commit didn't fire a re-render (empty -> empty), restore span
+        if (row.isConnected && row.contains(input)) {
+          row.replaceChild(span, input);
+        }
+      };
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+        else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+        ev.stopPropagation();
+      });
+      input.addEventListener('blur', () => finish(true));
+      input.addEventListener('click', (ev) => ev.stopPropagation());
+    });
   }
 }
