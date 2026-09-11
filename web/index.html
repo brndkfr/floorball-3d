@@ -430,16 +430,25 @@
      activateTool path. */
   #toolPalette .tp-group { position:relative; }
   #toolPalette .tp-group > button { position:relative; padding-right:14px; }
+  /* Extend the group's own hoverable area 8px to the right so the cursor
+     can traverse the gap between the button and the submenu without
+     losing :hover mid-flight (submenu-only hover-continuity is a
+     chicken-and-egg problem while the submenu is display:none). */
+  #toolPalette .tp-group::after {
+    content:''; position:absolute; top:0; left:100%;
+    width:8px; height:100%;
+  }
   #toolPalette .tp-caret {
     position:absolute; right:4px; top:50%; transform:translateY(-50%);
     font-size:9px; opacity:0.7;
   }
   #toolPalette .tp-submenu {
-    position:absolute; left:calc(100% + 6px); top:0;
+    position:absolute; left:100%; top:0;
     display:none; flex-direction:column; gap:4px;
     padding:6px; background:rgba(20,16,10,0.94);
     border:1px solid rgba(255,179,71,0.45); border-radius:10px;
     box-shadow:0 6px 24px rgba(0,0,0,0.4);
+    margin-left:6px;
   }
   #toolPalette .tp-group:hover .tp-submenu,
   #toolPalette .tp-submenu:hover { display:flex; }
@@ -728,7 +737,7 @@
 <div id="toolPalette" data-view="plan">
   <button data-tool="" title="Select (Esc)" class="active"><span class="tp-glyph">&#8598;</span>Select</button>
   <button data-tool="chip" title="Chip stamp - click the rink to drop a player"><span class="tp-glyph">&#9679;</span>Chip</button>
-  <button data-tool="ball" title="Ball - click the rink to place the ball there (detaches any carrier)"><span class="tp-glyph">&#9898;</span>Ball</button>
+  <button data-tool="ball" title="Ball - click the rink to drop an extra ball (the primary ball stays independent)"><span class="tp-glyph">&#9898;</span>Ball</button>
   <button data-tool="arrow" title="Arrow - click start then end (straight, 2 clicks)"><span class="tp-glyph">&#8594;</span>Arrow</button>
   <button data-tool="arrow-curved" title="Curved arrow - click waypoints, Enter / double-click / right-click to finish"><span class="tp-glyph">&#10551;</span>Curved</button>
   <div class="tp-group">

@@ -10,6 +10,8 @@ import { state } from '../state.js';
 import { ensureDoc } from './doc.js';
 import { chipDataFor, setChipHidden, TEAM_COLORS, setLabelsVisible, updateChipLabel, removeChip } from './chips.js';
 import { shapeDataFor, setShapeHidden, updateShapeLabel, updateShape, removeShape } from './shapes.js';
+import { coneDataFor, setConeHidden, updateCone, removeCone, CONE_DEFAULT_COLOR } from './cones.js';
+import { ballDataFor, setBallHidden, updateBall, removeBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { onSelectionChanged, selectObject, deselectAll } from '../selection.js';
 
 const root = document.getElementById('layersPanel');
@@ -76,6 +78,10 @@ if (root) {
     if (chip) return chip.id;
     const shape = shapeDataFor(state.selected);
     if (shape) return shape.id;
+    const cone = coneDataFor(state.selected);
+    if (cone) return cone.id;
+    const ball = ballDataFor(state.selected);
+    if (ball) return ball.id;
     return null;
   }
 
@@ -84,6 +90,8 @@ if (root) {
     const doc = ensureDoc();
     const players = Object.values(doc.scheme.players || {});
     const shapes = doc.scheme.shapes || [];
+    const cones = doc.scheme.cones || [];
+    const balls = doc.scheme.balls?.extras || [];
     const selId = selectedId();
 
     const teamA = players.filter((p) => p.team === 1);
@@ -92,10 +100,10 @@ if (root) {
     const arrows = shapes.filter((s) => s.type === 'arrow');
     const texts = shapes.filter((s) => s.type === 'text');
 
-    if (!players.length && !shapes.length) {
+    if (!players.length && !shapes.length && !cones.length && !balls.length) {
       const empty = document.createElement('div');
       empty.className = 'lp-empty';
-      empty.textContent = 'No chips or shapes on this frame yet.';
+      empty.textContent = 'No chips, shapes, cones or balls on this frame yet.';
       body.appendChild(empty);
       return;
     }
@@ -105,6 +113,8 @@ if (root) {
     renderSection('zones', `Zones · ${zones.length}`, zones.map(shapeRow(selId)));
     renderSection('arrows', `Arrows · ${arrows.length}`, arrows.map(shapeRow(selId)));
     renderSection('texts', `Text · ${texts.length}`, texts.map(shapeRow(selId)));
+    renderSection('cones', `Cones · ${cones.length}`, cones.map(coneRow(selId)));
+    renderSection('balls', `Balls · ${balls.length}`, balls.map(ballRow(selId)));
   }
 
   function renderSection(key, title, rows) {
@@ -262,6 +272,111 @@ if (root) {
     const obj = state.shapeObjects.find((o) => o.userData.shape?.id === id);
     if (obj && state.selected === obj) deselectAll();
     removeShape(id);
+  }
+
+  function deleteCone(id) {
+    const mesh = state.coneObjects.find((m) => m.userData.cone?.id === id);
+    if (mesh && state.selected === mesh) deselectAll();
+    removeCone(id);
+  }
+
+  function deleteBall(id) {
+    const mesh = state.extraBalls.find((m) => m.userData.ball?.id === id);
+    if (mesh && state.selected === mesh) deselectAll();
+    removeBall(id);
+  }
+
+  function ballRow(selId) {
+    return (ball) => {
+      const row = document.createElement('div');
+      row.className = 'lp-row';
+      if (ball.id === selId) row.classList.add('selected');
+
+      const eye = document.createElement('button');
+      eye.className = 'lp-eye';
+      eye.title = ball.hidden ? 'Show' : 'Hide';
+      eye.textContent = ball.hidden ? '\u25CB' : '\u25CF';
+      eye.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setBallHidden(ball.id, !ball.hidden);
+      });
+      row.appendChild(eye);
+
+      const swatch = document.createElement('span');
+      swatch.className = 'lp-swatch';
+      swatch.style.background = ball.color || BALL_DEFAULT_COLOR;
+      row.appendChild(swatch);
+
+      const name = document.createElement('span');
+      name.className = 'lp-name';
+      name.textContent = (ball.label && ball.label.trim()) || 'Ball';
+      name.title = 'Double-click to rename';
+      attachInlineRename(name, row, {
+        current: (ball.label && ball.label.trim()) || '',
+        placeholder: 'Ball',
+        commit: (v) => updateBall(ball.id, { label: v }),
+      });
+      row.appendChild(name);
+
+      row.appendChild(makeTrash(() => deleteBall(ball.id)));
+
+      row.addEventListener('click', () => {
+        const mesh = state.extraBalls.find((m) => m.userData.ball?.id === ball.id);
+        if (mesh) selectObject(mesh);
+      });
+      row.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        deleteBall(ball.id);
+      });
+      return row;
+    };
+  }
+
+  function coneRow(selId) {
+    return (cone) => {
+      const row = document.createElement('div');
+      row.className = 'lp-row';
+      if (cone.id === selId) row.classList.add('selected');
+
+      const eye = document.createElement('button');
+      eye.className = 'lp-eye';
+      eye.title = cone.hidden ? 'Show' : 'Hide';
+      eye.textContent = cone.hidden ? '\u25CB' : '\u25CF';
+      eye.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setConeHidden(cone.id, !cone.hidden);
+      });
+      row.appendChild(eye);
+
+      const swatch = document.createElement('span');
+      swatch.className = 'lp-swatch';
+      swatch.style.background = cone.color || CONE_DEFAULT_COLOR;
+      row.appendChild(swatch);
+
+      const name = document.createElement('span');
+      name.className = 'lp-name';
+      const defaultName = cone.kind === 'disc' ? 'Disc' : 'Cone';
+      name.textContent = (cone.label && cone.label.trim()) || defaultName;
+      name.title = 'Double-click to rename';
+      attachInlineRename(name, row, {
+        current: (cone.label && cone.label.trim()) || '',
+        placeholder: defaultName,
+        commit: (v) => updateCone(cone.id, { label: v }),
+      });
+      row.appendChild(name);
+
+      row.appendChild(makeTrash(() => deleteCone(cone.id)));
+
+      row.addEventListener('click', () => {
+        const mesh = state.coneObjects.find((m) => m.userData.cone?.id === cone.id);
+        if (mesh) selectObject(mesh);
+      });
+      row.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        deleteCone(cone.id);
+      });
+      return row;
+    };
   }
 
   // Turn a name span into a double-click-to-edit inline input. Enter or

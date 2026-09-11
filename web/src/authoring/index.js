@@ -11,6 +11,7 @@ import { readHashDoc, clearHashDoc } from './share.js';
 import { rebuildFromDoc, updateChipAnimations } from './chips.js';
 import { rebuildShapesFromDoc } from './shapes.js';
 import { rebuildConesFromDoc } from './cones.js';
+import { rebuildBallsFromDoc } from './balls.js';
 import { initHistory } from './history.js';
 import { initFaceoffSnapToggle } from './faceoff-snap.js';
 import './dock.js';       // side-effect: wires up the DOM
@@ -39,6 +40,7 @@ ensureDoc();
 rebuildFromDoc();
 rebuildShapesFromDoc();
 rebuildConesFromDoc();
+rebuildBallsFromDoc();
 initHistory();
 initFaceoffSnapToggle();
 

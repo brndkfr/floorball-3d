@@ -10,6 +10,8 @@ import { state } from '../state.js';
 import { onSelectionChanged, deselectAll, labelFor } from '../selection.js';
 import { chipDataFor } from './chips.js';
 import { shapeDataFor, removeShape, updateShape, updateShapeLabel } from './shapes.js';
+import { coneDataFor, updateCone, CONE_DEFAULT_COLOR } from './cones.js';
+import { ballDataFor, updateBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { arrowRoleColor } from '../tokens.js';
 import { ensureDoc } from './doc.js';
 import { getBallCarrier, setBallCarrier } from './actors.js';
@@ -62,6 +64,12 @@ function render(sel) {
 
   const shape = shapeDataFor(sel);
   if (shape) return renderShape(shape);
+
+  const cone = coneDataFor(sel);
+  if (cone) return renderCone(cone);
+
+  const extraBall = ballDataFor(sel);
+  if (extraBall) return renderExtraBall(extraBall);
 
   // Ball / goalie / goal / other: read-only label.
   const heading = document.createElement('div');
@@ -152,6 +160,107 @@ function rotationRow(obj) {
   row.appendChild(slider);
   row.appendChild(num);
   return row;
+}
+
+function renderCone(cone) {
+  const heading = document.createElement('div');
+  heading.className = 'ins-heading';
+  heading.textContent = (cone.kind === 'disc' ? 'Disc' : 'Cone') + (cone.label ? ` \u00b7 ${cone.label}` : '');
+  body.appendChild(heading);
+
+  // Kind switcher (Disc <-> Full)
+  const kindRow = document.createElement('div');
+  kindRow.className = 'ins-row';
+  const kl = document.createElement('span');
+  kl.className = 'ins-label';
+  kl.textContent = 'Kind';
+  kindRow.appendChild(kl);
+  const kindSel = document.createElement('select');
+  kindSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+  for (const opt of [{ v: 'disc', t: 'Disc (flat)' }, { v: 'full', t: 'Full (cone)' }]) {
+    const o = document.createElement('option');
+    o.value = opt.v; o.textContent = opt.t;
+    kindSel.appendChild(o);
+  }
+  kindSel.value = cone.kind;
+  kindSel.addEventListener('change', () => updateCone(cone.id, { kind: kindSel.value }));
+  kindRow.appendChild(kindSel);
+  body.appendChild(kindRow);
+
+  // Colour picker
+  const colorRow = document.createElement('div');
+  colorRow.className = 'ins-row';
+  const cl = document.createElement('span');
+  cl.className = 'ins-label';
+  cl.textContent = 'Colour';
+  colorRow.appendChild(cl);
+  const input = document.createElement('input');
+  input.type = 'color';
+  input.value = cone.color || CONE_DEFAULT_COLOR;
+  input.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
+  input.addEventListener('input', () => updateCone(cone.id, { color: input.value }));
+  colorRow.appendChild(input);
+  body.appendChild(colorRow);
+
+  // Label editor
+  const labelRow = document.createElement('div');
+  labelRow.className = 'ins-row';
+  const ll = document.createElement('span');
+  ll.className = 'ins-label';
+  ll.textContent = 'Label';
+  labelRow.appendChild(ll);
+  const labelInput = document.createElement('input');
+  labelInput.type = 'text';
+  labelInput.maxLength = 32;
+  labelInput.placeholder = cone.kind === 'disc' ? 'Disc' : 'Cone';
+  labelInput.value = cone.label || '';
+  labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+  labelInput.addEventListener('change', () => updateCone(cone.id, { label: labelInput.value }));
+  labelRow.appendChild(labelInput);
+  body.appendChild(labelRow);
+}
+
+function renderExtraBall(ball) {
+  const heading = document.createElement('div');
+  heading.className = 'ins-heading';
+  heading.textContent = 'Ball' + (ball.label ? ` \u00b7 ${ball.label}` : '');
+  body.appendChild(heading);
+
+  const colorRow = document.createElement('div');
+  colorRow.className = 'ins-row';
+  const cl = document.createElement('span');
+  cl.className = 'ins-label';
+  cl.textContent = 'Colour';
+  colorRow.appendChild(cl);
+  const input = document.createElement('input');
+  input.type = 'color';
+  input.value = ball.color || BALL_DEFAULT_COLOR;
+  input.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
+  input.addEventListener('input', () => updateBall(ball.id, { color: input.value }));
+  colorRow.appendChild(input);
+  body.appendChild(colorRow);
+
+  const labelRow = document.createElement('div');
+  labelRow.className = 'ins-row';
+  const ll = document.createElement('span');
+  ll.className = 'ins-label';
+  ll.textContent = 'Label';
+  labelRow.appendChild(ll);
+  const labelInput = document.createElement('input');
+  labelInput.type = 'text';
+  labelInput.maxLength = 32;
+  labelInput.placeholder = 'Ball';
+  labelInput.value = ball.label || '';
+  labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+  labelInput.addEventListener('change', () => updateBall(ball.id, { label: labelInput.value }));
+  labelRow.appendChild(labelInput);
+  body.appendChild(labelRow);
+
+  const hint = document.createElement('div');
+  hint.className = 'ins-empty';
+  hint.style.marginTop = '6px';
+  hint.textContent = 'Extra balls are decorative. Coverage / trajectory analysis still tracks the primary ball only.';
+  body.appendChild(hint);
 }
 
 function renderShape(shape) {
