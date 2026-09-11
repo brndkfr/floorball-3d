@@ -364,6 +364,27 @@ Still on the backlog from that exploration:
      as `shape.label`, rendered as a floor-plane text sprite anchored to
      the arrow's midpoint (or the head end?), oriented along the arrow.
      Reuses the zone-label sprite pipeline. Inspector Label input.
+- **[A-BACK-012]** [shipped] **Persist ball + goalie state in `frame.scheme`
+  + ball carrier**. `playback.js` had a reader for `fa.balls.main.{x,z}` /
+  `fa.goalie.{x,z,angle}` but nothing wrote them, so any ball / goalie
+  edit was runtime-only and disappeared on reload, undo, or frame switch.
+  New [actors.js](../web/src/authoring/actors.js) syncs both bodies each
+  rAF (`tickActors()` in `main.js`'s animate loop, skipped during
+  playback) and re-applies them from the scheme on every rebuild path
+  (`frames.js`'s `afterMutation`, `history.js`'s `apply`). Ball scheme
+  also carries a new `carrier: chipId | null` field: when non-null the
+  ball snaps to `carrier.position + {x:0, z:250}` each tick (reads as
+  "in front of the player"), and the carrier chip gets an orange ring.
+  Two carrier-set gestures: **right-click a chip while the ball is
+  selected** (added in `selection.js`'s `handleRightClick`, matches the
+  RTS move-command idiom) and an Inspector **Carrier** dropdown listing
+  every chip. Right-click on empty floor with the ball selected detaches
+  the carrier first, then runs the normal move-command. Follow-ups still
+  open: a small ball glyph above the chip carrying it (rather than an
+  orange ring which is redundant with selection styling), a preview
+  "pass arrow" during Choreograph mode when a frame changes carrier, and
+  multi-ball support (data model already ready per
+  [docs/reference/tactical-board-followups.md](reference/tactical-board-followups.md)).
 
 ---
 

@@ -561,6 +561,20 @@ function handleRightClick(event) {
     return;
   }
 
+  // 1b) Pass gesture: ball selected + right-click on a chip = hand the
+  //     ball to that chip. Empty floor falls through to a move-command
+  //     (which also detaches the ball from any current carrier).
+  if (state.selected === state.ballGroup) {
+    const chip = chipUnderCursor(event);
+    if (chip) {
+      import('./authoring/actors.js').then((a) => a.setBallCarrier(chip.userData.chip.id));
+      spawnMoveMarker(chip.position.x, chip.position.z, { color: 0xffb347 });
+      return;
+    }
+    // Move-command on empty floor: detach carrier first.
+    import('./authoring/actors.js').then((a) => a.setBallCarrier(null));
+  }
+
   // 2) Move-command on the selected chip / ball / goalie. Works in both 2D
   //    top-down and 3D perspective: the raycast against the floor plane is
   //    well-defined in either camera - only the visual "arc of the throw"

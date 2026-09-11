@@ -11,6 +11,8 @@ import { onSelectionChanged, deselectAll, labelFor } from '../selection.js';
 import { chipDataFor } from './chips.js';
 import { shapeDataFor, removeShape, updateShape, updateShapeLabel } from './shapes.js';
 import { arrowRoleColor } from '../tokens.js';
+import { ensureDoc } from './doc.js';
+import { getBallCarrier, setBallCarrier } from './actors.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
 // not here; the Inspector still handles shapes / text / read-only labels.
@@ -18,6 +20,7 @@ import { arrowRoleColor } from '../tokens.js';
 const body = document.getElementById('inspectorBody');
 if (body) {
   onSelectionChanged(render);
+  window.addEventListener('ballCarrierChanged', () => render(state.selected));
   render(state.selected);
 }
 
@@ -72,10 +75,48 @@ function render(sel) {
     return;
   }
 
+  // Ball: carrier picker (dock the ball to a chip so passes are 1 click).
+  if (sel === state.ballGroup) {
+    body.appendChild(carrierRow());
+    const hint = document.createElement('div');
+    hint.className = 'ins-empty';
+    hint.style.marginTop = '6px';
+    hint.textContent = 'Tip: right-click a chip to hand the ball off.';
+    body.appendChild(hint);
+    return;
+  }
+
   const empty = document.createElement('div');
   empty.className = 'ins-empty';
   empty.textContent = 'No editable properties.';
   body.appendChild(empty);
+}
+
+function carrierRow() {
+  const row = document.createElement('div');
+  row.className = 'ins-row';
+  const label = document.createElement('span');
+  label.className = 'ins-label';
+  label.textContent = 'Carrier';
+  row.appendChild(label);
+
+  const sel = document.createElement('select');
+  sel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = '(loose)';
+  sel.appendChild(none);
+  const doc = ensureDoc();
+  for (const p of Object.values(doc.scheme.players || {})) {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `Team ${p.team} #${p.number}` + (p.label ? ` \u00b7 ${p.label}` : '');
+    sel.appendChild(opt);
+  }
+  sel.value = getBallCarrier() ?? '';
+  sel.addEventListener('change', () => setBallCarrier(sel.value || null));
+  row.appendChild(sel);
+  return row;
 }
 
 function rotationRow(obj) {
