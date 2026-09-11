@@ -140,8 +140,21 @@ export. Data model is `state.doc` v2 with a per-frame `scheme` accessor
 
 ### 3.2 Gaps to product
 
-- **[A-GAP-001]** [open] **2D-first authoring surface**. The current 2D view
-  is a preview of 3D interactions, not a native 2D UX like tactical-board.com.
+- **[A-GAP-001]** [shipped] **2D-first authoring surface** (polish pass).
+  Top-down mode now swaps in a flat-lighting profile (hemisphere ambient
+  boosted to 2.6, both directional key/fill lights zeroed) via
+  `setFlatLighting()` exported from [scene.js](../web/src/scene.js), so
+  rink markings, the goal frame, ball and goalie read as diagrammatic
+  flat colours instead of subtly shaded 3D surfaces - restored on exit.
+  Per-tool cursor feedback on the WebGL canvas: chip stamp shows `copy`,
+  the draw tools stay `crosshair`, and plain top-down select shows `grab`
+  (driven by a `topdown-mode` body class toggled in `enterTopDown` /
+  `exitTopDown`). `F` (in top-down only) resets zoom + pan back to the
+  fitted default via the new `resetTopDownView()` helper - bound in
+  [controls.js](../web/src/controls.js). Info panel updated to advertise
+  the fit hotkey. Deliberately out of scope: no data-model change, no
+  swap to Canvas2D/SVG rendering, no visual redesign toward the Broadcast
+  direction (§2) - kept HUD look per user preference.
 - **[A-GAP-002]** [open] **Frame thumbnails** on the timeline (per-frame
   top-down snapshot of chips + shapes; needs invalidation + caching so it
   isn't re-rendered every tick).

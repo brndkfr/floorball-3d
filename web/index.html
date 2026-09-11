@@ -305,9 +305,13 @@
     pointer-events:none; white-space:nowrap;
     box-shadow:0 2px 8px rgba(0,0,0,0.4);
   }
-  /* crosshair cursor while the chip tool is active */
-  body.tool-chip canvas { cursor:crosshair; }
+  /* per-tool cursor feedback on the WebGL canvas (A-GAP-001). More specific
+     body classes win over `.tool-active` alone: chip stamp gets `copy` to
+     read as "drop a new item here", the draw tools stay crosshair, and
+     plain top-down select gets `grab` so pan-with-right-drag reads. */
   body.tool-active canvas { cursor:crosshair; }
+  body.tool-chip canvas { cursor:copy; }
+  body.topdown-mode:not(.tool-active) canvas { cursor:grab; }
 
   /* inline text input for the text shape tool - anchored at the click point */
   .draw-text-input {
@@ -739,7 +743,7 @@
     <b>2D Plan mode (RTS controls):</b> Left-click = select &middot; Left-drag chip = move &middot;
     Right-click floor = move-command to selected chip / ball / goalie &middot;
     Right-drag / middle-drag = pan &middot; Wheel = zoom &middot;
-    Arrows / WASD = pan the camera<br>
+    Arrows / WASD = pan the camera &middot; F = fit rink to view<br>
     <b>3D walking view:</b> Left-drag = look around &middot; Scroll = zoom &middot;
     Arrows / WASD = walk<br>
     <b>Shared:</b> Tab / Shift+Tab = cycle selection &middot; Esc = cancel tool / deselect &middot;

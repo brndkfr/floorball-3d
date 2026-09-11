@@ -5,7 +5,7 @@ import { camera, topDownCamera } from './scene.js';
 import { selectObject, deselectAll, labelFor } from './selection.js';
 import { removeChip } from './authoring/chips.js';
 import { removeShape } from './authoring/shapes.js';
-import { isTopDown } from './authoring/topdown-camera.js';
+import { isTopDown, resetTopDownView } from './authoring/topdown-camera.js';
 
 const targetGoalLabelEl = document.getElementById('targetGoalLabel');
 
@@ -125,6 +125,11 @@ window.addEventListener('keydown', (event) => {
   if (event.key === 'Tab') {
     event.preventDefault();
     cycleSelection(event.shiftKey ? -1 : 1);
+    return;
+  }
+  if ((event.key === 'f' || event.key === 'F') && !event.ctrlKey && !event.metaKey && isTopDown()) {
+    resetTopDownView();
+    event.preventDefault();
     return;
   }
 });

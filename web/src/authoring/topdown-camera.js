@@ -6,7 +6,7 @@
 // Wheel-zoom scales topDownCamera.zoom; middle-mouse or right-drag pans by
 // shifting the camera's x/z. Both reset when you exit the tool.
 
-import { camera, topDownCamera, setActiveCamera, scene } from '../scene.js';
+import { camera, topDownCamera, setActiveCamera, scene, setFlatLighting } from '../scene.js';
 
 const MIN_ZOOM = 0.5, MAX_ZOOM = 8;
 const savedTopDown = {
@@ -27,6 +27,8 @@ export function enterTopDown() {
   };
   savedFog = scene.fog;
   scene.fog = null;
+  setFlatLighting(true);
+  document.body.classList.add('topdown-mode');
   setActiveCamera(topDownCamera);
 }
 
@@ -39,6 +41,8 @@ export function exitTopDown() {
   savedPerspective = null;
   scene.fog = savedFog;
   savedFog = null;
+  setFlatLighting(false);
+  document.body.classList.remove('topdown-mode');
   // Reset top-down transform so re-entering the tool starts fitted again.
   topDownCamera.zoom = savedTopDown.zoom;
   topDownCamera.position.x = savedTopDown.x;
@@ -49,6 +53,16 @@ export function exitTopDown() {
 
 export function isTopDown() {
   return savedPerspective !== null;
+}
+
+// Reset zoom + pan back to the fitted default without leaving top-down.
+// Bound to the F key in controls.js (A-GAP-001).
+export function resetTopDownView() {
+  if (!isTopDown()) return;
+  topDownCamera.zoom = savedTopDown.zoom;
+  topDownCamera.position.x = savedTopDown.x;
+  topDownCamera.position.z = savedTopDown.z;
+  topDownCamera.updateProjectionMatrix();
 }
 
 // --- wheel zoom + drag pan (only active while in top-down mode) -------

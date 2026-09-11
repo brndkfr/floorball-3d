@@ -133,13 +133,27 @@ export function lookAtFrom(fromPos, targetPos) {
 }
 
 // lighting
-scene.add(new THREE.HemisphereLight(0xffffff, 0x3a3a40, 1.15));
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x3a3a40, 1.15);
+scene.add(hemiLight);
 const key = new THREE.DirectionalLight(0xffffff, 1.1);
 key.position.set(15000, 26000, 10000);
 scene.add(key);
 const fill = new THREE.DirectionalLight(0xffffff, 0.35);
 fill.position.set(-18000, 12000, 30000);
 scene.add(fill);
+
+// Flat-lighting mode for the top-down 2D authoring surface (A-GAP-001):
+// disable directional shading and boost hemisphere ambient so rink markings,
+// the goal frame and the ball read as diagrammatic flat colours instead of
+// subtly shaded 3D surfaces. Restored on exit from top-down.
+const LIGHTING_3D = { hemi: 1.15, key: 1.1, fill: 0.35 };
+const LIGHTING_2D = { hemi: 2.6, key: 0.0, fill: 0.0 };
+export function setFlatLighting(flat) {
+  const p = flat ? LIGHTING_2D : LIGHTING_3D;
+  hemiLight.intensity = p.hemi;
+  key.intensity = p.key;
+  fill.intensity = p.fill;
+}
 
 // blue floor, sized a bit larger than the rink so it reads as a floor border
 // around the boards, like a real hall floor around the court
