@@ -322,15 +322,21 @@ Still on the backlog from that exploration:
      `history.js`'s `apply()` calls `finishAllWalks()` before disposing
      meshes. Selection ring(s) follow via a `setWalkTickCallback`
      (`applySelectionVisuals`) so no circular import with selection.js.
-- **[A-BACK-010]** [open] **Persistent in-scene chip labels**. Today the
-  chip's `player.label` ("Wing", "Michael") only shows in the popover when
-  the chip is selected. Rendering the label as a small floating text sprite
-  above the chip (like the number sprite in `chips.js`, but text and only
-  when label is set) would let a coach scan a formation without clicking
-  each chip. Needs a visibility toggle (labels get noisy on 10 chips +
-  shapes + zones), and the sprite's screen-space size should stay legible
-  across zoom levels in top-down - the number sprite already handles this
-  pattern, so it's mostly a re-use.
+- **[A-BACK-010]** [shipped] **Persistent in-scene chip labels**. The label
+  sprite pipeline in [chips.js](../web/src/authoring/chips.js)
+  (`refreshChipSprites` + `makeLabelSprite`) already renders
+  `player.label` as a floating text sprite above the chip whenever the
+  label is set - so a coach can scan a formation without clicking each
+  chip. This session added the visibility toggle the plan called out:
+  new `labels` checkbox in the Layers panel header
+  ([index.html](../web/index.html)), persisted to
+  `floorball3d.labels.visible` (default on) and wired via
+  [layers-panel.js](../web/src/authoring/layers-panel.js). New
+  `setLabelsVisible()` export in `chips.js` flips `state.labelsVisible`
+  and re-runs `refreshChipSprites` for every chip - when off, chips with
+  a label fall back to the number sprite so the chip stays readable in
+  dense formations. Screen-space size follows the number sprite's
+  existing pattern (world-height 110 mm), no zoom-level rework needed.
 - **[A-BACK-011]** [in-progress] **Arrow shape refinement**. Current arrows
   ([shapes.js](../web/src/authoring/shapes.js)) are a straight shaft +
   fixed-size triangle head, with `shape.width` stored but ignored. Scope:

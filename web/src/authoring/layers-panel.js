@@ -8,7 +8,7 @@
 
 import { state } from '../state.js';
 import { ensureDoc } from './doc.js';
-import { chipDataFor, setChipHidden, TEAM_COLORS } from './chips.js';
+import { chipDataFor, setChipHidden, TEAM_COLORS, setLabelsVisible } from './chips.js';
 import { shapeDataFor, setShapeHidden } from './shapes.js';
 import { onSelectionChanged, selectObject } from '../selection.js';
 
@@ -39,6 +39,20 @@ if (root) {
     marqueeToggle.addEventListener('change', () => {
       state.marqueeIncludesShapes = marqueeToggle.checked;
       localStorage.setItem(MARQUEE_KEY, marqueeToggle.checked ? '1' : '0');
+    });
+  }
+
+  // In-scene labels visibility toggle (A-BACK-010). On by default; when
+  // off, chips with a label fall back to the number sprite.
+  const labelsToggle = document.getElementById('labelsVisibleToggle');
+  const LABELS_KEY = 'floorball3d.labels.visible';
+  if (labelsToggle) {
+    const on = localStorage.getItem(LABELS_KEY) !== '0';
+    labelsToggle.checked = on;
+    setLabelsVisible(on);
+    labelsToggle.addEventListener('change', () => {
+      setLabelsVisible(labelsToggle.checked);
+      localStorage.setItem(LABELS_KEY, labelsToggle.checked ? '1' : '0');
     });
   }
 

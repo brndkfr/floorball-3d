@@ -171,7 +171,10 @@ function refreshChipSprites(group, player) {
   }
   const sprites = [];
   const trimmed = player.label?.trim();
-  const primary = trimmed ? makeLabelSprite(trimmed) : makeNumberSprite(player.number);
+  // When the labels toggle is off, fall back to the number sprite even if
+  // the player has a label - keeps the chip legible in dense formations.
+  const showLabel = trimmed && state.labelsVisible !== false;
+  const primary = showLabel ? makeLabelSprite(trimmed) : makeNumberSprite(player.number);
   group.add(primary);
   sprites.push(primary);
   if (player.role) {
@@ -182,6 +185,18 @@ function refreshChipSprites(group, player) {
     }
   }
   group.userData.sprites = sprites;
+}
+
+// Toggle from the Layers panel: re-render every chip's sprite so labels
+// switch to numbers (or back) in bulk.
+export function setLabelsVisible(on) {
+  state.labelsVisible = !!on;
+  const doc = ensureDoc();
+  for (const group of state.chipGroups) {
+    const id = group.userData.chip?.id;
+    const player = id && doc.scheme.players[id];
+    if (player) refreshChipSprites(group, player);
+  }
 }
 
 // --- spawn / remove ---------------------------------------------------
