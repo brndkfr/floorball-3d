@@ -6,6 +6,7 @@ import { selectObject, deselectAll, labelFor } from './selection.js';
 import { removeChip } from './authoring/chips.js';
 import { removeShape } from './authoring/shapes.js';
 import { isTopDown, resetTopDownView } from './authoring/topdown-camera.js';
+import { isChoreoActive, cancelChoreo } from './authoring/choreograph.js';
 
 const targetGoalLabelEl = document.getElementById('targetGoalLabel');
 
@@ -102,6 +103,7 @@ window.addEventListener('keydown', (event) => {
     // Staged escape: dock.js's own Esc listener cancels an active tool.
     // Only deselect if no tool was active (this leg fires on the *next*
     // Esc press, or if there was never a tool to begin with).
+    if (isChoreoActive()) { cancelChoreo(); return; }
     if (state.activeTool) return;
     deselectAll();
     return;

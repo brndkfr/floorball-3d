@@ -12,7 +12,7 @@ import './goalie.js';
 import './selection.js';
 import './touch-controls.js';
 import './help.js';
-import { updateChipAnimations } from './authoring/index.js';
+import { updateChipAnimations, tickChoreo } from './authoring/index.js';
 import { updateDrawPreview } from './authoring/draw-tool.js';
 import { tickPlayback } from './authoring/playback.js';
 import { updateMoveMarkers } from './authoring/move-marker.js';
@@ -29,6 +29,7 @@ function animate() {
   updateWalks(dt);
   updateDrawPreview();
   tickPlayback(dt * 1000);
+  tickChoreo();
   const ballCenter = getBallWorldCenter(); // computed once, shared by both calls below
   updateTrajectory(ballCenter);
   updateCoverage(ballCenter);

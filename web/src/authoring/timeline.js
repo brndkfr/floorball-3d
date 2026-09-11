@@ -12,6 +12,7 @@ import {
   stop, toggle, toggleLoop, setSpeed, stepFrame,
   playbackState, frameIndexAt,
 } from './playback.js';
+import { startChoreo, cancelChoreo, commitChoreo, isChoreoActive } from './choreograph.js';
 
 const el = document.getElementById('timeline');
 if (!el) throw new Error('timeline element missing from index.html');
@@ -100,6 +101,17 @@ btnNext.addEventListener('click', () => stepFrame(1));
 btnLoop.addEventListener('click', toggleLoop);
 btnAdd.addEventListener('click', addFrame);
 speedEl.addEventListener('click', () => setSpeed((playbackState().speed % 9) + 1));
+
+const btnChoreo = el.querySelector('[data-tl="choreo"]');
+if (btnChoreo) {
+  btnChoreo.addEventListener('click', () => {
+    if (isChoreoActive()) commitChoreo(); else startChoreo();
+  });
+  window.addEventListener('choreoChanged', () => {
+    btnChoreo.classList.toggle('active', isChoreoActive());
+    btnChoreo.textContent = isChoreoActive() ? 'Commit' : 'Choreo';
+  });
+}
 
 window.addEventListener('framesChanged', render);
 window.addEventListener('playbackChanged', render);

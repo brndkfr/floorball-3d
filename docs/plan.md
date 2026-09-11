@@ -246,32 +246,24 @@ Still on the backlog from that exploration:
 - **[A-BACK-005]** [open] **Wireframe/contour overlay mode**: a high-contrast
   outline-only render mode for the rink/goal overlay in Mode B, for photos
   where a solid overlay is hard to see against similar-coloured backgrounds.
-- **[A-BACK-006]** [open] **Choreograph mode** (frame-
-  recording UX). (Was blocked-by A-BACK-007; that prereq shipped.) Right-click today is a "move-command in the current frame" -
-  semantically identical to drag-move, just a different gesture. Users
-  wanting a game-like "record my play" workflow will hit a mental-model
-  conflict because the doc's frames + bezier paths already ARE the recording.
-  Four interpretations exist, all with tradeoffs:
-  1. *Move-command in current frame* (shipped). Cheap, safe, redundant with
-     drag.
-  2. *Right-click auto-creates the next frame.* Feels game-like, but 5-player
-     floorball formations move simultaneously; per-chip right-clicks would
-     explode frame count and can't express "all five run at once."
-  3. *Right-click drops a bezier waypoint on the current segment.* Turns
-     straight runs into curves without new frames. Forces the path model to
-     become a variable-length list of sub-segments (playback interpolation,
-     path-handles, serialization all shift).
-  4. *Real-time record mode with a REC button.* Playback runs at 1x while
-     the user right-clicks each chip's next position; positions are stamped
-     at the current playback time. New authoring paradigm layered on top of
-     the frame model.
-  Preferred future direction (not planned yet): modal "Choreograph frame N+1"
-  toggle where all chips are pinned to frame N; left-click to arm a chip,
-  right-click to set its endpoint; click **Commit** to bake exactly one new
-  frame containing all armed chips' new positions. Un-armed chips carry
-  over. This gives the "record" feel without the per-click frame explosion.
-  Depends on multi-select being solved first (currently only single chip
-  selection) - otherwise the modal cycle is still per-chip.
+- **[A-BACK-006]** [shipped] **Choreograph mode** (frame-recording UX).
+  New "Choreo" button in the timeline toolbar. Clicking it duplicates the
+  current frame -> creates a draft frame N+1, switches to it, snapshots
+  every chip's position, and renders a semi-transparent cyan ring at each
+  snapshot pos plus a live cyan line from the ring to the chip's current
+  position (hidden while the chip hasn't moved yet). The user edits chips
+  normally (drag, right-click move-command, walk-tween all work); a
+  top-center banner offers **Commit** (dispose ghosts, keep the frame) or
+  **Cancel** (dispose ghosts, delete the draft, return to N). Esc also
+  cancels. Ghost + arrow updates ride the existing `animate()` loop via a
+  new `tickChoreo()` exported from `authoring/index.js`. The "Choreo"
+  button re-labels to "Commit" while active, driven by a
+  `choreoChanged` window event so the Cancel banner button also flips it
+  back. History: `duplicateFrame` and `deleteFrame` each push one entry,
+  so Ctrl+Z incrementally unwinds; intermediate chip edits push their
+  own entries as usual. No new data-model change - the draft frame is
+  just a real frame that happens to be visualised specially. See
+  [choreograph.js](../web/src/authoring/choreograph.js).
 - **[A-BACK-007]** [shipped] **Marquee (box) multi-select**. Left-drag on
   empty top-down floor draws a rubber-band rect (`#marqueeRect`); every chip
   whose projected position lands inside is selected (shapes too when the

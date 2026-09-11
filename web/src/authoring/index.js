@@ -19,6 +19,7 @@ import './chip-popover.js'; // side-effect: wires up the chip-anchored popover
 import './layers-panel.js'; // side-effect: wires up the right layers panel
 import './timeline.js';   // side-effect: wires up the timeline UI
 import './photo-overlay/photo-overlay.js'; // side-effect: wires up the photo overlay panel
+export { tickChoreo } from './choreograph.js';
 
 // Prefer a shared doc from the URL hash so incognito links "just work"
 // without touching whatever the user already has in localStorage. Fall
