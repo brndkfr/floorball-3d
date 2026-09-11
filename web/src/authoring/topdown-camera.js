@@ -7,8 +7,14 @@
 // shifting the camera's x/z. Both reset when you exit the tool.
 
 import { camera, topDownCamera, setActiveCamera, scene, setFlatLighting } from '../scene.js';
+import { state } from '../state.js';
 
 const MIN_ZOOM = 0.5, MAX_ZOOM = 8;
+// Ball is a real-size 72 mm sphere; at rink scale it reads as a dot from
+// top-down. Scale up its mesh only while in top-down so it's easy to see
+// and pick, without changing the 3D walk view. The underlying position
+// and BALL_RADIUS used by coverage/trajectory math are unaffected.
+const BALL_TOPDOWN_SCALE = 5;
 const savedTopDown = {
   zoom: topDownCamera.zoom,
   x: topDownCamera.position.x,
@@ -17,6 +23,7 @@ const savedTopDown = {
 
 let savedPerspective = null;
 let savedFog = null;   // scene.fog is dimming the ortho view; disable while top-down
+let savedBallScale = null;
 
 export function enterTopDown() {
   if (savedPerspective) return;   // already in top-down
@@ -29,6 +36,7 @@ export function enterTopDown() {
   scene.fog = null;
   setFlatLighting(true);
   document.body.classList.add('topdown-mode');
+  applyBallTopDownScale(true);
   setActiveCamera(topDownCamera);
 }
 
@@ -43,12 +51,27 @@ export function exitTopDown() {
   savedFog = null;
   setFlatLighting(false);
   document.body.classList.remove('topdown-mode');
+  applyBallTopDownScale(false);
   // Reset top-down transform so re-entering the tool starts fitted again.
   topDownCamera.zoom = savedTopDown.zoom;
   topDownCamera.position.x = savedTopDown.x;
   topDownCamera.position.z = savedTopDown.z;
   topDownCamera.updateProjectionMatrix();
   setActiveCamera(camera);
+}
+
+// state.ballGroup may be null at first enterTopDown() call (OBJ loads
+// async); re-apply on every enter/exit so a late load still gets scaled.
+function applyBallTopDownScale(on) {
+  const ball = state.ballGroup;
+  if (!ball) return;
+  if (on) {
+    if (savedBallScale == null) savedBallScale = ball.scale.x;
+    ball.scale.setScalar(BALL_TOPDOWN_SCALE);
+  } else if (savedBallScale != null) {
+    ball.scale.setScalar(savedBallScale);
+    savedBallScale = null;
+  }
 }
 
 export function isTopDown() {
