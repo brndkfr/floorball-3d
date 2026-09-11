@@ -40,6 +40,16 @@
 
   #info { top:52px; left:150px; font-size:12px; line-height:1.5; max-width:340px; }
   #info a { color:var(--hud-accent); }
+  /* Pass rink clicks through the (large, expanded) info panel body -
+     only the interactive controls capture pointer events. Otherwise
+     right-click move-commands on the floor behind the panel silently
+     hit the panel instead. Header + layer toggles + buttons are opted
+     back in below. */
+  #info { pointer-events:none; }
+  #info .hud-header, #info .hud-toggle,
+  #info #layers, #info label, #info input, #info select, #info button, #info a {
+    pointer-events:auto;
+  }
 
   #status {
     position:absolute; bottom:12px; left:64px; z-index:10;
