@@ -65,10 +65,52 @@ function render(sel) {
   heading.className = 'ins-heading';
   heading.textContent = labelFor(sel);
   body.appendChild(heading);
+
+  // Goalie: rotation slider (Q/E works too but a slider is discoverable).
+  if (sel === state.goalieGroup) {
+    body.appendChild(rotationRow(sel));
+    return;
+  }
+
   const empty = document.createElement('div');
   empty.className = 'ins-empty';
   empty.textContent = 'No editable properties.';
   body.appendChild(empty);
+}
+
+function rotationRow(obj) {
+  const row = document.createElement('div');
+  row.className = 'ins-row';
+  const label = document.createElement('span');
+  label.className = 'ins-label';
+  label.textContent = 'Facing';
+  row.appendChild(label);
+
+  const deg = () => Math.round((obj.rotation.y * 180 / Math.PI) % 360);
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = '-180'; slider.max = '180'; slider.step = '1';
+  slider.value = String(((deg() + 540) % 360) - 180);
+  slider.style.cssText = 'flex:1;';
+
+  const num = document.createElement('input');
+  num.type = 'number';
+  num.min = '-180'; num.max = '180'; num.step = '1';
+  num.value = slider.value;
+  num.style.cssText = 'width:56px; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:2px 4px; font-family:inherit; font-size:11px;';
+
+  function apply(v) {
+    const rad = v * Math.PI / 180;
+    obj.rotation.y = rad;
+    slider.value = String(v);
+    num.value = String(v);
+  }
+  slider.addEventListener('input', () => apply(Number(slider.value)));
+  num.addEventListener('input', () => apply(Number(num.value)));
+
+  row.appendChild(slider);
+  row.appendChild(num);
+  return row;
 }
 
 function renderShape(shape) {
