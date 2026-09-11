@@ -79,6 +79,7 @@ function refreshStatus() {
   else if (tool === 'zone-rect') msg = 'rectangle - drag on the rink to draw (or click for a default size, Esc to exit)';
   else if (tool === 'zone-circle') msg = 'circle - drag on the rink to draw (or click for a default size, Esc to exit)';
   else if (tool === 'zone-triangle') msg = 'triangle - drag on the rink to draw (or click for a default size, Esc to exit)';
+  else if (tool === 'ball') msg = 'ball tool - click the rink to place the ball (Esc to exit)';
   statusEl.textContent = msg;
   teamBtn.style.setProperty('--team-color', '#' + TEAM_COLORS[t].toString(16).padStart(6, '0'));
   teamBtn.textContent = `T${t}`;
@@ -310,6 +311,16 @@ export function handleFloorClickForTool(worldPoint) {
     // range so rounded-position tactical schemes stay tidy.
     const snap = snapToNearestDot(worldPoint.x, worldPoint.z);
     spawnChip({ team: state.currentTeam, x: snap.x, z: snap.z });
+    refreshStatus();
+    return true;
+  }
+  if (state.activeTool === 'ball') {
+    if (state.ballGroup) {
+      state.ballGroup.position.x = worldPoint.x;
+      state.ballGroup.position.z = worldPoint.z;
+      // Explicit floor-place = loose ball; drop any current carrier.
+      import('./actors.js').then((a) => a.setBallCarrier(null));
+    }
     refreshStatus();
     return true;
   }
