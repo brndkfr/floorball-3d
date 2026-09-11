@@ -14,7 +14,7 @@ import { coneDataFor, updateCone, CONE_DEFAULT_COLOR } from './cones.js';
 import { ballDataFor, updateBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { arrowRoleColor } from '../tokens.js';
 import { ensureDoc } from './doc.js';
-import { getBallCarrier, setBallCarrier } from './actors.js';
+import { getBallCarrier, setBallCarrier, getBallColor, setBallColor } from './actors.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
 // not here; the Inspector still handles shapes / text / read-only labels.
@@ -23,6 +23,7 @@ const body = document.getElementById('inspectorBody');
 if (body) {
   onSelectionChanged(render);
   window.addEventListener('ballCarrierChanged', () => render(state.selected));
+  window.addEventListener('ballColorChanged', () => render(state.selected));
   render(state.selected);
 }
 
@@ -83,9 +84,10 @@ function render(sel) {
     return;
   }
 
-  // Ball: carrier picker (dock the ball to a chip so passes are 1 click).
+  // Ball: carrier picker + colour tint on the primary ball mesh.
   if (sel === state.ballGroup) {
     body.appendChild(carrierRow());
+    body.appendChild(ballColorRow());
     const hint = document.createElement('div');
     hint.className = 'ins-empty';
     hint.style.marginTop = '6px';
@@ -124,6 +126,32 @@ function carrierRow() {
   sel.value = getBallCarrier() ?? '';
   sel.addEventListener('change', () => setBallCarrier(sel.value || null));
   row.appendChild(sel);
+  return row;
+}
+
+function ballColorRow() {
+  const row = document.createElement('div');
+  row.className = 'ins-row';
+  const label = document.createElement('span');
+  label.className = 'ins-label';
+  label.textContent = 'Colour';
+  row.appendChild(label);
+
+  const stored = getBallColor();
+  const input = document.createElement('input');
+  input.type = 'color';
+  input.value = stored || '#ffffff';
+  input.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
+  input.addEventListener('input', () => setBallColor(input.value));
+  row.appendChild(input);
+
+  const reset = document.createElement('button');
+  reset.textContent = 'Reset';
+  reset.title = 'Restore the ball\u2019s default (loader) colour';
+  reset.style.cssText = 'margin-left:6px; padding:2px 8px; border-radius:4px; cursor:pointer; border:1px solid rgba(79,224,255,0.35); background:rgba(79,224,255,0.08); color:#dff9ff; font-family:inherit; font-size:10px;';
+  reset.addEventListener('click', () => { setBallColor(null); input.value = '#ffffff'; });
+  row.appendChild(reset);
+
   return row;
 }
 

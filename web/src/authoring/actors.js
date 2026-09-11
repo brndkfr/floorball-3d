@@ -24,13 +24,47 @@ import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from './chips.js';
 const BALL_CARRY_OFFSET = { x: 0, z: 250 };
 const CARRIER_RING_COLOR = 0xffb347;
 
-let lastBall = { x: NaN, z: NaN, carrier: undefined };
+let lastBall = { x: NaN, z: NaN, carrier: undefined, color: undefined };
 let lastGoalie = { x: NaN, z: NaN, angle: NaN };
 // Ball + goalie OBJs load async - the first time we see them we must
 // APPLY the persisted scheme values instead of the mesh's default OBJ
 // position, or those defaults would overwrite the user's saved layout.
 let ballApplied = false;
 let goalieApplied = false;
+// Ball material tint: OBJ+MTL loader gives every mesh in state.ballGroup
+// its own Material with a default colour. First time we see the mesh we
+// clone each material so tinting one ball doesn't leak into shared MTL
+// state, then cache each mesh's original colour so a null tint restores
+// the loader default.
+let ballMaterialCache = null;   // Array<{ material, defaultColor: THREE.Color }>
+
+function ensureBallMaterialCache() {
+  if (ballMaterialCache || !state.ballGroup) return;
+  ballMaterialCache = [];
+  state.ballGroup.traverse((child) => {
+    if (!child.isMesh || !child.material) return;
+    const wrap = (m) => {
+      const cloned = m.clone();
+      const defaultColor = cloned.color ? cloned.color.clone() : new THREE.Color(0xffffff);
+      ballMaterialCache.push({ material: cloned, defaultColor });
+      return cloned;
+    };
+    if (Array.isArray(child.material)) {
+      child.material = child.material.map(wrap);
+    } else {
+      child.material = wrap(child.material);
+    }
+  });
+}
+
+function applyBallColor(hex) {
+  if (!ballMaterialCache) return;
+  for (const { material, defaultColor } of ballMaterialCache) {
+    if (!material.color) continue;
+    if (hex) material.color.set(hex);
+    else material.color.copy(defaultColor);
+  }
+}
 
 const carrierRing = new THREE.Mesh(
   new THREE.RingGeometry(CHIP_RADIUS * CHIP_DISPLAY_SCALE * 1.15, CHIP_RADIUS * CHIP_DISPLAY_SCALE * 1.35, 48),
@@ -70,18 +104,22 @@ export function tickActors() {
   let dirty = false;
 
   if (state.ballGroup) {
+    ensureBallMaterialCache();
     if (!ballApplied) {
-      // First tick after the ball OBJ loaded: replay the stored position.
+      // First tick after the ball OBJ loaded: replay the stored position + colour.
       const stored = scheme.balls.main;
       if (stored && stored.carrier == null) {
         state.ballGroup.position.x = stored.x;
         state.ballGroup.position.z = stored.z;
       }
+      applyBallColor(stored?.color || null);
+      lastBall.color = stored?.color || null;
       ballApplied = true;
     }
     const bx = state.ballGroup.position.x;
     const bz = state.ballGroup.position.z;
-    if (bx !== lastBall.x || bz !== lastBall.z || carrierId !== lastBall.carrier) {
+    const storedColor = scheme.balls.main?.color || null;
+    if (bx !== lastBall.x || bz !== lastBall.z || carrierId !== lastBall.carrier || storedColor !== lastBall.color) {
       if (!scheme.balls.main) scheme.balls.main = { x: bx, z: bz, carrier: carrierId };
       // While attached, ball position is derived from the carrier each
       // tick, so don't overwrite the last-loose-position in the scheme -
@@ -91,7 +129,8 @@ export function tickActors() {
         scheme.balls.main.z = bz;
       }
       scheme.balls.main.carrier = carrierId;
-      lastBall = { x: bx, z: bz, carrier: carrierId };
+      if (storedColor !== lastBall.color) applyBallColor(storedColor);
+      lastBall = { x: bx, z: bz, carrier: carrierId, color: storedColor };
       dirty = true;
     }
   }
@@ -130,6 +169,8 @@ export function applyActorsFromScheme() {
       state.ballGroup.position.x = b.x;
       state.ballGroup.position.z = b.z;
     }
+    ensureBallMaterialCache();
+    applyBallColor(b.color || null);
     // If carrier is set, the next tickActors() call snaps the ball to it.
   }
   if (state.goalieGroup && scheme.goalie) {
@@ -139,7 +180,7 @@ export function applyActorsFromScheme() {
   }
   // Invalidate the last-synced cache so tickActors doesn't skip a
   // legitimate write of the values it just applied.
-  lastBall = { x: NaN, z: NaN, carrier: undefined };
+  lastBall = { x: NaN, z: NaN, carrier: undefined, color: undefined };
   lastGoalie = { x: NaN, z: NaN, angle: NaN };
   ballApplied = true;
   goalieApplied = true;
@@ -163,4 +204,26 @@ export function setBallCarrier(chipId) {
   saveDoc();
   import('./history.js').then((h) => h.pushHistory());
   window.dispatchEvent(new Event('ballCarrierChanged'));
+}
+
+export function getBallColor() {
+  const doc = ensureDoc();
+  return doc.scheme.balls?.main?.color ?? null;
+}
+
+export function setBallColor(hex) {
+  const doc = ensureDoc();
+  const scheme = doc.scheme;
+  if (!scheme.balls) scheme.balls = {};
+  if (!scheme.balls.main) {
+    const bx = state.ballGroup?.position.x ?? 0;
+    const bz = state.ballGroup?.position.z ?? 0;
+    scheme.balls.main = { x: bx, z: bz, carrier: null };
+  }
+  if (hex) scheme.balls.main.color = hex;
+  else delete scheme.balls.main.color;
+  applyBallColor(hex || null);
+  saveDoc();
+  import('./history.js').then((h) => h.pushHistory());
+  window.dispatchEvent(new Event('ballColorChanged'));
 }
