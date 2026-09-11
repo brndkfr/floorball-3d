@@ -60,6 +60,17 @@ overlay.innerHTML = `
       <kbd>&#9744;</kbd><span>set / clear a camera keyframe on that frame</span>
       <kbd>duration</kbd><span>per-frame in the small ms box</span>
 
+      <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Choreograph mode (draft the next frame)</b>
+      <span style="grid-column:1/-1; font-size:11px; opacity:0.85; margin-bottom:4px;">
+        Plan a play by seeing before / after positions side by side. Use it when
+        the current frame is your <em>starting</em> position and you want to
+        draft where each player runs next.
+      </span>
+      <kbd>Choreo</kbd><span>timeline button. Duplicates the current frame as a draft <em>N+1</em>, snapshots every chip's position, then shows a cyan ring at each snapshot with a live line to the chip's new position.</span>
+      <kbd>drag chips</kbd><span>move each chip to where it should end up. Right-click move-commands and walk-tweens also work. Arrows appear as chips leave their starting rings.</span>
+      <kbd>Commit</kbd><span>keep the new frame and exit (green banner button).</span>
+      <kbd>Cancel / Esc</kbd><span>delete the draft frame and return to N (red banner button).</span>
+
       <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Save / share / export</b>
       <kbd>Ctrl+Z / Ctrl+Y</kbd><span>undo / redo</span>
       <kbd>&hellip;</kbd><span>Save / Load / Export JSON / Import JSON / Copy share link / Export video</span>
