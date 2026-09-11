@@ -7,6 +7,7 @@ import { state } from '../state.js';
 import { ensureDoc, emptyFrame } from './doc.js';
 import { rebuildFromDoc } from './chips.js';
 import { rebuildShapesFromDoc } from './shapes.js';
+import { rebuildConesFromDoc } from './cones.js';
 import { saveDoc } from './storage.js';
 import { applyActorsFromScheme } from './actors.js';
 
@@ -14,6 +15,7 @@ function afterMutation(pushHistory = true) {
   saveDoc();
   rebuildFromDoc();
   rebuildShapesFromDoc();
+  rebuildConesFromDoc();
   applyActorsFromScheme();
   if (pushHistory) import('./history.js').then((h) => h.pushHistory());
   window.dispatchEvent(new Event('framesChanged'));

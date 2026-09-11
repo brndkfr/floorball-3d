@@ -5,6 +5,7 @@ import { camera, topDownCamera } from './scene.js';
 import { selectObject, deselectAll, labelFor } from './selection.js';
 import { removeChip } from './authoring/chips.js';
 import { removeShape } from './authoring/shapes.js';
+import { removeCone } from './authoring/cones.js';
 import { isTopDown, resetTopDownView } from './authoring/topdown-camera.js';
 import { isChoreoActive, cancelChoreo } from './authoring/choreograph.js';
 
@@ -111,14 +112,17 @@ window.addEventListener('keydown', (event) => {
   if ((event.key === 'Delete' || event.key === 'Backspace') && state.selectedSet.length) {
     const chipIds = [];
     const shapeIds = [];
+    const coneIds = [];
     for (const o of state.selectedSet) {
       if (state.chipGroups.includes(o) && o.userData.chip) chipIds.push(o.userData.chip.id);
       else if (state.shapeObjects.includes(o) && o.userData.shape) shapeIds.push(o.userData.shape.id);
+      else if (state.coneObjects.includes(o) && o.userData.cone) coneIds.push(o.userData.cone.id);
     }
-    if (!chipIds.length && !shapeIds.length) return;
+    if (!chipIds.length && !shapeIds.length && !coneIds.length) return;
     deselectAll();
     for (const id of chipIds) removeChip(id, false);
     for (const id of shapeIds) removeShape(id, false);
+    for (const id of coneIds) removeCone(id, false);
     // One combined history snapshot for the whole multi-delete.
     import('./authoring/history.js').then((h) => h.pushHistory());
     event.preventDefault();

@@ -43,6 +43,8 @@ export const state = {
   chipGroups: [],        // per-chip THREE.Group, selectable, in the same array shape as goalInstances
   shapesRoot: null,      // THREE.Group holding every shape (arrow/zone/text); child of scene
   shapeObjects: [],      // per-shape THREE.Object3D, selectable
+  conesRoot: null,       // THREE.Group holding every marker cone; child of scene
+  coneObjects: [],       // per-cone THREE.Mesh, selectable
   activeTool: null,      // null | 'chip' | 'arrow' | 'zone' | 'text'
   currentTeam: 1,        // 1 | 2 - which team the chip stamp is currently placing
   activeCamera: null,    // scene.js sets this to the perspective camera at boot; swapped to ortho in shape tools

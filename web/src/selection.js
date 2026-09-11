@@ -7,6 +7,7 @@ import { chipDataFor, persistChipPosition, scheduleHistoryPush } from './authori
 import * as pathHandles from './authoring/path-handles.js';
 import * as shapeHandles from './authoring/shape-handles.js';
 import { shapeDataFor, translateShapes } from './authoring/shapes.js';
+import { coneDataFor, persistConePosition } from './authoring/cones.js';
 import { setPointerHint, isPrimitiveTool, beginPrimitiveDrag, updatePrimitiveDrag, commitPrimitiveDrag, cancelPrimitiveDrag, tryCommitArrow } from './authoring/draw-tool.js';
 import { spawnMoveMarker } from './authoring/move-marker.js';
 import { startWalk, setWalkTickCallback } from './authoring/walk-tween.js';
@@ -124,6 +125,8 @@ export function labelFor(obj) {
   if (i === 1) return 'goal B (z=40000 end)';
   const chip = chipDataFor(obj);
   if (chip) return `Team ${chip.team} #${chip.number}`;
+  const cone = coneDataFor(obj);
+  if (cone) return `${cone.kind} cone`;
   if (obj?.userData?.shape) return obj.userData.shape.type;
   return 'object';
 }
@@ -203,10 +206,10 @@ export function selectedChips() {
 }
 
 // Objects whose body can be grabbed and dragged on the top-down floor:
-// chips plus every shape (arrow / zone / text). Goals, ball and goalie are
-// deliberately excluded - they have their own gestures.
+// chips plus every shape (arrow / zone / text) plus marker cones. Goals,
+// ball and goalie are deliberately excluded - they have their own gestures.
 function isBodyDraggable(obj) {
-  return !!obj && (state.chipGroups.includes(obj) || state.shapeObjects.includes(obj));
+  return !!obj && (state.chipGroups.includes(obj) || state.shapeObjects.includes(obj) || state.coneObjects.includes(obj));
 }
 
 export function deselectAll() {
@@ -306,7 +309,7 @@ function selectablesUnderCursor(event) {
   mouseNDC.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouseNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouseNDC, state.activeCamera);
-  const selectables = [...state.goalInstances, ...state.chipGroups, ...state.shapeObjects];
+  const selectables = [...state.goalInstances, ...state.chipGroups, ...state.shapeObjects, ...state.coneObjects];
   if (state.ballGroup) selectables.push(state.ballGroup);
   if (state.goalieGroup) selectables.push(state.goalieGroup);
   const hits = raycaster.intersectObjects(selectables, true);
@@ -485,6 +488,7 @@ window.addEventListener('pointerup', (event) => {
     const { dx, dz } = captured.dragDelta || { dx: 0, dz: 0 };
     const objs = captured.dragObjs || [];
     for (const o of objs) if (state.chipGroups.includes(o)) persistChipPosition(o);
+    for (const o of objs) if (state.coneObjects.includes(o)) persistConePosition(o);
     const shapeIds = objs.filter((o) => state.shapeObjects.includes(o))
       .map((o) => o.userData.shape.id);
     if (shapeIds.length && (dx || dz)) {
@@ -603,6 +607,12 @@ function handleRightClick(event) {
         o.position.z += dz;
         persistChipPosition(o);
         startWalk(o, fromX, fromZ, o.position.x, o.position.z);
+      } else if (state.coneObjects.includes(o)) {
+        const fromX = o.position.x, fromZ = o.position.z;
+        o.position.x += dx;
+        o.position.z += dz;
+        persistConePosition(o);
+        startWalk(o, fromX, fromZ, o.position.x, o.position.z);
       }
     }
     const shapeIds = dragObjs.filter((o) => state.shapeObjects.includes(o))
@@ -629,6 +639,15 @@ function handleRightClick(event) {
     persistChipPosition(sel);
     scheduleHistoryPush();
     startWalk(sel, fromX, fromZ, p.x, p.z);   // snaps sel back to (fromX,fromZ)
+    selectObject(sel);
+    spawnMoveMarker(p.x, p.z);
+  } else if (state.coneObjects.includes(sel)) {
+    const fromX = sel.position.x, fromZ = sel.position.z;
+    sel.position.x = p.x;
+    sel.position.z = p.z;
+    persistConePosition(sel);
+    scheduleHistoryPush();
+    startWalk(sel, fromX, fromZ, p.x, p.z);
     selectObject(sel);
     spawnMoveMarker(p.x, p.z);
   } else if (sel === state.ballGroup || sel === state.goalieGroup) {

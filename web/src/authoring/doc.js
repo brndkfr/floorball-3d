@@ -22,7 +22,7 @@ export function newId(prefix = 'p') {
 }
 
 function emptyScheme() {
-  return { players: {}, balls: {}, shapes: [] };
+  return { players: {}, balls: {}, shapes: [], cones: [] };
 }
 
 export function emptyFrame(scheme = emptyScheme(), duration = DEFAULT_FRAME_MS) {
@@ -65,6 +65,7 @@ function migrate(doc) {
       players: doc.scheme.players || {},
       balls: doc.scheme.balls || {},
       shapes: doc.scheme.shapes || [],
+      cones: doc.scheme.cones || [],
     };
     return {
       version: DOC_VERSION,
@@ -99,6 +100,7 @@ export function ensureDoc() {
     if (!f.scheme.players) f.scheme.players = {};
     if (!f.scheme.balls) f.scheme.balls = {};
     if (!f.scheme.shapes) f.scheme.shapes = [];
+    if (!f.scheme.cones) f.scheme.cones = [];
     if (typeof f.duration !== 'number' || f.duration <= 0) f.duration = DEFAULT_FRAME_MS;
     if (!f.id) f.id = newId('f');
   }

@@ -31,6 +31,7 @@ function apply(snap) {
   state.doc = structuredClone(snap);
   rebuildFromDoc();
   rebuildShapesFromDoc();
+  import('./cones.js').then((c) => c.rebuildConesFromDoc());
   import('./actors.js').then((a) => a.applyActorsFromScheme());
   saveDoc();
 }

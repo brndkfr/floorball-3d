@@ -8,6 +8,7 @@
 import { state } from '../state.js';
 import { spawnChip, nextNumber, TEAM_COLORS, rebuildFromDoc } from './chips.js';
 import { rebuildShapesFromDoc, updateShape } from './shapes.js';
+import { spawnCone } from './cones.js';
 import { ensureDoc, emptyDoc } from './doc.js';
 import { saveDoc, saveNamedSlot, loadNamedSlot, listSlots, deleteSlot, downloadDocJson, readDocFromFile } from './storage.js';
 import { encodeShareUrl } from './share.js';
@@ -80,6 +81,8 @@ function refreshStatus() {
   else if (tool === 'zone-circle') msg = 'circle - drag on the rink to draw (or click for a default size, Esc to exit)';
   else if (tool === 'zone-triangle') msg = 'triangle - drag on the rink to draw (or click for a default size, Esc to exit)';
   else if (tool === 'ball') msg = 'ball tool - click the rink to place the ball (Esc to exit)';
+  else if (tool === 'cone-full') msg = 'cone tool - click the rink to drop a full cone (Esc to exit)';
+  else if (tool === 'cone-disc') msg = 'disc tool - click the rink to drop a flat disc marker (Esc to exit)';
   statusEl.textContent = msg;
   teamBtn.style.setProperty('--team-color', '#' + TEAM_COLORS[t].toString(16).padStart(6, '0'));
   teamBtn.textContent = `T${t}`;
@@ -321,6 +324,12 @@ export function handleFloorClickForTool(worldPoint) {
       // Explicit floor-place = loose ball; drop any current carrier.
       import('./actors.js').then((a) => a.setBallCarrier(null));
     }
+    refreshStatus();
+    return true;
+  }
+  if (state.activeTool === 'cone-full' || state.activeTool === 'cone-disc') {
+    const kind = state.activeTool === 'cone-full' ? 'full' : 'disc';
+    spawnCone({ kind, x: worldPoint.x, z: worldPoint.z });
     refreshStatus();
     return true;
   }
