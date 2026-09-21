@@ -1,7 +1,8 @@
 // Lazy-loads OpenCV.js and wraps cv.solvePnP so the rest of photo-overlay/
-// only deals with plain arrays/THREE types. OpenCV.js is NOT bundled in
-// this repo (it's a multi-MB WASM build) - drop the official build at
-// web/lib/opencv.js yourself; see docs/photo-overlay-plan.md.
+// only deals with plain arrays/THREE types. OpenCV.js (a multi-MB WASM
+// build) IS vendored in this repo at web/lib/opencv.js and committed to
+// git - it's just loaded lazily on first Photo Overlay use rather than at
+// startup, not omitted. See docs/photo-overlay-plan.md.
 import * as THREE from 'three';
 
 let cvReadyPromise = null;
