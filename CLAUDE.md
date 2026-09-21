@@ -138,6 +138,15 @@ only the input source differs.
 
 ## Verification
 
+- **Before every commit, run `pnpm test` and it must pass in full
+  (0 failures).** Tests live in `test/*.test.js` (`node --test`, no
+  browser needed - see `docs/plan.md` section 10, S-BACK-009, for which
+  modules are covered and why). If a change touches a module with
+  existing tests, extend them rather than leaving the new behaviour
+  uncovered. If `pnpm`/`npm` genuinely isn't available in the environment,
+  run `node --test "test/**/*.test.js"` directly (needs `three` resolvable
+  under `node_modules` - `pnpm install` handles that) - never skip running
+  the suite outright and never commit on a red test.
 - **Chromium caches ES modules aggressively** even with `?bust=` query
   strings on dynamic imports and even after `location.reload()`. When
   testing changes via Playwright / the running dev server, do:
@@ -175,3 +184,12 @@ only the input source differs.
   exists because GitHub Pages' plain branch/`docs`-folder source doesn't
   support serving from an arbitrary subfolder (`web/`) - don't remove it in
   favor of the simple settings-UI source without re-solving that.
+- The workflow's `build` job (runs on every push **and** PR) is the real
+  gate: `pnpm install --frozen-lockfile`, `pnpm test`, `pnpm run build`
+  (stages `web/` into `dist/` - per-file minify via `scripts/build.mjs`,
+  never mutates `web/` itself), `pnpm run check:size` (budget check,
+  `scripts/check-size.mjs`). `deploy` only runs after `build` passes, and
+  only on a push to `main`, uploading `dist/` (not `web/`). A red test or a
+  blown size budget blocks the deploy - which is exactly why the local
+  pre-commit rule above (`pnpm test` must pass) exists: catch it before
+  pushing, not after CI does.
