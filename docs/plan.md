@@ -881,20 +881,47 @@ added.
 - **[S-BACK-007]** [open] **Hardcoded asset count in loading indicator.**
   `status.js` hardcodes `pending = 7`; changing the tracked asset count
   makes the loading indicator stick or clear early.
-- **[S-BACK-008]** [decide] **CI/build pipeline has no test or lint gate,
-  no minification, `Date.now()` cache-bust in production.** The deploy
-  workflow currently uploads `web/` as-is. Proposed (built and locally
-  verified - `npm ci`/build/size-check passed - in the reviewing session,
-  but never pushed or run in GitHub Actions from this repo, so CI-green is
-  unconfirmed): a `scripts/build.mjs` staging step (per-file minify,
-  commit-SHA cache-bust instead of `Date.now()`, drop unreferenced dirs
-  like `design-sample`/unused vendored Shoelace bits), a `check-size.mjs`
-  budget gate, and splitting the workflow into build (PRs) / deploy
-  (main-only). Claimed local result: deploy 71->51 MB, startup assets
-  ~5.3->~0.8 MB (gzip, estimated, goalie texture PNG->WebP accounts for
-  most of it: 4.87 MB -> 0.37 MB at q92). None of this is applied to the
-  actual repo/workflow yet - needs a real PR to confirm the Actions run
-  succeeds and the goalie model still renders correctly.
+- **[S-BACK-008]** [shipped, on branch `perf/ci-and-load`] **CI/build
+  pipeline: test + minify + size-budget gate before deploy.** The deploy
+  workflow used to upload `web/` byte-for-byte with no test/build/size
+  gate, and `constants.js`'s `CACHE_BUST` was `?t=${Date.now()}` -
+  recomputed on every page load, so it wasn't actually a cache-bust in
+  production, just a permanent forced-refetch of every asset on every
+  visit. Fixed, and verified locally end-to-end with `pnpm` (this session
+  had pnpm available, unlike the earlier S-BACK-001/002/009 commits which
+  only had bare `node`):
+  - `scripts/build.mjs`: stages `web/` into `dist/` - per-file `esbuild`
+    minify of `web/src/**/*.js` (not bundled - the app loads modules
+    natively via `index.html`'s import map, so bundling would break that),
+    the `Date.now()` cache-bust replaced with a commit-SHA-based one in
+    the staged copy only (`web/` itself is never touched, so local
+    zero-build-step dev is unaffected), and the confirmed-unreferenced
+    dirs from **S-BACK-010** excluded.
+  - `scripts/check-size.mjs`: budget gate, sizes set from this repo's
+    *actual* measured output (dist ~55.5MB/70MB budget, dist/assets
+    ~6.4MB/8MB, web/src ~0.51MB/0.8MB) - not copied from the external
+    review's numbers, which turned out not to match this repo (see
+    S-BACK-010).
+  - `.github/workflows/deploy-pages.yml`: split into a `build` job (runs
+    on every push and PR: `pnpm install --frozen-lockfile`, `pnpm test`,
+    `pnpm run build`, `pnpm run check:size`) and a `deploy` job (main-push
+    only, needs `build`, uploads `dist/` instead of `web/`).
+  - Verified for real: `rm -rf dist node_modules && pnpm install
+    --frozen-lockfile && pnpm test && pnpm run build && pnpm run
+    check:size` all pass from a clean state (39/39 tests, minify succeeds,
+    both size budgets pass); the built `dist/` was served locally and
+    every touched module from this session's other fixes (`dock.js`,
+    `dialog.js`, `save-status-ui.js`, `insights.js`, etc.) loads with a
+    200. Workflow YAML validated with `js-yaml`.
+  - **Not verified:** an actual GitHub Actions run (this was local-only;
+    the workflow itself was never executed by Actions) and no goalie
+    texture WebP conversion was done (that part of the external review's
+    "load size" numbers was about `web/lib`/texture size, separate from
+    this build-pipeline change and not attempted - would need image
+    tooling and visual verification this session doesn't have).
+  - Deliberately kept on a branch, not merged to `main` - this changes the
+    live deploy artifact and deserves a real PR + Actions run before it
+    touches the live site.
 - **[S-BACK-009]** [in-progress] **Automated tests for the pure-logic
   modules.** `package.json` + `node --test` added (see S-BACK-001/002).
   39 tests across 4 files now cover `doc.js` (id sanitization/migration),
@@ -911,14 +938,26 @@ added.
   `trajectory.js`/`coverage.js` remain entangled with `scene.js` and don't
   load standalone in Node - extracting the pure math (e.g. to a
   `bezier.js`) is still open and not attempted this session.
-- **[S-BACK-010]** [open] **Deploy ships ~65 MB of `web/lib/` unconditionally**
-  (models 26 MB, Shoelace 15 MB, OpenCV 13 MB, onnxruntime 11 MB), some of
-  it (Shoelace/Open Props/Radix/`design-sample`) unreferenced by any
-  current `index.html`/`src` code per a text-search check - only relevant
-  once the visual-direction redesign (section 2) actually starts porting
-  `design-sample`; until then it's dead weight in the deploy artifact.
-  `pnp.js` has a stale comment claiming OpenCV is "NOT bundled" - it is,
-  just lazy-loaded on Photo Overlay open.
+- **[S-BACK-010]** [shipped, on branch `perf/ci-and-load`] **Deploy ships
+  unreferenced libraries.** Re-measured (the external review's `web/lib`
+  numbers didn't match this repo - e.g. it claimed a vendored/minified
+  `three.module.js` that doesn't exist here at all, three.js loads from
+  the unpkg CDN via `index.html`'s import map, untouched by this fix):
+  `web/lib/models` 26MB, `opencv.js` 13MB, `onnxruntime-web` 11MB (all
+  three confirmed referenced, Mode B, left alone), vs. `shoelace` 9.8MB,
+  `open-props` 44KB, `radix-colors` 24KB (confirmed via `grep -rl` against
+  `index.html` and `web/src` - zero references; only `web/design-sample/`
+  uses them, and `design-sample` itself isn't linked from `index.html`).
+  `scripts/build.mjs` now excludes `lib/shoelace`, `lib/open-props`,
+  `lib/radix-colors`, and `design-sample/` from `dist/` - confirmed no
+  dangling references in the built output. Deploy artifact: 66MB source ->
+  55.5MB built (includes both the exclusion and the JS minification from
+  S-BACK-008, not separable). Once the visual-direction redesign (section
+  2) actually starts porting `design-sample`, remove it from
+  `EXCLUDE_DIRS` in `build.mjs` first. `pnp.js`'s stale comment claiming
+  OpenCV is "NOT bundled" was also fixed in passing (it is committed to
+  the repo at `web/lib/opencv.js`, just lazy-loaded on Photo Overlay open
+  rather than at startup).
 - **[S-BACK-011]** [open] **Perf micro-findings, not yet actioned:**
   `animate()` render-loops unconditionally every frame even when nothing
   moved (coverage.js already has a dirty-check; the main loop doesn't);

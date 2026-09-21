@@ -2,11 +2,15 @@
   "name": "floorball-3d",
   "private": true,
   "type": "module",
-  "description": "Test runner only - the app itself ships with zero build step, see CLAUDE.md.",
+  "packageManager": "pnpm@11.0.9",
+  "description": "Test runner + CI build/size-check tooling. The app itself still ships with zero build step for local dev - see CLAUDE.md - this only stages a minified dist/ for deploy.",
   "scripts": {
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "build": "node scripts/build.mjs",
+    "check:size": "node scripts/check-size.mjs"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "three": "0.160.0"
   }
 }
