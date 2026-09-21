@@ -89,16 +89,20 @@ colour scales) for the palette, with a small semantic token layer on top
 (`--surface-1/2/3`, `--accent`, `--team-home`/`--team-away`,
 `--vector-pass`/`--vector-shot`/`--vector-coverage`).
 
-All three are vendored locally under `web/lib/` (same pattern as
-`web/lib/opencv.js`) rather than pulled from a CDN, so the app has no
-runtime dependency on a third-party host. See
-`/memories/repo/design-system-vendoring.md` for the re-vendoring steps and a
-Shoelace self-hosting gotcha (base-path resolution) hit while wiring it up.
-
-A working demo of the shell + tokens + a Mode B stepper screen lives in
-`web/design-sample/` (not part of the shipped app; a visual reference to
-port from). It also demonstrates the chip-anchored popover pattern from
-section 3.3.
+**As of 2026-09-21, none of the three are actually in the repo.** They were
+vendored locally under `web/lib/` (same pattern as `web/lib/opencv.js`)
+rather than pulled from a CDN, but since nothing in `index.html`/`web/src`
+ever referenced them - only the unshipped `web/design-sample/` demo did -
+CodeQL flagged a bad HTML-comment regex (`js/bad-tag-filter`) inside
+vendored Shoelace's own source, and since that code was 100% dead weight
+already excluded from the deploy artifact (S-BACK-010), the fix was to
+delete `web/lib/shoelace`, `web/lib/open-props`, `web/lib/radix-colors`,
+and `web/design-sample/` outright rather than patch third-party vendored
+code in place - see **S-BACK-013**. The stack choice above still stands as
+the *plan*; re-vendor all three (see
+`/memories/repo/design-system-vendoring.md` for the steps and a Shoelace
+self-hosting gotcha hit while wiring it up the first time) when this
+redesign actually starts.
 
 ### Visual direction exploration (design canvas)
 
@@ -948,13 +952,15 @@ added.
   `open-props` 44KB, `radix-colors` 24KB (confirmed via `grep -rl` against
   `index.html` and `web/src` - zero references; only `web/design-sample/`
   uses them, and `design-sample` itself isn't linked from `index.html`).
-  `scripts/build.mjs` now excludes `lib/shoelace`, `lib/open-props`,
-  `lib/radix-colors`, and `design-sample/` from `dist/` - confirmed no
+  `scripts/build.mjs` initially excluded `lib/shoelace`, `lib/open-props`,
+  `lib/radix-colors`, and `design-sample/` from `dist/` only - confirmed no
   dangling references in the built output. Deploy artifact: 66MB source ->
   55.5MB built (includes both the exclusion and the JS minification from
-  S-BACK-008, not separable). Once the visual-direction redesign (section
-  2) actually starts porting `design-sample`, remove it from
-  `EXCLUDE_DIRS` in `build.mjs` first. `pnp.js`'s stale comment claiming
+  S-BACK-008, not separable). **Superseded by S-BACK-013**: those four
+  paths were later deleted from the repo entirely (not just excluded from
+  `dist/`), so `EXCLUDE_DIRS` in `build.mjs` is now empty - re-add an entry
+  there if/when the design stack is re-vendored for the redesign.
+  `pnp.js`'s stale comment claiming
   OpenCV is "NOT bundled" was also fixed in passing (it is committed to
   the repo at `web/lib/opencv.js`, just lazy-loaded on Photo Overlay open
   rather than at startup).
@@ -963,9 +969,29 @@ added.
   moved (coverage.js already has a dirty-check; the main loop doesn't);
   `three.js`/`mp4-muxer` load from CDN (unpkg/esm.sh) rather than being
   vendored, contradicting the "no runtime third-party host dependency"
-  claim in section 2 (that claim is true only for the vendored design-
-  system stack); renderer always uses `antialias:true` + pixelRatio 2 with
-  no quality tier for weaker devices.
+  claim in section 2 (that claim was true only for the design-system stack
+  while it was vendored - see S-BACK-013, it no longer is); renderer
+  always uses `antialias:true` + pixelRatio 2 with no quality tier for
+  weaker devices.
+- **[S-BACK-013]** [shipped] **CodeQL alert: bad HTML-comment regex inside
+  vendored Shoelace.** GitHub code scanning (`js/bad-tag-filter`) flagged
+  `web/lib/shoelace/chunks/chunk.CXZZ2LVK.js:16` - a regex that only
+  matches `-->` and not the equally-valid `--!>` HTML comment-end syntax.
+  This was third-party vendored code, not anything this repo authored, and
+  per S-BACK-010 it was already confirmed 100% unreferenced by the shipped
+  app (only the unshipped `design-sample/` used it) and already excluded
+  from the deploy artifact. Hand-patching a regex inside someone else's
+  minified vendored bundle would be fragile (silently reverted on any
+  re-vendor) and wouldn't fix anything real users are exposed to, so
+  instead of patching it in place, `web/lib/shoelace/`,
+  `web/lib/open-props/`, `web/lib/radix-colors/`, and `web/design-sample/`
+  were deleted from the repo outright via `git rm`. `scripts/build.mjs`'s
+  `EXCLUDE_DIRS` (added for S-BACK-010) is now empty since there's nothing
+  left to exclude. The chosen design-system stack (section 2) is
+  unaffected as a *plan* - just re-vendor all three (see
+  `/memories/repo/design-system-vendoring.md`) when that redesign starts,
+  and re-add an `EXCLUDE_DIRS` entry in `build.mjs` at the same time if
+  `design-sample/` comes back as a non-shipped reference.
 
 ---
 

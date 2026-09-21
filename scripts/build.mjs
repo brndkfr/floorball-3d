@@ -1,9 +1,16 @@
 // Stages web/ into dist/ for deploy: minifies web/src/*.js per-file (no
 // bundling - the app loads modules natively via index.html's import map,
 // so bundling would break that architecture), swaps the dev-only
-// Date.now() cache-bust for a stable one based on the commit SHA, and
-// drops directories nothing in index.html or web/src actually references
+// Date.now() cache-bust for a stable one based on the commit SHA, and can
+// drop directories nothing in index.html or web/src actually references
 // (confirmed by grep before excluding - see docs/plan.md S-BACK-010).
+//
+// EXCLUDE_DIRS is currently empty: it used to carry lib/shoelace,
+// lib/open-props, lib/radix-colors and design-sample, but those were
+// deleted from the repo outright (not just excluded from dist/) after
+// CodeQL flagged a bad HTML-comment regex inside vendored Shoelace - see
+// docs/plan.md S-BACK-013. Re-vendor + re-add an entry here if that design
+// stack (section 2 of plan.md) is picked back up.
 //
 // Local dev is untouched: `web/` itself is never modified, so the
 // zero-build-step workflow in CLAUDE.md still works exactly as documented.
@@ -21,12 +28,7 @@ const OUT = join(ROOT, 'dist');
 // Confirmed unreferenced by index.html/web/src (grep check before this was
 // written) - see S-BACK-010 in docs/plan.md. Re-check with a fresh grep if
 // this list is ever extended; don't exclude on a guess.
-const EXCLUDE_DIRS = new Set([
-  'lib/shoelace',
-  'lib/open-props',
-  'lib/radix-colors',
-  'design-sample',
-]);
+const EXCLUDE_DIRS = new Set([]);
 
 function commitSha() {
   if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA.slice(0, 12);
