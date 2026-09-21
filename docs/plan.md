@@ -811,13 +811,26 @@ added.
   link could inject script. `(inferred)` - the full id-to-render data flow
   wasn't traced, found via grep. Fix: validate ids (`[\w-]+`, finite
   numbers) in `acceptDoc`, switch that render path to `textContent`.
-- **[S-BACK-003]** [open] **Keyboard handling is scattered, no single
-  source of truth.** Nine separate `window.addEventListener('keydown', ...)`
-  registrations across dock.js/controls.js/timeline.js/help.js/
-  chip-popover.js/inspector.js/draw-tool.js, Escape handled independently
-  in both controls.js and dock.js with no defined precedence. Proposal (not
-  started): one `keymap.js` with a single handler that also generates the
-  help overlay, so the two can't drift apart.
+- **[S-BACK-003]** [open] **Keyboard handling is scattered - re-scoped
+  after inspection.** Two of the review's specific claims didn't hold up:
+  only 4 of the "nine" keydown registrations are actually `window`-level
+  (dock.js, controls.js, timeline.js, help.js) - the other five
+  (chip-popover.js, inspector.js x2, draw-tool.js) are element-scoped
+  listeners on the input/li itself and already call `stopPropagation()`
+  where it matters (draw-tool.js even has a comment explaining why, for
+  Escape specifically). And the Escape "ambiguity" between controls.js and
+  dock.js is intentional, working, and already documented: controls.js's
+  handler checks `state.activeTool` and only deselects if dock.js's Esc
+  (which cancels the active tool) had nothing to do - a real two-stage
+  Escape, not a race. The one actual bug in this area was dock.js's
+  missing INPUT/TEXTAREA guard, already fixed as **[S-BACK-004]**; all 4
+  `window`-level handlers now have it. What's still genuinely true and
+  still open: there's no single place that documents the full keybinding
+  set (the help overlay is hand-maintained separately from the 4 handlers
+  and can drift), so a `keymap.js` consolidation remains a reasonable
+  maintainability improvement - just not a correctness fix, and not
+  attempted this session given the regression risk of merging 4 handlers'
+  worth of closures blind without a browser to test in.
 - **[S-BACK-004]** [shipped] **`dock.js` keydown missing INPUT/TEXTAREA
   guard.** Unlike controls.js/timeline.js/help.js, dock.js's handler had no
   check for a focused text field - typing in a chip label and hitting
