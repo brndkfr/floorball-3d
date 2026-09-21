@@ -1614,13 +1614,25 @@ photoCanvas.setBallMovedHandler((imagePx) => {
 
 // Step 4 - Insights (Phase 3, docs/phase-3-plan.md T5). Disabled until a
 // usable pose exists AND the ball is placed (Phase-2 prerequisites).
+// ids are validated at doc-ingestion time (doc.js's sanitizeDoc), but this
+// builds the <select> via DOM nodes rather than an HTML template string
+// as a second, independent line of defense against a crafted id reaching
+// innerHTML.
 function goalieOptionsHtml(players, team, selectedId) {
-  const opts = ['<option value="">-</option>'];
+  const frag = document.createDocumentFragment();
+  const blank = document.createElement('option');
+  blank.value = '';
+  blank.textContent = '-';
+  frag.appendChild(blank);
   for (const p of players) {
     if (p.team !== team) continue;
-    opts.push(`<option value="${p.id}"${p.id === selectedId ? ' selected' : ''}>#${p.id}</option>`);
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `#${p.id}`;
+    if (p.id === selectedId) opt.selected = true;
+    frag.appendChild(opt);
   }
-  return opts.join('');
+  return frag;
 }
 
 function updateStep4() {
@@ -1647,8 +1659,8 @@ function updateStep4() {
 
   const players = photo.players || [];
   const goalies = photo.goalies || (photo.goalies = { home: null, away: null });
-  goalieHomeSelect.innerHTML = goalieOptionsHtml(players, 'home', goalies.home);
-  goalieAwaySelect.innerHTML = goalieOptionsHtml(players, 'away', goalies.away);
+  goalieHomeSelect.replaceChildren(goalieOptionsHtml(players, 'home', goalies.home));
+  goalieAwaySelect.replaceChildren(goalieOptionsHtml(players, 'away', goalies.away));
 
   const overrideIds = new Set([photo.ballCarrier, goalies.home, goalies.away].filter((v) => v != null));
   const hasOverride = players.some((p) => overrideIds.has(p.id) && p.facingDeg != null);

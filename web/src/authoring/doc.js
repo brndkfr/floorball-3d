@@ -21,6 +21,47 @@ export function newId(prefix = 'p') {
   return prefix + '_' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
 }
 
+// Every id newId() generates matches this. Ids can also arrive from an
+// imported JSON file or a #doc= share link, which acceptDoc() does not
+// otherwise validate - and some of those ids reach innerHTML verbatim at
+// render time (photo-overlay.js's goalieOptionsHtml), so a crafted id like
+// `"><img src=x onerror=...>` could inject script. sanitizeDoc() below
+// drops any entry whose id doesn't match this pattern before the doc is
+// accepted, closing that off at the ingestion boundary regardless of what
+// any individual render site does.
+const ID_RE = /^[\w-]+$/;
+export function isValidId(id) {
+  return typeof id === 'string' && ID_RE.test(id);
+}
+
+// Strips scheme/photo entries with malformed ids from a doc that just came
+// from an untrusted source (file import, share link). Mutates in place.
+function sanitizeDoc(doc) {
+  if (!doc || !Array.isArray(doc.frames)) return doc;
+  for (const frame of doc.frames) {
+    const scheme = frame?.scheme;
+    if (scheme?.players && typeof scheme.players === 'object') {
+      for (const id of Object.keys(scheme.players)) {
+        if (!isValidId(id)) delete scheme.players[id];
+      }
+    }
+    if (Array.isArray(scheme?.shapes)) {
+      scheme.shapes = scheme.shapes.filter((s) => isValidId(s?.id));
+    }
+    const photo = frame?.photo;
+    if (photo && Array.isArray(photo.players)) {
+      photo.players = photo.players.filter((p) => isValidId(p?.id));
+      const validIds = new Set(photo.players.map((p) => p.id));
+      if (photo.ballCarrier != null && !validIds.has(photo.ballCarrier)) photo.ballCarrier = null;
+      if (photo.goalies) {
+        if (photo.goalies.home != null && !validIds.has(photo.goalies.home)) photo.goalies.home = null;
+        if (photo.goalies.away != null && !validIds.has(photo.goalies.away)) photo.goalies.away = null;
+      }
+    }
+  }
+  return doc;
+}
+
 function emptyScheme() {
   return { players: {}, balls: {}, shapes: [], cones: [] };
 }
@@ -82,7 +123,7 @@ function migrate(doc) {
 export function acceptDoc(raw) {
   if (!raw || typeof raw !== 'object') return null;
   if (raw.version !== 1 && raw.version !== DOC_VERSION) return null;
-  const migrated = migrate(raw);
+  const migrated = sanitizeDoc(migrate(raw));
   installSchemeAccessor(migrated);
   return migrated;
 }

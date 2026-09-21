@@ -1,0 +1,12 @@
+{
+  "name": "floorball-3d",
+  "private": true,
+  "type": "module",
+  "description": "Test runner only - the app itself ships with zero build step, see CLAUDE.md.",
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "devDependencies": {
+    "three": "0.160.0"
+  }
+}
