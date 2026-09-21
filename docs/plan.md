@@ -825,12 +825,33 @@ added.
   editing the text. Fixed: same guard as controls.js
   (`document.activeElement?.tagName` check) added at the top of dock.js's
   handler.
-- **[S-BACK-005]** [open] **Accessibility gaps.** No `<label for>` on any
-  of ~26 inputs; ~88 buttons are icon-only (unicode glyph + `title`) with no
-  `aria-label`; dialogs (export, help) don't trap focus and only help.js
-  reacts to Escape; no `prefers-reduced-motion` despite walk-tweens/
-  drop-flash/ring animations. `(inferred, not verified with a screen
-  reader)`.
+- **[S-BACK-005]** [in-progress] **Accessibility gaps.** The blanket claim
+  of "no `<label for>` on any input" didn't hold up under inspection: of
+  the 25 inputs in `web/index.html`, 23 were already implicitly labelled
+  (wrapped in `<label>...<input>...</label>`, which the accessible-name
+  algorithm handles the same as an explicit `for`). Found and fixed the
+  actual two gaps: `photoFileInput` (no label at all - added
+  `aria-label="Upload photo to analyze"`) and `photoAlignSlider` (a
+  `<label>` existed nearby but wasn't associated - added `for=
+  "photoAlignSlider"`). **Still open, not attempted this session** (real
+  risk of getting it wrong without live verification):
+  - Icon-only buttons (unicode glyph + `title`) do get an accessible name
+    from the glyph's text content per the accname spec, and `title` is a
+    fallback too, but the *quality* of what a screen reader announces for
+    a bare glyph like "&#9664;" is genuinely poor - auditing which of the
+    ~83 buttons need an explicit `aria-label` needs a real screen reader,
+    not a grep.
+  - Dialogs (export, help) don't trap focus and only help.js reacts to
+    Escape - the new S-BACK-006 dialogs (`dialog.js`, native `<dialog>`)
+    get this for free, but export.js/help.js's own hand-rolled overlays
+    are untouched.
+  - No `prefers-reduced-motion` - only one plain CSS transition exists in
+    `index.html`; the actual animation (walk-tween, drop-flash, selection
+    rings) is JS/Three.js-driven, so a CSS media query alone wouldn't
+    meaningfully cover it. Doing this properly means gating
+    `walk-tween.js` and the ring/flash code in `chips.js` behind
+    `matchMedia('(prefers-reduced-motion: reduce)')`, which is a real
+    behaviour change across multiple files - not attempted blind here.
 - **[S-BACK-006]** [shipped] **Blocking `alert`/`confirm`/`prompt` calls.**
   dock.js had 8 occurrences (New/Delete-slot/Overwrite confirms,
   load-failed/import-failed/too-large-for-share alerts, save-as prompt,
