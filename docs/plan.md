@@ -78,7 +78,7 @@ around indefinitely.
 `web/index.html`, mode-switching in [shell.js](../web/src/shell.js) via
 `[data-view]` tags on existing panels - no `authoring/`/`photo-overlay/`
 logic touched. `Library` is a placeholder ("coming soon"), per the open
-question in section 10.
+question in section 11.
 
 ### Design system
 
@@ -773,7 +773,101 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
 
 ---
 
-## 10. Open questions
+## 10. Robustness / infra backlog (external review, 2026-09)
+
+From a code review session against the public repo clone (not this
+session's own analysis - flagged `(inferred)` where the reviewer read code
+but never ran the app in a browser). Nothing in this section has been
+applied yet except **S-BACK-004**, fixed the same session this section was
+added.
+
+- **[S-BACK-001]** [open] **Silent data loss on quota errors.**
+  `saveDoc()` (authoring/storage.js) swallows localStorage quota errors
+  with `console.warn` only - no UI signal, so the user keeps working while
+  nothing persists and a reload silently loses everything. Related: no
+  `beforeunload` guard, no visible "saved" indicator; undo (`history.js`,
+  MAX=100) is memory-only and lost on reload including after "New scheme";
+  photo-overlay landmark placement isn't in the undo stack at all.
+- **[S-BACK-002]** [open] **Unvalidated ids reach innerHTML.** `acceptDoc()`
+  (authoring/doc.js) validates only `version`. An id from an imported doc
+  or a `#doc=` share link can reach `innerHTML` via template strings (e.g.
+  `goalieOptionsHtml`, photo-overlay.js:1621) unsanitized - a crafted share
+  link could inject script. `(inferred)` - the full id-to-render data flow
+  wasn't traced, found via grep. Fix: validate ids (`[\w-]+`, finite
+  numbers) in `acceptDoc`, switch that render path to `textContent`.
+- **[S-BACK-003]** [open] **Keyboard handling is scattered, no single
+  source of truth.** Nine separate `window.addEventListener('keydown', ...)`
+  registrations across dock.js/controls.js/timeline.js/help.js/
+  chip-popover.js/inspector.js/draw-tool.js, Escape handled independently
+  in both controls.js and dock.js with no defined precedence. Proposal (not
+  started): one `keymap.js` with a single handler that also generates the
+  help overlay, so the two can't drift apart.
+- **[S-BACK-004]** [shipped] **`dock.js` keydown missing INPUT/TEXTAREA
+  guard.** Unlike controls.js/timeline.js/help.js, dock.js's handler had no
+  check for a focused text field - typing in a chip label and hitting
+  Escape cancelled the active tool, Ctrl+Z undid a scene change, instead of
+  editing the text. Fixed: same guard as controls.js
+  (`document.activeElement?.tagName` check) added at the top of dock.js's
+  handler.
+- **[S-BACK-005]** [open] **Accessibility gaps.** No `<label for>` on any
+  of ~26 inputs; ~88 buttons are icon-only (unicode glyph + `title`) with no
+  `aria-label`; dialogs (export, help) don't trap focus and only help.js
+  reacts to Escape; no `prefers-reduced-motion` despite walk-tweens/
+  drop-flash/ring animations. `(inferred, not verified with a screen
+  reader)`.
+- **[S-BACK-006]** [open] **Blocking `alert`/`confirm`/`prompt` calls.**
+  Nine occurrences in dock.js, including a `prompt()` for the user to
+  self-copy the share link instead of using the Clipboard API. Reads as
+  prototype-grade against the product framing in section 2. Proposed fix:
+  toast/dialog component + `navigator.clipboard.writeText`.
+- **[S-BACK-007]** [open] **Hardcoded asset count in loading indicator.**
+  `status.js` hardcodes `pending = 7`; changing the tracked asset count
+  makes the loading indicator stick or clear early.
+- **[S-BACK-008]** [decide] **CI/build pipeline has no test or lint gate,
+  no minification, `Date.now()` cache-bust in production.** The deploy
+  workflow currently uploads `web/` as-is. Proposed (built and locally
+  verified - `npm ci`/build/size-check passed - in the reviewing session,
+  but never pushed or run in GitHub Actions from this repo, so CI-green is
+  unconfirmed): a `scripts/build.mjs` staging step (per-file minify,
+  commit-SHA cache-bust instead of `Date.now()`, drop unreferenced dirs
+  like `design-sample`/unused vendored Shoelace bits), a `check-size.mjs`
+  budget gate, and splitting the workflow into build (PRs) / deploy
+  (main-only). Claimed local result: deploy 71->51 MB, startup assets
+  ~5.3->~0.8 MB (gzip, estimated, goalie texture PNG->WebP accounts for
+  most of it: 4.87 MB -> 0.37 MB at q92). None of this is applied to the
+  actual repo/workflow yet - needs a real PR to confirm the Actions run
+  succeeds and the goalie model still renders correctly.
+- **[S-BACK-009]** [open] **No automated tests.** No `package.json`, no
+  test runner. Reviewer confirmed by importing all 67 `web/src` modules in
+  Node 22 that 26 load without browser globals (`insights.js`, `doc.js`,
+  `share.js`, `storage.js`, `faceoff-snap.js`, several photo-overlay
+  modules) - good first candidates for `node --test`. `playback.js`'s
+  Bezier/interpolation math is entangled with `scene.js` and doesn't load
+  standalone; extracting it to a pure `bezier.js` would make it testable
+  too. `trajectory.js`/`coverage.js` also don't load standalone (three.js
+  scene coupling). Not started; blocked on deciding whether to add a
+  `package.json` dev-only dependency on `three` for the test runner (no
+  change to the runtime zero-build-step architecture).
+- **[S-BACK-010]** [open] **Deploy ships ~65 MB of `web/lib/` unconditionally**
+  (models 26 MB, Shoelace 15 MB, OpenCV 13 MB, onnxruntime 11 MB), some of
+  it (Shoelace/Open Props/Radix/`design-sample`) unreferenced by any
+  current `index.html`/`src` code per a text-search check - only relevant
+  once the visual-direction redesign (section 2) actually starts porting
+  `design-sample`; until then it's dead weight in the deploy artifact.
+  `pnp.js` has a stale comment claiming OpenCV is "NOT bundled" - it is,
+  just lazy-loaded on Photo Overlay open.
+- **[S-BACK-011]** [open] **Perf micro-findings, not yet actioned:**
+  `animate()` render-loops unconditionally every frame even when nothing
+  moved (coverage.js already has a dirty-check; the main loop doesn't);
+  `three.js`/`mp4-muxer` load from CDN (unpkg/esm.sh) rather than being
+  vendored, contradicting the "no runtime third-party host dependency"
+  claim in section 2 (that claim is true only for the vendored design-
+  system stack); renderer always uses `antialias:true` + pixelRatio 2 with
+  no quality tier for weaker devices.
+
+---
+
+## 11. Open questions
 
 To be resolved as the plan evolves. Not blockers for starting.
 

@@ -284,6 +284,11 @@ overflowMenu.querySelector('[data-action="export-video"]').addEventListener('cli
 // --- keyboard: Esc exits tool mode, Ctrl+Z / Ctrl+Y for undo/redo -----
 
 window.addEventListener('keydown', (event) => {
+  // Skip everything while a text field is focused so typing a chip label
+  // doesn't cancel the active tool or trigger undo/redo.
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
   if (event.key === 'Escape' && state.activeTool) {
     setActiveTool(null);
     return;
