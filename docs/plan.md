@@ -861,17 +861,22 @@ added.
   most of it: 4.87 MB -> 0.37 MB at q92). None of this is applied to the
   actual repo/workflow yet - needs a real PR to confirm the Actions run
   succeeds and the goalie model still renders correctly.
-- **[S-BACK-009]** [open] **No automated tests.** No `package.json`, no
-  test runner. Reviewer confirmed by importing all 67 `web/src` modules in
-  Node 22 that 26 load without browser globals (`insights.js`, `doc.js`,
-  `share.js`, `storage.js`, `faceoff-snap.js`, several photo-overlay
-  modules) - good first candidates for `node --test`. `playback.js`'s
-  Bezier/interpolation math is entangled with `scene.js` and doesn't load
-  standalone; extracting it to a pure `bezier.js` would make it testable
-  too. `trajectory.js`/`coverage.js` also don't load standalone (three.js
-  scene coupling). Not started; blocked on deciding whether to add a
-  `package.json` dev-only dependency on `three` for the test runner (no
-  change to the runtime zero-build-step architecture).
+- **[S-BACK-009]** [in-progress] **Automated tests for the pure-logic
+  modules.** `package.json` + `node --test` added (see S-BACK-001/002).
+  39 tests across 4 files now cover `doc.js` (id sanitization/migration),
+  `storage.js` (save-status tracking), `share.js` (encode/decode
+  round-trip, size-limit, malformed-payload handling), `faceoff-snap.js`
+  (snap radius/toggle), and `insights.js` (shot verdict colour/angle
+  bands, coverage-grid open/fully-blocked, pass-corridor clear/blocked/
+  goalie-exclusion) - the last one was the reviewer's top pick since it's
+  the actual shared Mode-A/Mode-B compute core. Run via `npm test` (needs
+  `npm install` first - not run against a real npm in this session, only
+  `node --test` directly; see the package.json commit for why). **Not
+  done:** `chips.js`, `shapes.js`, `frames.js`, `history.js`, and the rest
+  of `photo-overlay/` still have no tests. `playback.js`'s Bezier math and
+  `trajectory.js`/`coverage.js` remain entangled with `scene.js` and don't
+  load standalone in Node - extracting the pure math (e.g. to a
+  `bezier.js`) is still open and not attempted this session.
 - **[S-BACK-010]** [open] **Deploy ships ~65 MB of `web/lib/` unconditionally**
   (models 26 MB, Shoelace 15 MB, OpenCV 13 MB, onnxruntime 11 MB), some of
   it (Shoelace/Open Props/Radix/`design-sample`) unreferenced by any
