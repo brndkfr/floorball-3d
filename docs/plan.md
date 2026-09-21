@@ -781,13 +781,29 @@ but never ran the app in a browser). Nothing in this section has been
 applied yet except **S-BACK-004**, fixed the same session this section was
 added.
 
-- **[S-BACK-001]** [open] **Silent data loss on quota errors.**
-  `saveDoc()` (authoring/storage.js) swallows localStorage quota errors
-  with `console.warn` only - no UI signal, so the user keeps working while
-  nothing persists and a reload silently loses everything. Related: no
-  `beforeunload` guard, no visible "saved" indicator; undo (`history.js`,
-  MAX=100) is memory-only and lost on reload including after "New scheme";
-  photo-overlay landmark placement isn't in the undo stack at all.
+- **[S-BACK-001]** [shipped] **Silent data loss on quota errors - save
+  status + beforeunload guard.** `saveDoc()` (authoring/storage.js) used to
+  swallow localStorage quota errors with `console.warn` only - no UI
+  signal, so the user kept working while nothing persisted and a reload
+  silently lost everything. Fixed: `storage.js` now tracks save status
+  (`getSaveStatus()`/`onSaveStatusChange()`, pure/DOM-free so it stays
+  Node-testable) and the new `save-status-ui.js` renders it as a
+  `#saveStatus` badge ("saved HH:MM:SS" / "save failed - storage full or
+  unavailable, export a backup") plus a `beforeunload` guard that only
+  fires while the last save attempt is failed. Covered by
+  `test/storage.test.js` (4 cases: success, quota-error, recovery,
+  listener notification). Not verified in a browser - the badge's visual
+  placement/timing needs a live check. **Remaining, not done:** see
+  **[S-BACK-012]**.
+- **[S-BACK-012]** [open] **Undo history not persisted, photo-overlay work
+  not undoable.** `history.js`'s undo stack (MAX=100) is memory-only and
+  lost on reload, including after an accidental "New scheme". Photo-overlay
+  landmark placement/solve steps aren't pushed to the undo stack at all.
+  Scoped out of S-BACK-001 - persisting an undo stack (or snapshotting to
+  storage) and wiring photo-overlay actions into `history.js` is a bigger
+  structural change than the quota/indicator fix, with real regression risk
+  that needs live browser verification to do safely, not attempted blind in
+  this pass.
 - **[S-BACK-002]** [open] **Unvalidated ids reach innerHTML.** `acceptDoc()`
   (authoring/doc.js) validates only `version`. An id from an imported doc
   or a `#doc=` share link can reach `innerHTML` via template strings (e.g.

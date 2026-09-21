@@ -14,6 +14,7 @@ import { rebuildConesFromDoc } from './cones.js';
 import { rebuildBallsFromDoc } from './balls.js';
 import { initHistory } from './history.js';
 import { initFaceoffSnapToggle } from './faceoff-snap.js';
+import './save-status-ui.js'; // side-effect: wires up the save-status badge + beforeunload guard
 import './dock.js';       // side-effect: wires up the DOM
 import './tool-palette.js'; // side-effect: wires up the left tool palette
 import './inspector.js';    // side-effect: wires up the right inspector panel

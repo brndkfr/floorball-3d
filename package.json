@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Test runner only - the app itself ships with zero build step, see CLAUDE.md.",
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test \"test/**/*.test.js\""
   },
   "devDependencies": {
     "three": "0.160.0"

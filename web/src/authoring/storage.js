@@ -7,14 +7,39 @@ import { ensureDoc, acceptDoc } from './doc.js';
 const KEY = 'floorball-3d:doc';
 const SLOT_PREFIX = 'floorball-3d:slot:';
 
+// Save status is tracked here (pure, no DOM) so this module keeps loading
+// standalone in Node for tests; save-status-ui.js is the DOM-touching
+// side-effect module that turns this into a visible "saved"/"save failed"
+// badge and a beforeunload guard - see S-BACK-001.
+let lastSaveStatus = { ok: true, at: null, error: null };
+const listeners = [];
+
+export function getSaveStatus() {
+  return lastSaveStatus;
+}
+
+export function onSaveStatusChange(cb) {
+  listeners.push(cb);
+}
+
+function setSaveStatus(status) {
+  lastSaveStatus = status;
+  for (const cb of listeners) cb(status);
+}
+
 export function saveDoc() {
   try {
     localStorage.setItem(KEY, JSON.stringify(ensureDoc()));
+    setSaveStatus({ ok: true, at: Date.now(), error: null });
   } catch (e) {
     // localStorage can be full or disabled (private mode on some browsers).
-    // Silently drop; the in-memory doc is still authoritative for this
-    // session, and the next save attempt will retry.
+    // The in-memory doc is still authoritative for this session and the
+    // next save attempt will retry, but nothing is actually persisted until
+    // one succeeds - previously this only logged a console.warn, so a user
+    // could keep working for an entire session and lose everything on
+    // reload with no indication anything was wrong.
     console.warn('saveDoc: could not persist to localStorage', e);
+    setSaveStatus({ ok: false, at: Date.now(), error: e });
   }
 }
 
