@@ -831,11 +831,19 @@ added.
   reacts to Escape; no `prefers-reduced-motion` despite walk-tweens/
   drop-flash/ring animations. `(inferred, not verified with a screen
   reader)`.
-- **[S-BACK-006]** [open] **Blocking `alert`/`confirm`/`prompt` calls.**
-  Nine occurrences in dock.js, including a `prompt()` for the user to
-  self-copy the share link instead of using the Clipboard API. Reads as
-  prototype-grade against the product framing in section 2. Proposed fix:
-  toast/dialog component + `navigator.clipboard.writeText`.
+- **[S-BACK-006]** [shipped] **Blocking `alert`/`confirm`/`prompt` calls.**
+  dock.js had 8 occurrences (New/Delete-slot/Overwrite confirms,
+  load-failed/import-failed/too-large-for-share alerts, save-as prompt,
+  and a share-link-copy prompt used only as the Clipboard API's fallback,
+  which was already the primary path there). Fixed: new
+  `authoring/dialog.js` (`showAlert`/`showConfirm`/`showPrompt`, all
+  Promise-based) backed by the native `<dialog>` element -
+  `showModal()` gives focus trapping and Escape-to-cancel for free, so
+  this also closes part of S-BACK-005 for these specific dialogs. Every
+  dock.js call site converted to `async`/`await` around the new calls; no
+  behavioural change to the decision logic at each site, just the
+  presentation. No unit test - this is a DOM-only module (`<dialog>`,
+  `showModal()`) with no pure logic to isolate; not verified in a browser.
 - **[S-BACK-007]** [open] **Hardcoded asset count in loading indicator.**
   `status.js` hardcodes `pending = 7`; changing the tracked asset count
   makes the loading indicator stick or clear early.

@@ -17,6 +17,7 @@ import { undo, redo, pushHistory } from './history.js';
 import { enterTopDown, exitTopDown, isTopDown } from './topdown-camera.js';
 import { startDrawing, cancelDrawing, handleFloorClick, tryCommitZone, tryCommitArrow, drawPointCount } from './draw-tool.js';
 import { snapToNearestDot } from './faceoff-snap.js';
+import { showAlert, showConfirm, showPrompt } from './dialog.js';
 
 const dockEl = document.getElementById('dock');
 if (!dockEl) throw new Error('dock element missing from index.html');
@@ -133,11 +134,11 @@ document.addEventListener('click', (e) => {
   }
 });
 
-overflowMenu.querySelector('[data-action="new"]').addEventListener('click', () => {
+overflowMenu.querySelector('[data-action="new"]').addEventListener('click', async () => {
   overflowMenu.classList.remove('open');
   const empty = Object.keys(ensureDoc().scheme.players).length === 0 && (ensureDoc().scheme.shapes?.length ?? 0) === 0;
   if (empty) return;
-  if (!confirm('Discard the current scheme and start a new one?')) return;
+  if (!(await showConfirm('Discard the current scheme and start a new one?'))) return;
   state.doc = emptyDoc();
   rebuildFromDoc();
   rebuildShapesFromDoc();
@@ -190,9 +191,9 @@ function renderSlotsPopover() {
     label.className = 'slots-load';
     label.textContent = name;
     label.title = 'Load this scheme';
-    label.addEventListener('click', () => {
+    label.addEventListener('click', async () => {
       const doc = loadNamedSlot(name);
-      if (!doc) { alert(`Could not load "${name}".`); return; }
+      if (!doc) { await showAlert(`Could not load "${name}".`); return; }
       loadDocInto(doc);
       slotsPopover.classList.remove('open');
     });
@@ -201,9 +202,9 @@ function renderSlotsPopover() {
     del.className = 'slots-delete';
     del.title = 'Delete';
     del.textContent = '\u00d7';
-    del.addEventListener('click', (e) => {
+    del.addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (!confirm(`Delete saved scheme "${name}"?`)) return;
+      if (!(await showConfirm(`Delete saved scheme "${name}"?`))) return;
       deleteSlot(name);
       renderSlotsPopover();
     });
@@ -213,14 +214,14 @@ function renderSlotsPopover() {
   }
 }
 
-overflowMenu.querySelector('[data-action="save"]').addEventListener('click', () => {
+overflowMenu.querySelector('[data-action="save"]').addEventListener('click', async () => {
   overflowMenu.classList.remove('open');
   const suggested = new Date().toISOString().slice(0, 16).replace('T', ' ');
-  const name = prompt('Save scheme as:', suggested);
+  const name = await showPrompt('Save scheme as:', suggested);
   if (!name) return;
   const trimmed = name.trim();
   if (!trimmed) return;
-  if (listSlots().includes(trimmed) && !confirm(`Overwrite existing "${trimmed}"?`)) return;
+  if (listSlots().includes(trimmed) && !(await showConfirm(`Overwrite existing "${trimmed}"?`))) return;
   if (saveNamedSlot(trimmed)) refreshStatus();
 });
 
@@ -249,7 +250,7 @@ fileInput.addEventListener('change', async () => {
   const file = fileInput.files?.[0];
   if (!file) return;
   const doc = await readDocFromFile(file);
-  if (!doc) { alert('Could not read that file - is it a valid floorball-3d scheme JSON?'); return; }
+  if (!doc) { await showAlert('Could not read that file - is it a valid floorball-3d scheme JSON?'); return; }
   loadDocInto(doc);
 });
 
@@ -259,7 +260,7 @@ overflowMenu.querySelector('[data-action="share"]').addEventListener('click', as
   if (!url) {
     // Scene too large for a URL fragment - fall back to JSON download and
     // tell the user, so a shareable artifact still exists.
-    alert('This scheme is too large for a share URL (~32 KB max). Downloading JSON instead - share the file.');
+    await showAlert('This scheme is too large for a share URL (~32 KB max). Downloading JSON instead - share the file.');
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     downloadDocJson(ensureDoc(), `floorball-scheme-${stamp}.json`);
     return;
@@ -270,8 +271,9 @@ overflowMenu.querySelector('[data-action="share"]').addEventListener('click', as
     setTimeout(refreshStatus, 2000);
   } catch (e) {
     // Clipboard API blocked (e.g. non-HTTPS, no user gesture chain) -
-    // fall back to showing the URL for manual copy.
-    prompt('Share URL (copy manually):', url);
+    // fall back to a read-only dialog with the URL pre-selected for manual
+    // copy, instead of the browser's own prompt() chrome.
+    await showPrompt('Share URL (copy manually):', url);
   }
 });
 
