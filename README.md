@@ -2,8 +2,10 @@
 
 An interactive three.js viewer and tactical scheme editor for floorball -
 an IFF-spec rink, goal and ball, a placeable goalie, tactical overlays
-for reasoning about positioning, plus a full authoring surface for
-planning and animating team schemes.
+for reasoning about positioning, a full authoring surface for planning
+and animating team schemes (**Mode A**), and a photo/video analysis
+workflow that aligns a real match photo to the rink and reuses the same
+tactical compute layer on it (**Mode B**).
 
 **Live demo: https://brndkfr.github.io/floorball-3d/**
 
@@ -12,7 +14,8 @@ planning and animating team schemes.
 ### Analytical viewer
 - Full 40x20 m rink with board, markings and two goals, positioned per
   IFF SPCR 011 / SP-METHOD 1506 and the Rules of the Game 2026
-- A 72 mm, 26-hole floorball, freely placeable on the rink
+- A 72 mm, 26-hole floorball, freely placeable on the rink (plus extra
+  training balls via the Ball tool, each with its own colour tint)
 - A goalie, switchable between a placeholder figure and a detailed
   textured model, freely movable and rotatable
 - Ball-to-goal trajectory lines (to all 4 corners) plus a dotted
@@ -27,42 +30,80 @@ planning and animating team schemes.
 - First-person walk controls (WASD / arrows, drag to look, scroll to
   zoom) with context-sensitive controls for the selected object
 
-### Authoring & animation
+### Mode A - tactical planning & animation
 - 2D / 3D view toggle - top-down orthographic for planning, first-person
   perspective for review. Both default to a landscape orientation of the
   rink; the top-down view rotates in 90° steps via a dock button. Wheel
   zoom + right-drag pan in 2D.
-- **Chip** stamp: drop numbered players (green Team 1, red Team 2). Chips
-  snap to the nearest face-off dot within 800 mm (toggle in the HUD).
-- **Arrow / Zone / Text** shape tools: click-to-place tactical markers
-  with a colour palette. Enter or double-click closes a zone.
+- RTS-style input model: left-click selects, left-drag moves the selected
+  object(s), right-click on empty floor issues a move-command (the
+  selected chip / ball / goalie eases to the click point), right-click
+  cancels the active tool. Left-drag on empty floor draws a marquee
+  rubber-band select (Shift-drag unions, Shift-click toggles one object).
+- **Chip** stamp: drop numbered players (Team 1 / Team 2), with optional
+  labels, roles and a per-row Layers panel. Chips snap to the nearest
+  face-off dot within 800 mm (toggle in the HUD).
+- **Ball**, **Cone** (full or flat disc) and **Arrow / Zone / Text**
+  placement tools - zones support freehand, rectangle, circle and
+  triangle shapes; arrows support straight/curved paths, head/shaft
+  styles and semantic pass/shot/run colouring.
 - Keyframe timeline at the bottom of the viewport: per-frame duration,
   duplicate / insert-before / insert-after / delete. Wheel over the strip
   resizes cards.
 - Playback with linear + **cubic Bezier** chip paths - drag the two
   handles on a selected chip to shape the arc. Live dashed preview.
+- **Choreograph mode**: draft the next frame by dragging chips to where
+  they should end up (right-click move-commands and walk animations both
+  work); ghost rings + live arrows show every planned move before you
+  commit or cancel the draft frame.
 - Per-frame camera keyframes: click the marker button on any card to
   snapshot the current view; playback lerps position + slerps quaternion
   between keyframes.
 - Undo / redo (Ctrl+Z / Ctrl+Y) across every authoring action.
-- Save / load named schemes to localStorage, export / import JSON,
-  copy a share URL (deflate-raw compressed, ~32 KB limit before falling
-  back to a JSON download).
+- Save / load named schemes to localStorage (with a visible save-status
+  indicator and a warn-before-close guard if a save ever fails), export /
+  import JSON, copy a share URL (deflate-raw compressed, ~32 KB limit
+  before falling back to a JSON download).
 - **Export video**: MP4 (H.264 via WebCodecs + mp4-muxer), WebM (VP9 via
   MediaRecorder), or PNG. Format / resolution / fps / range dialog, live
   progress bar, cancel.
 
+### Mode B - photo/video analysis
+- Align a real match photo to the rink via manual landmark placement, a
+  draggable "fit rink outline" quadrilateral, or a guided one-hint-at-a-time
+  flow with automatic goal detection (classical CV) once you zoom into the
+  goal - OpenCV.js (`solvePnP` + Levenberg-Marquardt refinement) solves the
+  camera pose, with a live before/after alignment slider.
+- Auto-detects players (YOLOv8n via onnxruntime-web) and goalies, with
+  jersey-colour team clustering and manual drag-to-correct.
+- Ball placement, automatic ball-carrier assignment, and a facing
+  direction per player - defaulted (carrier faces goal, goalie faces
+  ball/out), refined via YOLOv8n-Pose shoulder/nose keypoints, or dragged
+  by hand.
+- Reuses Mode A's compute layer for insights on the photo itself: shot
+  verdict (on target / near-miss / off), goal coverage heatmap, and
+  clear/blocked passing lanes to every teammate - plus a "View in 3D"
+  toggle that drops the detected positions into the top-down scene.
+
 ## Shortcuts
+
+The full, current list lives in the in-app cheat sheet (press `?`) so it
+can't drift from the actual key bindings - the highlights:
 
 | | |
 |---|---|
-| drag | look around (3D) / right-drag pans in 2D |
+| left-click | select (empty floor = deselect, or place with the active tool) |
+| left-drag chip/shape | move it under the cursor |
+| left-drag empty floor | marquee-select (Shift-drag unions, Shift-click toggles one) |
+| right-click floor | move-command: selected chip / ball / goalie walks there |
+| right-click (tool active) | cancel the active tool |
+| right-drag / middle-drag | pan the top-down camera |
 | scroll / pinch | zoom |
-| WASD / arrows | walk when nothing is selected; move the selected chip / ball / goalie otherwise |
-| Q / E | rotate the selected goalie |
+| WASD / arrows | pan camera (2D) / walk (3D, first-person) - never moves a selection |
+| Q / E | rotate the selected goalie (Shift = fine) |
 | Tab / Shift+Tab | cycle selection |
-| Esc | deselect / exit tool |
-| Del | remove selected chip |
+| Esc | cancel active tool, then deselect on a second press |
+| Del / Backspace | remove selected chip or shape |
 | Space | play / pause |
 | , / . | step to previous / next keyframe |
 | 1..9 | playback speed |
@@ -79,9 +120,12 @@ python -m http.server 8000
 
 Then open `http://localhost:8000`.
 
-Zero build step - three.js and `mp4-muxer` are loaded as ESM from esm.sh
-via an importmap. The share-URL codec uses the native
-`CompressionStream('deflate-raw')` API.
+Zero build step for local dev - `three` (unpkg) is loaded as ESM via
+`index.html`'s importmap, `mp4-muxer` (esm.sh) via a dynamic `import()`
+in `export.js` only when a video export actually runs. The share-URL
+codec uses the native `CompressionStream('deflate-raw')` API. Mode B's
+OpenCV.js and the YOLO ONNX models (`web/lib/`) are vendored locally and
+lazy-loaded only when Photo Overlay is opened - nothing extra to install.
 
 ## Testing
 
@@ -121,35 +165,62 @@ static file under `web/assets/`.
 ## Project structure
 
 ```
-generators/                        Python scripts that generate every .obj/.mtl asset
 docs/
-  floorball-3d-authoring-plan.md   authoring/animation milestone plan (A1-A7)
-  floorball-board-clone-plan.md    original inspiration reference
+  plan.md                          single source of truth: product plan,
+                                    work-item backlog (stable IDs), phases
+  phase-2-plan.md, phase-3-plan.md Mode B phase plans
+  reference/                       old 2D-clone reference plan (inspiration only)
+generators/                        Python scripts that generate every .obj/.mtl asset
+scripts/
+  build.mjs                        stages web/ -> dist/ for deploy (minify,
+                                    SHA cache-bust) - never touches web/ itself
+  check-size.mjs                   deploy size-budget gate
+test/                              node --test suite - see Testing above
 web/
-  index.html                       page shell + HUD + dock + timeline markup
+  index.html                       page shell + HUD + dock + tool palette + timeline
   assets/                          generated (and one user-supplied) .obj/.mtl/.png files
+  lib/                             vendored OpenCV.js + ONNX runtime + YOLO
+                                    models for Mode B (lazy-loaded on first use)
   src/
     main.js                        module wiring + rAF loop
     state.js                       one shared mutable state object (see CLAUDE.md)
     scene.js, controls.js          perspective + top-down cameras, look/walk input
     selection.js, layers.js        hit-testing + HUD layer toggles
-    coverage.js, trajectory.js     goal coverage heatmap + shot lines
+    insights.js                    pure compute core: shot verdict, coverage
+                                    grid, pass corridors - shared by both modes
+    coverage.js, trajectory.js     goal coverage heatmap + shot lines (Mode A scene)
     goalie.js                      goalie models + outline highlight
     help.js                        cheat-sheet overlay + first-visit tip
     touch-controls.js              on-screen D-pad + pinch zoom
-    authoring/
-      doc.js, storage.js           schema v2 with frames[], migrate v1 on load
-      chips.js                     player chip meshes + spawn / rebuild
+    authoring/                     Mode A: tactical planning & animation
+      doc.js, storage.js           schema v2 with frames[], migrate v1 on load,
+                                    id validation on import/share-link
+      dialog.js                    app-styled alert/confirm/prompt dialogs
+      save-status-ui.js            save-status badge + beforeunload guard
+      chips.js, balls.js, cones.js placeable object meshes + spawn / rebuild
       shapes.js, draw-tool.js      Arrow / Zone / Text primitives
-      dock.js, timeline.js         authoring surface + keyframe timeline
+      dock.js, tool-palette.js,
+      layers-panel.js, timeline.js authoring surface UI
       frames.js, playback.js       frame CRUD + Bezier interp + camera lerp
+      choreograph.js               draft-next-frame workflow (ghosts + arrows)
       path-handles.js              draggable Bezier handles + dashed preview
       history.js                   undo/redo stack
       share.js                     deflate-raw share URL
       faceoff-snap.js              snap-to-dot for chip placement
       export.js, export-dialog.js  MP4 / WebM / PNG export
       timer-worker.js              background heartbeat (staged for future
-                                   tab-hidden recording)
+                                    tab-hidden recording)
+      photo-overlay/               Mode B: photo/video analysis
+        pnp.js                     OpenCV.js solvePnP wrapper (camera pose)
+        landmarks.js, border-mode.js,
+        detect.js                  manual + auto landmark placement, goal detection
+        detect-players.js,
+        detect-goalie.js,
+        detect-pose.js             YOLOv8n player/goalie detection + pose keypoints
+        team-cluster.js            jersey-colour team assignment
+        facing-from-pose.js        pose keypoints -> facing angle
+        insights-overlay.js,
+        preview-3d.js              Step-4 insights render + "View in 3D"
 ```
 
 ## Sources & disclaimers

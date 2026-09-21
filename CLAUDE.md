@@ -62,6 +62,10 @@ only the input source differs.
   point at the old filename and need a manual fix.
 - The dev server serves from `web/`, and `index.html`'s asset URLs are cache-busted
   (`?t=${Date.now()}`) - a hard refresh is never needed after editing an asset.
+  This is dev-only: `scripts/build.mjs` rewrites that to a stable per-deploy
+  value (`?v=<commit-sha>`) in the staged `dist/` copy, so production visitors
+  get real caching between deploys instead of a forced refetch every visit -
+  `web/`'s own source file is never touched by the build.
 
 ## Architecture
 
@@ -176,6 +180,15 @@ only the input source differs.
   directory it's serving from - Windows locks files that are open for
   reading. Likewise, `cd` out of a directory before renaming/moving it -
   a shell with its cwd inside that directory also holds a lock on it.
+- **`pnpm add -D <pkg>` silently skips a package's postinstall script**
+  (e.g. `esbuild` downloading its native binary) unless the build is
+  approved - you'll see `[ERR_PNPM_IGNORED_BUILDS]` and the binary won't
+  actually be there (`esbuild --version` fails) even though install
+  reported success. Fix: `pnpm approve-builds <pkg>` (writes
+  `pnpm-workspace.yaml`'s `allowBuilds:`, commit it) or `pnpm rebuild
+  <pkg>`. `packageManager` in `package.json` also needs to be set for
+  `pnpm/action-setup@v4` in CI - without it the action has no version to
+  install and the workflow fails immediately.
 
 ## Deployment
 
