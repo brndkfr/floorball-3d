@@ -2,6 +2,7 @@
   "name": "floorball-3d",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.0.9",
   "description": "Test runner + CI build/size-check tooling. The app itself still ships with zero build step for local dev - see CLAUDE.md - this only stages a minified dist/ for deploy.",
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
