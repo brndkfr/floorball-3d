@@ -4,7 +4,7 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { CACHE_BUST, GOAL_LINE_FROM_BOARD } from './constants.js';
 import { state } from './state.js';
 import { scene, renderer } from './scene.js';
-import { loaded, failed } from './status.js';
+import { expectLoad, loaded, failed } from './status.js';
 import { selectObject } from './selection.js';
 
 // --- layer: goalie - switchable between two models. `state.goalieGroup`
@@ -19,6 +19,7 @@ goalieCheckbox.addEventListener('change', () => {
 });
 
 function loadGoalieModel(mtlUrl, objUrl, onReady) {
+  expectLoad(objUrl);
   const mtlLoader = new MTLLoader();
   mtlLoader.load(
     mtlUrl + CACHE_BUST,

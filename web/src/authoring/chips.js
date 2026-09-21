@@ -13,7 +13,7 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { CACHE_BUST } from '../constants.js';
 import { state } from '../state.js';
 import { scene } from '../scene.js';
-import { loaded, failed } from '../status.js';
+import { expectLoad, loaded, failed } from '../status.js';
 import { TEAM_HOME, TEAM_AWAY } from '../tokens.js';
 import { ensureDoc, newId } from './doc.js';
 import { saveDoc } from './storage.js';
@@ -49,6 +49,7 @@ const rings = [];   // { mesh, elapsed, dur, fromScale, toScale, fromOpacity }
 state.chipsRoot = new THREE.Group();
 scene.add(state.chipsRoot);
 
+expectLoad('player_chip.obj');
 const chipMtl = new MTLLoader();
 chipMtl.load(
   'assets/player_chip.mtl' + CACHE_BUST,

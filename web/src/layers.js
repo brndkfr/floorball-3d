@@ -5,13 +5,14 @@ import { CACHE_BUST, RINK_L, HALF_W, GRID_TILE_SIZE, GRID_N_COLS, GRID_N_ROWS, G
 import { state } from './state.js';
 import { scene } from './scene.js';
 import { bindLayerToggle, makeLabelSprite } from './utils.js';
-import { loaded, failed } from './status.js';
+import { expectLoad, loaded, failed } from './status.js';
 
 // --- layer: rink (board + IFF markings) ---
 const rinkCheckbox = document.getElementById('rinkCheckbox');
 let rinkGroup = null;
 bindLayerToggle(rinkCheckbox, () => rinkGroup);
 
+expectLoad('rink.obj');
 const rinkMtlLoader = new MTLLoader();
 rinkMtlLoader.load(
   'assets/rink.mtl' + CACHE_BUST,
@@ -43,6 +44,7 @@ const goalsCheckbox = document.getElementById('goalsCheckbox');
 let goalsGroup = null;
 bindLayerToggle(goalsCheckbox, () => goalsGroup);
 
+expectLoad('floorball_goal.obj');
 const goalMtlLoader = new MTLLoader();
 goalMtlLoader.load(
   'assets/floorball_goal.mtl' + CACHE_BUST,
@@ -91,6 +93,7 @@ goalMtlLoader.load(
 const ballCheckbox = document.getElementById('ballCheckbox');
 bindLayerToggle(ballCheckbox, () => state.ballGroup);
 
+expectLoad('ball.obj');
 const ballMtlLoader = new MTLLoader();
 ballMtlLoader.load(
   'assets/ball.mtl' + CACHE_BUST,
@@ -125,6 +128,7 @@ const gridTilesCheckbox = document.getElementById('gridTilesCheckbox');
 let gridTilesGroup = null;
 bindLayerToggle(gridTilesCheckbox, () => gridTilesGroup);
 
+expectLoad('grid_tiles.obj');
 const gridTilesMtlLoader = new MTLLoader();
 gridTilesMtlLoader.load(
   'assets/grid_tiles.mtl' + CACHE_BUST,
@@ -173,6 +177,7 @@ const legendEl = document.getElementById('legend');
 let tacticalGroup = null;
 bindLayerToggle(tacticalCheckbox, () => tacticalGroup);
 
+expectLoad('tactical_zones.obj');
 const tacticalMtlLoader = new MTLLoader();
 tacticalMtlLoader.load(
   'assets/tactical_zones.mtl' + CACHE_BUST,
