@@ -814,7 +814,7 @@ frame.photo = {
     home: chipId | null,        // user-editable via the dropdown
     away: chipId | null,
     autoDetected: {
-      home: { chipId, source: 'yolo' | 'nearest', confidence: number | null } | null,
+      home: { chipId, source: 'yolo' | 'pose' | 'nearest', confidence: number | null } | null,
       away: { ... } | null,
     },
   },
@@ -954,9 +954,36 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
 - **Auto-detect / calibration follow-ups still open**:
   - **[B-BACK-004]** [open] Whole-image auto-detect false positives on red
     spectator chairs and sponsor banners winning over the actual goal.
-  - **[B-BACK-005]** [open] Occluded-goalie detection (kneeling white gear
-    against white ice) - likely not fixable classically, needs Phase 4
-    pose cues.
+  - **[B-BACK-005]** [mitigated] Occluded-goalie detection (kneeling white
+    gear against white ice). As predicted, addressed with Phase 4 pose
+    cues (B-PHASE-005) rather than classically:
+    [detect-goalie.js](../web/src/authoring/photo-overlay/detect-goalie.js)'s
+    Layer 1 (object detector on the crease ROI) now falls back to a Layer
+    1b pass - `detectPose()` on the same ROI at a relaxed threshold -
+    whenever Layer 1 finds nothing at all. A kneeling/occluded goalie's
+    head/torso keypoints can still register even where the plain object
+    detector's box confidence never clears its own threshold. New pure
+    helpers: `footPixelFromKeypoints()` (estimates the foot from ankle
+    keypoints when confident, since a kneeling player's bbox-bottom is
+    knee/shin height, not foot height - falls back to the existing
+    bbox-bottom `footPixel()` when neither ankle is confident) and
+    `pickGoalieCandidate()` (prefers any Layer 1 object-detector candidate
+    over Layer 1b pose candidates, since Layer 1 is already more
+    reliable when it finds something). The result's `source` field is now
+    `'yolo' | 'pose' | 'nearest'` (was `'yolo' | 'nearest'`), threaded
+    through `photo.goalies.autoDetected` and the Step-4 status line (data
+    model in §4.4 updated to match). `isFootInCrease` and
+    `projectCreaseRoi` were also exported and unit-tested for the first
+    time in the process (previously untested despite being pure). 16 new
+    node tests in `test/detect-goalie.test.js`. Verified: `pnpm test`
+    201/201, `pnpm run build` passes, `test-e2e/photo-stepper.spec.js`
+    4/4. **Not verified:** against a real occluded-goalie photo in a live
+    browser (no such fixture exists in the repo, same limitation noted
+    elsewhere for this panel) - the fallback's trigger condition (Layer 1
+    empty) and candidate math are covered by unit tests, but whether the
+    pose model actually detects keypoints on a real kneeling, heavily-
+    padded goalie is unverified. Layer 2 (classical CV blob-in-mouth,
+    for when pose also comes up empty) remains deferred.
   - **[B-BACK-006]** [mitigated] Auto-disambiguate L/R symmetric goal
     solves. `detectAndPlace()` in
     [photo-overlay.js](../web/src/authoring/photo-overlay/photo-overlay.js)

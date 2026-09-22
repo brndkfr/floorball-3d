@@ -1952,10 +1952,11 @@ autoAssignGoaliesBtn.addEventListener('click', async () => {
           if (p) { p.team = team; p.role = 'goalie'; }
         }
         goalies[team] = chipId;
-        autoDetected[team] = { chipId, source: 'yolo', confidence: detected.score };
+        autoDetected[team] = { chipId, source: detected.source, confidence: detected.score };
         continue;
       }
-      // Layer 1 miss - fall back to nearest own-team chip to this goal.
+      // Layer 1 (+ Layer 1b pose fallback, B-BACK-005) both missed - fall
+      // back to nearest own-team chip to this goal.
       const gz = end === 'A' ? GOAL_LINE_FROM_BOARD : RINK_L - GOAL_LINE_FROM_BOARD;
       let bestId = null, bestDistSq = Infinity;
       for (const p of players) {
@@ -1978,6 +1979,7 @@ autoAssignGoaliesBtn.addEventListener('click', async () => {
       const a = autoDetected[t];
       if (!a) return `${t}: none`;
       if (a.source === 'yolo') return `${t}: #${a.chipId} (yolo ${a.confidence.toFixed(2)})`;
+      if (a.source === 'pose') return `${t}: #${a.chipId} (pose ${a.confidence.toFixed(2)})`;
       return `${t}: #${a.chipId} (nearest chip)`;
     });
     insightsReadout.textContent = `goalies · ${parts.join(' · ')}`;
