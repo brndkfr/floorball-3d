@@ -1214,14 +1214,28 @@ added.
     coordinate math (points/x·z/cx·cz), unchanged behaviour. 5 new tests
     (points, rect/text anchor, circle centre, no-op on unrelated fields,
     a shape carrying more than one representation at once).
-  154 tests across 11 files now, up from 138 (S-BACK-012's own +12).
-  Verified: `pnpm test` 154/154, `pnpm run build` + `check:size` pass, and
+  - [frame-list.js](../web/src/authoring/frame-list.js) -
+    `isValidFrameIndex`/`clampInsertIndex`/`canRemoveFrame`/
+    `clampCurrentAfterRemoval`, the bounds-check math behind `frames.js`'s
+    `selectFrame`/`insertBlankFrame`/`deleteFrame` (the actual
+    `doc.frames.splice()` call stays in `frames.js` - only the "is this
+    index valid / where does the pointer land after removal" decisions
+    moved out). 9 new tests covering every boundary: index 0 and
+    length-1 valid, length itself and negative invalid; insert-at-end and
+    negative/past-the-end clamping; refusing to remove the last remaining
+    frame; and the pointer pull-back when the removed frame was both
+    current and last.
+  163 tests across 12 files now, up from 138 (S-BACK-012's own +12).
+  Verified: `pnpm test` 163/163, `pnpm run build` + `check:size` pass, and
   `test-e2e/layers-panel.spec.js` (drives `reorderChips`/`reorderShapes`
-  through real drag-and-drop) still 2/2. **Still not done:** `frames.js`'s
-  frame-list mutations, and `history.js`'s own `apply()`/scene-rebuild
-  glue (inherently impure - it's what `history-stack.js` was extracted
-  *from*). `trajectory.js` and `coverage.js` remain entangled with
-  `scene.js` for the same reason as before.
+  through real drag-and-drop) still 2/2 - no existing e2e spec exercises
+  frame CRUD directly, so `frame-list.js`'s extraction relies on the node
+  tests plus the fact it's a mechanical, behaviour-preserving move (same
+  comparisons, same splice calls, still in `frames.js`). **Still not
+  done:** `history.js`'s own `apply()`/scene-rebuild glue (inherently
+  impure - it's what `history-stack.js` was extracted *from*).
+  `trajectory.js` and `coverage.js` remain entangled with `scene.js` for
+  the same reason as before.
 - **[S-BACK-010]** [shipped, on branch `perf/ci-and-load`] **Deploy ships
   unreferenced libraries.** Re-measured (the external review's `web/lib`
   numbers didn't match this repo - e.g. it claimed a vendored/minified

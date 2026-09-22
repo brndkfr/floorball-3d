@@ -11,6 +11,7 @@ import { rebuildConesFromDoc } from './cones.js';
 import { rebuildBallsFromDoc } from './balls.js';
 import { saveDoc } from './storage.js';
 import { applyActorsFromScheme } from './actors.js';
+import { isValidFrameIndex, clampInsertIndex, canRemoveFrame, clampCurrentAfterRemoval } from './frame-list.js';
 
 function afterMutation(pushHistory = true) {
   saveDoc();
@@ -33,7 +34,7 @@ export function getCurrentIndex() {
 
 export function selectFrame(i) {
   const doc = ensureDoc();
-  if (i < 0 || i >= doc.frames.length) return;
+  if (!isValidFrameIndex(doc.frames.length, i)) return;
   if (doc.currentFrame === i) return;
   doc.currentFrame = i;
   afterMutation();
@@ -55,7 +56,7 @@ export function duplicateFrame(srcIdx = getCurrentIndex(), insertAt = srcIdx + 1
 
 export function insertBlankFrame(at) {
   const doc = ensureDoc();
-  const idx = Math.min(Math.max(at, 0), doc.frames.length);
+  const idx = clampInsertIndex(doc.frames.length, at);
   doc.frames.splice(idx, 0, emptyFrame());
   doc.currentFrame = idx;
   afterMutation();
@@ -64,10 +65,9 @@ export function insertBlankFrame(at) {
 
 export function deleteFrame(i) {
   const doc = ensureDoc();
-  if (doc.frames.length <= 1) return false;   // must always keep frame 0
-  if (i < 0 || i >= doc.frames.length) return false;
+  if (!canRemoveFrame(doc.frames.length, i)) return false;   // must always keep frame 0
   doc.frames.splice(i, 1);
-  if (doc.currentFrame >= doc.frames.length) doc.currentFrame = doc.frames.length - 1;
+  doc.currentFrame = clampCurrentAfterRemoval(doc.frames.length, doc.currentFrame);
   afterMutation();
   return true;
 }
