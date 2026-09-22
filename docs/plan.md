@@ -1202,7 +1202,7 @@ added.
   drifting when a loader is added or removed. The previous literal `7`
   actually undercounted the real 8 loaders and could clear the indicator
   before every asset had finished.
-- **[S-BACK-008]** [shipped, on branch `perf/ci-and-load`] **CI/build
+- **[S-BACK-008]** [shipped] **CI/build
   pipeline: test + minify + size-budget gate before deploy.** The deploy
   workflow used to upload `web/` byte-for-byte with no test/build/size
   gate, and `constants.js`'s `CACHE_BUST` was `?t=${Date.now()}` -
@@ -1240,9 +1240,22 @@ added.
     "load size" numbers was about `web/lib`/texture size, separate from
     this build-pipeline change and not attempted - would need image
     tooling and visual verification this session doesn't have).
-  - Deliberately kept on a branch, not merged to `main` - this changes the
-    live deploy artifact and deserves a real PR + Actions run before it
-    touches the live site.
+  - **Now on `main`** (as of this check): this work was originally kept
+    on a `perf/ci-and-load` branch pending a real PR + Actions run, but
+    the same CI/build/size gate was independently re-implemented directly
+    on `main` via commit `690151b` ("CI: test/build/size gate + trim
+    unreferenced deploy weight (#1)") and has since been extended further
+    (Playwright e2e in **S-BACK-014**, vendored-lib deletion in
+    **S-BACK-013**). `main`'s current `deploy-pages.yml` runs `pnpm test`,
+    the Playwright e2e suite, `pnpm run build`, and `pnpm run check:size`
+    in the `build` job before `deploy` uploads `dist/` - confirmed by
+    reading the live file, not by an Actions run inspected this session.
+    The `perf/ci-and-load` branch itself is now stale and superseded -
+    merging it would regress `main` (it would drop the e2e step and the
+    `@playwright/test` dependency, and reintroduce `EXCLUDE_DIRS` entries
+    for `lib/shoelace`/`lib/open-props`/`lib/radix-colors`/`design-sample`,
+    which **S-BACK-013** deleted outright). Recommend deleting the branch
+    rather than merging it.
 - **[S-BACK-009]** [in-progress] **Automated tests for the pure-logic
   modules.** `package.json` + `node --test` added (see S-BACK-001/002).
   60 tests across 5 files now cover `doc.js` (id sanitization/migration),
@@ -1312,7 +1325,7 @@ added.
   impure - it's what `history-stack.js` was extracted *from*).
   `trajectory.js` and `coverage.js` remain entangled with `scene.js` for
   the same reason as before.
-- **[S-BACK-010]** [shipped, on branch `perf/ci-and-load`] **Deploy ships
+- **[S-BACK-010]** [shipped] **Deploy ships
   unreferenced libraries.** Re-measured (the external review's `web/lib`
   numbers didn't match this repo - e.g. it claimed a vendored/minified
   `three.module.js` that doesn't exist here at all, three.js loads from
