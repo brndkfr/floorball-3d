@@ -913,8 +913,17 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
     pose cues.
   - **[B-BACK-006]** [open] Auto-disambiguate L/R symmetric goal solves
     (currently manual "Flip left/right" button).
-  - **[B-BACK-007]** [open] Cosmetic: chip labels sometimes overlap
-    landmark labels in cluttered photos.
+  - **[B-BACK-007]** [shipped] Cosmetic: chip labels sometimes overlap
+    landmark labels in cluttered photos. Fixed in
+    [photo-canvas.js](../web/src/authoring/photo-overlay/photo-canvas.js)
+    with a per-frame `placeLabelRect()` helper: every label drawn in
+    `redraw()` (player chip labels, then landmark marker labels) measures
+    its own bounding box and, if it would overlap a label already placed
+    this frame, gets nudged straight down in fixed steps until clear (or
+    after 8 attempts, whichever comes first). No data-model change, no new
+    dependency - pure canvas-layout fix scoped to one render pass. Not
+    unit-tested (canvas-only rendering, no pure logic to isolate, same as
+    the rest of this module); `pnpm test` still 126/126 green.
 
 ---
 

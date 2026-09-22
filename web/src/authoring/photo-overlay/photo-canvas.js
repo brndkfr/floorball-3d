@@ -503,9 +503,27 @@ export function setRoiChangeHandler(fn) { onRoiChange = fn; }
 let pendingMarker = null; // [imgX, imgY] or null
 export function setPendingMarker(xy) { pendingMarker = xy ? [xy[0], xy[1]] : null; redraw(); }
 
+// Nudges a label down (in fixed steps) until its bounding box clears every
+// rect already placed this frame, so chip labels and landmark labels drawn
+// near the same photo point (common around a goal cluster) don't overlap.
+function placeLabelRect(placedRects, x, y, width, height) {
+  const STEP = height + 3;
+  let ly = y;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const rect = { x: x - 2, y: ly - height, w: width + 4, h: height + 4 };
+    const overlaps = placedRects.some(r =>
+      rect.x < r.x + r.w && rect.x + rect.w > r.x && rect.y < r.y + r.h && rect.y + rect.h > r.y);
+    if (!overlaps) { placedRects.push(rect); return ly; }
+    ly += STEP;
+  }
+  placedRects.push({ x: x - 2, y: ly - height, w: width + 4, h: height + 4 });
+  return ly;
+}
+
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!image) return;
+  const labelRects = [];
   const vr = computeViewRect();
   ctx.drawImage(image, vr.x, vr.y, vr.w, vr.h);
   if (edgeOverlayEnabled && edgeOverlay) {
@@ -692,10 +710,12 @@ function redraw() {
       ctx.save();
       ctx.font = 'bold 11px system-ui, sans-serif';
       ctx.textBaseline = 'middle';
+      const lx = cx + 12;
+      const width = ctx.measureText(chip.label).width;
+      const ly = placeLabelRect(labelRects, lx, cy - 12, width, 14);
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(0,0,0,0.7)';
       ctx.fillStyle = color;
-      const lx = cx + 12, ly = cy - 12;
       ctx.strokeText(chip.label, lx, ly);
       ctx.fillText(chip.label, lx, ly);
       ctx.restore();
@@ -748,13 +768,18 @@ function redraw() {
     ctx.moveTo(cx, cy - 9); ctx.lineTo(cx, cy + 9);
     ctx.stroke();
     // Outlined text (dark stroke behind the fill) so the label stays
-    // legible over any photo background, not just dark ones.
+    // legible over any photo background, not just dark ones. Nudged down
+    // (via placeLabelRect) when it would land on a chip/landmark label
+    // already placed this frame - common in a cluttered goal-area cluster.
     const label = `#${i} ${labelResolver(key)}`;
+    const lx = cx + 10;
+    const width = ctx.measureText(label).width;
+    const ly = placeLabelRect(labelRects, lx, cy - 8, width, 11);
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-    ctx.strokeText(label, cx + 10, cy - 8);
+    ctx.strokeText(label, lx, ly);
     ctx.fillStyle = dragging ? '#ffe14f' : '#4fe0ff';
-    ctx.fillText(label, cx + 10, cy - 8);
+    ctx.fillText(label, lx, ly);
     ctx.lineWidth = 1;
   }
   if (roi) {
