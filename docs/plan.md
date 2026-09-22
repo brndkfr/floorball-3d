@@ -662,9 +662,47 @@ playback + tracking + interpolation).
   converges to wrong values (observed: 20° on a mid-focal shot). Mix at
   least two of {floor y=0, post-top y=1150, board-top y=500}. Warning banner
   is shipped; the underlying trap remains a fundamental PnP constraint.
-- **[B-BUG-002]** [in-progress] **Manual calibration UX is a dev console** -
-  20+ controls at once, no guidance. The stepper redesign in 4.3 addresses
-  this; Steps 1-2 shipped, Steps 3-4 depend on Phases 2/3.
+- **[B-BUG-002]** [shipped] **Manual calibration UX is a dev console** -
+  20+ controls at once, no guidance. The stepper redesign in 4.3
+  addresses this. Steps 1-2 shipped previously; Steps 3-4 shipped this
+  session on top of the now-complete Phases 2/3/3.5/4/5:
+  - Horizontal 4-pill stepper indicator (`#photoStepper`) at the top of
+    the photo panel showing Photo -> Align -> Players -> Insights.
+    Pills report `pending` / `active` / `complete` state (colour-coded
+    off `tokens.css`), reflect `aria-current="step"` on the active
+    pill, and click-to-jump to the matching section (Steps 3/4 force-
+    open their `<details>` and scroll into view).
+  - Primary-CTA banners at the top of the Step 3 and Step 4
+    `<details>`: a single guided-hint line + one enabled action button.
+    Step 3's CTA delegates to the existing `Auto-detect players`
+    button; Step 4's CTA either fires `Set ball` when players are placed
+    but the ball isn't, or focuses the target-goal radio otherwise.
+    Existing controls stay in place below the banner - the redesign
+    guides the flow without hiding what the user already knows.
+  - Pure step-computation extracted to
+    [photo-step-tracker.js](../web/src/authoring/photo-overlay/photo-step-tracker.js)
+    (`currentStep` / `stepStatuses` / `guidedHint` / `isPoseUsable`),
+    fully unit-tested (19 node tests: photo-not-loaded / landmarks-below-
+    threshold / reproj-error-too-high / usable-pose-no-players /
+    players-no-ball / everything-placed / custom threshold overrides,
+    plus per-status transitions and hint-text branches).
+  - Auto-open logic: whenever the derived current step transitions to
+    Players or Insights, that step's `<details>` opens automatically
+    on the first transition into the step - a user's manual collapse
+    later isn't fought.
+  - E2e coverage in
+    [test-e2e/photo-stepper.spec.js](../test-e2e/photo-stepper.spec.js):
+    stepper renders 4 pills with Photo active on fresh load, Step 3/4
+    CTA banners show the right hint + disabled CTA when preconditions
+    aren't met, and pill clicks force-open the matching details block.
+  - Deliberately kept: the existing scattered per-tool controls
+    (feedback mode, per-player team/facing buttons, add-player mode,
+    goalie selects) are still where they were - reorganising THOSE
+    into "Advanced" accordions per §4.3 is a real refactor of ~300
+    lines of DOM wiring in `photo-overlay.js` and out of scope for the
+    stepper polish. The stepper + primary CTAs deliver the "one
+    primary action per step" plan-level UX principle; the fine
+    controls remain accessible via the same buttons as before.
 - **[B-BUG-003]** [open] **Long-baseline point sensitivity**: board/centre-line points ~16-20m from
   the goal cluster amplify small pixel-placement errors into large pose
   error far more than near-goal points do (observed this session: adding 3

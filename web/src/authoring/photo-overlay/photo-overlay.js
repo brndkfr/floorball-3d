@@ -26,6 +26,15 @@ import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from '../chips.js';
 import * as photoCache from './photo-cache.js';
 import { recomputeInsights } from './insights-overlay.js';
 import { enterPhotoPreview3D, exitPhotoPreview3D, isPhotoPreview3D } from './preview-3d.js';
+import {
+  currentStep as computeCurrentStep,
+  stepStatuses as computeStepStatuses,
+  guidedHint as computeGuidedHint,
+  STEP_PHOTO,
+  STEP_ALIGN,
+  STEP_PLAYERS,
+  STEP_INSIGHTS,
+} from './photo-step-tracker.js';
 
 // Structured, in-page debug log (capped) so calibration state can be
 // inspected from devtools/automation at any later point in the session,
@@ -79,6 +88,13 @@ const setBallBtn = document.getElementById('photoSetBallBtn');
 const bodyOutlineToggle = document.getElementById('photoBodyOutlineToggle');
 const step3Status = document.getElementById('photoStep3Status');
 const STEP3_MAX_REPROJ_ERROR_PX = 20;
+const step3Cta = document.getElementById('photoStep3Cta');
+const step3Hint = document.getElementById('photoStep3Hint');
+const step3PrimaryBtn = document.getElementById('photoStep3PrimaryBtn');
+const step4Cta = document.getElementById('photoStep4Cta');
+const step4Hint = document.getElementById('photoStep4Hint');
+const step4PrimaryBtn = document.getElementById('photoStep4PrimaryBtn');
+const stepperEl = document.getElementById('photoStepper');
 const setTeamHomeBtn = document.getElementById('photoSetTeamHomeBtn');
 const setTeamAwayBtn = document.getElementById('photoSetTeamAwayBtn');
 const deletePlayerBtn = document.getElementById('photoDeletePlayerBtn');
@@ -1048,6 +1064,97 @@ function updateStep3Enabled() {
   const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
   const hasPlayers = !!(photo?.players && photo.players.length);
   estimateFacingsBtn.disabled = !enabled || !hasPlayers;
+  updateStepper();
+}
+
+// Snapshot of the current calibration + scene state used by the guided
+// stepper (B-BUG-002). Kept intentionally minimal - matches the input
+// shape of photo-step-tracker.currentStep().
+function stepperSnapshot() {
+  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
+  const placedCount = photoCanvas.getPlacedPoints?.().length || 0;
+  return {
+    hasPhoto: photoCanvas.hasPhoto?.() || false,
+    landmarkCount: placedCount,
+    reprojErrorPx: lastPose?.reprojErrorPx ?? null,
+    playerCount: photo?.players?.length || 0,
+    hasBall: !!(photo?.ball),
+    minLandmarks: MIN_LANDMARKS,
+    maxReprojErrorPx: STEP3_MAX_REPROJ_ERROR_PX,
+  };
+}
+
+let lastStepperStep = null;
+function updateStepper() {
+  if (!stepperEl) return;
+  const snap = stepperSnapshot();
+  const step = computeCurrentStep(snap);
+  const statuses = computeStepStatuses(snap);
+  const hint = computeGuidedHint(snap);
+  for (const el of stepperEl.querySelectorAll('.ps-step')) {
+    const n = Number(el.dataset.step);
+    el.classList.remove('active', 'complete', 'pending');
+    el.classList.add(statuses[n]);
+    el.setAttribute('aria-current', n === step ? 'step' : 'false');
+  }
+  // Steps 3/4 hint banner text + primary CTA state.
+  if (step3Hint) step3Hint.textContent = step >= STEP_PLAYERS ? hint : 'Solve the camera pose first.';
+  if (step4Hint) step4Hint.textContent = step === STEP_INSIGHTS ? hint : 'Needs players + a placed ball first.';
+  if (step3PrimaryBtn) step3PrimaryBtn.disabled = autoDetectPlayersBtn.disabled;
+  if (step4PrimaryBtn) {
+    step4PrimaryBtn.disabled = step !== STEP_INSIGHTS;
+    step4PrimaryBtn.textContent = snap.playerCount && !snap.hasBall ? 'Set ball' : 'Pick target goal';
+  }
+  // Auto-open the details block for the current step so the user doesn't
+  // have to hunt for it - only on a transition into that step so a manual
+  // collapse the user made isn't fought.
+  if (lastStepperStep !== step) {
+    if (step === STEP_PLAYERS && step3Details) step3Details.open = true;
+    if (step === STEP_INSIGHTS && step4Details) step4Details.open = true;
+    lastStepperStep = step;
+  }
+}
+
+// Stepper pill click: force-open the matching details block and scroll
+// it into view. Steps 1/2 scroll to the top of the panel (their controls
+// aren't in a details wrapper).
+if (stepperEl) {
+  stepperEl.addEventListener('click', (e) => {
+    const target = e.target.closest('.ps-step');
+    if (!target) return;
+    const n = Number(target.dataset.step);
+    if (n === STEP_PLAYERS && step3Details) {
+      step3Details.open = true;
+      step3Details.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    } else if (n === STEP_INSIGHTS && step4Details) {
+      step4Details.open = true;
+      step4Details.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    } else if (fileInput) {
+      fileInput.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+  });
+}
+
+// The Step 3/4 primary CTAs are shortcuts to the existing controls the
+// stepper is guiding the user toward - reuse the wired buttons instead
+// of duplicating handlers.
+if (step3PrimaryBtn) {
+  step3PrimaryBtn.addEventListener('click', () => {
+    if (!autoDetectPlayersBtn.disabled) autoDetectPlayersBtn.click();
+  });
+}
+if (step4PrimaryBtn) {
+  step4PrimaryBtn.addEventListener('click', () => {
+    const snap = stepperSnapshot();
+    if (snap.playerCount && !snap.hasBall && !setBallBtn.disabled) {
+      setBallBtn.click();
+      return;
+    }
+    const active = targetGoalARadio.checked || targetGoalBRadio.checked
+      ? (targetGoalARadio.checked ? targetGoalARadio : targetGoalBRadio)
+      : targetGoalARadio;
+    active?.focus();
+  });
 }
 
 // Ring of image-px points tracing a real-world-radius circle around a floor
@@ -1657,6 +1764,7 @@ function updateStep4() {
   if (!enabled) {
     resetFacingBtn.disabled = true;
     insightsReadout.textContent = '-';
+    updateStepper();
     return;
   }
 
@@ -1683,6 +1791,7 @@ function updateStep4() {
   insightsReadout.textContent = `angle: ${Math.round(shot.angleDeg)}° · dist: ${Math.round(shot.distance)}mm · `
     + `coverage: ${coveragePct != null ? Math.round(coveragePct) + '%' : '-'} · `
     + `clear passes: ${clearCount}/${passes.length}`;
+  updateStepper();
 }
 
 function setTargetGoal(letter) {
