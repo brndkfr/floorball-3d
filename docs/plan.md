@@ -295,9 +295,35 @@ Still on the backlog from that exploration:
      Size slider (mm), rotation buttons (0/90/-90), and weight toggle
      (Regular/Bold) that override the autofit when the user wants a specific
      look.
-- **[A-BACK-005]** [open] **Wireframe/contour overlay mode**: a high-contrast
-  outline-only render mode for the rink/goal overlay in Mode B, for photos
-  where a solid overlay is hard to see against similar-coloured backgrounds.
+- **[A-BACK-005]** [shipped] **Wireframe/contour overlay mode**: a
+  high-contrast outline-only render mode for the rink/goal overlay in
+  Mode B, for photos where a solid overlay blends into similar-coloured
+  backgrounds. New [wireframe.js](../web/src/authoring/photo-overlay/wireframe.js)
+  walks the scene by `userData.wireframeSource` markers set in
+  [layers.js](../web/src/layers.js) on `rinkGroup` and `goalsGroup`
+  (deliberately not ball / grid / tactical zones - only the surfaces
+  that camouflage into typical photos). For each tagged descendant
+  `Mesh` it swaps in a bright-cyan `LineSegments` (`EdgesGeometry`,
+  20° threshold) as a child, hides the underlying mesh, and records
+  enough state to fully restore on disable. Collects meshes before
+  mutating per CLAUDE.md's traverse gotcha. New `#photoWireframeToggle`
+  checkbox in [index.html](../web/index.html) under the alignment
+  slider; [photo-overlay.js](../web/src/authoring/photo-overlay/photo-overlay.js)
+  applies on Enter Photo View if checked, always disables on Exit
+  (so a re-entry never inherits a mixed state), and hot-toggles while
+  in photo view. Not persisted per doc/frame - session-scoped display
+  preference. Verified in a live browser via a CDP cache-clear reload:
+  before enable = 3 meshes visible / 0 overlays; after enable = 3
+  meshes hidden / 3 overlays, `isWireframeActive()` true; double-enable
+  is idempotent (still 3); after disable = 3 visible / 0 overlays,
+  active back to false. Not covered by a Node test - the module only
+  does three.js scene mutation, no pure logic to isolate. **Caveat:**
+  `LineBasicMaterial` linewidth is clamped to 1 px on every WebGL
+  driver, so contours look faint from a distant establishing camera;
+  in the intended Photo Overlay use (camera close to a single goal
+  filling most of the frame) the goal frame reads fine. Follow-up if
+  needed: swap to `Line2` / `LineMaterial` from three's addons for
+  real wide lines.
 - **[A-BACK-006]** [shipped] **Choreograph mode** (frame-recording UX).
   New "Choreo" button in the timeline toolbar. Clicking it duplicates the
   current frame -> creates a draft frame N+1, switches to it, snapshots

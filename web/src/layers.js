@@ -27,6 +27,7 @@ rinkMtlLoader.load(
       'assets/rink.obj' + CACHE_BUST,
       (object) => {
         object.visible = rinkCheckbox.checked;
+        object.userData.wireframeSource = 'rink';
         rinkGroup = object;
         scene.add(object);
         loaded('rink.obj');
@@ -76,6 +77,7 @@ goalMtlLoader.load(
         goalsGroup = new THREE.Group();
         goalsGroup.add(object, goalB);
         goalsGroup.visible = goalsCheckbox.checked;
+        goalsGroup.userData.wireframeSource = 'goals';
         scene.add(goalsGroup);
         state.goalInstances.push(object, goalB);
 

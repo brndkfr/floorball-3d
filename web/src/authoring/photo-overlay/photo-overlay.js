@@ -10,6 +10,7 @@ import { WORLD_LANDMARKS, LANDMARK_LABELS, MIN_LANDMARKS } from './landmarks.js'
 import { solveCameraPose } from './pnp.js';
 import * as photoCanvas from './photo-canvas.js';
 import { enterPhoto, exitPhoto, isPhoto, fitToPhotoRect, setOverlayOpacity } from './view.js';
+import { enableWireframeOverlay, disableWireframeOverlay } from './wireframe.js';
 import { detectGoal, computeEdgeOverlay } from './detect.js';
 import { detectPlayers } from './detect-players.js';
 import { detectPose, matchPoseToPlayers, detectPoseInBoxes } from './detect-pose.js';
@@ -64,6 +65,7 @@ const advancedPanel = document.getElementById('photoAdvanced');
 const autoBanner = document.getElementById('photoAutoBanner');
 const refineBtn = document.getElementById('photoRefineBtn');
 const alignSlider = document.getElementById('photoAlignSlider');
+const wireframeToggle = document.getElementById('photoWireframeToggle');
 const hintPanel = document.getElementById('photoHintPanel');
 const hintText = document.getElementById('photoHintText');
 const hintDiagram = document.getElementById('photoHintDiagram');
@@ -973,14 +975,22 @@ enterBtn.addEventListener('click', async () => {
   enterPhoto();
   fitToPhotoRect(photoCanvas.getPhotoRect());
   setOverlayOpacity(Number(opacitySlider.value) / 100);
+  if (wireframeToggle.checked) enableWireframeOverlay();
   setCalibrating(false); // locked in: let clicks reach the 3D scene again (chips etc.)
   photoCanvas.setShowMarkers(false); // clean comparison view, not cluttered with calibration crosshairs
 });
 
 exitBtn.addEventListener('click', () => {
+  disableWireframeOverlay();
   exitPhoto();
   setCalibrating(photoCanvas.hasPhoto()); // still have a photo loaded - resume landmark picking
   photoCanvas.setShowMarkers(true);
+});
+
+wireframeToggle.addEventListener('change', () => {
+  if (!isPhoto()) return; // takes effect on the next Enter Photo View
+  if (wireframeToggle.checked) enableWireframeOverlay();
+  else disableWireframeOverlay();
 });
 
 function leaveRinkFit() {
