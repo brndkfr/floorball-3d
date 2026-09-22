@@ -162,8 +162,27 @@ export. Data model is `state.doc` v2 with a per-frame `scheme` accessor
 - **[A-GAP-002]** [open] **Frame thumbnails** on the timeline (per-frame
   top-down snapshot of chips + shapes; needs invalidation + caching so it
   isn't re-rendered every tick).
-- **[A-GAP-003]** [open] **Named projects in a Library** (currently one
-  persisted doc).
+- **[A-GAP-003]** [shipped] **Named projects in a Library**. Each project
+  is now a first-class localStorage entry
+  (`floorball-3d:project:<id>`) with `doc.meta = { id, name, createdAt,
+  modifiedAt }`; a small `floorball-3d:currentProjectId` pointer picks
+  the one being edited. The legacy singleton `floorball-3d:doc` and the
+  earlier `floorball-3d:slot:<name>` keys are migrated once by
+  `migrateLegacyStorage()` (guarded by `floorball-3d:migrated:v1`) and
+  then deleted - the singleton becomes "My scheme" and every named slot
+  becomes its own project. Dock gets a project-name button (leftmost,
+  click to rename); overflow menu swaps `Save scheme...` / `Load
+  scheme...` for `Rename project...` and `Library...`. The new
+  [library-dialog.js](../web/src/authoring/library-dialog.js) modal
+  lists every persisted project (newest first) with load / rename /
+  duplicate / delete row actions and a `New project...` header button;
+  `switchToProject()` re-runs every rebuild hook and re-seeds the
+  history stack so undo can't reach across projects. Import (`Import
+  JSON...`) and share-URL load both go through `adoptDocAsProject()`
+  which forces a fresh id + name so re-importing your own export never
+  clobbers the current project. Export filename now includes the
+  project name. Tests cover project CRUD, duplicate, adoption, and the
+  one-shot legacy migration.
 
 ### 3.3 Backlog
 
@@ -992,6 +1011,25 @@ added.
   `/memories/repo/design-system-vendoring.md`) when that redesign starts,
   and re-add an `EXCLUDE_DIRS` entry in `build.mjs` at the same time if
   `design-sample/` comes back as a non-shipped reference.
+- **[S-BACK-014]** [shipped] **Automated browser-level integration
+  tests.** `pnpm test` (node --test) only covered pure logic; the
+  A-GAP-003 refactor surfaced a real failure mode (module init reading
+  `state.doc` before `authoring/index.js`'s top-level-await bootstrap
+  finalises it) that no Node test could have caught. Added a
+  Playwright-based e2e suite ([test-e2e/library.spec.js](../test-e2e/library.spec.js)),
+  a portable static-file server ([scripts/serve-static.mjs](../scripts/serve-static.mjs))
+  wired via [playwright.config.js](../playwright.config.js)'s
+  `webServer` so CI doesn't depend on Python, a `pnpm test:e2e` script,
+  and a new CI step in
+  [.github/workflows/deploy-pages.yml](../.github/workflows/deploy-pages.yml)'s
+  `build` job that installs Chromium via `playwright install --with-deps`
+  and gates the deploy the same way `pnpm test` does (failure uploads
+  the Playwright report as an artifact). Initial coverage:
+  `library.spec.js` for the A-GAP-003 flows - rename + reload
+  persistence, new + switch + state isolation, legacy-key migration on
+  first boot, delete-current fallback. 4 specs, ~40s wall-clock.
+  Follow-up policy: grow the suite only when a similar UI regression
+  bites, no fishing.
 
 ---
 

@@ -132,15 +132,23 @@ lazy-loaded only when Photo Overlay is opened - nothing extra to install.
 ```
 pnpm install
 pnpm test
+pnpm test:e2e
 ```
 
-Runs the `node --test` suite in `test/*.test.js` (pure-logic modules -
-doc migration/validation, save-status tracking, share-URL round-trip,
-face-off snapping, shot/coverage/pass compute - no browser needed).
-**All tests must pass before committing.** `pnpm run build` (stages a
-minified `dist/` for deploy) and `pnpm run check:size` (deploy-size
-budget) are what CI runs on every push/PR; run them locally too if a
-change touches the build pipeline itself.
+`pnpm test` runs the `node --test` suite in `test/*.test.js` (pure-logic
+modules - doc migration/validation, save-status tracking, share-URL
+round-trip, face-off snapping, shot/coverage/pass compute - no browser
+needed). `pnpm test:e2e` runs the Playwright integration suite in
+`test-e2e/*.spec.js` against a headless Chromium (config in
+`playwright.config.js`); its `webServer` block auto-starts
+`scripts/serve-static.mjs` on port 8000 so nothing else is needed - one
+command boots both. The e2e suite covers UI wiring that Node tests can't:
+project rename, Library modal load/rename/duplicate/delete, legacy-key
+migration on first boot, delete-current fallback. **All tests must pass
+before committing.** `pnpm run build` (stages a minified `dist/` for
+deploy) and `pnpm run check:size` (deploy-size budget) are what CI runs
+on every push/PR; run them locally too if a change touches the build
+pipeline itself.
 
 ## Regenerating assets
 

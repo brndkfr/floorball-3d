@@ -6,7 +6,16 @@
 
 import { state } from '../state.js';
 import { ensureDoc } from './doc.js';
-import { loadDoc, saveDoc } from './storage.js';
+import {
+  loadDoc,
+  saveDoc,
+  migrateLegacyStorage,
+  adoptDocAsProject,
+  setCurrentProjectId,
+  createProject,
+  loadProject,
+  getCurrentProjectId,
+} from './storage.js';
 import { readHashDoc, clearHashDoc } from './share.js';
 import { rebuildFromDoc, updateChipAnimations } from './chips.js';
 import { rebuildShapesFromDoc } from './shapes.js';
@@ -22,22 +31,46 @@ import './chip-popover.js'; // side-effect: wires up the chip-anchored popover
 import './layers-panel.js'; // side-effect: wires up the right layers panel
 import './timeline.js';   // side-effect: wires up the timeline UI
 import './photo-overlay/photo-overlay.js'; // side-effect: wires up the photo overlay panel
+import { notifyProjectChanged } from './library-dialog.js';
 export { tickChoreo } from './choreograph.js';
 export { tickActors } from './actors.js';
 
+migrateLegacyStorage();
+
 // Prefer a shared doc from the URL hash so incognito links "just work"
-// without touching whatever the user already has in localStorage. Fall
-// back to the default localStorage slot for a normal reload.
+// without touching whatever the user already has in localStorage. Shared
+// docs land as a new local project (fresh id, name from the doc or a
+// default), then become the current project.
 const shared = await readHashDoc();
 if (shared) {
-  state.doc = shared;
+  const adopted = adoptDocAsProject(shared, { name: shared.meta?.name || 'Shared scheme' });
+  if (adopted) {
+    state.doc = adopted;
+    setCurrentProjectId(adopted.meta.id);
+  }
   clearHashDoc();
-  saveDoc();
 } else {
   const saved = loadDoc();
-  if (saved) state.doc = saved;
+  if (saved) {
+    state.doc = saved;
+  } else if (getCurrentProjectId()) {
+    // Pointer references a project that was deleted or corrupted -
+    // create a fresh one so the user isn't stranded.
+    const id = createProject('Untitled');
+    setCurrentProjectId(id);
+    const doc = loadProject(id);
+    if (doc) state.doc = doc;
+  }
 }
 ensureDoc();
+// First-run bootstrap: no legacy doc, no share link, no current pointer -
+// register the fresh in-memory doc as the initial project so save/history
+// have somewhere to write.
+if (!getCurrentProjectId()) saveDoc();
+// dock.js and other UI ran their initial render at import time, before
+// state.doc was finalised - kick a project-changed event so the
+// project-name label picks up the migrated / loaded name.
+notifyProjectChanged();
 rebuildFromDoc();
 rebuildShapesFromDoc();
 rebuildConesFromDoc();

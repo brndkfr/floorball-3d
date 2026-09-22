@@ -6,18 +6,19 @@
 // add-keyframe stubs are disabled placeholders until their milestones ship.
 
 import { state } from '../state.js';
-import { spawnChip, nextNumber, TEAM_COLORS, rebuildFromDoc } from './chips.js';
-import { rebuildShapesFromDoc, updateShape } from './shapes.js';
+import { spawnChip, nextNumber, TEAM_COLORS } from './chips.js';
+import { updateShape } from './shapes.js';
 import { spawnCone } from './cones.js';
 import { spawnBall } from './balls.js';
-import { ensureDoc, emptyDoc } from './doc.js';
-import { saveDoc, saveNamedSlot, loadNamedSlot, listSlots, deleteSlot, downloadDocJson, readDocFromFile } from './storage.js';
+import { ensureDoc } from './doc.js';
+import { saveDoc, downloadDocJson, readDocFromFile, createProject, adoptDocAsProject, setCurrentProjectId } from './storage.js';
+import { openLibraryDialog, switchToProject, onProjectChanged, currentProjectName } from './library-dialog.js';
 import { encodeShareUrl } from './share.js';
-import { undo, redo, pushHistory } from './history.js';
+import { undo, redo } from './history.js';
 import { enterTopDown, exitTopDown, isTopDown } from './topdown-camera.js';
 import { startDrawing, cancelDrawing, handleFloorClick, tryCommitZone, tryCommitArrow, drawPointCount } from './draw-tool.js';
 import { snapToNearestDot } from './faceoff-snap.js';
-import { showAlert, showConfirm, showPrompt } from './dialog.js';
+import { showAlert, showPrompt } from './dialog.js';
 
 const dockEl = document.getElementById('dock');
 if (!dockEl) throw new Error('dock element missing from index.html');
@@ -28,6 +29,8 @@ const viewBtn = dockEl.querySelector('[data-dock="view"]');
 const rotateBtn = dockEl.querySelector('[data-dock="rotate"]');
 const overflowBtn = dockEl.querySelector('[data-dock="overflow"]');
 const overflowMenu = dockEl.querySelector('#dockOverflow');
+const projectBtn = dockEl.querySelector('[data-dock="project"]');
+const projectNameEl = document.getElementById('dockProjectName');
 const colorBtn = dockEl.querySelector('[data-dock="color"]');
 const palette = document.getElementById('dockPalette');
 const statusEl = document.getElementById('dockStatus');
@@ -136,14 +139,13 @@ document.addEventListener('click', (e) => {
 
 overflowMenu.querySelector('[data-action="new"]').addEventListener('click', async () => {
   overflowMenu.classList.remove('open');
-  const empty = Object.keys(ensureDoc().scheme.players).length === 0 && (ensureDoc().scheme.shapes?.length ?? 0) === 0;
-  if (empty) return;
-  if (!(await showConfirm('Discard the current scheme and start a new one?'))) return;
-  state.doc = emptyDoc();
-  rebuildFromDoc();
-  rebuildShapesFromDoc();
-  saveDoc();
-  pushHistory();
+  const suggested = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const name = await showPrompt('New project name:', suggested);
+  if (!name) return;
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const id = createProject(trimmed);
+  switchToProject(id);
   refreshStatus();
 });
 
@@ -159,86 +161,49 @@ overflowMenu.querySelector('[data-action="redo"]').addEventListener('click', () 
   refreshStatus();
 });
 
-// --- A3: named slots, JSON import/export, share URL -------------------
+// --- Projects: rename, library, import, export, share -----------------
 
-const slotsPopover = document.getElementById('dockSlots');
 const fileInput = document.getElementById('dockImportFile');
 
-function loadDocInto(doc) {
-  state.doc = doc;
-  rebuildFromDoc();
-  rebuildShapesFromDoc();
+async function renameCurrentProject() {
+  const doc = ensureDoc();
+  const current = doc.meta?.name || 'Untitled';
+  const next = await showPrompt('Rename project to:', current);
+  if (next == null) return;
+  const trimmed = next.trim();
+  if (!trimmed || trimmed === current) return;
+  doc.meta.name = trimmed;
   saveDoc();
-  pushHistory();
-  refreshStatus();
+  refreshProjectName();
 }
 
-function renderSlotsPopover() {
-  const names = listSlots();
-  slotsPopover.innerHTML = '';
-  if (names.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'slots-empty';
-    empty.textContent = 'no saved schemes yet';
-    slotsPopover.appendChild(empty);
-    return;
-  }
-  for (const name of names) {
-    const row = document.createElement('div');
-    row.className = 'slots-row';
-    const label = document.createElement('button');
-    label.type = 'button';
-    label.className = 'slots-load';
-    label.textContent = name;
-    label.title = 'Load this scheme';
-    label.addEventListener('click', async () => {
-      const doc = loadNamedSlot(name);
-      if (!doc) { await showAlert(`Could not load "${name}".`); return; }
-      loadDocInto(doc);
-      slotsPopover.classList.remove('open');
-    });
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'slots-delete';
-    del.title = 'Delete';
-    del.textContent = '\u00d7';
-    del.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      if (!(await showConfirm(`Delete saved scheme "${name}"?`))) return;
-      deleteSlot(name);
-      renderSlotsPopover();
-    });
-    row.appendChild(label);
-    row.appendChild(del);
-    slotsPopover.appendChild(row);
-  }
-}
-
-overflowMenu.querySelector('[data-action="save"]').addEventListener('click', async () => {
+overflowMenu.querySelector('[data-action="rename"]').addEventListener('click', async () => {
   overflowMenu.classList.remove('open');
-  const suggested = new Date().toISOString().slice(0, 16).replace('T', ' ');
-  const name = await showPrompt('Save scheme as:', suggested);
-  if (!name) return;
-  const trimmed = name.trim();
-  if (!trimmed) return;
-  if (listSlots().includes(trimmed) && !(await showConfirm(`Overwrite existing "${trimmed}"?`))) return;
-  if (saveNamedSlot(trimmed)) refreshStatus();
+  await renameCurrentProject();
 });
 
-overflowMenu.querySelector('[data-action="load"]').addEventListener('click', (e) => {
+overflowMenu.querySelector('[data-action="library"]').addEventListener('click', () => {
+  overflowMenu.classList.remove('open');
+  openLibraryDialog();
+});
+
+projectBtn.addEventListener('click', async (e) => {
   e.stopPropagation();
-  overflowMenu.classList.remove('open');
-  renderSlotsPopover();
-  slotsPopover.classList.toggle('open');
+  await renameCurrentProject();
 });
-document.addEventListener('click', (e) => {
-  if (!slotsPopover.contains(e.target)) slotsPopover.classList.remove('open');
-});
+
+function refreshProjectName() {
+  if (projectNameEl) projectNameEl.textContent = currentProjectName();
+}
+onProjectChanged(refreshProjectName);
+refreshProjectName();
 
 overflowMenu.querySelector('[data-action="export"]').addEventListener('click', () => {
   overflowMenu.classList.remove('open');
+  const doc = ensureDoc();
+  const safeName = (doc.meta?.name || 'floorball-scheme').replace(/[^\w.-]+/g, '-').slice(0, 60) || 'floorball-scheme';
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-  downloadDocJson(ensureDoc(), `floorball-scheme-${stamp}.json`);
+  downloadDocJson(doc, `${safeName}-${stamp}.json`);
 });
 
 overflowMenu.querySelector('[data-action="import"]').addEventListener('click', () => {
@@ -251,7 +216,12 @@ fileInput.addEventListener('change', async () => {
   if (!file) return;
   const doc = await readDocFromFile(file);
   if (!doc) { await showAlert('Could not read that file - is it a valid floorball-3d scheme JSON?'); return; }
-  loadDocInto(doc);
+  const importedName = doc.meta?.name || file.name.replace(/\.json$/i, '') || 'Imported scheme';
+  const adopted = adoptDocAsProject(doc, { name: importedName });
+  if (!adopted) { await showAlert('Could not import that scheme.'); return; }
+  setCurrentProjectId(adopted.meta.id);
+  switchToProject(adopted.meta.id);
+  refreshStatus();
 });
 
 overflowMenu.querySelector('[data-action="share"]').addEventListener('click', async () => {
@@ -261,8 +231,10 @@ overflowMenu.querySelector('[data-action="share"]').addEventListener('click', as
     // Scene too large for a URL fragment - fall back to JSON download and
     // tell the user, so a shareable artifact still exists.
     await showAlert('This scheme is too large for a share URL (~32 KB max). Downloading JSON instead - share the file.');
+    const doc = ensureDoc();
+    const safeName = (doc.meta?.name || 'floorball-scheme').replace(/[^\w.-]+/g, '-').slice(0, 60) || 'floorball-scheme';
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    downloadDocJson(ensureDoc(), `floorball-scheme-${stamp}.json`);
+    downloadDocJson(doc, `${safeName}-${stamp}.json`);
     return;
   }
   try {

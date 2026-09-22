@@ -73,12 +73,31 @@ export function emptyFrame(scheme = emptyScheme(), duration = DEFAULT_FRAME_MS) 
 export function emptyDoc() {
   const doc = {
     version: DOC_VERSION,
+    meta: emptyMeta(),
     hideMarkup: false,
     currentFrame: 0,
     frames: [ emptyFrame() ],
   };
   installSchemeAccessor(doc);
   return doc;
+}
+
+// Project metadata (A-GAP-003). Carried inside the doc so exports round-trip
+// the project name; the `id` is regenerated on import so an imported file
+// never collides with an existing local project.
+export function emptyMeta(name = 'Untitled') {
+  const now = Date.now();
+  return { id: newId('proj'), name, createdAt: now, modifiedAt: now };
+}
+
+function ensureMeta(doc, fallbackName = 'Untitled') {
+  if (!doc.meta || typeof doc.meta !== 'object') doc.meta = emptyMeta(fallbackName);
+  if (!doc.meta.id || !isValidId(doc.meta.id)) doc.meta.id = newId('proj');
+  if (typeof doc.meta.name !== 'string' || !doc.meta.name.trim()) doc.meta.name = fallbackName;
+  const now = Date.now();
+  if (typeof doc.meta.createdAt !== 'number') doc.meta.createdAt = now;
+  if (typeof doc.meta.modifiedAt !== 'number') doc.meta.modifiedAt = doc.meta.createdAt;
+  return doc.meta;
 }
 
 // Non-enumerable accessor - JSON.stringify skips it. Callers reading
@@ -110,6 +129,7 @@ function migrate(doc) {
     };
     return {
       version: DOC_VERSION,
+      meta: emptyMeta(),
       hideMarkup: !!doc.hideMarkup,
       currentFrame: 0,
       frames: [ emptyFrame(scheme) ],
@@ -124,6 +144,7 @@ export function acceptDoc(raw) {
   if (!raw || typeof raw !== 'object') return null;
   if (raw.version !== 1 && raw.version !== DOC_VERSION) return null;
   const migrated = sanitizeDoc(migrate(raw));
+  ensureMeta(migrated);
   installSchemeAccessor(migrated);
   return migrated;
 }
@@ -131,6 +152,7 @@ export function acceptDoc(raw) {
 export function ensureDoc() {
   if (!state.doc || typeof state.doc !== 'object') state.doc = emptyDoc();
   if (state.doc.version !== DOC_VERSION) state.doc = migrate(state.doc);
+  ensureMeta(state.doc);
   if (!Array.isArray(state.doc.frames) || state.doc.frames.length === 0) {
     state.doc.frames = [ emptyFrame() ];
   }

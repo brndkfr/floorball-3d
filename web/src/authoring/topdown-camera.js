@@ -93,7 +93,7 @@ export function resetTopDownView() {
 window.addEventListener('wheel', (e) => {
   if (!isTopDown()) return;
   // Don't hijack wheel events over UI (dock, timeline, HUD panels).
-  if (e.target && e.target !== document.body && e.target.closest?.('#dock, #timeline, #dockOverflow, #dockPalette, #dockSlots, #info, #coords')) return;
+  if (e.target && e.target !== document.body && e.target.closest?.('#dock, #timeline, #dockOverflow, #dockPalette, #info, #coords')) return;
   e.preventDefault();
   const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
   topDownCamera.zoom = Math.min(Math.max(topDownCamera.zoom * factor, MIN_ZOOM), MAX_ZOOM);
@@ -105,7 +105,7 @@ let lastX = 0, lastY = 0;
 window.addEventListener('pointerdown', (e) => {
   if (!isTopDown()) return;
   if (e.button !== 1 && e.button !== 2) return;
-  if (e.target && e.target.closest?.('#dock, #timeline, #dockOverflow, #dockPalette, #dockSlots, #info, #coords')) return;
+  if (e.target && e.target.closest?.('#dock, #timeline, #dockOverflow, #dockPalette, #info, #coords')) return;
   panning = true;
   lastX = e.clientX;
   lastY = e.clientY;

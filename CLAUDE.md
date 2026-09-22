@@ -150,8 +150,27 @@ only the input source differs.
   uncovered. If `pnpm`/`npm` genuinely isn't available in the environment,
   run `node --test "test/**/*.test.js"` directly (needs `three` resolvable
   under `node_modules` - `pnpm install` handles that) - never skip running
-  the suite outright and never commit on a red test.
-- **Chromium caches ES modules aggressively** even with `?bust=` query
+  the suite outright and never commit on a red test.- **UI-touching changes must be validated by the Playwright e2e suite,
+  not just `pnpm test` + `pnpm run build`.** Passing Node tests and a
+  clean build only prove pure-logic paths and that the code parses /
+  bundles - they say nothing about whether the dock button renders, the
+  dialog opens, the overflow menu wiring hits the right handler, or the
+  bootstrap ordering works when the DOM is real. Run `pnpm test:e2e`
+  (Playwright + Chromium, config in `playwright.config.js`, specs in
+  `test-e2e/*.spec.js`). Playwright's `webServer` auto-starts
+  `scripts/serve-static.mjs` on port 8000 so no separate dev server is
+  needed. If a change touches DOM, wires new event handlers, mutates
+  state at module-init time, or depends on `state.doc` being finalised
+  before something reads it, extend the relevant spec (or add a new one
+  under `test-e2e/`) rather than leaving the new behaviour uncovered.
+  CI runs `pnpm test:e2e` between `pnpm test` and `pnpm run build` and
+  uploads the Playwright report on failure. A common failure mode caught
+  this way but never by the Node tests: module init reads a
+  not-yet-populated `state.doc` because `import`s run before the
+  top-level-await bootstrap finishes - fix by firing an explicit event
+  from the end of `authoring/index.js`'s bootstrap once state is
+  finalised (see `notifyProjectChanged`), not by hoping module order
+  works out.- **Chromium caches ES modules aggressively** even with `?bust=` query
   strings on dynamic imports and even after `location.reload()`. When
   testing changes via Playwright / the running dev server, do:
   ```js

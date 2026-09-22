@@ -1,16 +1,26 @@
-// Persist the authoring Doc to localStorage. A1 shipped a single-slot key;
-// A3 adds named slots (unlimited, one localStorage entry each) and JSON
-// import/export. Share URLs live in share.js since they're async-only.
+// Persist the authoring Doc to localStorage.
+//
+// A-GAP-003: named projects. Each project is stored under its own key
+// (`floorball-3d:project:<id>`); a small pointer key
+// (`floorball-3d:currentProjectId`) selects the one being edited. The
+// legacy single-doc key (`floorball-3d:doc`) and the earlier named-slot
+// keys (`floorball-3d:slot:<name>`) are migrated once by
+// `migrateLegacyStorage()` and then deleted.
+//
+// This module stays free of DOM globals so it keeps loading standalone in
+// Node for tests; save-status-ui.js is the DOM-touching side-effect module
+// that turns save status into a visible badge + beforeunload guard.
 
-import { ensureDoc, acceptDoc } from './doc.js';
+import { ensureDoc, acceptDoc, emptyDoc, emptyMeta, newId } from './doc.js';
 
-const KEY = 'floorball-3d:doc';
-const SLOT_PREFIX = 'floorball-3d:slot:';
+const LEGACY_DOC_KEY = 'floorball-3d:doc';
+const LEGACY_SLOT_PREFIX = 'floorball-3d:slot:';
+const PROJECT_PREFIX = 'floorball-3d:project:';
+const CURRENT_KEY = 'floorball-3d:currentProjectId';
+const MIGRATION_FLAG = 'floorball-3d:migrated:v1';
 
-// Save status is tracked here (pure, no DOM) so this module keeps loading
-// standalone in Node for tests; save-status-ui.js is the DOM-touching
-// side-effect module that turns this into a visible "saved"/"save failed"
-// badge and a beforeunload guard - see S-BACK-001.
+// --- save status ------------------------------------------------------
+
 let lastSaveStatus = { ok: true, at: null, error: null };
 const listeners = [];
 
@@ -27,67 +37,215 @@ function setSaveStatus(status) {
   for (const cb of listeners) cb(status);
 }
 
-export function saveDoc() {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(ensureDoc()));
-    setSaveStatus({ ok: true, at: Date.now(), error: null });
-  } catch (e) {
-    // localStorage can be full or disabled (private mode on some browsers).
-    // The in-memory doc is still authoritative for this session and the
-    // next save attempt will retry, but nothing is actually persisted until
-    // one succeeds - previously this only logged a console.warn, so a user
-    // could keep working for an entire session and lose everything on
-    // reload with no indication anything was wrong.
-    console.warn('saveDoc: could not persist to localStorage', e);
-    setSaveStatus({ ok: false, at: Date.now(), error: e });
-  }
+// --- project CRUD -----------------------------------------------------
+
+function projectKey(id) {
+  return PROJECT_PREFIX + id;
 }
 
-export function loadDoc() {
+export function getCurrentProjectId() {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
-    return acceptDoc(JSON.parse(raw));
-  } catch (e) {
-    console.warn('loadDoc: could not read localStorage', e);
+    return localStorage.getItem(CURRENT_KEY);
+  } catch {
     return null;
   }
 }
 
-// --- named slots ------------------------------------------------------
-
-export function listSlots() {
-  const names = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith(SLOT_PREFIX)) names.push(k.slice(SLOT_PREFIX.length));
+export function setCurrentProjectId(id) {
+  try {
+    if (id) localStorage.setItem(CURRENT_KEY, id);
+    else localStorage.removeItem(CURRENT_KEY);
+  } catch (e) {
+    console.warn('setCurrentProjectId: could not persist', e);
   }
-  return names.sort((a, b) => a.localeCompare(b));
 }
 
-export function saveNamedSlot(name, doc = ensureDoc()) {
+// Returns a shallow index of every persisted project, newest first.
+// Loads and re-parses each doc - fine for the handful of projects a user
+// realistically keeps locally; if that ever grows we can maintain a
+// sidecar index instead.
+export function listProjects() {
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k || !k.startsWith(PROJECT_PREFIX)) continue;
+    try {
+      const doc = JSON.parse(localStorage.getItem(k));
+      const meta = doc?.meta;
+      if (!meta?.id) continue;
+      out.push({
+        id: meta.id,
+        name: meta.name || 'Untitled',
+        createdAt: meta.createdAt || 0,
+        modifiedAt: meta.modifiedAt || 0,
+      });
+    } catch {
+      // skip corrupt entry
+    }
+  }
+  out.sort((a, b) => (b.modifiedAt || 0) - (a.modifiedAt || 0));
+  return out;
+}
+
+export function loadProject(id) {
+  if (!id) return null;
   try {
-    localStorage.setItem(SLOT_PREFIX + name, JSON.stringify(doc));
+    const raw = localStorage.getItem(projectKey(id));
+    if (!raw) return null;
+    return acceptDoc(JSON.parse(raw));
+  } catch (e) {
+    console.warn('loadProject: could not read', e);
+    return null;
+  }
+}
+
+// Writes the doc under its own meta.id, bumping modifiedAt. The
+// save-status listeners are only notified for the currently-edited
+// project - background writes (rename of another project, migration)
+// shouldn't flip the badge to "save failed".
+export function saveProject(doc = ensureDoc(), { touchModified = true, notifyStatus = null } = {}) {
+  if (!doc?.meta?.id) return false;
+  if (touchModified) doc.meta.modifiedAt = Date.now();
+  const isCurrent = doc.meta.id === getCurrentProjectId();
+  const notify = notifyStatus ?? isCurrent;
+  try {
+    localStorage.setItem(projectKey(doc.meta.id), JSON.stringify(doc));
+    if (notify) setSaveStatus({ ok: true, at: Date.now(), error: null });
     return true;
   } catch (e) {
-    console.warn('saveNamedSlot: could not persist', e);
+    console.warn('saveProject: could not persist', e);
+    if (notify) setSaveStatus({ ok: false, at: Date.now(), error: e });
     return false;
   }
 }
 
-export function loadNamedSlot(name) {
+export function deleteProject(id) {
   try {
-    const raw = localStorage.getItem(SLOT_PREFIX + name);
-    if (!raw) return null;
-    return acceptDoc(JSON.parse(raw));
+    localStorage.removeItem(projectKey(id));
   } catch (e) {
-    console.warn('loadNamedSlot: could not read localStorage', e);
-    return null;
+    console.warn('deleteProject: could not remove', e);
   }
 }
 
-export function deleteSlot(name) {
-  localStorage.removeItem(SLOT_PREFIX + name);
+export function renameProject(id, newName) {
+  const doc = loadProject(id);
+  if (!doc) return false;
+  doc.meta.name = newName;
+  return saveProject(doc);
+}
+
+// Creates a fresh empty project with the given name, saves it, and
+// returns its id. Does NOT change the current project pointer.
+export function createProject(name = 'Untitled') {
+  const doc = emptyDoc();
+  doc.meta = emptyMeta(name);
+  saveProject(doc, { notifyStatus: false });
+  return doc.meta.id;
+}
+
+// Deep-clones an existing project, gives the clone a new id + name.
+export function duplicateProject(id, newName) {
+  const doc = loadProject(id);
+  if (!doc) return null;
+  const clone = JSON.parse(JSON.stringify(doc));
+  const now = Date.now();
+  clone.meta = { id: newId('proj'), name: newName, createdAt: now, modifiedAt: now };
+  const accepted = acceptDoc(clone);
+  if (!accepted) return null;
+  saveProject(accepted, { notifyStatus: false });
+  return accepted.meta.id;
+}
+
+// Accepts an untrusted doc (share link, imported file) and persists it
+// as a new local project with a fresh id. Returns the accepted doc (with
+// the scheme accessor installed) or null if the input can't be accepted.
+export function adoptDocAsProject(rawDoc, { name } = {}) {
+  const accepted = acceptDoc(rawDoc);
+  if (!accepted) return null;
+  const now = Date.now();
+  accepted.meta.id = newId('proj');
+  if (name) accepted.meta.name = name;
+  accepted.meta.createdAt = now;
+  accepted.meta.modifiedAt = now;
+  saveProject(accepted, { touchModified: false, notifyStatus: false });
+  return accepted;
+}
+
+// --- current-project convenience (used by every mutating module) ------
+
+// Saves the in-memory doc to its own project slot. This is the entry
+// point every mutating module (chips.js, shapes.js, ...) calls, so its
+// signature has to stay identical to the pre-A-GAP-003 version.
+export function saveDoc() {
+  const doc = ensureDoc();
+  if (!getCurrentProjectId()) setCurrentProjectId(doc.meta.id);
+  saveProject(doc);
+}
+
+// Loads the current project's doc, or null if none exists. Used only by
+// the bootstrap in index.js.
+export function loadDoc() {
+  const id = getCurrentProjectId();
+  if (!id) return null;
+  return loadProject(id);
+}
+
+// --- one-time migration from the legacy single-doc + slot layout -----
+
+// Idempotent: runs once per browser (guarded by MIGRATION_FLAG), moves
+// the singleton doc and any named slots into first-class projects, then
+// removes the legacy keys.
+export function migrateLegacyStorage() {
+  try {
+    if (localStorage.getItem(MIGRATION_FLAG)) return;
+  } catch {
+    return;
+  }
+  let currentId = null;
+
+  try {
+    const raw = localStorage.getItem(LEGACY_DOC_KEY);
+    if (raw) {
+      const accepted = acceptDoc(JSON.parse(raw));
+      if (accepted) {
+        if (!accepted.meta.name || accepted.meta.name === 'Untitled') {
+          accepted.meta.name = 'My scheme';
+        }
+        saveProject(accepted, { touchModified: false, notifyStatus: false });
+        currentId = accepted.meta.id;
+      }
+      localStorage.removeItem(LEGACY_DOC_KEY);
+    }
+  } catch (e) {
+    console.warn('migrateLegacyStorage: legacy doc migration failed', e);
+  }
+
+  const slotKeys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(LEGACY_SLOT_PREFIX)) slotKeys.push(k);
+  }
+  for (const key of slotKeys) {
+    const name = key.slice(LEGACY_SLOT_PREFIX.length);
+    try {
+      const accepted = acceptDoc(JSON.parse(localStorage.getItem(key)));
+      if (accepted) {
+        accepted.meta.name = name;
+        saveProject(accepted, { touchModified: false, notifyStatus: false });
+      }
+    } catch (e) {
+      console.warn('migrateLegacyStorage: slot migration failed for', name, e);
+    }
+    localStorage.removeItem(key);
+  }
+
+  if (currentId) setCurrentProjectId(currentId);
+  try {
+    localStorage.setItem(MIGRATION_FLAG, '1');
+  } catch {
+    // Non-fatal: worst case migration re-runs on next load and is a no-op
+    // because the legacy keys are gone.
+  }
 }
 
 // --- JSON file I/O ----------------------------------------------------
