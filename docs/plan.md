@@ -159,9 +159,28 @@ export. Data model is `state.doc` v2 with a per-frame `scheme` accessor
   the fit hotkey. Deliberately out of scope: no data-model change, no
   swap to Canvas2D/SVG rendering, no visual redesign toward the Broadcast
   direction (§2) - kept HUD look per user preference.
-- **[A-GAP-002]** [open] **Frame thumbnails** on the timeline (per-frame
-  top-down snapshot of chips + shapes; needs invalidation + caching so it
-  isn't re-rendered every tick).
+- **[A-GAP-002]** [shipped] **Frame thumbnails** on the timeline. Each
+  card in [timeline.js](../web/src/authoring/timeline.js) now shows a
+  landscape (rink long axis horizontal, 2:1) top-down snapshot of the
+  frame's chips + shapes drawn from
+  [frame-thumb.js](../web/src/authoring/frame-thumb.js), a plain 2D-canvas
+  renderer (rink outline + centre line + team-coloured chip dots + zone
+  fills + arrow polylines with a head at the last tangent). No WebGL,
+  no scene mutation, no camera swap. Cached per `frame.id` with a
+  size + `JSON.stringify(frame.scheme)` hash key so a re-render on frame
+  selection or on any `playbackChanged` event returns the cached data URL
+  and only a real content mutation (which changes the hash) triggers a
+  redraw. Timeline's `render()` fires on `framesChanged` / `playbackChanged`
+  / wheel-resize only (never per rAF - verified in `playback.js`, where
+  the event is dispatched from discrete transport actions), so the
+  stringify cost is bounded by user interaction rate.
+  `test/frame-thumb.test.js` covers the DOM-less no-op path (returns `''`
+  cleanly in Node), degenerate sizes, and malformed input tolerance; 4
+  new tests, 51/51 green. Verified in a live Chromium tab via a CDP
+  cache-clear reload - the thumb renders correctly with an empty frame
+  and updates on chip placement (chips whose world-x exceeds `HALF_W`
+  fall outside the drawn rink, matching the fact that the app currently
+  allows off-rink chip placement; unrelated to this feature).
 - **[A-GAP-003]** [shipped] **Named projects in a Library**. Each project
   is now a first-class localStorage entry
   (`floorball-3d:project:<id>`) with `doc.meta = { id, name, createdAt,
@@ -827,13 +846,22 @@ added.
   structural change than the quota/indicator fix, with real regression risk
   that needs live browser verification to do safely, not attempted blind in
   this pass.
-- **[S-BACK-002]** [open] **Unvalidated ids reach innerHTML.** `acceptDoc()`
-  (authoring/doc.js) validates only `version`. An id from an imported doc
-  or a `#doc=` share link can reach `innerHTML` via template strings (e.g.
-  `goalieOptionsHtml`, photo-overlay.js:1621) unsanitized - a crafted share
-  link could inject script. `(inferred)` - the full id-to-render data flow
-  wasn't traced, found via grep. Fix: validate ids (`[\w-]+`, finite
-  numbers) in `acceptDoc`, switch that render path to `textContent`.
+- **[S-BACK-002]** [shipped] **Unvalidated ids reach innerHTML.** Fixed at
+  the ingestion boundary: new `isValidId()` (`[\w-]+`) + `sanitizeDoc()`
+  in [doc.js](../web/src/authoring/doc.js) run from `acceptDoc()`, so every
+  untrusted entry point (share-link decode via `share.js`, JSON import via
+  `dock.js`, storage load) drops malformed ids from `scheme.players` keys,
+  `scheme.shapes[].id`, and `frame.photo.players[].id`, and clears any
+  `ballCarrier` / `goalies.{home,away}` references left dangling by the
+  drop. As a second, independent line of defense, the specific render path
+  the review called out (`goalieOptionsHtml`, photo-overlay.js) was
+  converted to build a `DocumentFragment` of `<option>` nodes with
+  `textContent` rather than an HTML template string, so a crafted id can't
+  become script even if a future doc bypasses `acceptDoc()`. Covered by 4
+  new tests in `test/doc.test.js` (malformed player-key drop, malformed
+  shape-id drop, `frame.photo.players` drop + dangling-reference cleanup,
+  valid-data pass-through) alongside the `isValidId` unit tests; 47/47
+  green.
 - **[S-BACK-003]** [open] **Keyboard handling is scattered - re-scoped
   after inspection.** Two of the review's specific claims didn't hold up:
   only 4 of the "nine" keydown registrations are actually `window`-level

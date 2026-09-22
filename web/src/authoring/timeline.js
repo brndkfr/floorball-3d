@@ -13,6 +13,7 @@ import {
   playbackState, frameIndexAt,
 } from './playback.js';
 import { startChoreo, cancelChoreo, commitChoreo, isChoreoActive } from './choreograph.js';
+import { getFrameThumb } from './frame-thumb.js';
 
 const el = document.getElementById('timeline');
 if (!el) throw new Error('timeline element missing from index.html');
@@ -48,6 +49,22 @@ function render() {
     num.className = 'tl-num';
     num.textContent = i + 1;
     card.appendChild(num);
+
+    // Thumbnail (top-down snapshot). Rink is 2:1 (long:short), so thumb
+    // height is half the card's usable width; getFrameThumb caches by
+    // frame id + hash so this runs at most once per frame per size.
+    const thumbW = Math.max(24, cardWidth - 8);
+    const thumbH = Math.max(12, Math.round(thumbW / 2));
+    const thumb = document.createElement('img');
+    thumb.className = 'tl-thumb';
+    thumb.width = thumbW;
+    thumb.height = thumbH;
+    thumb.alt = '';
+    thumb.decoding = 'async';
+    thumb.draggable = false;
+    const thumbUrl = getFrameThumb(f, thumbW, thumbH);
+    if (thumbUrl) thumb.src = thumbUrl;
+    card.appendChild(thumb);
 
     const dur = document.createElement('input');
     dur.className = 'tl-dur';
