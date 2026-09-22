@@ -657,11 +657,22 @@ playback + tracking + interpolation).
   snapping back to the full photo - repeatedly re-running auto-detect
   while already zoomed into a good view no longer yanks the zoom back
   each time.
-- **[B-BUG-001]** [open] **Coplanar landmark trap**: solvePnP has a depth/FOV
-  ambiguity when all placed points share a Y coordinate. Auto-tune FOV then
-  converges to wrong values (observed: 20° on a mid-focal shot). Mix at
-  least two of {floor y=0, post-top y=1150, board-top y=500}. Warning banner
-  is shipped; the underlying trap remains a fundamental PnP constraint.
+- **[B-BUG-001]** [mitigated] **Coplanar landmark trap**: solvePnP has a
+  depth/FOV ambiguity when all placed points lie on a single plane. Auto-tune
+  FOV then converges to wrong values (observed: 20° on a mid-focal shot). Mix
+  at least two of {floor y=0, post-top y=1150, board-top y=500}. The
+  underlying trap is a fundamental PnP constraint and can't be eliminated,
+  but the detector that drives the warning banner was generalized: the old
+  check only compared distinct Y values (`distinctY <= 1`), so it caught the
+  "all floor" / "all board-top" cases this app's landmark set usually
+  produces but would miss any other planar arrangement. New
+  [pose-diagnostics.js](../web/src/authoring/photo-overlay/pose-diagnostics.js)
+  `assessPlanarity()` computes the actual 3D covariance of the placed points
+  and flags any set whose determinant-based spread score is ~0, regardless
+  of which axis (or tilted plane) the degeneracy is in. Unit-tested in
+  [test/pose-diagnostics.test.js](../test/pose-diagnostics.test.js): all-floor,
+  all-board-top, an arbitrary tilted-plane set, a genuine 3D mix (not
+  flagged), and the <4-points edge case.
 - **[B-BUG-002]** [shipped] **Manual calibration UX is a dev console** -
   20+ controls at once, no guidance. The stepper redesign in 4.3
   addresses this. Steps 1-2 shipped previously; Steps 3-4 shipped this

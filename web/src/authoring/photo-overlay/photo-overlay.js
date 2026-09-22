@@ -8,6 +8,7 @@ import { ensureDoc } from '../doc.js';
 import { saveDoc } from '../storage.js';
 import { WORLD_LANDMARKS, LANDMARK_LABELS, MIN_LANDMARKS } from './landmarks.js';
 import { solveCameraPose } from './pnp.js';
+import { assessPlanarity } from './pose-diagnostics.js';
 import * as photoCanvas from './photo-canvas.js';
 import { enterPhoto, exitPhoto, isPhoto, fitToPhotoRect, setOverlayOpacity } from './view.js';
 import { enableWireframeOverlay, disableWireframeOverlay } from './wireframe.js';
@@ -486,12 +487,13 @@ async function trySolve() {
   try {
     const pose = await solveCameraPose(points, intrinsics, size.w, size.h);
     if (seq !== solveSeq) return null; // a newer call has since started - drop this stale result
-    // Warn if the point set is dominated by coplanar landmarks (all at
-    // y=500 board-top OR all at y=0 floor). solvePnP has a depth/FOV
+    // Warn if the point set is (near-)coplanar - solvePnP has a depth/FOV
     // ambiguity on planar sets that Auto-tune FOV can drive to nonsense.
-    const ys = points.map((p) => p.world[1]);
-    const distinctY = new Set(ys).size;
-    const coplanar = distinctY <= 1;
+    // assessPlanarity checks the actual 3D spread (via covariance
+    // determinant) rather than assuming Y is the missing axis, so it also
+    // catches degenerate sets that aren't the "all floor" / "all board-top"
+    // cases this app's landmark set usually produces.
+    const coplanar = assessPlanarity(points.map((p) => p.world)).degenerate;
     borderMode.setCoplanarWarning(coplanar);
     errorEl.textContent = `reprojection error: ${pose.reprojErrorPx.toFixed(1)} px (${placed.length} pts)`
       + (coplanar ? ' - warning: all points coplanar, add crease/post landmarks' : '');
