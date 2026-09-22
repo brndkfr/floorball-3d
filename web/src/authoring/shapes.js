@@ -14,6 +14,8 @@ import { state } from '../state.js';
 import { scene } from '../scene.js';
 import { ensureDoc, newId } from './doc.js';
 import { saveDoc } from './storage.js';
+import { reorderAtSlots } from './reorder.js';
+import { translateShapeCoords } from './shape-coords.js';
 
 const ARROW_DEFAULT_WIDTH = 80;   // mm; shaft full width
 const ARROW_HEAD_LEN_RATIO = 5;   // head_len  = width * this
@@ -743,20 +745,6 @@ function disposeObject(obj) {
   }
 }
 
-// Shift every world-space coordinate a shape carries by (dx, dz) mm. Covers
-// all representations: freehand / arrow `points`, rect + triangle bbox
-// (`x,z,w,h`), circle centre (`cx,cz`), and text anchor (`x,z`). Size fields
-// (`w,h,r`) are left alone - only positions move.
-function translateShapeCoords(shape, dx, dz) {
-  if (Array.isArray(shape.points)) {
-    for (const p of shape.points) { p.x += dx; p.z += dz; }
-  }
-  if (typeof shape.x === 'number') shape.x += dx;
-  if (typeof shape.z === 'number') shape.z += dz;
-  if (typeof shape.cx === 'number') shape.cx += dx;
-  if (typeof shape.cz === 'number') shape.cz += dz;
-}
-
 // Batch-translate several shapes by (dx, dz) and rebuild their objects in one
 // pass: a single saveDoc + layers:dirty, and NO history push - the caller
 // owns history so a mixed chip + shape drag collapses to one undo step.
@@ -805,14 +793,9 @@ export function rebuildShapesFromDoc() {
 export function reorderShapes(orderedIds) {
   const doc = ensureDoc();
   const shapes = doc.scheme.shapes || [];
-  const idSet = new Set(orderedIds);
-  const slots = [];
-  for (let i = 0; i < shapes.length; i++) {
-    if (idSet.has(shapes[i].id)) slots.push(i);
-  }
-  if (slots.length !== orderedIds.length) return;
-  const byId = new Map(shapes.map((s) => [s.id, s]));
-  for (let k = 0; k < slots.length; k++) shapes[slots[k]] = byId.get(orderedIds[k]);
+  const reordered = reorderAtSlots(shapes, orderedIds, (s) => s.id);
+  if (!reordered) return;
+  doc.scheme.shapes = reordered;
   rebuildShapesFromDoc();
   saveDoc();
   import('./history.js').then((h) => h.pushHistory());

@@ -19,6 +19,8 @@ import { prefersReducedMotion } from '../reduced-motion.js';
 import { ensureDoc, newId } from './doc.js';
 import { saveDoc } from './storage.js';
 import { drawRoleGlyph } from './role-icons.js';
+import { reorderAtSlots } from './reorder.js';
+import { nextAvailableNumber } from './numbering.js';
 
 export const CHIP_HEIGHT = 20;   // matches generate_player_chip.py
 export const CHIP_RADIUS = 100;  // matches generate_player_chip.py
@@ -349,15 +351,8 @@ export function setChipHidden(id, hidden) {
 export function reorderChips(orderedIds) {
   const doc = ensureDoc();
   const players = doc.scheme.players || {};
-  const idSet = new Set(orderedIds);
-  const currentIds = Object.keys(players);
-  const slots = [];
-  for (let i = 0; i < currentIds.length; i++) {
-    if (idSet.has(currentIds[i])) slots.push(i);
-  }
-  if (slots.length !== orderedIds.length) return;
-  const newIds = currentIds.slice();
-  for (let k = 0; k < slots.length; k++) newIds[slots[k]] = orderedIds[k];
+  const newIds = reorderAtSlots(Object.keys(players), orderedIds);
+  if (!newIds) return;
   const rebuilt = {};
   for (const id of newIds) rebuilt[id] = players[id];
   doc.scheme.players = rebuilt;
@@ -410,13 +405,7 @@ function disposeGroup(group) {
 // The smallest positive integer 1..25 that isn't used by any current chip on
 // the given team. Wraps to 1 after 25, so long sessions still yield a number.
 export function nextNumber(team) {
-  const doc = ensureDoc();
-  const used = new Set();
-  for (const p of Object.values(doc.scheme.players)) {
-    if (p.team === team) used.add(Number(p.number));
-  }
-  for (let i = 1; i <= 25; i++) if (!used.has(i)) return i;
-  return 1;
+  return nextAvailableNumber(ensureDoc().scheme.players, team);
 }
 
 // --- rebuild from doc (used by history undo/redo and initial load) ----

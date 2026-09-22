@@ -1192,15 +1192,36 @@ added.
   module without touching ORT since `loadOrt()` is call-time-only), and
   `facing-from-pose.js` (world -> image -> back-project round-trip at
   eight facings 0/±45/±90/±135/180, plus null/nose-fallback/cue reporting
-  paths). 94 tests across 8 files now, up from 69. **Not done:**
-  `chips.js`, `shapes.js`, `frames.js`, `history.js` still have no tests
-  - each pulls in `scene.js` (which reads `window.innerWidth` at module
-  load) or dispatches `document` events at module load, so covering them
-  needs a refactor to extract the pure permutation / lookup logic
-  (`nextNumber`, `reorderChips` / `reorderShapes` id-slot rewrite,
-  `translateShapes` coord math, frame-list mutations) into a
-  dependency-free module first. `trajectory.js` and `coverage.js`
-  remain entangled with `scene.js` for the same reason.
+  paths). 94 tests across 8 files now, up from 69. **This session:** did
+  exactly the extraction this item called for, for `chips.js` and
+  `shapes.js`'s permutation/lookup logic (the `history.js` half was done
+  separately as part of **S-BACK-012** - see `history-stack.js`):
+  - [reorder.js](../web/src/authoring/reorder.js) - `reorderAtSlots(items,
+    orderedIds, getId?)`, one shared implementation of the "keep absolute
+    slots, take on the new relative order" algorithm that `chips.js`'s
+    `reorderChips` (over `Object.keys(players)`) and `shapes.js`'s
+    `reorderShapes` (over the `shapes` array, keyed by `.id`) used to
+    each hand-roll independently, with zero test coverage on either copy.
+    Both call sites now delegate to it - a reuse win as well as a
+    testability one. 6 new tests (subset reorder, full permutation, no-op,
+    two invalid-input shapes, no-mutation, object/getId usage).
+  - [numbering.js](../web/src/authoring/numbering.js) -
+    `nextAvailableNumber(players, team)`, `chips.js`'s `nextNumber` minus
+    the `ensureDoc()` call. 4 new tests (empty team, per-team isolation,
+    gap-filling, wraparound at 25).
+  - [shape-coords.js](../web/src/authoring/shape-coords.js) -
+    `translateShapeCoords(shape, dx, dz)`, `shapes.js`'s `translateShapes`
+    coordinate math (points/x·z/cx·cz), unchanged behaviour. 5 new tests
+    (points, rect/text anchor, circle centre, no-op on unrelated fields,
+    a shape carrying more than one representation at once).
+  154 tests across 11 files now, up from 138 (S-BACK-012's own +12).
+  Verified: `pnpm test` 154/154, `pnpm run build` + `check:size` pass, and
+  `test-e2e/layers-panel.spec.js` (drives `reorderChips`/`reorderShapes`
+  through real drag-and-drop) still 2/2. **Still not done:** `frames.js`'s
+  frame-list mutations, and `history.js`'s own `apply()`/scene-rebuild
+  glue (inherently impure - it's what `history-stack.js` was extracted
+  *from*). `trajectory.js` and `coverage.js` remain entangled with
+  `scene.js` for the same reason as before.
 - **[S-BACK-010]** [shipped, on branch `perf/ci-and-load`] **Deploy ships
   unreferenced libraries.** Re-measured (the external review's `web/lib`
   numbers didn't match this repo - e.g. it claimed a vendored/minified
