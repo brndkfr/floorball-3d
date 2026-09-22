@@ -15,6 +15,7 @@ import { detectGoal, computeEdgeOverlay } from './detect.js';
 import { detectPlayers } from './detect-players.js';
 import { detectPose, matchPoseToPlayers, detectPoseInBoxes } from './detect-pose.js';
 import { facingFromKeypoints } from './facing-from-pose.js';
+import { isLowConfidenceFacing } from './facing-confidence.js';
 import { detectGoalieForEnd } from './detect-goalie.js';
 import { segmentPlayer } from './segment-player.js';
 import { backProjectPlayers, backProjectFoot } from './back-project.js';
@@ -1199,6 +1200,7 @@ function renderPlayersAndBall() {
       const tip = facingTipWorld(p.world, facingDeg);
       facingImagePx = lastPose.projectWorld(tip[0], tip[1], tip[2]);
     }
+    const facingLowConfidence = facingImagePx ? isLowConfidenceFacing(p) : false;
     let ghost = null;
     if (p.feedback) {
       ghost = {};
@@ -1213,7 +1215,7 @@ function renderPlayersAndBall() {
         if (gtx) ghost.facingImagePx = gtx;
       }
     }
-    chips.push({ id: p.id, imagePx: px, team: p.team, isCarrier: p.id === photo.ballCarrier, ring, outline: showOutline ? p.outline : null, label: labels.get(p.id), facingImagePx, ghost, corrected: !!p.feedback });
+    chips.push({ id: p.id, imagePx: px, team: p.team, isCarrier: p.id === photo.ballCarrier, ring, outline: showOutline ? p.outline : null, label: labels.get(p.id), facingImagePx, facingLowConfidence, ghost, corrected: !!p.feedback });
   }
   photoCanvas.setPlayerChips(chips);
   photoCanvas.setBallMarker(photo.ball ? lastPose.projectWorld(photo.ball[0], photo.ball[1], photo.ball[2]) : null);
@@ -1223,9 +1225,11 @@ function renderPlayersAndBall() {
   updateFeedbackStatus();
 }
 
-// Draggable facing "nose" (Phase 3.5 polish, docs/plan.md 9 Deferred -
-// v1 stop-gap until Phase 4 ML pose lands). Shown only for the ball
-// carrier + designated goalies; other chips have no meaningful default.
+// Draggable facing "nose" (Phase 3.5 polish, docs/plan.md 9 Deferred).
+// Originally shown only for the ball carrier + designated goalies (no
+// meaningful default existed for anyone else); Phase 5's "Estimate facings
+// (pose)" now seeds player.facingDeg for every detected chip, so the arrow
+// renders for any chip effectiveFacingDeg() resolves - see B-BACK-003.
 // Convention matches updateBallCarrierAndFacing(): facingDeg = atan2(dx, dz),
 // 0° points down +z, 90° points down +x.
 const FACING_TIP_DISTANCE_MM = 1200;

@@ -690,6 +690,10 @@ function redraw() {
     // Facing "nose" - line from chip centre to a draggable tip, marking
     // the ball carrier's shot direction / a goalie's stance angle. Only
     // rendered when photo-overlay.js supplies chip.facingImagePx.
+    // B-BACK-003: a pose-seeded facing photo-overlay.js flags as low
+    // confidence (edge-on torso / nose-only cue, or a low keypoint score)
+    // draws dashed and dimmer, so an uncertain auto-guess reads differently
+    // from a confident one or a manual drag, without adding a second control.
     if (chip.facingImagePx) {
       const [fpx, fpy] = chip.facingImagePx;
       const fx = vr.x + (fpx / image.width) * vr.w;
@@ -697,9 +701,14 @@ function redraw() {
       const dragging = facingDrag && facingDrag.id === chip.id;
       const noseColor = chip.corrected ? '#3ddc84' : '#ffe14f';
       ctx.save();
+      if (chip.facingLowConfidence) {
+        ctx.globalAlpha = 0.55;
+        ctx.setLineDash([4, 3]);
+      }
       ctx.strokeStyle = noseColor;
       ctx.lineWidth = dragging ? 3 : 2;
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(fx, fy); ctx.stroke();
+      ctx.setLineDash([]);
       ctx.fillStyle = noseColor;
       ctx.strokeStyle = '#111';
       ctx.lineWidth = 1.5;

@@ -902,9 +902,29 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
     (any source: manual drag or pose seed); `handleChipSelected()` sets its
     disabled state and a manual facing drag on the selected chip flips it
     on live.
-  - **[B-BACK-003]** [open] Consider a facing arrow / stance indicator on
-    non-carrier/non-goalie chips once Phase 4 has a confidence score to
-    attach.
+  - **[B-BACK-003]** [shipped] Facing arrow on non-carrier/non-goalie chips,
+    with a confidence indicator. Turned out to be two separate things: the
+    arrow itself already appeared for *every* chip once **B-PHASE-005**
+    (auto-pose facing) shipped, since `effectiveFacingDeg()` resolves for
+    any chip with a `facingDeg` and `renderPlayersAndBall()` was never
+    actually gated to carrier/goalie - only the code comment describing it
+    still was, and that's now fixed too. What this item actually needed was
+    the "confidence score to attach" - `facing-from-pose.js` was already
+    computing one (`quality` = the primary torso line's keypoint
+    confidence, plus a `cue` naming which rule fired) and storing it as
+    `player.facingQuality`/`facingCue`, but nothing read it. New
+    [facing-confidence.js](../web/src/authoring/photo-overlay/facing-confidence.js)
+    exports a pure `isLowConfidenceFacing(player)` (nose-only tiebreaker
+    cue, or quality below 0.65) that `photo-overlay.js` now calls per chip;
+    [photo-canvas.js](../web/src/authoring/photo-overlay/photo-canvas.js)
+    draws that chip's facing arrow dashed and at 55% opacity instead of
+    adding a second on-screen control. Manual drags and confident pose
+    guesses are unaffected. 5 new node tests for the predicate; verified
+    `pnpm test` 168/168, build + size-check pass, and
+    `test-e2e/photo-stepper.spec.js` (closest existing coverage for this
+    panel) still 4/4 - no dedicated visual check for the dashed rendering
+    itself since that's canvas-only with no pure logic to isolate, same as
+    the rest of `photo-canvas.js`.
 - **Auto-detect / calibration follow-ups still open**:
   - **[B-BACK-004]** [open] Whole-image auto-detect false positives on red
     spectator chairs and sponsor banners winning over the actual goal.
