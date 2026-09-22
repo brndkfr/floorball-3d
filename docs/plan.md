@@ -974,7 +974,7 @@ added.
   shape-id drop, `frame.photo.players` drop + dangling-reference cleanup,
   valid-data pass-through) alongside the `isValidId` unit tests; 47/47
   green.
-- **[S-BACK-003]** [open] **Keyboard handling is scattered - re-scoped
+- **[S-BACK-003]** [shipped] **Keyboard handling is scattered - re-scoped
   after inspection.** Two of the review's specific claims didn't hold up:
   only 4 of the "nine" keydown registrations are actually `window`-level
   (dock.js, controls.js, timeline.js, help.js) - the other five
@@ -987,13 +987,25 @@ added.
   (which cancels the active tool) had nothing to do - a real two-stage
   Escape, not a race. The one actual bug in this area was dock.js's
   missing INPUT/TEXTAREA guard, already fixed as **[S-BACK-004]**; all 4
-  `window`-level handlers now have it. What's still genuinely true and
-  still open: there's no single place that documents the full keybinding
-  set (the help overlay is hand-maintained separately from the 4 handlers
-  and can drift), so a `keymap.js` consolidation remains a reasonable
-  maintainability improvement - just not a correctness fix, and not
-  attempted this session given the regression risk of merging 4 handlers'
-  worth of closures blind without a browser to test in.
+  `window`-level handlers now have it. What was still genuinely true: no
+  single place documented the full keybinding set (the help overlay was
+  hand-maintained separately from the 4 handlers and had already drifted -
+  controls.js's `F` reset-top-down-view and dock.js's Ctrl+Shift+Z alt-redo
+  were both real, working shortcuts missing from the overlay). Fixed this
+  session with a documentation-only consolidation, deliberately **not**
+  merging the 4 handlers themselves (still the regression risk called out
+  below): new [keymap.js](../web/src/keymap.js) exports `KEY_SECTIONS`, a
+  plain data array of `{title, entries, note}` describing every shortcut
+  shown in the help overlay; [help.js](../web/src/help.js) now builds its
+  shortcut grid from that data via `renderShortcutGrid()` instead of a
+  hand-written HTML block, and picked up the two missing entries in the
+  process. The 4 keydown handlers are untouched - this only changes what
+  help.js *displays*, so the drift risk shrinks to "one file to update"
+  rather than being eliminated (a new shortcut added to a handler still
+  needs a manual `keymap.js` entry to show up in the overlay). Verified via
+  `pnpm test` (126/126) and the `test-e2e/a11y.spec.js` help-overlay spec
+  (still passes - it checks dialog role/focus-trap structure, not exact
+  shortcut text).
 - **[S-BACK-004]** [shipped] **`dock.js` keydown missing INPUT/TEXTAREA
   guard.** Unlike controls.js/timeline.js/help.js, dock.js's handler had no
   check for a focused text field - typing in a chip label and hitting

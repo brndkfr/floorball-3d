@@ -4,8 +4,20 @@
 // help button, or the first time the app boots.
 
 import { installFocusTrap } from './focus-trap.js';
+import { KEY_SECTIONS } from './keymap.js';
 
 const ONBOARDED_KEY = 'floorball-3d:onboarded';
+
+function renderShortcutGrid() {
+  return KEY_SECTIONS.map(({ title, entries, note }) => {
+    const rows = entries.map(([key, desc]) =>
+      `<kbd>${key}</kbd><span>${desc}</span>`).join('\n      ');
+    const noteRow = note
+      ? `<span style="grid-column:1/-1; font-size:11px; opacity:0.7;">${note}</span>`
+      : '';
+    return `<b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">${title}</b>\n      ${rows}${rows && noteRow ? '\n      ' : ''}${noteRow}`;
+  }).join('\n\n      ');
+}
 
 const overlay = document.createElement('div');
 overlay.id = 'helpOverlay';
@@ -29,60 +41,7 @@ overlay.innerHTML = `
       <button data-x="close" style="background:transparent; color:#f7e6cf; border:1px solid rgba(255,179,71,0.35); border-radius:6px; padding:2px 10px; font-family:inherit; cursor:pointer;">Close (Esc)</button>
     </div>
     <div style="display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:12px;">
-      <b style="color:#ffb347; grid-column:1/-1; margin-top:6px;">2D Plan mode (RTS controls)</b>
-      <kbd>left-click</kbd><span>select object &middot; on empty floor = deselect (or place with active tool)</span>
-      <kbd>left-drag chip</kbd><span>move that chip under the cursor</span>
-      <kbd>right-click floor</kbd><span>move-command: selected chip / ball / goalie walks there</span>
-      <kbd>right-click tool</kbd><span>cancel the active tool (chip stamp, arrow, zone, text)</span>
-      <kbd>right-drag / middle-drag</kbd><span>pan the top-down camera</span>
-      <kbd>scroll</kbd><span>zoom in / out</span>
-      <kbd>WASD / arrows</kbd><span>pan camera (never moves the selected item)</span>
-
-      <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">3D walking view</b>
-      <kbd>left-drag</kbd><span>look around (first-person)</span>
-      <kbd>WASD / arrows</kbd><span>walk relative to look direction</span>
-      <kbd>scroll</kbd><span>zoom / dolly</span>
-
-      <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Selection &amp; edit</b>
-      <kbd>Q / E</kbd><span>rotate the selected goalie (Shift = fine)</span>
-      <kbd>Tab / Shift+Tab</kbd><span>cycle selection</span>
-      <kbd>Esc</kbd><span>cancel active tool &middot; second press = deselect</span>
-      <kbd>Del / Backspace</kbd><span>remove selected chip or shape</span>
-
-      <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Tool hotkeys</b>
-      <span style="grid-column:1/-1; font-size:11px; opacity:0.7;">Click the tool palette on the left. Number-key hotkeys are reserved for playback speed.</span>
-
-      <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Authoring dock</b>
-      <kbd>3D / 2D</kbd><span>toggle first-person and top-down camera</span>
-      <kbd>T1 / T2</kbd><span>flip active team (chip color)</span>
-      <kbd>color swatch</kbd><span>pick color for next shape or the selected shape</span>
-
-      <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Timeline &amp; playback</b>
-      <kbd>Space</kbd><span>play / pause</span>
-      <kbd>, / .</kbd><span>step to previous / next keyframe</span>
-      <kbd>R</kbd><span>toggle loop</span>
-      <kbd>+</kbd><span>append a new keyframe (copy of current)</span>
-      <kbd>&#9744;</kbd><span>set / clear a camera keyframe on that frame</span>
-      <kbd>duration</kbd><span>per-frame in the small ms box</span>
-
-      <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Choreograph mode (draft the next frame)</b>
-      <span style="grid-column:1/-1; font-size:11px; opacity:0.85; margin-bottom:4px;">
-        Plan a play by seeing before / after positions side by side. Use it when
-        the current frame is your <em>starting</em> position and you want to
-        draft where each player runs next.
-      </span>
-      <kbd>Choreo</kbd><span>timeline button. Duplicates the current frame as a draft <em>N+1</em>, snapshots every chip's position, then shows a cyan ring at each snapshot with a live line to the chip's new position.</span>
-      <kbd>drag chips</kbd><span>move each chip to where it should end up. Right-click move-commands and walk-tweens also work. Arrows appear as chips leave their starting rings.</span>
-      <kbd>Commit</kbd><span>keep the new frame and exit (green banner button).</span>
-      <kbd>Cancel / Esc</kbd><span>delete the draft frame and return to N (red banner button).</span>
-
-      <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Save / share / export</b>
-      <kbd>Ctrl+Z / Ctrl+Y</kbd><span>undo / redo</span>
-      <kbd>&hellip;</kbd><span>Save / Load / Export JSON / Import JSON / Copy share link / Export video</span>
-      <kbd>share link</kbd><span>copies a URL with the whole scheme embedded (up to ~32 KB, JSON download otherwise)</span>
-
-      <b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">Help</b>
-      <kbd>?</kbd><span>open this dialog</span>
+      ${renderShortcutGrid()}
     </div>
     <div style="margin-top:14px; font-size:11px; opacity:0.7; text-align:right;">Press <b>Esc</b> or click Close</div>
   </div>
