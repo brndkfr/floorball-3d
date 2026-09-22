@@ -1,6 +1,6 @@
 // Pure geometric diagnostics for the landmark set fed into solvePnP
 // (pnp.js). No OpenCV/THREE dependency so these stay unit-testable without
-// a browser. See docs/plan.md B-BUG-001 and B-BUG-003.
+// a browser. See docs/plan.md B-BUG-001, B-BUG-003, B-BACK-006.
 
 // [x,y,z][] -> 3x3 covariance matrix (population, not sample - only used
 // for a scale-invariant degeneracy ratio, so the denominator convention
@@ -87,4 +87,23 @@ export function findLeverageOutliers(points, perPointErrorPx, opts = {}) {
     if (isFar && highError) flagged.push(points[i].key);
   }
   return flagged;
+}
+
+// B-BACK-006: a goal viewed near head-on is close to bilaterally symmetric,
+// so trying both left/right hypotheses for the 4 auto-detected goal corners
+// and picking whichever solvePnP call reports the lower reprojection error
+// can end up choosing between two errors that differ in the 6th decimal
+// place - not a real signal, a coin flip. This doesn't decide WHICH
+// hypothesis is right (that still needs more points or a human); it only
+// says whether the gap between the two trial errors is big enough to trust
+// as a real signal, so callers can warn instead of silently locking in a
+// guess. A relative threshold alone would fail when both errors are near 0
+// (any difference looks "huge" relatively), so an absolute pixel floor is
+// ORed in.
+export function isAmbiguousChoice(errA, errB, opts = {}) {
+  const { relativeThreshold = 0.05, absolutePxFloor = 0.5 } = opts;
+  const lo = Math.min(errA, errB), hi = Math.max(errA, errB);
+  if (hi === 0) return true;
+  const diff = hi - lo;
+  return diff < absolutePxFloor || diff / hi < relativeThreshold;
 }

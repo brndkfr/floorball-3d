@@ -8,7 +8,7 @@ import { ensureDoc } from '../doc.js';
 import { saveDoc } from '../storage.js';
 import { WORLD_LANDMARKS, LANDMARK_LABELS, MIN_LANDMARKS } from './landmarks.js';
 import { solveCameraPose } from './pnp.js';
-import { assessPlanarity, findLeverageOutliers } from './pose-diagnostics.js';
+import { assessPlanarity, findLeverageOutliers, isAmbiguousChoice } from './pose-diagnostics.js';
 import * as photoCanvas from './photo-canvas.js';
 import { enterPhoto, exitPhoto, isPhoto, fitToPhotoRect, setOverlayOpacity } from './view.js';
 import { enableWireframeOverlay, disableWireframeOverlay } from './wireframe.js';
@@ -829,18 +829,34 @@ async function detectAndPlace(end) {
   const size = photoCanvas.getImageSize();
   const intr = currentIntrinsics(size);
   const toSolveInput = (kp) => kp.map(([key, image]) => ({ world: WORLD_LANDMARKS[key], image }));
-  let chosenKp;
+  const candidateKeys = new Set(buildKeyed(false).map(([key]) => key));
+  // B-BACK-006: a goal viewed near head-on is close to bilaterally
+  // symmetric, so deciding L/R from JUST these 4 points can be a near-exact
+  // tie (observed: reprojection errors differing in the 6th decimal place).
+  // Any landmark already placed elsewhere on the rink (other end, crease,
+  // board, face-off) almost always breaks that local symmetry, since a real
+  // camera is rarely dead-centered on the rink's mirror axis - so fold in
+  // whatever's already placed before comparing the two hypotheses.
+  const otherPlaced = toSolveInput(
+    photoCanvas.getPlacedPoints()
+      .filter((p) => !candidateKeys.has(p.key))
+      .map((p) => [p.key, p.image]),
+  );
+  let chosenKp, ambiguous;
   try {
     const kpA = buildKeyed(false), kpB = buildKeyed(true);
     const [poseA, poseB] = await Promise.all([
-      solveCameraPose(toSolveInput(kpA), intr, size.w, size.h),
-      solveCameraPose(toSolveInput(kpB), intr, size.w, size.h),
+      solveCameraPose([...toSolveInput(kpA), ...otherPlaced], intr, size.w, size.h),
+      solveCameraPose([...toSolveInput(kpB), ...otherPlaced], intr, size.w, size.h),
     ]);
     chosenKp = poseB.reprojErrorPx < poseA.reprojErrorPx ? kpB : kpA;
+    ambiguous = isAmbiguousChoice(poseA.reprojErrorPx, poseB.reprojErrorPx);
   } catch {
     // Fall back to non-swapped if one of the trial solves fails (rare -
-    // happens on very degenerate landmark layouts).
+    // happens on very degenerate landmark layouts). Can't tell L from R
+    // here, so treat it as unresolved rather than silently guessing.
     chosenKp = buildKeyed(false);
+    ambiguous = true;
   }
   for (const [key, xy] of chosenKp) await autoPlace(key, xy);
   // Safety net: only reset zoom if a placed point would actually be
@@ -852,7 +868,10 @@ async function detectAndPlace(end) {
   return {
     ok: true,
     count: chosenKp.length,
-    message: 'auto-detect: goal placed - review + nudge, then place crease/board/face-off landmarks manually',
+    ambiguous,
+    message: ambiguous
+      ? 'auto-detect: goal placed, but left/right could not be confidently resolved (near head-on view) - check the overlay and use "Flip left/right" if it looks mirrored'
+      : 'auto-detect: goal placed - review + nudge, then place crease/board/face-off landmarks manually',
   };
 }
 
@@ -861,15 +880,26 @@ async function detectAndPlace(end) {
 // triggers auto-align (docs/plan.md 4.3 Step 2: only once the user has
 // zoomed into the goal area, not on file load).
 async function tryAutoAlign(end) {
+  let ambiguous = false;
   try {
-    await detectAndPlace(end);
+    ambiguous = !!(await detectAndPlace(end)).ambiguous;
   } catch (err) {
     console.error('auto-align failed', err);
   }
   const pose = await trySolve();
-  if (pose && pose.reprojErrorPx < 10 && photoCanvas.getPlacedPoints().length >= MIN_LANDMARKS) {
+  // B-BACK-006: a good reprojection error alone doesn't mean the pose is
+  // right - a near head-on goal can solve cleanly in EITHER L/R mirror, so
+  // don't claim "aligned for you" when detectAndPlace couldn't confidently
+  // pick a side. Route to guided hints instead, with an explicit nudge to
+  // check the flip.
+  if (pose && pose.reprojErrorPx < 10 && photoCanvas.getPlacedPoints().length >= MIN_LANDMARKS && !ambiguous) {
     autoBanner.style.display = 'block';
   } else {
+    if (ambiguous) {
+      errorEl.textContent += ' - left/right unresolved, check "Flip left/right" if the overlay looks mirrored';
+      errorEl.classList.add('bad');
+      errorEl.classList.remove('ok');
+    }
     startGuidedHints(end);
   }
 }
@@ -884,9 +914,18 @@ autoDetectBtn.addEventListener('click', async () => {
   try {
     const result = await detectAndPlace(end);
     errorEl.textContent = result.message;
-    errorEl.classList.toggle('bad', !result.ok);
+    errorEl.classList.toggle('bad', !result.ok || !!result.ambiguous);
     errorEl.classList.remove('ok');
-    trySolve();
+    // trySolve() below overwrites errorEl with the reprojection-error line
+    // once it resolves - await it here (instead of the previous fire-and-
+    // forget) so the ambiguous warning above isn't silently clobbered a
+    // moment later; re-append it once trySolve is done.
+    await trySolve();
+    if (result.ambiguous) {
+      errorEl.textContent += ' - left/right unresolved, verify with "Flip left/right" if mirrored';
+      errorEl.classList.add('bad');
+      errorEl.classList.remove('ok');
+    }
   } catch (err) {
     console.error(err);
     errorEl.textContent = 'auto-detect failed: ' + (err.message || err);

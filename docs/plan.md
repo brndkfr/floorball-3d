@@ -957,8 +957,38 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
   - **[B-BACK-005]** [open] Occluded-goalie detection (kneeling white gear
     against white ice) - likely not fixable classically, needs Phase 4
     pose cues.
-  - **[B-BACK-006]** [open] Auto-disambiguate L/R symmetric goal solves
-    (currently manual "Flip left/right" button).
+  - **[B-BACK-006]** [mitigated] Auto-disambiguate L/R symmetric goal
+    solves. `detectAndPlace()` in
+    [photo-overlay.js](../web/src/authoring/photo-overlay/photo-overlay.js)
+    already tried both L/R corner mappings and kept whichever gave the
+    lower reprojection error, but a near head-on goal view is close to
+    bilaterally symmetric so that comparison could be an unresolvable
+    coin flip (observed: errors differing in the 6th decimal place).
+    Two changes: (1) the L/R trial solve now folds in whatever's already
+    placed elsewhere on the rink (other end, crease, board, face-off) in
+    addition to the 4 candidate corners - a real camera is rarely
+    dead-centered on the rink's mirror axis, so any other placed point
+    almost always breaks the local symmetry and actually resolves cases
+    that were previously a toss-up; (2) when the two trial errors are
+    still statistically indistinguishable even with that extra context,
+    `isAmbiguousChoice()` (new in
+    [pose-diagnostics.js](../web/src/authoring/photo-overlay/pose-diagnostics.js))
+    flags it, and the UI says so explicitly ("left/right could not be
+    confidently resolved... use Flip left/right if mirrored") instead of
+    silently locking in a guess - both in the manual Auto-detect button's
+    result message and in `tryAutoAlign()`, which now withholds the
+    "aligned for you" success banner when ambiguous (a clean reprojection
+    error doesn't mean the pose is right if it's the mirror image).
+    Manual "Flip left/right" remains the fallback for whatever's still
+    ambiguous. Unit-tested in
+    [test/pose-diagnostics.test.js](../test/pose-diagnostics.test.js):
+    near-tied errors, exactly-equal/zero edge cases, a clearly-decided
+    pair, the absolute-pixel-floor case (small errors near zero aren't
+    "relatively huge"), and custom thresholds. Not verified against a
+    real photo in a live browser - the ambiguity-resolution path depends
+    on OpenCV's actual solvePnP output for a real image, which isn't
+    practical to drive from Playwright; the decision logic itself
+    (`isAmbiguousChoice`) is fully covered by unit tests.
   - **[B-BACK-007]** [shipped] Cosmetic: chip labels sometimes overlap
     landmark labels in cluttered photos. Fixed in
     [photo-canvas.js](../web/src/authoring/photo-overlay/photo-canvas.js)

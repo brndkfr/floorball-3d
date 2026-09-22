@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assessPlanarity, findLeverageOutliers } from '../web/src/authoring/photo-overlay/pose-diagnostics.js';
+import { assessPlanarity, findLeverageOutliers, isAmbiguousChoice } from '../web/src/authoring/photo-overlay/pose-diagnostics.js';
 
 test('assessPlanarity flags an all-floor (y=0) point set as degenerate', () => {
   const points = [
@@ -88,4 +88,28 @@ test('findLeverageOutliers is a no-op below 4 points or with mismatched array le
   assert.deepEqual(findLeverageOutliers(points, [1, 1, 1]), []);
   const points4 = [...points, { key: 'd', world: [0, 0, 1] }];
   assert.deepEqual(findLeverageOutliers(points4, [1, 1, 1]), []); // mismatched length
+});
+
+test('isAmbiguousChoice flags a near head-on goal tie (6th-decimal difference)', () => {
+  assert.equal(isAmbiguousChoice(3.412001, 3.412007), true);
+});
+
+test('isAmbiguousChoice flags equal errors, including the zero/zero edge case', () => {
+  assert.equal(isAmbiguousChoice(0, 0), true);
+  assert.equal(isAmbiguousChoice(5, 5), true);
+});
+
+test('isAmbiguousChoice does not flag a clearly-decided pair', () => {
+  assert.equal(isAmbiguousChoice(2.5, 40), false);
+});
+
+test('isAmbiguousChoice applies an absolute pixel floor so small errors near zero are not "relatively huge"', () => {
+  // 0.05 vs 0.2 differ by 4x relatively, but both are sub-pixel noise -
+  // without the absolute floor this would wrongly read as "clearly decided".
+  assert.equal(isAmbiguousChoice(0.05, 0.2), true);
+});
+
+test('isAmbiguousChoice respects custom thresholds', () => {
+  assert.equal(isAmbiguousChoice(10, 10.4, { absolutePxFloor: 0.1, relativeThreshold: 0.01 }), false);
+  assert.equal(isAmbiguousChoice(10, 10.4, { absolutePxFloor: 1 }), true);
 });
