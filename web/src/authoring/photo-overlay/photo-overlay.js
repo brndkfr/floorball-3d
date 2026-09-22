@@ -8,7 +8,7 @@ import { ensureDoc } from '../doc.js';
 import { saveDoc } from '../storage.js';
 import { WORLD_LANDMARKS, LANDMARK_LABELS, MIN_LANDMARKS } from './landmarks.js';
 import { solveCameraPose } from './pnp.js';
-import { assessPlanarity } from './pose-diagnostics.js';
+import { assessPlanarity, findLeverageOutliers } from './pose-diagnostics.js';
 import * as photoCanvas from './photo-canvas.js';
 import { enterPhoto, exitPhoto, isPhoto, fitToPhotoRect, setOverlayOpacity } from './view.js';
 import { enableWireframeOverlay, disableWireframeOverlay } from './wireframe.js';
@@ -495,11 +495,23 @@ async function trySolve() {
     // cases this app's landmark set usually produces.
     const coplanar = assessPlanarity(points.map((p) => p.world)).degenerate;
     borderMode.setCoplanarWarning(coplanar);
+    // B-BUG-003: a far-away point (board/centre-line, ~16-20m from the goal
+    // cluster) has outsized leverage on the solve - a small pixel slip there
+    // can drag the whole pose off while an equally-sloppy near-goal point
+    // barely moves it. Flag it by name so the user knows WHICH point to
+    // re-check instead of guessing from the aggregate error alone.
+    const leveragePoints = findLeverageOutliers(
+      placed.map((p) => ({ key: p.key, world: WORLD_LANDMARKS[p.key] })),
+      pose.perPointErrorPx,
+    );
     errorEl.textContent = `reprojection error: ${pose.reprojErrorPx.toFixed(1)} px (${placed.length} pts)`
-      + (coplanar ? ' - warning: all points coplanar, add crease/post landmarks' : '');
-    errorEl.classList.toggle('bad', pose.reprojErrorPx > 10 || coplanar);
-    errorEl.classList.toggle('ok', pose.reprojErrorPx <= 10 && !coplanar);
-    updatePerPointErrors(placed, pose.perPointErrorPx);
+      + (coplanar ? ' - warning: all points coplanar, add crease/post landmarks' : '')
+      + (leveragePoints.length
+        ? ` - warning: ${leveragePoints.map((k) => LANDMARK_LABELS[k] || k).join(', ')} far from the other points and may be destabilizing the pose - re-check its placement`
+        : '');
+    errorEl.classList.toggle('bad', pose.reprojErrorPx > 10 || coplanar || leveragePoints.length > 0);
+    errorEl.classList.toggle('ok', pose.reprojErrorPx <= 10 && !coplanar && leveragePoints.length === 0);
+    updatePerPointErrors(placed, pose.perPointErrorPx, leveragePoints);
     debugLog('trySolve:result', {
       reprojErrorPx: Number(pose.reprojErrorPx.toFixed(2)),
       pointCount: placed.length,
@@ -745,7 +757,7 @@ edgesToggle.addEventListener('change', async () => {
   }
 });
 
-function updatePerPointErrors(placed, perPoint) {
+function updatePerPointErrors(placed, perPoint, leverageKeys = []) {
   if (!perPoint) return;
   let worstIdx = -1, worst = -1;
   for (let i = 0; i < perPoint.length; i++) {
@@ -756,14 +768,20 @@ function updatePerPointErrors(placed, perPoint) {
   // already sub-pixel accurate.
   const mean = perPoint.reduce((a, b) => a + b, 0) / perPoint.length;
   const flagWorst = worst > 5 && worst > mean * 1.5;
+  const leverageSet = new Set(leverageKeys);
   const byKey = new Map();
   placed.forEach((p, i) => byKey.set(p.key, i));
   listEl.querySelectorAll('.photo-landmark-row').forEach((row) => {
     const idx = byKey.get(row.dataset.key);
     const errEl = row.querySelector('.err');
-    if (idx === undefined) { errEl.textContent = ''; errEl.classList.remove('worst'); return; }
+    if (idx === undefined) { errEl.textContent = ''; errEl.classList.remove('worst', 'leverage'); return; }
     errEl.textContent = perPoint[idx].toFixed(1) + ' px';
     errEl.classList.toggle('worst', flagWorst && idx === worstIdx);
+    const isLeverage = leverageSet.has(row.dataset.key);
+    errEl.classList.toggle('leverage', isLeverage);
+    errEl.title = isLeverage
+      ? 'Far from the other placed points - a small placement error here has outsized effect on the solved pose (B-BUG-003)'
+      : '';
   });
 }
 

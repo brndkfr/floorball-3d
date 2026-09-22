@@ -714,14 +714,29 @@ playback + tracking + interpolation).
     stepper polish. The stepper + primary CTAs deliver the "one
     primary action per step" plan-level UX principle; the fine
     controls remain accessible via the same buttons as before.
-- **[B-BUG-003]** [open] **Long-baseline point sensitivity**: board/centre-line points ~16-20m from
-  the goal cluster amplify small pixel-placement errors into large pose
-  error far more than near-goal points do (observed this session: adding 3
-  imprecisely-dragged rink-outline points took a clean 5.8px/6-point solve
-  to 165px, with the camera position jumping to a nonsensical location).
-  Neither the coplanar warning nor the per-point error catches this before
-  the fact - always re-check the overall reprojection error line after
-  adding far points, don't assume more points = better.
+- **[B-BUG-003]** [mitigated] **Long-baseline point sensitivity**: board/centre-line
+  points ~16-20m from the goal cluster amplify small pixel-placement errors
+  into large pose error far more than near-goal points do (observed this
+  session: adding 3 imprecisely-dragged rink-outline points took a clean
+  5.8px/6-point solve to 165px, with the camera position jumping to a
+  nonsensical location). Previously neither the coplanar warning nor the
+  per-point error caught this before the fact - the user had to notice and
+  reason about it manually. `pose-diagnostics.js` gained
+  `findLeverageOutliers()`: it flags any landmark that is BOTH a world-space
+  distance outlier relative to the other placed points' centroid AND already
+  carrying elevated reprojection error, which is exactly the combination
+  that indicates a far point is dragging the solve off (a legitimately-far
+  point with low error is left alone - being far isn't itself a problem).
+  `trySolve()` in [photo-overlay.js](../web/src/authoring/photo-overlay/photo-overlay.js)
+  names the offending landmark(s) in the reprojection-error line and adds an
+  orange dotted-underline `.err.leverage` style + tooltip on that row in the
+  landmark list, so the user knows *which* point to re-check instead of
+  guessing from the aggregate error. Unit-tested in
+  [test/pose-diagnostics.test.js](../test/pose-diagnostics.test.js#L47):
+  far+high-error flagged, far+low-error not flagged, near+high-error not
+  flagged, and the <4-points/mismatched-array no-op cases. Detection only -
+  it still can't tell the user the CORRECT placement, just which click to
+  re-examine.
 - **Rink-outline tool zoom/pan**: verified working - wheel-zoom and
   right-click-drag pan are wired at the top level in
   [photo-canvas.js](../web/src/authoring/photo-overlay/photo-canvas.js),

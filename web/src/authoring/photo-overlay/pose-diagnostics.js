@@ -1,6 +1,6 @@
 // Pure geometric diagnostics for the landmark set fed into solvePnP
 // (pnp.js). No OpenCV/THREE dependency so these stay unit-testable without
-// a browser. See docs/plan.md B-BUG-001.
+// a browser. See docs/plan.md B-BUG-001 and B-BUG-003.
 
 // [x,y,z][] -> 3x3 covariance matrix (population, not sample - only used
 // for a scale-invariant degeneracy ratio, so the denominator convention
@@ -47,4 +47,44 @@ export function assessPlanarity(worldPoints, opts = {}) {
   if (trace <= 0) return { degenerate: true, score: 0 };
   const score = det3x3(cov) / Math.pow(trace / 3, 3);
   return { degenerate: score < threshold, score };
+}
+
+function distance3(a, b) {
+  const dx = a[0] - b[0], dy = a[1] - b[1], dz = a[2] - b[2];
+  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+function median(values) {
+  const s = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+// B-BUG-003: a landmark far outside the main cluster (e.g. a board/centre-
+// line point ~16-20m from the goal cluster) has outsized leverage on the
+// solve - a small pixel-placement slip there swings the pose far more than
+// the same slip on a near-goal point would. Flags any point that is BOTH a
+// world-space distance outlier relative to the other points' centroid AND
+// already carrying elevated reprojection error - the two-condition test
+// keeps this from flagging every legitimately-far board point, only ones
+// that are also currently hurting the solve.
+export function findLeverageOutliers(points, perPointErrorPx, opts = {}) {
+  const { distanceFactor = 2.5, errorPxThreshold = 5 } = opts;
+  const n = points.length;
+  if (n < 4 || !perPointErrorPx || perPointErrorPx.length !== n) return [];
+  const flagged = [];
+  for (let i = 0; i < n; i++) {
+    const others = points.filter((_, j) => j !== i);
+    const centroid = others.reduce(
+      (acc, p) => [acc[0] + p.world[0], acc[1] + p.world[1], acc[2] + p.world[2]],
+      [0, 0, 0],
+    ).map((v) => v / others.length);
+    const otherDistances = others.map((p) => distance3(p.world, centroid));
+    const medianDist = median(otherDistances);
+    const myDist = distance3(points[i].world, centroid);
+    const isFar = medianDist > 0 && myDist > medianDist * distanceFactor;
+    const highError = perPointErrorPx[i] > errorPxThreshold;
+    if (isFar && highError) flagged.push(points[i].key);
+  }
+  return flagged;
 }
