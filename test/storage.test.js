@@ -36,6 +36,9 @@ const {
   setCurrentProjectId,
   adoptDocAsProject,
   migrateLegacyStorage,
+  saveHistoryState,
+  loadHistoryState,
+  deleteHistoryState,
 } = await import('../web/src/authoring/storage.js');
 const { state } = await import('../web/src/state.js');
 const { emptyDoc, emptyMeta } = await import('../web/src/authoring/doc.js');
@@ -150,6 +153,32 @@ test('deleteProject removes just that entry from listProjects', () => {
   const remaining = listProjects();
   assert.equal(remaining.length, 1);
   assert.equal(remaining[0].id, b);
+});
+
+test('deleteProject also clears that project\'s persisted history (S-BACK-012)', () => {
+  resetStorage();
+  const a = createProject('A');
+  saveHistoryState(a, { stack: [{ n: 1 }], cursor: 0 });
+  assert.ok(loadHistoryState(a));
+  deleteProject(a);
+  assert.equal(loadHistoryState(a), null);
+});
+
+test('saveHistoryState / loadHistoryState round-trip; missing key is null', () => {
+  resetStorage();
+  assert.equal(loadHistoryState('nope'), null);
+  const data = { stack: [{ n: 1 }, { n: 2 }], cursor: 1 };
+  assert.equal(saveHistoryState('proj-x', data), true);
+  assert.deepEqual(loadHistoryState('proj-x'), data);
+  deleteHistoryState('proj-x');
+  assert.equal(loadHistoryState('proj-x'), null);
+});
+
+test('saveHistoryState reports failure (not a throw) on a quota error', () => {
+  resetStorage();
+  fakeStorage.failNextWrites = true;
+  assert.equal(saveHistoryState('proj-x', { stack: [{}], cursor: 0 }), false);
+  fakeStorage.failNextWrites = false;
 });
 
 test('adoptDocAsProject gives an untrusted doc a fresh id and persists it', () => {

@@ -18,6 +18,7 @@ const LEGACY_SLOT_PREFIX = 'floorball-3d:slot:';
 const PROJECT_PREFIX = 'floorball-3d:project:';
 const CURRENT_KEY = 'floorball-3d:currentProjectId';
 const MIGRATION_FLAG = 'floorball-3d:migrated:v1';
+const HISTORY_PREFIX = 'floorball-3d:history:';
 
 // --- save status ------------------------------------------------------
 
@@ -124,6 +125,46 @@ export function deleteProject(id) {
     localStorage.removeItem(projectKey(id));
   } catch (e) {
     console.warn('deleteProject: could not remove', e);
+  }
+  deleteHistoryState(id);
+}
+
+// --- undo/redo stack persistence (S-BACK-012) --------------------------
+//
+// One entry per project, storing history-stack.js's serialized
+// { stack, cursor }. Kept as its own key rather than folded into the
+// project doc itself so a corrupt/oversized history blob can never stop
+// the doc load path; failures here are swallowed (undo persistence
+// degrading to memory-only for the session is fine, unlike a doc save
+// failure which needs the visible save-status badge).
+
+export function saveHistoryState(id, data) {
+  if (!id) return false;
+  try {
+    localStorage.setItem(HISTORY_PREFIX + id, JSON.stringify(data));
+    return true;
+  } catch (e) {
+    console.warn('saveHistoryState: could not persist', e);
+    return false;
+  }
+}
+
+export function loadHistoryState(id) {
+  if (!id) return null;
+  try {
+    const raw = localStorage.getItem(HISTORY_PREFIX + id);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.warn('loadHistoryState: could not read', e);
+    return null;
+  }
+}
+
+export function deleteHistoryState(id) {
+  try {
+    localStorage.removeItem(HISTORY_PREFIX + id);
+  } catch (e) {
+    console.warn('deleteHistoryState: could not remove', e);
   }
 }
 

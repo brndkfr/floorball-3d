@@ -949,15 +949,56 @@ added.
   listener notification). Not verified in a browser - the badge's visual
   placement/timing needs a live check. **Remaining, not done:** see
   **[S-BACK-012]**.
-- **[S-BACK-012]** [open] **Undo history not persisted, photo-overlay work
-  not undoable.** `history.js`'s undo stack (MAX=100) is memory-only and
-  lost on reload, including after an accidental "New scheme". Photo-overlay
-  landmark placement/solve steps aren't pushed to the undo stack at all.
-  Scoped out of S-BACK-001 - persisting an undo stack (or snapshotting to
-  storage) and wiring photo-overlay actions into `history.js` is a bigger
-  structural change than the quota/indicator fix, with real regression risk
-  that needs live browser verification to do safely, not attempted blind in
-  this pass.
+- **[S-BACK-012]** [in-progress] **Undo history not persisted, photo-overlay
+  work not undoable.** `history.js`'s undo stack (MAX=100) used to be
+  memory-only and lost on reload, including after an accidental "New
+  scheme". Photo-overlay landmark placement/solve steps still aren't pushed
+  to the undo stack at all. **Persistence half shipped this session:**
+  - The stack's push/undo/redo/cursor bookkeeping was extracted to
+    [history-stack.js](../web/src/authoring/history-stack.js) - a
+    dependency-free module operating on a plain `{stack, cursor, max}`
+    record, so it's unit-testable without pulling in `chips.js`/`shapes.js`/
+    `scene.js` (closes part of **S-BACK-009**: `createHistoryStack`,
+    `pushSnapshot`, `stepUndo`/`stepRedo`, `resetHistoryStack`,
+    `canUndo`/`canRedo`, and a `serializeHistoryStack`/`hydrateHistoryStack`
+    round-trip pair; 10 new node tests cover push/evict/cursor invariants
+    and reject malformed persisted data instead of throwing).
+    [history.js](../web/src/authoring/history.js) is now a thin wrapper:
+    same public API (`pushHistory`/`undo`/`redo`/`initHistory`), same
+    scene-rebuild side effects in `apply()`, delegating stack bookkeeping
+    to `history-stack.js`.
+  - `storage.js` gained `saveHistoryState`/`loadHistoryState`/
+    `deleteHistoryState`, one `floorball-3d:history:<projectId>` key per
+    project (kept separate from the project doc itself so a corrupt/
+    oversized history blob can never block the doc load path). Failures
+    are swallowed - unlike a doc-save failure, a history-persist failure
+    degrades to memory-only for the session rather than needing the
+    visible save-status badge. `deleteProject()` now also clears that
+    project's history key. 3 new node tests in `test/storage.test.js`
+    (round-trip, missing-key, quota-error, delete-cascade).
+  - `history.js`'s `pushHistory`/`undo`/`redo` persist after every stack
+    mutation; `initHistory()` (called on boot and on every
+    `switchToProject()`) tries to rehydrate this project's saved stack
+    first and only falls back to seeding a fresh one-entry stack from the
+    current doc if nothing valid is stored - so undo survives a reload and
+    still can't reach across projects.
+  - Verified: `pnpm test` 138/138, `pnpm run build` + `check:size` pass,
+    and the full Playwright suite (`test-e2e/library.spec.js` in
+    particular, which drives `switchToProject`) - the first full-suite run
+    after this change showed several unrelated failures that turned out to
+    be caused by **stray leftover `python -m http.server` processes**
+    squatting on port 8000 from an old session (not this repo's
+    `serve-static.mjs`), which `reuseExistingServer` was silently reusing;
+    killing those and rerunning gave every affected spec a clean pass in
+    isolation, and only pre-existing multi-worker contention flakiness
+    (also present with unrelated specs, not caused by this change)
+    remained when running the whole suite at once.
+  - **Not done, still open:** wiring photo-overlay actions into
+    `pushHistory()`. Left out of this pass because it needs deciding edit
+    granularity per photo-overlay action (drag-in-progress vs. drop, one
+    push per landmark vs. per solve) and live-browser verification to get
+    right, same risk this item originally called out - it's a separate,
+    larger change than the persistence half above.
 - **[S-BACK-002]** [shipped] **Unvalidated ids reach innerHTML.** Fixed at
   the ingestion boundary: new `isValidId()` (`[\w-]+`) + `sanitizeDoc()`
   in [doc.js](../web/src/authoring/doc.js) run from `acceptDoc()`, so every
