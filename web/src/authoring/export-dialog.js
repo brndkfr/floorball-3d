@@ -3,9 +3,13 @@
 // dropdown never offers a format that will fail on encode.
 
 import { probeMp4, probeWebm, exportMp4, exportWebm, exportPng, downloadBlob, totalDurationMs } from './export.js';
+import { installFocusTrap } from '../focus-trap.js';
 
 const overlay = document.createElement('div');
 overlay.id = 'exportOverlay';
+overlay.setAttribute('role', 'dialog');
+overlay.setAttribute('aria-modal', 'true');
+overlay.setAttribute('aria-label', 'Export animation');
 overlay.style.cssText = `
   position:fixed; inset:0; z-index:30;
   background:rgba(0,0,0,0.55); display:none;
@@ -72,6 +76,7 @@ const pctEl = overlay.querySelector('.ex-pct');
 
 let cancelled = false;
 let running = false;
+let releaseTrap = null;
 
 async function refreshFormats() {
   formatSel.innerHTML = '';
@@ -93,6 +98,9 @@ export async function openExportDialog() {
   msgEl.textContent = '';
   goBtn.disabled = true;
   overlay.style.display = 'flex';
+  releaseTrap = installFocusTrap(overlay, {
+    onEscape: () => { if (!running) closeDialog(); },
+  });
   await refreshFormats();
   goBtn.disabled = false;
   const total = totalDurationMs();
@@ -102,6 +110,8 @@ export async function openExportDialog() {
 
 function closeDialog() {
   overlay.style.display = 'none';
+  releaseTrap?.();
+  releaseTrap = null;
 }
 
 cancelBtn.addEventListener('click', () => {

@@ -15,6 +15,7 @@ import { state } from '../state.js';
 import { scene } from '../scene.js';
 import { expectLoad, loaded, failed } from '../status.js';
 import { TEAM_HOME, TEAM_AWAY } from '../tokens.js';
+import { prefersReducedMotion } from '../reduced-motion.js';
 import { ensureDoc, newId } from './doc.js';
 import { saveDoc } from './storage.js';
 import { drawRoleGlyph } from './role-icons.js';
@@ -221,7 +222,12 @@ function spawnChipMesh(player) {
 
   // drop micro-interaction: chip scales in from 0.7 -> 1.0 (times display
   // scale) with a cyan ring flash. Cheap, defining for the "playful" feel
-  // called out in the plan's §3.7.
+  // called out in the plan's §3.7. Skipped when the user has enabled
+  // "reduce motion" - the chip snaps to full scale and no ring appears.
+  if (prefersReducedMotion()) {
+    group.scale.setScalar(CHIP_DISPLAY_SCALE);
+    return group;
+  }
   group.scale.setScalar(0.7 * CHIP_DISPLAY_SCALE);
   drops.push({ group, elapsed: 0, dur: 0.2, fromScale: 0.7 * CHIP_DISPLAY_SCALE, toScale: CHIP_DISPLAY_SCALE });
 

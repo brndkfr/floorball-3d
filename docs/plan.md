@@ -954,7 +954,7 @@ added.
   editing the text. Fixed: same guard as controls.js
   (`document.activeElement?.tagName` check) added at the top of dock.js's
   handler.
-- **[S-BACK-005]** [in-progress] **Accessibility gaps.** The blanket claim
+- **[S-BACK-005]** [shipped] **Accessibility gaps.** The blanket claim
   of "no `<label for>` on any input" didn't hold up under inspection: of
   the 25 inputs in `web/index.html`, 23 were already implicitly labelled
   (wrapped in `<label>...<input>...</label>`, which the accessible-name
@@ -962,25 +962,50 @@ added.
   actual two gaps: `photoFileInput` (no label at all - added
   `aria-label="Upload photo to analyze"`) and `photoAlignSlider` (a
   `<label>` existed nearby but wasn't associated - added `for=
-  "photoAlignSlider"`). **Still open, not attempted this session** (real
-  risk of getting it wrong without live verification):
-  - Icon-only buttons (unicode glyph + `title`) do get an accessible name
-    from the glyph's text content per the accname spec, and `title` is a
-    fallback too, but the *quality* of what a screen reader announces for
-    a bare glyph like "&#9664;" is genuinely poor - auditing which of the
-    ~83 buttons need an explicit `aria-label` needs a real screen reader,
-    not a grep.
-  - Dialogs (export, help) don't trap focus and only help.js reacts to
-    Escape - the new S-BACK-006 dialogs (`dialog.js`, native `<dialog>`)
-    get this for free, but export.js/help.js's own hand-rolled overlays
-    are untouched.
-  - No `prefers-reduced-motion` - only one plain CSS transition exists in
-    `index.html`; the actual animation (walk-tween, drop-flash, selection
-    rings) is JS/Three.js-driven, so a CSS media query alone wouldn't
-    meaningfully cover it. Doing this properly means gating
-    `walk-tween.js` and the ring/flash code in `chips.js` behind
-    `matchMedia('(prefers-reduced-motion: reduce)')`, which is a real
-    behaviour change across multiple files - not attempted blind here.
+  "photoAlignSlider"`). **This session closes the three remaining pieces:**
+  - Icon-only button `aria-label` audit: added explicit `aria-label`s
+    to every button whose only content is a unicode glyph and whose
+    surrounding `title` isn't announced by every screen reader -
+    timeline transport (`data-tl="prev|play|stop|next|speed|loop|add"`),
+    the layers/info/coords/photoPanel collapse toggles
+    (`.lp-toggle`, `.hud-toggle`), and the dock's `rotate` / `color` /
+    `overflow` buttons. Buttons that already carry a visible text label
+    alongside their glyph (Chip, Ball, Arrow, Curved, Zone, Text, Cone,
+    T1/T2, 3D) were left alone - a redundant `aria-label` would fight
+    the accname algorithm's "text content" pass. Covered by an e2e
+    spec that walks every visible top-level `<button>` and fails if
+    the accessible name (aria-label OR visible text OR title) is empty.
+  - Focus trap + `role="dialog"` + `aria-modal="true"` on the hand-rolled
+    `help.js` overlay and `export-dialog.js`. Trap lives in a new
+    `web/src/focus-trap.js` with a pure `nextTrappedIndex()` helper (7
+    node tests: no-op empty trap, wrap end<->start on Tab/Shift+Tab,
+    hand-off to browser default in the middle, single-element trap
+    onto itself). Both dialogs restore focus to the opener on close.
+    Native `<dialog>`-based UIs (`dialog.js`, `library-dialog.js`) still
+    get focus trap + Escape for free from `showModal()` and were not
+    touched. E2e spec opens the help overlay via `?`, asserts
+    `role="dialog"`, `aria-modal="true"`, initial focus lands on Close,
+    Tab wraps within the overlay, Escape closes.
+  - `prefers-reduced-motion` gating for the JS/Three.js decorations:
+    new `web/src/reduced-motion.js` exports a single
+    `prefersReducedMotion()` that reads `window.matchMedia` on every
+    call (6 node tests for missing-window / missing-matchMedia /
+    matches-true / matches-false / no-caching-across-calls / throw-safe).
+    `walk-tween.js`'s `startWalk` short-circuits to the destination
+    coordinate under reduce-motion (no ease, no per-frame tick), and
+    `chips.js`'s `spawnChipMesh` skips the 0.7x -> 1.0x drop scale and
+    doesn't spawn the cyan ring flash. Playback timelines (interpolated
+    frame animation) are deliberately NOT gated - they're the primary
+    product output, not decoration. E2e spec emulates
+    `reducedMotion: 'reduce'`, calls `spawnChip`, and asserts the group
+    is already at full display scale on the frame it was created;
+    baseline spec (`reducedMotion: 'no-preference'`) confirms the chip
+    starts at 0.7x display scale so we know the reduce path is really
+    what disabled it.
+  The one plain CSS `transition:` in `index.html` (100 ms border-color +
+  background on `.tl-card:hover`) is deliberately left alone - well
+  under the WCAG "essential" threshold and not the kind of motion that
+  causes vestibular issues.
 - **[S-BACK-006]** [shipped] **Blocking `alert`/`confirm`/`prompt` calls.**
   dock.js had 8 occurrences (New/Delete-slot/Overwrite confirms,
   load-failed/import-failed/too-large-for-share alerts, save-as prompt,

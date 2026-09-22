@@ -3,10 +3,15 @@
 // localStorage prefix. The overlay opens on '?', from an on-screen
 // help button, or the first time the app boots.
 
+import { installFocusTrap } from './focus-trap.js';
+
 const ONBOARDED_KEY = 'floorball-3d:onboarded';
 
 const overlay = document.createElement('div');
 overlay.id = 'helpOverlay';
+overlay.setAttribute('role', 'dialog');
+overlay.setAttribute('aria-modal', 'true');
+overlay.setAttribute('aria-label', 'Shortcuts and tips');
 overlay.style.cssText = `
   position:fixed; inset:0; z-index:30;
   background:rgba(0,0,0,0.55); display:none;
@@ -108,8 +113,17 @@ css.textContent = `
 `;
 document.head.appendChild(css);
 
-function openHelp() { overlay.style.display = 'flex'; }
-function closeHelp() { overlay.style.display = 'none'; }
+function openHelp() {
+  overlay.style.display = 'flex';
+  releaseTrap = installFocusTrap(overlay, { onEscape: closeHelp });
+}
+function closeHelp() {
+  overlay.style.display = 'none';
+  releaseTrap?.();
+  releaseTrap = null;
+}
+
+let releaseTrap = null;
 
 overlay.querySelector('[data-x="close"]').addEventListener('click', closeHelp);
 overlay.addEventListener('click', (e) => { if (e.target === overlay) closeHelp(); });
@@ -121,9 +135,9 @@ window.addEventListener('keydown', (e) => {
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     e.preventDefault();
     if (overlay.style.display === 'flex') closeHelp(); else openHelp();
-  } else if (e.key === 'Escape' && overlay.style.display === 'flex') {
-    closeHelp();
   }
+  // Escape while the overlay is open is handled by the focus-trap's
+  // onEscape callback so we do not double-close here.
 });
 
 // --- first-visit onboarding tip --------------------------------------

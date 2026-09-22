@@ -15,6 +15,7 @@
 //   last set and the walk is abandoned rather than fought.
 
 import { state } from '../state.js';
+import { prefersReducedMotion } from '../reduced-motion.js';
 
 const WALK_S = 0.28;
 const MAX_DT = 1 / 30;   // clamp frame spikes (backgrounded tab, GC pause) so a
@@ -33,6 +34,15 @@ function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 // rendered position back to the start so the next frame eases forward.
 export function startWalk(obj, fromX, fromZ, toX, toZ) {
   if (state.playback?.playing) return;
+  if (prefersReducedMotion()) {
+    // Skip the ease entirely - rendered position already matches the doc
+    // destination (caller set obj.position before calling us), just clear
+    // any prior in-flight walk so updateWalks doesn't re-drive it.
+    walks.delete(obj);
+    obj.position.x = toX;
+    obj.position.z = toZ;
+    return;
+  }
   const prev = walks.get(obj);
   const sx = prev ? prev.curX : fromX;
   const sz = prev ? prev.curZ : fromZ;
