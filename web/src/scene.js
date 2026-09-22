@@ -77,6 +77,7 @@ export function setTopDownRotationSteps(steps) {
   topDownCamera.up.copy(UPS[topDownRotationSteps]);
   topDownCamera.lookAt(topDownCamera.position.x, 0, topDownCamera.position.z);
   fitTopDownFrustum();
+  document.dispatchEvent(new CustomEvent('topdownRotated'));
 }
 export function getTopDownRotationSteps() { return topDownRotationSteps; }
 

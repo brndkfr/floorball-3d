@@ -151,39 +151,10 @@ function segmentAt(elapsed) {
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
-// Shortest-path lerp for angles in radians (so a chip doesn't take the
-// long way around when its heading crosses -PI / +PI).
-function lerpAngle(a, b, t) {
-  let d = b - a;
-  d = ((d + Math.PI) % (2 * Math.PI)) - Math.PI;
-  return a + d * t;
-}
-
-// Cubic Bezier evaluation on a single axis. C1 defaults to P0 + (P1-P0)/3
-// and C2 to P0 + 2(P1-P0)/3, which degenerates to a straight line - so
-// bezierPos(t) matches lerp(t) exactly when no control points are set.
-function bezierPos(p0, p1, c1, c2, t) {
-  const _c1 = (c1 === undefined || c1 === null) ? p0 + (p1 - p0) / 3 : c1;
-  const _c2 = (c2 === undefined || c2 === null) ? p0 + 2 * (p1 - p0) / 3 : c2;
-  const it = 1 - t;
-  return it * it * it * p0
-       + 3 * it * it * t * _c1
-       + 3 * it * t * t * _c2
-       + t * t * t * p1;
-}
-
-// Returns [c1x, c1z, c2x, c2z] in absolute world coords for the segment
-// (pa -> pb). pa.im1 is the outgoing control offset from pa (stored as
-// { dx, dz } relative to pa's position); pb.im2 is the incoming control
-// offset relative to pb. Absent controls resolve to the straight-line
-// 1/3 and 2/3 defaults.
-export function segmentControls(pa, pb) {
-  const c1x = pa?.im1 ? pa.x + pa.im1.dx : undefined;
-  const c1z = pa?.im1 ? pa.z + pa.im1.dz : undefined;
-  const c2x = pb?.im2 ? pb.x + pb.im2.dx : undefined;
-  const c2z = pb?.im2 ? pb.z + pb.im2.dz : undefined;
-  return [c1x, c1z, c2x, c2z];
-}
+// Cubic Bezier evaluation + segment-control resolution + shortest-path
+// angle lerp live in ./bezier.js so they can be unit-tested without the
+// three.js graph.
+import { bezierPos, segmentControls, lerpAngle } from './bezier.js';
 
 function applyPose(elapsed) {
   const frames = getFrames();
@@ -289,4 +260,4 @@ export function seekTo(elapsed) {
   applyPose(playback.elapsed);
 }
 
-export { frameIndexAt, frameStartTime, totalDuration, bezierPos };
+export { frameIndexAt, frameStartTime, totalDuration, bezierPos, segmentControls };

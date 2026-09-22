@@ -12,12 +12,13 @@
 
 import * as THREE from 'three';
 import { state } from '../state.js';
-import { scene } from '../scene.js';
+import { scene, topDownCamera } from '../scene.js';
 import { ensureDoc } from './doc.js';
-import { shapeDataFor, rebuildZonePoints, updateShape } from './shapes.js';
+import { shapeDataFor, rebuildZonePoints, updateShape, TEXT_MIN_SIZE, TEXT_MAX_SIZE, TEXT_DEFAULT_SIZE } from './shapes.js';
 import { onSelectionChanged } from '../selection.js';
 import { isTopDown } from './topdown-camera.js';
 import { saveDoc } from './storage.js';
+import { topdownAxes, textCorners, resizeFromCornerDrag } from './text-resize-math.js';
 
 const HANDLE_Y = 20;
 const CORNER_COLOR = 0xffb347;
@@ -28,10 +29,12 @@ group.visible = false;
 scene.add(group);
 
 const handleMeshes = [];   // { mesh, role: 'corner'|'edge'|'vertex'|'point', index, kind }
+let outlineMesh = null;    // dotted bbox outline shown for text shapes
 
 let currentShapeId = null;
 let dragTarget = null;     // matches an entry in handleMeshes
 let dragShape = null;      // mutable snapshot; committed on endDrag
+let dragOrigBbox = null;   // bbox + size at drag start (text shapes only)
 
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
@@ -62,6 +65,56 @@ function disposeHandles() {
     h.mesh.material?.dispose?.();
   }
   handleMeshes.length = 0;
+  if (outlineMesh) {
+    group.remove(outlineMesh);
+    outlineMesh.geometry?.dispose?.();
+    outlineMesh.material?.dispose?.();
+    outlineMesh = null;
+  }
+}
+
+// Dotted rectangle spanning the four given world-XZ corners at y=HANDLE_Y-5.
+// Corners are supplied in NW,NE,SE,SW order so the rectangle can be tilted
+// (text is a billboard, so its bbox axes rotate with the top-down view).
+function makeDottedRect(corners) {
+  const y = HANDLE_Y - 5;
+  const [nw, ne, se, sw] = corners;
+  const pts = new Float32Array([
+    nw.x, y, nw.z,  ne.x, y, ne.z,
+    ne.x, y, ne.z,  se.x, y, se.z,
+    se.x, y, se.z,  sw.x, y, sw.z,
+    sw.x, y, sw.z,  nw.x, y, nw.z,
+  ]);
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.BufferAttribute(pts, 3));
+  const mat = new THREE.LineDashedMaterial({
+    color: 0xffb347, dashSize: 200, gapSize: 150, depthTest: false, transparent: true, opacity: 0.9,
+  });
+  const line = new THREE.LineSegments(geom, mat);
+  line.computeLineDistances();
+  line.frustumCulled = false;
+  line.renderOrder = 3;
+  return line;
+}
+
+// Screen-space axes of the top-down camera projected onto the floor plane.
+// Sprite's local +Y aligns with camera up, +X with camera right - so a
+// billboard's bbox is axis-aligned with these, not with world X/Z.
+function topdownAxesFromCamera() {
+  return topdownAxes(topDownCamera.up);
+}
+
+// World-XZ corners of the text sprite's tight bbox, oriented along the
+// current top-down camera axes. Order: NW, NE, SE, SW (screen space).
+function textCornersFromMesh(shapeId) {
+  const mesh = state.shapeObjects.find((o) => o.userData.shape?.id === shapeId);
+  if (!mesh) return null;
+  const tight = mesh.userData?.textWorldBbox;
+  const w = tight?.w ?? mesh.scale.x;
+  const h = tight?.h ?? mesh.scale.y;
+  const cx = mesh.position.x, cz = mesh.position.z;
+  const { up, right } = topdownAxesFromCamera();
+  return { w, h, cx, cz, right, up, corners: textCorners(cx, cz, w, h, right, up) };
 }
 
 function rectHandlePositions(s) {
@@ -112,11 +165,25 @@ function build() {
     group.visible = false;
     return;
   }
-  if (shape.type !== 'zone' && shape.type !== 'arrow') {
+  if (shape.type !== 'zone' && shape.type !== 'arrow' && shape.type !== 'text') {
     group.visible = false;
     return;
   }
   currentShapeId = shape.id;
+  if (shape.type === 'text') {
+    const info = textCornersFromMesh(shape.id);
+    if (!info) { group.visible = false; return; }
+    outlineMesh = makeDottedRect(info.corners);
+    group.add(outlineMesh);
+    info.corners.forEach((p, i) => {
+      const mesh = makeHandleMesh(CORNER_COLOR, 260);
+      mesh.position.set(p.x, HANDLE_Y, p.z);
+      group.add(mesh);
+      handleMeshes.push({ mesh, role: 'corner', index: i, kind: 'text' });
+    });
+    group.visible = true;
+    return;
+  }
   const kind = shape.type === 'arrow' ? 'arrow' : (shape.kind || 'polygon');
   let positions;
   if (kind === 'rect') positions = rectHandlePositions(shape);
@@ -142,6 +209,7 @@ function build() {
 // selectionSubs).
 Promise.resolve().then(() => onSelectionChanged(build));
 document.addEventListener('layers:dirty', build);
+document.addEventListener('topdownRotated', build);
 
 export function refreshShapeHandles() { build(); }
 
@@ -158,6 +226,17 @@ export function tryStartDrag(event) {
   const doc = ensureDoc();
   const shape = doc.scheme.shapes?.find((s) => s.id === currentShapeId);
   dragShape = shape ? JSON.parse(JSON.stringify(shape)) : null;
+  dragOrigBbox = null;
+  if (dragShape && dragShape.type === 'text') {
+    const info = textCornersFromMesh(currentShapeId);
+    if (info) {
+      dragOrigBbox = {
+        w: info.w, h: info.h, size: dragShape.size || TEXT_DEFAULT_SIZE,
+        cx: info.cx, cz: info.cz,
+        right: info.right, up: info.up,
+      };
+    }
+  }
   return !!dragShape;
 }
 
@@ -217,6 +296,19 @@ function applyDrag(worldX, worldZ) {
   } else if (t.kind === 'arrow') {
     const s = dragShape;
     if (s.points && s.points[t.index]) s.points[t.index] = { x: worldX, z: worldZ };
+  } else if (t.kind === 'text') {
+    const s = dragShape;
+    if (!dragOrigBbox) return;
+    const orig = dragOrigBbox;
+    const { newSize, newCx, newCz } = resizeFromCornerDrag({
+      cx: orig.cx, cz: orig.cz, w: orig.w, h: orig.h, size: orig.size,
+      right: orig.right, up: orig.up, cornerIndex: t.index,
+      worldX, worldZ,
+      minSize: TEXT_MIN_SIZE, maxSize: TEXT_MAX_SIZE,
+    });
+    s.size = newSize;
+    s.x = newCx;
+    s.z = newCz;
   } else {
     // polygon
     const s = dragShape;
@@ -237,6 +329,23 @@ export function onDragMove(event) {
   // Instead, we manually reposition the same handle mesh, and defer the
   // handle rebuild to endDrag.
   const t = dragTarget;
+  if (t.kind === 'text') {
+    const info = textCornersFromMesh(currentShapeId);
+    if (info) {
+      for (const h of handleMeshes) {
+        const c = info.corners[h.index];
+        if (c) h.mesh.position.set(c.x, HANDLE_Y, c.z);
+      }
+      if (outlineMesh) {
+        group.remove(outlineMesh);
+        outlineMesh.geometry?.dispose?.();
+        outlineMesh.material?.dispose?.();
+      }
+      outlineMesh = makeDottedRect(info.corners);
+      group.add(outlineMesh);
+    }
+    return true;
+  }
   const positions = t.kind === 'rect' ? rectHandlePositions(dragShape)
     : t.kind === 'circle' ? circleHandlePositions(dragShape)
     : t.kind === 'triangle' ? triangleHandlePositions(dragShape)
@@ -253,6 +362,7 @@ export function endDrag() {
   if (!dragTarget) return;
   dragTarget = null;
   dragShape = null;
+  dragOrigBbox = null;
   saveDoc();
   import('./history.js').then((h) => h.pushHistory());
   build();

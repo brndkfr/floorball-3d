@@ -8,8 +8,8 @@
 
 import { state } from '../state.js';
 import { ensureDoc } from './doc.js';
-import { chipDataFor, setChipHidden, TEAM_COLORS, setLabelsVisible, updateChipLabel, removeChip } from './chips.js';
-import { shapeDataFor, setShapeHidden, updateShapeLabel, updateShape, removeShape } from './shapes.js';
+import { chipDataFor, setChipHidden, TEAM_COLORS, setLabelsVisible, updateChipLabel, removeChip, reorderChips } from './chips.js';
+import { shapeDataFor, setShapeHidden, updateShapeLabel, updateShape, removeShape, reorderShapes } from './shapes.js';
 import { coneDataFor, setConeHidden, updateCone, removeCone, CONE_DEFAULT_COLOR } from './cones.js';
 import { ballDataFor, setBallHidden, updateBall, removeBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { onSelectionChanged, selectObject, deselectAll } from '../selection.js';
@@ -108,16 +108,16 @@ if (root) {
       return;
     }
 
-    renderSection('chips-a', `Team 1 · ${teamA.length}`, teamA.map(chipRow(selId)));
-    renderSection('chips-b', `Team 2 · ${teamB.length}`, teamB.map(chipRow(selId)));
-    renderSection('zones', `Zones · ${zones.length}`, zones.map(shapeRow(selId)));
-    renderSection('arrows', `Arrows · ${arrows.length}`, arrows.map(shapeRow(selId)));
-    renderSection('texts', `Text · ${texts.length}`, texts.map(shapeRow(selId)));
+    renderSection('chips-a', `Team 1 · ${teamA.length}`, teamA.map(chipRow(selId)), (ids) => reorderChips(ids));
+    renderSection('chips-b', `Team 2 · ${teamB.length}`, teamB.map(chipRow(selId)), (ids) => reorderChips(ids));
+    renderSection('zones', `Zones · ${zones.length}`, zones.map(shapeRow(selId)), (ids) => reorderShapes(ids));
+    renderSection('arrows', `Arrows · ${arrows.length}`, arrows.map(shapeRow(selId)), (ids) => reorderShapes(ids));
+    renderSection('texts', `Text · ${texts.length}`, texts.map(shapeRow(selId)), (ids) => reorderShapes(ids));
     renderSection('cones', `Cones · ${cones.length}`, cones.map(coneRow(selId)));
     renderSection('balls', `Balls · ${balls.length}`, balls.map(ballRow(selId)));
   }
 
-  function renderSection(key, title, rows) {
+  function renderSection(key, title, rows, onReorder) {
     if (!rows.length) return;
     const sec = document.createElement('div');
     sec.className = 'lp-section';
@@ -136,15 +136,66 @@ if (root) {
     const list = document.createElement('div');
     list.className = 'lp-section-body';
     for (const r of rows) list.appendChild(r);
+    if (onReorder && rows.length > 1) wireDragReorder(list, onReorder);
     sec.appendChild(list);
 
     body.appendChild(sec);
+  }
+
+  // HTML5 drag-and-drop reorder within a single section. Every row in
+  // `list` must carry `dataset.itemId`. On drop, `onReorder` is called
+  // with the new id order for that section only.
+  function wireDragReorder(list, onReorder) {
+    let draggingId = null;
+    list.querySelectorAll('.lp-row').forEach((row) => {
+      row.draggable = true;
+      row.addEventListener('dragstart', (e) => {
+        draggingId = row.dataset.itemId;
+        row.classList.add('lp-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        // Firefox needs some payload to fire the drag events.
+        e.dataTransfer.setData('text/plain', draggingId);
+      });
+      row.addEventListener('dragend', () => {
+        row.classList.remove('lp-dragging');
+        list.querySelectorAll('.lp-drop-before, .lp-drop-after').forEach((r) => {
+          r.classList.remove('lp-drop-before', 'lp-drop-after');
+        });
+        draggingId = null;
+      });
+      row.addEventListener('dragover', (e) => {
+        if (!draggingId || row.dataset.itemId === draggingId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = row.getBoundingClientRect();
+        const before = e.clientY < rect.top + rect.height / 2;
+        list.querySelectorAll('.lp-drop-before, .lp-drop-after').forEach((r) => {
+          r.classList.remove('lp-drop-before', 'lp-drop-after');
+        });
+        row.classList.add(before ? 'lp-drop-before' : 'lp-drop-after');
+      });
+      row.addEventListener('drop', (e) => {
+        if (!draggingId || row.dataset.itemId === draggingId) return;
+        e.preventDefault();
+        const rect = row.getBoundingClientRect();
+        const before = e.clientY < rect.top + rect.height / 2;
+        const ids = Array.from(list.querySelectorAll('.lp-row')).map((r) => r.dataset.itemId);
+        const from = ids.indexOf(draggingId);
+        if (from < 0) return;
+        ids.splice(from, 1);
+        let to = ids.indexOf(row.dataset.itemId);
+        if (!before) to += 1;
+        ids.splice(to, 0, draggingId);
+        onReorder(ids);
+      });
+    });
   }
 
   function chipRow(selId) {
     return (player) => {
       const row = document.createElement('div');
       row.className = 'lp-row';
+      row.dataset.itemId = player.id;
       if (player.id === selId) row.classList.add('selected');
 
       const eye = document.createElement('button');
@@ -201,6 +252,7 @@ if (root) {
     return (shape) => {
       const row = document.createElement('div');
       row.className = 'lp-row';
+      row.dataset.itemId = shape.id;
       if (shape.id === selId) row.classList.add('selected');
 
       const eye = document.createElement('button');

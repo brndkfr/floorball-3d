@@ -258,18 +258,28 @@ Shipped from the design-sample exploration:
 
 Still on the backlog from that exploration:
 
-- **[A-BACK-001]** [in-progress] **Layers panel enhancements** (shipped: right-rail
+- **[A-BACK-001]** [shipped] **Layers panel enhancements**: right-rail
   panel with per-row eye toggles for chips + shapes, click-to-select, section
   + panel collapse persisted; **inline rename** of chip labels + shape names
   via double-click on the row's name (Enter / blur commits, Esc cancels);
   **row Delete** via a hover-visible trash button on every row and a
   **right-click row context** shortcut, both routed through `removeChip` /
   `removeShape` with a `deselectAll()` guard when the target row is the
-  current selection). Also this session: fixed an info-panel / tool-palette
+  current selection. Also this session: fixed an info-panel / tool-palette
   overlap (`#info` shifted from `left:64` -> `left:150` so it clears the
-  vertical tool palette that also anchors at `left:64`). Follow-ups still
-  open: drag-to-reorder within a section to influence the shape `layer`
-  group (chips too, via re-inserting keys into `doc.scheme.players`).
+  vertical tool palette that also anchors at `left:64`). **Drag-to-reorder
+  within a section** shipped: HTML5 DnD on chip + shape rows (Team 1, Team 2,
+  Zones, Arrows, Text), with a cyan insertion-line drop indicator above /
+  below the target row. On drop, `reorderChips(orderedIds)` /
+  `reorderShapes(orderedIds)` in `chips.js` / `shapes.js` rewrite the ids at
+  the same absolute slots they currently occupy (so a within-team drag
+  doesn't disturb the other team's slots, and a within-Arrows drag doesn't
+  disturb Zone slots): `doc.scheme.players` keys are re-inserted in the new
+  order and `doc.scheme.shapes` entries are swapped in place; shapes then
+  call `rebuildShapesFromDoc()` so the three.js layer group insertion order
+  (`low` / `mid` / `high`) reflects the new draw order. Both push history
+  and dispatch `layers:dirty`. E2e coverage in
+  [test-e2e/layers-panel.spec.js](../test-e2e/layers-panel.spec.js).
 - **Zone label typography follow-ups** (shipped: Inspector Label input,
   floor-plane text sprite laid flat inside the zone, fit-both aspect-
   preserved autosize so long labels never overflow the zone bbox).
@@ -377,7 +387,7 @@ Still on the backlog from that exploration:
   a label fall back to the number sprite so the chip stays readable in
   dense formations. Screen-space size follows the number sprite's
   existing pattern (world-height 110 mm), no zoom-level rework needed.
-- **[A-BACK-011]** [in-progress] **Arrow shape refinement**. Current arrows
+- **[A-BACK-011]** [shipped] **Arrow shape refinement**. Current arrows
   ([shapes.js](../web/src/authoring/shapes.js)) are a straight shaft +
   fixed-size triangle head, with `shape.width` stored but ignored. Scope:
   1. **[A-BACK-011a]** [shipped] *Respect `shape.width`* in
@@ -427,6 +437,35 @@ Still on the backlog from that exploration:
   "pass arrow" during Choreograph mode when a frame changes carrier, and
   multi-ball support (data model already ready per
   [docs/reference/tactical-board-followups.md](reference/tactical-board-followups.md)).
+- **[A-BACK-013]** [shipped] **Text-shape resize handles**. Standalone
+  text shapes (drawn via the Text tool) used to be a fixed-`worldHeight`
+  billboard with no user-facing size control. Now: `shape.size` (mm) is
+  stored on the shape (default 1500, clamp 200-8000). Selecting a text
+  shape in top-down draws a dotted amber rectangle hugging the visible
+  letters (not the padded sprite bbox) with four amber corner handles;
+  dragging a corner uniform-scales the sprite anchor-locked to the
+  opposite corner. The rectangle + corners are laid out along the
+  top-down camera's `(right, up)` axes rather than world XZ, so a
+  rotated top-down (Q/E rotates `topDownCamera.up` between the four
+  90-deg steps) still shows a rectangle aligned with the visible text.
+  Inspector gets a Size slider (200-8000mm). The standard yellow
+  bounding-box selection ring is suppressed for text shapes since the
+  dotted rect + handles replace it. Pure math extracted to
+  [text-resize-math.js](../web/src/authoring/text-resize-math.js) with 9
+  node unit tests, plus 2 Playwright specs
+  ([test-e2e/text-resize.spec.js](../test-e2e/text-resize.spec.js))
+  covering handle spawn + Size slider round-trip.
+- **[A-BACK-014]** [shipped] **Bezier / angle-lerp math extracted for
+  unit-testing**. `playback.js`'s `bezierPos`, `segmentControls`,
+  `lerpAngle` moved to [bezier.js](../web/src/authoring/bezier.js), a
+  dependency-free module. `playback.js` still re-exports them so
+  `path-handles.js` etc. keep working. The extraction surfaced a real
+  bug in the old `lerpAngle`: JS's `%` keeps the dividend's sign, so
+  the intended short-path wrap took the long way around for large-
+  negative deltas (e.g. +170° -> -170° passed through 0° instead of
+  ±180°). Fixed to `atan2(sin(d), cos(d))`. 9 new node tests cover
+  Bezier endpoints, straight-line degeneracy, control-offset resolution,
+  and the ±π short-path wrap. This closes part of S-BACK-009.
 
 ---
 
@@ -929,9 +968,13 @@ added.
   behavioural change to the decision logic at each site, just the
   presentation. No unit test - this is a DOM-only module (`<dialog>`,
   `showModal()`) with no pure logic to isolate; not verified in a browser.
-- **[S-BACK-007]** [open] **Hardcoded asset count in loading indicator.**
-  `status.js` hardcodes `pending = 7`; changing the tracked asset count
-  makes the loading indicator stick or clear early.
+- **[S-BACK-007]** [shipped] **Hardcoded asset count in loading indicator.**
+  `status.js`'s `pending` is now driven by call-site `expectLoad(name)` +
+  `loaded(name)` pairs (in `chips.js`, `goalie.js`, `layers.js`), so the
+  counter always matches the real number of in-flight loads instead of
+  drifting when a loader is added or removed. The previous literal `7`
+  actually undercounted the real 8 loaders and could clear the indicator
+  before every asset had finished.
 - **[S-BACK-008]** [shipped, on branch `perf/ci-and-load`] **CI/build
   pipeline: test + minify + size-budget gate before deploy.** The deploy
   workflow used to upload `web/` byte-for-byte with no test/build/size
@@ -975,20 +1018,24 @@ added.
     touches the live site.
 - **[S-BACK-009]** [in-progress] **Automated tests for the pure-logic
   modules.** `package.json` + `node --test` added (see S-BACK-001/002).
-  39 tests across 4 files now cover `doc.js` (id sanitization/migration),
+  60 tests across 5 files now cover `doc.js` (id sanitization/migration),
   `storage.js` (save-status tracking), `share.js` (encode/decode
   round-trip, size-limit, malformed-payload handling), `faceoff-snap.js`
-  (snap radius/toggle), and `insights.js` (shot verdict colour/angle
+  (snap radius/toggle), `insights.js` (shot verdict colour/angle
   bands, coverage-grid open/fully-blocked, pass-corridor clear/blocked/
-  goalie-exclusion) - the last one was the reviewer's top pick since it's
-  the actual shared Mode-A/Mode-B compute core. Run via `npm test` (needs
-  `npm install` first - not run against a real npm in this session, only
-  `node --test` directly; see the package.json commit for why). **Not
-  done:** `chips.js`, `shapes.js`, `frames.js`, `history.js`, and the rest
-  of `photo-overlay/` still have no tests. `playback.js`'s Bezier math and
-  `trajectory.js`/`coverage.js` remain entangled with `scene.js` and don't
-  load standalone in Node - extracting the pure math (e.g. to a
-  `bezier.js`) is still open and not attempted this session.
+  goalie-exclusion), and `bezier.js` (cubic Bezier endpoints + straight-
+  line degeneracy, `segmentControls` im1/im2 resolution, `lerpAngle`
+  short-path across ±π). The `bezier.js` module was extracted from
+  `playback.js` for this - three functions (`bezierPos`, `segmentControls`,
+  `lerpAngle`) moved to a dependency-free file; `playback.js` still
+  re-exports them so `path-handles.js` etc. keep working. Extracting also
+  surfaced a real bug in the old `lerpAngle`: JS's `%` keeps the
+  dividend's sign, so the intended short-path wrap actually took the long
+  way around for large-negative deltas (e.g. +170° -> -170°). Fixed to
+  `atan2(sin(d), cos(d))`. Run via `npm test`. **Not done:**
+  `chips.js`, `shapes.js`, `frames.js`, `history.js`, and the rest of
+  `photo-overlay/` still have no tests. `trajectory.js` and `coverage.js`
+  remain entangled with `scene.js` and don't load standalone in Node.
 - **[S-BACK-010]** [shipped, on branch `perf/ci-and-load`] **Deploy ships
   unreferenced libraries.** Re-measured (the external review's `web/lib`
   numbers didn't match this repo - e.g. it claimed a vendored/minified

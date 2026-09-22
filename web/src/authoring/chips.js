@@ -336,6 +336,30 @@ export function setChipHidden(id, hidden) {
   import('./history.js').then((h) => h.pushHistory());
 }
 
+// Rewrite doc.scheme.players key order so the given ids appear at the
+// same positions they currently occupy, but relatively in the new order.
+// Other chips keep their absolute slots. Callers pass ids belonging to a
+// single layers-panel section (e.g. a single team).
+export function reorderChips(orderedIds) {
+  const doc = ensureDoc();
+  const players = doc.scheme.players || {};
+  const idSet = new Set(orderedIds);
+  const currentIds = Object.keys(players);
+  const slots = [];
+  for (let i = 0; i < currentIds.length; i++) {
+    if (idSet.has(currentIds[i])) slots.push(i);
+  }
+  if (slots.length !== orderedIds.length) return;
+  const newIds = currentIds.slice();
+  for (let k = 0; k < slots.length; k++) newIds[slots[k]] = orderedIds[k];
+  const rebuilt = {};
+  for (const id of newIds) rebuilt[id] = players[id];
+  doc.scheme.players = rebuilt;
+  saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
+  import('./history.js').then((h) => h.pushHistory());
+}
+
 // Called by selection.js after a floor-click drag on a chip, and by
 // controls.js after WASD movement, to persist the new position.
 export function persistChipPosition(group) {

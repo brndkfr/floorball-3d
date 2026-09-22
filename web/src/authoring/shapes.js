@@ -288,7 +288,11 @@ export function rebuildZonePoints(shape) {
   // polygon: caller manages points directly.
 }
 
-function makeTextSprite(text, color) {
+export const TEXT_DEFAULT_SIZE = 1500;
+export const TEXT_MIN_SIZE = 200;
+export const TEXT_MAX_SIZE = 8000;
+
+function makeTextSprite(text, color, sizeMm = TEXT_DEFAULT_SIZE) {
   const font = 'bold 96px system-ui, sans-serif';
   const padding = 24;
   // measure first so long strings don't get clipped by a fixed-size canvas
@@ -315,8 +319,13 @@ function makeTextSprite(text, color) {
   const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
   const sprite = new THREE.Sprite(material);
   sprite.renderOrder = 2;
-  const worldHeight = 1500;
+  const worldHeight = sizeMm > 0 ? sizeMm : TEXT_DEFAULT_SIZE;
   sprite.scale.set(worldHeight * (width / height), worldHeight, 1);
+  // Tight world-space bbox of just the drawn text (no canvas padding),
+  // used by shape-handles.js so the selection rectangle hugs the letters.
+  const textWorldW = worldHeight * (textWidth / height);
+  const textWorldH = worldHeight * (96 / height); // font-size / canvas height
+  sprite.userData.textWorldBbox = { w: textWorldW, h: textWorldH };
   return sprite;
 }
 
@@ -560,7 +569,7 @@ export function buildShapeObject(shape, { ghost = false } = {}) {
     return fill;
   }
   if (shape.type === 'text') {
-    const sprite = makeTextSprite(shape.text || '', '#' + color.getHexString());
+    const sprite = makeTextSprite(shape.text || '', '#' + color.getHexString(), shape.size);
     sprite.position.set(shape.x, SHAPE_Y + 200, shape.z);
     sprite.material.opacity = opacity;
     return sprite;
@@ -787,6 +796,26 @@ export function rebuildShapesFromDoc() {
   const shapes = doc.scheme.shapes || [];
   for (const s of shapes) attachShape(s);
   document.dispatchEvent(new CustomEvent('layers:dirty'));
+}
+
+// Reorder shapes in-place: the given ids occupy the same absolute slots
+// in doc.scheme.shapes, but relatively in the new order. Other shapes
+// keep their slot. Then re-attach so the three.js layer group insertion
+// order matches, which drives overdraw / renderOrder.
+export function reorderShapes(orderedIds) {
+  const doc = ensureDoc();
+  const shapes = doc.scheme.shapes || [];
+  const idSet = new Set(orderedIds);
+  const slots = [];
+  for (let i = 0; i < shapes.length; i++) {
+    if (idSet.has(shapes[i].id)) slots.push(i);
+  }
+  if (slots.length !== orderedIds.length) return;
+  const byId = new Map(shapes.map((s) => [s.id, s]));
+  for (let k = 0; k < slots.length; k++) shapes[slots[k]] = byId.get(orderedIds[k]);
+  rebuildShapesFromDoc();
+  saveDoc();
+  import('./history.js').then((h) => h.pushHistory());
 }
 
 // --- helpers used by draw-tool.js and dock.js -------------------------

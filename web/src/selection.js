@@ -145,7 +145,10 @@ export function applySelectionVisuals() {
     if (obj.userData?.shape) {
       const hl = buildShapeHighlight(obj);
       if (hl) { shapeHighlightGroup.add(hl); continue; }
-      // text sprite (or unbuildable) - fall through to the bounding-box ring
+      // Text shapes get their own dotted rect + resize handles from
+      // shape-handles.js - suppress the fallback yellow ring.
+      if (obj.userData.shape.type === 'text') continue;
+      // Otherwise fall through to the bounding-box ring.
     }
     const box = new THREE.Box3().setFromObject(obj);
     const size = box.getSize(new THREE.Vector3());

@@ -9,7 +9,7 @@
 import { state } from '../state.js';
 import { onSelectionChanged, deselectAll, labelFor } from '../selection.js';
 import { chipDataFor } from './chips.js';
-import { shapeDataFor, removeShape, updateShape, updateShapeLabel } from './shapes.js';
+import { shapeDataFor, removeShape, updateShape, updateShapeLabel, TEXT_MIN_SIZE, TEXT_MAX_SIZE, TEXT_DEFAULT_SIZE } from './shapes.js';
 import { coneDataFor, updateCone, CONE_DEFAULT_COLOR } from './cones.js';
 import { ballDataFor, updateBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { arrowRoleColor } from '../tokens.js';
@@ -555,6 +555,25 @@ function renderShape(shape) {
     });
     row.appendChild(input);
     body.appendChild(row);
+
+    const sizeRow = document.createElement('div');
+    sizeRow.className = 'ins-row';
+    const sl = document.createElement('span');
+    sl.className = 'ins-label';
+    sl.textContent = 'Size';
+    sizeRow.appendChild(sl);
+    const sizeIn = document.createElement('input');
+    sizeIn.type = 'range';
+    sizeIn.min = String(TEXT_MIN_SIZE);
+    sizeIn.max = String(TEXT_MAX_SIZE);
+    sizeIn.step = '50';
+    sizeIn.value = String(shape.size || TEXT_DEFAULT_SIZE);
+    sizeIn.style.flex = '1';
+    sizeIn.addEventListener('input', () => {
+      updateShape(shape.id, { size: Number(sizeIn.value) });
+    });
+    sizeRow.appendChild(sizeIn);
+    body.appendChild(sizeRow);
   }
 
   const del = document.createElement('button');
