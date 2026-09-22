@@ -7,6 +7,7 @@ import { photoCamera, renderer } from '../../scene.js';
 import { ensureDoc } from '../doc.js';
 import { saveDoc } from '../storage.js';
 import { WORLD_LANDMARKS, LANDMARK_LABELS, MIN_LANDMARKS } from './landmarks.js';
+import { isHistoryCommitAction } from './photo-history.js';
 import { solveCameraPose } from './pnp.js';
 import { assessPlanarity, findLeverageOutliers, isAmbiguousChoice } from './pose-diagnostics.js';
 import * as photoCanvas from './photo-canvas.js';
@@ -46,6 +47,16 @@ function debugLog(event, data) {
   const log = (window.__photoOverlayDebugLog ??= []);
   log.push({ t: Date.now(), event, data });
   if (log.length > 200) log.shift();
+}
+
+// S-BACK-012 (remainder): push an undo entry for a discrete photo-overlay
+// edit. `action` is checked against photo-history.js's commit list so a
+// stray call from a continuous-input path (sliders, drag-in-progress) is
+// a silent no-op instead of spamming the stack. Late import to avoid a
+// circular dep, same pattern as chips.js/shapes.js's own pushHistory calls.
+function commitPhotoAction(action) {
+  if (!isHistoryCommitAction(action)) return;
+  import('../history.js').then((h) => h.pushHistory());
 }
 
 const fileInput = document.getElementById('photoFileInput');
@@ -235,7 +246,7 @@ function buildList() {
         photoCanvas.removeLandmark(key);
         row.classList.remove('placed');
         row.querySelector('.err').textContent = '';
-        trySolve();
+        trySolve('landmark-delete');
       }
     });
     left.appendChild(cb);
@@ -368,12 +379,12 @@ photoCanvas.setLandmarkClickHandler((imgX, imgY) => {
     const next = firstUncheckedUnplaced();
     if (next) armLandmark(next);
   }
-  trySolve();
+  trySolve('landmark-place');
 });
 
 // Dragging an already-placed marker (photo-canvas.js) nudges its stored
 // pixel position live; only re-solve once the drag ends, not every frame.
-photoCanvas.setMarkerMovedHandler(() => { trySolve(); });
+photoCanvas.setMarkerMovedHandler(() => { trySolve('landmark-move'); });
 photoCanvas.setLabelResolver((key) => LANDMARK_LABELS[key] || key);
 
 // Border-mode landmarks are added at runtime (dynamic keys boardTop_N) so
@@ -398,7 +409,7 @@ function addBorderRow(key, world) {
     photoCanvas.removeLandmark(key);
     borderMode.unregisterCommitted(key);
     row.remove();
-    trySolve();
+    trySolve('landmark-delete');
   });
   const err = document.createElement('span');
   err.className = 'err';
@@ -415,7 +426,7 @@ borderMode.setOnCommit((key, world, photoXY) => {
   photoCanvas.setPendingMarker(null);
   borderMode.registerCommitted(key, world);
   addBorderRow(key, world);
-  trySolve();
+  trySolve('landmark-place');
 });
 
 borderModeBtn.addEventListener('click', () => {
@@ -464,7 +475,7 @@ let solveSeq = 0;
 let lastPose = null;
 export function getLastPose() { return lastPose; }
 
-async function trySolve() {
+async function trySolve(historyAction = null) {
   const seq = ++solveSeq;
   const placed = photoCanvas.getPlacedPoints();
   if (placed.length < MIN_LANDMARKS) {
@@ -563,6 +574,7 @@ async function trySolve() {
       goalies: prevPhoto.goalies ?? { home: null, away: null },
     };
     saveDoc();
+    commitPhotoAction(historyAction);
     if (isPhoto()) fitToPhotoRect(photoCanvas.getPhotoRect());
     // Only show reference geometry that's actually backed by a placed
     // landmark out there - an unconstrained extrapolation 40m away just
@@ -886,7 +898,7 @@ async function tryAutoAlign(end) {
   } catch (err) {
     console.error('auto-align failed', err);
   }
-  const pose = await trySolve();
+  const pose = await trySolve('auto-detect-goal');
   // B-BACK-006: a good reprojection error alone doesn't mean the pose is
   // right - a near head-on goal can solve cleanly in EITHER L/R mirror, so
   // don't claim "aligned for you" when detectAndPlace couldn't confidently
@@ -920,7 +932,7 @@ autoDetectBtn.addEventListener('click', async () => {
     // once it resolves - await it here (instead of the previous fire-and-
     // forget) so the ambiguous warning above isn't silently clobbered a
     // moment later; re-append it once trySolve is done.
-    await trySolve();
+    await trySolve('auto-detect-goal');
     if (result.ambiguous) {
       errorEl.textContent += ' - left/right unresolved, verify with "Flip left/right" if mirrored';
       errorEl.classList.add('bad');
@@ -964,7 +976,7 @@ flipLRBtn.addEventListener('click', () => {
     errorEl.classList.remove('ok');
     return;
   }
-  trySolve();
+  trySolve('landmark-flip-lr');
 });
 
 autoFovBtn.addEventListener('click', async () => {
@@ -1002,7 +1014,7 @@ autoFovBtn.addEventListener('click', async () => {
     }
     fovSlider.value = Math.round(best.deg * 2) / 2;
     fovValue.textContent = fovSlider.value + '° (auto)';
-    trySolve();
+    trySolve('auto-tune-fov');
     errorEl.textContent = `auto FOV: ${fovSlider.value}° (reproj ${best.err.toFixed(1)} px)`;
     errorEl.classList.toggle('bad', best.err > 10);
     errorEl.classList.toggle('ok', best.err <= 10);
@@ -1102,7 +1114,7 @@ rinkFitConfirmBtn.addEventListener('click', async () => {
     await autoPlace(key, imgXY);
   }
   leaveRinkFit();
-  trySolve();
+  trySolve('landmark-place');
 });
 
 rinkFitCancelBtn.addEventListener('click', leaveRinkFit);
@@ -1391,6 +1403,7 @@ function setSelectedChipTeam(team) {
   if (!player) return;
   player.team = team;
   saveDoc();
+  commitPhotoAction('player-team-override');
   renderPlayersAndBall();
 }
 setTeamHomeBtn.addEventListener('click', () => setSelectedChipTeam('home'));
@@ -1410,6 +1423,7 @@ function deleteSelectedChip() {
   }
   photoCanvas.setChipSelectedHandler && photoCanvas.setChipSelectedHandler(handleChipSelected);
   saveDoc();
+  commitPhotoAction('player-delete');
   handleChipSelected(null);
   renderPlayersAndBall();
 }
@@ -1429,6 +1443,7 @@ function clearSelectedChipFacing() {
   delete player.facingCue;
   delete player.facingQuality;
   saveDoc();
+  commitPhotoAction('facing-clear-one');
   clearSelFacingBtn.disabled = true;
   renderPlayersAndBall();
   updateStep4(); // recompute insights + refresh the Step-4 "Reset facing" button
@@ -1462,6 +1477,7 @@ photoCanvas.setAddPlayerClickHandler((team, imgX, imgY) => {
   const nextId = players.reduce((m, p) => Math.max(m, p.id), -1) + 1;
   players.push({ id: nextId, world, team, bbox: null });
   saveDoc();
+  commitPhotoAction('player-add');
   renderPlayersAndBall();
 });
 
@@ -1526,6 +1542,7 @@ autoDetectPlayersBtn.addEventListener('click', async () => {
     const frame = ensureDoc().frames[state.doc.currentFrame];
     frame.photo.players = players;
     saveDoc();
+    commitPhotoAction('player-auto-detect');
     renderPlayersAndBall();
     updateStep3Enabled();
     step3Status.textContent = `${players.length} player(s) detected`;
@@ -1555,6 +1572,7 @@ flipTeamsBtn.addEventListener('click', () => {
     team: p.team === 'home' ? 'away' : p.team === 'away' ? 'home' : p.team,
   }));
   saveDoc();
+  commitPhotoAction('player-flip-teams');
   renderPlayersAndBall();
 });
 
@@ -1593,6 +1611,7 @@ estimateFacingsBtn.addEventListener('click', async () => {
       seeded.push({ id: p.id, facingDeg: Math.round(result.facingDeg), quality: +result.quality.toFixed(2), cue: result.cue });
     }
     saveDoc();
+    commitPhotoAction('facing-estimate-pose');
     renderPlayersAndBall();
     updateStep4();
     step3Status.textContent = `pose: seeded ${seeded.length}, skipped ${skipped.length}`;
@@ -1630,6 +1649,7 @@ photoCanvas.setBallPlacementClickHandler((imgX, imgY) => {
   frame.photo.ball = world;
   updateBallCarrierAndFacing(frame.photo);
   saveDoc();
+  commitPhotoAction('ball-place');
   renderPlayersAndBall();
 });
 
@@ -1742,6 +1762,7 @@ clearFeedbackBtn.addEventListener('click', () => {
     delete photo.ballFeedback;
   }
   saveDoc();
+  commitPhotoAction('feedback-clear');
   renderPlayersAndBall();
 });
 
@@ -1756,6 +1777,7 @@ photoCanvas.setPlayerChipMovedHandler((id, imagePx) => {
     player.world = world;
   }
   saveDoc();
+  commitPhotoAction('player-move');
   renderPlayersAndBall();
 });
 
@@ -1775,6 +1797,7 @@ photoCanvas.setChipFacingMovedHandler((id, tipImgXY) => {
   delete player.facingCue;
   delete player.facingQuality;
   saveDoc();
+  commitPhotoAction('facing-drag');
   if (photoCanvas.getSelectedChipId() === id) clearSelFacingBtn.disabled = false;
   renderPlayersAndBall();
 });
@@ -1789,6 +1812,7 @@ photoCanvas.setBallMovedHandler((imagePx) => {
   frame.photo.ball = world;
   updateBallCarrierAndFacing(frame.photo);
   saveDoc();
+  commitPhotoAction('ball-move');
   renderPlayersAndBall();
 });
 
@@ -1862,6 +1886,7 @@ function setTargetGoal(letter) {
   if (!frame.photo) return;
   frame.photo.targetGoal = letter;
   saveDoc();
+  commitPhotoAction('target-goal-select');
   updateStep4();
 }
 targetGoalARadio.addEventListener('change', () => { if (targetGoalARadio.checked) setTargetGoal('A'); });
@@ -1873,6 +1898,7 @@ function setGoalie(team, idText) {
   const id = idText === '' ? null : Number(idText);
   frame.photo.goalies = { ...(frame.photo.goalies || { home: null, away: null }), [team]: id };
   saveDoc();
+  commitPhotoAction('goalie-assign');
   updateStep4();
 }
 goalieHomeSelect.addEventListener('change', () => setGoalie('home', goalieHomeSelect.value));
@@ -1943,6 +1969,7 @@ autoAssignGoaliesBtn.addEventListener('click', async () => {
     }
     photo.goalies = { ...goalies, autoDetected };
     saveDoc();
+    commitPhotoAction('goalie-auto-detect');
     renderPlayersAndBall();
     updateStep4();
     // updateStep4 has already rewritten insightsReadout with the shot/coverage
@@ -1997,6 +2024,7 @@ resetFacingBtn.addEventListener('click', () => {
   }
   if (!changed) return;
   saveDoc();
+  commitPhotoAction('facing-reset');
   renderPlayersAndBall();
   updateStep4();
 });

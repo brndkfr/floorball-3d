@@ -1025,7 +1025,7 @@ added.
   listener notification). Not verified in a browser - the badge's visual
   placement/timing needs a live check. **Remaining, not done:** see
   **[S-BACK-012]**.
-- **[S-BACK-012]** [in-progress] **Undo history not persisted, photo-overlay
+- **[S-BACK-012]** [shipped] **Undo history not persisted, photo-overlay
   work not undoable.** `history.js`'s undo stack (MAX=100) used to be
   memory-only and lost on reload, including after an accidental "New
   scheme". Photo-overlay landmark placement/solve steps still aren't pushed
@@ -1069,12 +1069,37 @@ added.
     isolation, and only pre-existing multi-worker contention flakiness
     (also present with unrelated specs, not caused by this change)
     remained when running the whole suite at once.
-  - **Not done, still open:** wiring photo-overlay actions into
-    `pushHistory()`. Left out of this pass because it needs deciding edit
-    granularity per photo-overlay action (drag-in-progress vs. drop, one
-    push per landmark vs. per solve) and live-browser verification to get
-    right, same risk this item originally called out - it's a separate,
-    larger change than the persistence half above.
+  - **Photo-overlay wiring (this session), closing the item:**
+    [photo-history.js](../web/src/authoring/photo-overlay/photo-history.js)
+    is a new dependency-free module exporting `isHistoryCommitAction(action)`
+    - a single named list of which photo-overlay actions are discrete edits
+    worth an undo entry (landmark place/move/delete/flip, auto-detect goal,
+    auto-tune FOV, player add/auto-detect/move/flip-teams/team-override/
+    delete, ball place/move, facing drag/pose-estimate/reset/clear-one,
+    feedback-clear, goalie assign/auto-detect, target-goal select) versus
+    continuous input or a view transition that happens to reuse the same
+    `saveDoc()`/`trySolve()` choke point (FOV/k1 slider drag - re-solves on
+    every `input` tick; entering Photo View; restoring a saved overlay) -
+    pushing on those would spam the stack instead of giving one undo step
+    per user action. `photo-overlay.js`'s `trySolve()` now takes an optional
+    `historyAction` param (`null` by default = no push) so each call site
+    states its own granularity explicitly, and a small `commitPhotoAction()`
+    wrapper (checked against the same list) covers the non-solve edits
+    (player/ball/facing/goalie mutations). 3 new node tests in
+    `test/photo-history.test.js` cover every named commit action, the
+    explicitly-excluded continuous/view actions, and malformed input.
+    Verified: `pnpm test` 185/185, `pnpm run build` passes, and the full
+    Playwright suite is unaffected (one `library.spec.js` failure on a
+    5-worker run was the same pre-existing multi-worker contention
+    flakiness noted above, not a regression - passes 4/4 in isolation).
+    **Not attempted:** making undo/redo visually repaint the photo canvas
+    (re-sync landmark markers, pose, player/ball chips) after a photo-overlay
+    undo - `history.js`'s `apply()` only rebuilds chips/shapes/cones/balls/
+    actors today, so undoing past a photo-overlay edit updates
+    `frame.photo` correctly but the live canvas won't reflect it until the
+    panel is otherwise refreshed. That's a separate, DOM-heavy change (no
+    fixture photo exists in the repo to drive it through Playwright either)
+    and out of scope for wiring the data-model side of undo.
 - **[S-BACK-002]** [shipped] **Unvalidated ids reach innerHTML.** Fixed at
   the ingestion boundary: new `isValidId()` (`[\w-]+`) + `sanitizeDoc()`
   in [doc.js](../web/src/authoring/doc.js) run from `acceptDoc()`, so every
