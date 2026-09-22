@@ -1058,10 +1058,24 @@ added.
   surfaced a real bug in the old `lerpAngle`: JS's `%` keeps the
   dividend's sign, so the intended short-path wrap actually took the long
   way around for large-negative deltas (e.g. +170° -> -170°). Fixed to
-  `atan2(sin(d), cos(d))`. Run via `npm test`. **Not done:**
-  `chips.js`, `shapes.js`, `frames.js`, `history.js`, and the rest of
-  `photo-overlay/` still have no tests. `trajectory.js` and `coverage.js`
-  remain entangled with `scene.js` and don't load standalone in Node.
+  `atan2(sin(d), cos(d))`. Run via `npm test`. **Photo-overlay coverage
+  added this session:** `back-project.js` (`footPixel`, `backProjectFoot`
+  above-horizon null, `backProjectToHeight` at a lifted plane,
+  `backProjectPlayers` out-of-rink drop + id assignment + extra-field
+  pass-through), `detect-pose.js` (`matchPoseToPlayers` IoU pairing,
+  minIou threshold, missing-bbox skip, best-of-many pick - imports the
+  module without touching ORT since `loadOrt()` is call-time-only), and
+  `facing-from-pose.js` (world -> image -> back-project round-trip at
+  eight facings 0/±45/±90/±135/180, plus null/nose-fallback/cue reporting
+  paths). 94 tests across 8 files now, up from 69. **Not done:**
+  `chips.js`, `shapes.js`, `frames.js`, `history.js` still have no tests
+  - each pulls in `scene.js` (which reads `window.innerWidth` at module
+  load) or dispatches `document` events at module load, so covering them
+  needs a refactor to extract the pure permutation / lookup logic
+  (`nextNumber`, `reorderChips` / `reorderShapes` id-slot rewrite,
+  `translateShapes` coord math, frame-list mutations) into a
+  dependency-free module first. `trajectory.js` and `coverage.js`
+  remain entangled with `scene.js` for the same reason.
 - **[S-BACK-010]** [shipped, on branch `perf/ci-and-load`] **Deploy ships
   unreferenced libraries.** Re-measured (the external review's `web/lib`
   numbers didn't match this repo - e.g. it claimed a vendored/minified
