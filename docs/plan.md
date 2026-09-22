@@ -1308,7 +1308,7 @@ added.
     for `lib/shoelace`/`lib/open-props`/`lib/radix-colors`/`design-sample`,
     which **S-BACK-013** deleted outright). Recommend deleting the branch
     rather than merging it.
-- **[S-BACK-009]** [in-progress] **Automated tests for the pure-logic
+- **[S-BACK-009]** [shipped] **Automated tests for the pure-logic
   modules.** `package.json` + `node --test` added (see S-BACK-001/002).
   60 tests across 5 files now cover `doc.js` (id sanitization/migration),
   `storage.js` (save-status tracking), `share.js` (encode/decode
@@ -1372,11 +1372,52 @@ added.
   through real drag-and-drop) still 2/2 - no existing e2e spec exercises
   frame CRUD directly, so `frame-list.js`'s extraction relies on the node
   tests plus the fact it's a mechanical, behaviour-preserving move (same
-  comparisons, same splice calls, still in `frames.js`). **Still not
-  done:** `history.js`'s own `apply()`/scene-rebuild glue (inherently
-  impure - it's what `history-stack.js` was extracted *from*).
-  `trajectory.js` and `coverage.js` remain entangled with `scene.js` for
-  the same reason as before.
+  comparisons, same splice calls, still in `frames.js`).
+  **`history.js`/`trajectory.js`/`coverage.js` (this session), closing the
+  item:** re-inspected all three rather than re-stating the earlier
+  conclusion unchecked.
+  - `history.js`'s `apply()` is confirmed to have nothing further worth
+    extracting - it's pure sequencing (five dynamic imports + rebuild
+    calls in a fixed order, `structuredClone`, `saveDoc()`), no branching
+    or computation of its own to isolate. This is genuinely the same
+    finding as before, not a re-statement - `history-stack.js` (the
+    actual stack push/undo/redo/cursor math) was already pulled out in
+    **S-BACK-012**, and what's left in `apply()` *is* the impure glue by
+    construction.
+  - `trajectory.js` likewise has no extractable pure logic beyond what's
+    already tested: its one non-trivial decision
+    (`computeShotLineColor`) already delegates entirely to `insights.js`'s
+    `shotVerdict()`, covered by existing tests. The rest is THREE.js
+    buffer/transform mutation that requires a real scene graph.
+  - `coverage.js`'s `coverageInputsChanged()` (skip the 221-sample raycast
+    pass when nothing tracked moved, added for the S-BACK-011 perf note)
+    *was* real, previously-untested pure logic - just inlined as a
+    hand-rolled field-by-field comparison. Extracted to
+    [dirty-check.js](../web/src/dirty-check.js): `snapshotChanged(prev,
+    next, keys)` (shallow diff over a named key list) and
+    `copySnapshot(target, source, keys)`, both dependency-free and
+    reusable by any other per-frame recompute - directly relevant to
+    **S-BACK-011**'s open perf note that the main `animate()` loop has no
+    equivalent dirty-check at all. `coverage.js` now builds a plain
+    snapshot object and calls the shared comparator instead of hand-rolled
+    field comparisons; behaviour is unchanged (same fields tracked, same
+    NaN-sentinel-always-triggers-first-frame semantics). 6 new node tests
+    in `test/dirty-check.test.js` (equal/differing snapshots, untracked
+    keys ignored, NaN-never-equals-itself, null/undefined/object-identity
+    refs, `copySnapshot`'s in-place mutate-and-return).
+  207 tests across 14 files now, up from 201 (B-BACK-005's own +6-ish).
+  Verified: `pnpm test` 207/207, `pnpm run build` passes, syntax-checked.
+  The refactor is behaviour-preserving by construction (same tracked
+  fields, same comparison semantics, same NaN-sentinel first-frame
+  behaviour - only the comparison itself moved to a tested pure
+  function). **Not independently confirmed via Playwright this session:**
+  a full e2e run on this machine hit severe (30-50x normal) slowdowns
+  and `browserContext.close` teardown timeouts traced to dozens of
+  concurrent Firefox/Edge processes already running on the dev machine
+  (a real desktop, not a clean CI runner) - unrelated to this change (no
+  stray Playwright/Chromium processes of this session's own were found),
+  but it made e2e results for this specific edit inconclusive rather than
+  worth re-running repeatedly under that contention.
 - **[S-BACK-010]** [shipped] **Deploy ships
   unreferenced libraries.** Re-measured (the external review's `web/lib`
   numbers didn't match this repo - e.g. it claimed a vendored/minified

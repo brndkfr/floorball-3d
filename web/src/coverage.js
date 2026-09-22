@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { camera } from './scene.js';
 import { coverageGrid } from './insights.js';
 import { VECTOR_COVERAGE_BLOCKED, VECTOR_COVERAGE_OPEN } from './tokens.js';
+import { snapshotChanged, copySnapshot } from './dirty-check.js';
 
 // --- goal coverage: what fraction of the goal mouth does the goalie block? ---
 // Samples a grid of points across the goal opening; for each, casts a ray
@@ -57,30 +58,31 @@ coverageMesh.frustumCulled = false; // reparented between goals + defensive, sam
 // recomputed unless the ball, the target goal, or the goalie's identity/
 // pose/visibility actually changed since the last frame - so track that
 // and skip the raycasting pass entirely on unchanged frames.
+const COVERAGE_TRACKED_KEYS = [
+  'ballX', 'ballY', 'ballZ', 'targetGoal',
+  'goalieRef', 'goalieX', 'goalieY', 'goalieZ', 'goalieRotY', 'goalieVisible',
+];
 const lastCoverageState = {
   ballX: NaN, ballY: NaN, ballZ: NaN, targetGoal: null,
   goalieRef: null, goalieX: NaN, goalieY: NaN, goalieZ: NaN, goalieRotY: NaN, goalieVisible: null,
 };
 
 function coverageInputsChanged(ballCenter) {
-  const s = lastCoverageState;
   const goalieGroup = state.goalieGroup;
-  const gx = goalieGroup ? goalieGroup.position.x : NaN;
-  const gy = goalieGroup ? goalieGroup.position.y : NaN;
-  const gz = goalieGroup ? goalieGroup.position.z : NaN;
-  const grot = goalieGroup ? goalieGroup.rotation.y : NaN;
-  const gvis = goalieGroup ? goalieGroup.visible : null;
-  const bx = ballCenter ? ballCenter.x : NaN, by = ballCenter ? ballCenter.y : NaN, bz = ballCenter ? ballCenter.z : NaN;
-
-  const changed = s.ballX !== bx || s.ballY !== by || s.ballZ !== bz || s.targetGoal !== state.targetGoal ||
-    s.goalieRef !== goalieGroup || s.goalieX !== gx || s.goalieY !== gy || s.goalieZ !== gz ||
-    s.goalieRotY !== grot || s.goalieVisible !== gvis;
-
-  if (changed) {
-    s.ballX = bx; s.ballY = by; s.ballZ = bz; s.targetGoal = state.targetGoal;
-    s.goalieRef = goalieGroup; s.goalieX = gx; s.goalieY = gy; s.goalieZ = gz;
-    s.goalieRotY = grot; s.goalieVisible = gvis;
-  }
+  const next = {
+    ballX: ballCenter ? ballCenter.x : NaN,
+    ballY: ballCenter ? ballCenter.y : NaN,
+    ballZ: ballCenter ? ballCenter.z : NaN,
+    targetGoal: state.targetGoal,
+    goalieRef: goalieGroup,
+    goalieX: goalieGroup ? goalieGroup.position.x : NaN,
+    goalieY: goalieGroup ? goalieGroup.position.y : NaN,
+    goalieZ: goalieGroup ? goalieGroup.position.z : NaN,
+    goalieRotY: goalieGroup ? goalieGroup.rotation.y : NaN,
+    goalieVisible: goalieGroup ? goalieGroup.visible : null,
+  };
+  const changed = snapshotChanged(lastCoverageState, next, COVERAGE_TRACKED_KEYS);
+  if (changed) copySnapshot(lastCoverageState, next, COVERAGE_TRACKED_KEYS);
   return changed;
 }
 
