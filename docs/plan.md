@@ -1692,6 +1692,8 @@ added.
 
   If any of the feedback-mode UX is wanted back, git blame the
   removed helpers - the pre-removal shape is preserved in `4bcbd41^`.
+  **Update:** the removal was much wider than described here and has
+  been fully reverted - see **S-BACK-017**.
 
   Unrelated: the pnp.js stale-comment reversal that also rode in
   with the WIP was undone (the correct comment says opencv IS
@@ -1742,6 +1744,42 @@ added.
   work, part of S-BACK-015's broader WIP), and a live-browser
   drag+persist smoke-test through the CDP-cache-clear pattern from
   CLAUDE.md.
+- **[S-BACK-017]** [shipped] **Restore everything 4bcbd41 silently
+  reverted + get CI green.** S-BACK-015's write-up undersold the
+  damage: `4bcbd41` replaced `web/index.html`, `photo-overlay.js`
+  and `photo-canvas.js` with a stale copy, reverting far more than
+  feedback mode. The regressed features included: the Photo stepper + Step 3/4 CTAs
+  (B-BUG-002, the source of the 4 red `photo-stepper.spec.js`
+  tests), wireframe overlay toggle (A-BACK-005), pose-diagnostics
+  coplanar/leverage warnings (B-BUG-001/003), L/R ambiguity
+  handling (B-BACK-006), photo-overlay undo entries (S-BACK-012),
+  "Estimate facings (pose)" (B-PHASE-005), Reset / Clear facing
+  (B-PHASE-004, B-BACK-002), low-confidence dashed facings
+  (B-BACK-003), label overlap placer (B-BACK-007), the Layer-1b
+  pose goalie source label (B-BACK-005), the `goalieOptionsHtml`
+  DOM-node builder (S-BACK-002 XSS defence - had gone back to an
+  `innerHTML` template), tokens.css + tokens.js colours, the
+  `#saveStatus` badge (S-BACK-001), timeline thumbnail CSS
+  (A-GAP-002), per-tool cursors (A-GAP-001), the Choreo button
+  (A-BACK-006), chip popover / marquee / bulk-bar CSS, icon-button
+  aria-labels (S-BACK-005), and `#info` click pass-through. It also
+  brought back dead Save/Load overflow buttons with no handlers. Fix: restored all three files from `4bcbd41^`,
+  then re-applied the legitimate later changes (topbar project name
+  + rail Library from 4bcbd41, floating panels from S-BACK-016,
+  Goal tool / Pole cone, vendored three.js importmap); rename /
+  library stay in the topbar/rail, not the overflow. Feedback mode
+  (from `c617bc1`) came back with the rest. The cached-photo restore on
+  Analyze entry (4bcbd41) was kept. It also fixes a follow-on bug:
+  Plan -> Analyze round trip left a loaded photo hidden
+  (`photoCanvas.showIfLoaded()` + re-`setCalibrating`). Also fixed
+  a pre-existing race in `library.spec.js`'s legacy-migration test:
+  seeding after booting the app let its rAF `saveDoc()` write an
+  "Untitled" project back between `localStorage.clear()` and the
+  reload, so seeding now establishes the origin on a static asset.
+  New e2e: `bootstrap.spec.js` pins the restored control ids (red
+  on `623e61b`, green after), `photo-stepper.spec.js` covers the
+  round trip. Verified: unit 237/237, e2e 19/19, build + size OK,
+  live-browser Plan/Analyze round trip with a cached photo.
 
 ---
 

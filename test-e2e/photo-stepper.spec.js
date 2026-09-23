@@ -86,3 +86,23 @@ test('stepper reflects simulated pose/player/ball state via direct-state injecti
   await step4.click();
   await expect(page.locator('#photoStep4Details')).toHaveJSProperty('open', true);
 });
+
+// 1x1 PNG - just enough for photo-canvas.js's Image() decode.
+const TINY_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64');
+
+test('loaded photo is shown again after a Plan -> Analyze round trip', async ({ page }) => {
+  await bootApp(page);
+  await page.setInputFiles('#photoFileInput', { name: 'shot.png', mimeType: 'image/png', buffer: TINY_PNG });
+  const photo = page.locator('#photo-canvas');
+  const gl = page.locator('canvas[data-engine^="three"]');
+  await expect(photo).toBeVisible();
+  await expect(gl).toBeHidden();
+
+  await page.locator('[data-mode="plan"]').click();
+  await expect(photo).toBeHidden();
+  await expect(gl).toBeVisible();
+
+  await page.locator('[data-mode="analyze"]').click();
+  await expect(photo).toBeVisible();
+  await expect(gl).toBeHidden();
+});

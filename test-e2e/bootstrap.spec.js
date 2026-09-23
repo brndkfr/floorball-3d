@@ -41,3 +41,29 @@ test('app boots with no page errors and the rink renders', async ({ page }) => {
   const ownConsoleErrors = consoleErrors.filter((t) => /\/src\/|photo-overlay|dock\.js|main\.js/.test(t));
   expect(ownConsoleErrors, `own-source console errors during bootstrap:\n${ownConsoleErrors.join('\n')}`).toEqual([]);
 });
+
+// Commit 4bcbd41 rewrote index.html / photo-overlay.js from a stale copy and
+// silently dropped shipped controls whose modules no-op when the element is
+// missing. Pin the ids so a repeat fails here instead of in production.
+test('shipped controls are present in the DOM', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'load' });
+  await expect(page.locator('#rinkCheckbox')).toBeVisible();
+  const ids = [
+    // Plan mode
+    'saveStatus',                // S-BACK-001
+    // Analyze mode (photo overlay)
+    'photoStepper',              // B-BUG-002
+    'photoStep3PrimaryBtn',
+    'photoStep4PrimaryBtn',
+    'photoWireframeToggle',      // A-BACK-005
+    'photoEstimateFacingsBtn',   // B-PHASE-005
+    'photoResetFacingBtn',       // B-PHASE-004
+    'photoClearSelFacingBtn',    // B-BACK-002
+    'photoFeedbackToggle',
+  ];
+  for (const id of ids) {
+    await expect(page.locator(`#${id}`), `#${id} missing`).toHaveCount(1);
+  }
+  await expect(page.locator('#timeline [data-tl="choreo"]')).toHaveCount(1); // A-BACK-006
+  await expect(page.locator('link[href$="tokens.css"]')).toHaveCount(1);
+});

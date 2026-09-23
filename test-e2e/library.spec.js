@@ -13,18 +13,18 @@ async function bootApp(page) {
   await dismissOnboarding(page);
 }
 
-// Seeds localStorage with legacy keys before the app boots. Uses a
-// one-shot flow: first navigation establishes the origin so we can
-// write localStorage, then reload triggers the real bootstrap that
-// runs migrateLegacyStorage() against the seeded keys. NOT
-// addInitScript - that would re-seed on every reload during the test.
+// Seeds localStorage with legacy keys before the app boots. Establishes the
+// origin on a static asset rather than '/' - booting the app first let its
+// rAF loop saveDoc() a fresh "Untitled" project back into storage between
+// the clear and the reload. NOT addInitScript - that would re-seed on every
+// reload during the test.
 async function bootAppWithSeed(page, seed) {
-  await page.goto('/', { waitUntil: 'load' });
+  await page.goto('/assets/rink.mtl');
   await page.evaluate((s) => {
     localStorage.clear();
     for (const [k, v] of Object.entries(s)) localStorage.setItem(k, v);
   }, seed);
-  await page.reload({ waitUntil: 'load' });
+  await page.goto('/', { waitUntil: 'load' });
   await waitForBootstrap(page);
   await dismissOnboarding(page);
 }
