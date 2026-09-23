@@ -12,6 +12,61 @@ Two modes on one static site, see [docs/plan.md](docs/plan.md) for the full plan
 Know which mode a change targets before coding. The compute layer is shared;
 only the input source differs.
 
+## Workflow: TDD, always validate, never assume
+
+Every code change - bug fix, feature, refactor - follows this order.
+Deviating from it requires an explicit written justification in the
+commit message or the [docs/plan.md](docs/plan.md) item, not a chat
+aside.
+
+1. **Write the failing test first.** Add or extend a Node unit test in
+   [test/](test/) that captures the desired behaviour and fails against
+   the current code. No production edit before there is a red test.
+   The existing suite already covers pure math extracted from
+   DOM/canvas code (e.g. `bezier.test.js`, `text-resize-math.test.js`,
+   `shape-coords.test.js`) - "untestable at the pure-logic layer" is
+   rarer than it feels. If a change genuinely is untestable there
+   (canvas drawing, DOM wiring, worker plumbing), say so in writing
+   with the specific reason, then jump to step 3.
+2. **Implement until that test is green**, then run the full
+   `pnpm test` suite and confirm every existing test still passes.
+   Extend adjacent tests if the change touched their invariants.
+3. **Decide whether the change needs e2e coverage.** Anything that
+   touches the DOM, wires an event handler, mutates state at
+   module-init time, depends on `state.doc` being finalised before
+   something reads it, or otherwise only fails in a real browser
+   needs an e2e scenario. Pure-logic changes (compute helpers, math,
+   parsing) do not - the CI safety net (`pnpm test` + `pnpm test:e2e`
+   + `pnpm run build` on every push) is sufficient for those, and
+   `test-e2e/bootstrap.spec.js` already catches most module-init
+   regressions for free.
+4. **When e2e is warranted, add the spec to
+   [test-e2e/](test-e2e/) before wiring the feature to the UI** -
+   same TDD loop, just against Playwright. If a matching spec
+   already exists, extend it. Do not skip this step because "unit
+   tests pass and the build is clean" - see the Verification section
+   below for why that is not enough.
+5. **Run `pnpm test:e2e`** (Playwright + Chromium, config in
+   [playwright.config.js](playwright.config.js)) and confirm every
+   spec passes, including the ones you did not touch. If anything
+   fails, go back to step 1 for the failing case: write a unit test
+   that isolates the underlying logic error, fix it, re-run unit
+   tests, then re-run e2e. TDD applies to bug fixes surfaced by e2e
+   too, not just to the original change.
+6. **`pnpm run build` and `pnpm run check:size`** must also pass
+   before the goal is considered reached (both are CI gates).
+7. **Never assume it works because it compiled, because `pnpm test`
+   is green, or because the last screenshot looked fine.** Drive
+   the live browser (via the CDP cache-clear + `page.goto('/')`
+   pattern in the Verification section) or the Playwright suite for
+   every claim of "it works". Words like "should work" or "I believe
+   this is fixed" are not evidence.
+8. **Only commit when the goal is fully reached.** Failing tests,
+   red e2e, blown size budget, or an unverified behavioural claim
+   all block the commit. Never `--no-verify` past a failing hook,
+   never `git restore` unfamiliar working-tree changes to make a
+   test go green.
+
 ## Coordinate conventions (read before touching camera/movement/placement code)
 
 - Units are millimetres throughout (rink, goal, ball, goalie all generated in mm).
