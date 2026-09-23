@@ -545,7 +545,7 @@ Still on the backlog from that exploration:
   `state.goalInstances[0|1]` is the selection - no rotation slider or
   delete since fixed goals are pinned. Non-default fields are pruned
   from the doc, and an empty `fixed` object is deleted entirely so
-  existing frames don't gain schema noise. Commit `<pending>`.
+  existing frames don't gain schema noise. Commit `dfe1c34`.
 
 ---
 
