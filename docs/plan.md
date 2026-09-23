@@ -1542,7 +1542,43 @@ added.
   persistence, new + switch + state isolation, legacy-key migration on
   first boot, delete-current fallback. 4 specs, ~40s wall-clock.
   Follow-up policy: grow the suite only when a similar UI regression
-  bites, no fishing.
+  bites, no fishing. **Grew once:** commit `4bcbd41` added
+  [test-e2e/bootstrap.spec.js](../test-e2e/bootstrap.spec.js) after a
+  boot-time regression (`effectiveFacingDeg` declared without `export`
+  in `photo-overlay.js`) slipped past every existing spec - each one
+  hit `page.goto('/')` and would have triggered the throw, but none
+  listened for `pageerror` or `console.error`. The new spec asserts
+  zero unhandled page errors and zero own-source console errors during
+  boot, plus that `#rinkCheckbox` and `#dockProjectName` become
+  visible - i.e. main.js's scene bootstrap and dock.js's init both
+  finished. This is the "similar regression bites" case, not a fishing
+  expedition: any future missing-export / null-querySelector / typo
+  in a module-init path fails here without needing a targeted spec.
+- **[S-BACK-015]** [in-progress] **App-shell WIP: mode-switching topbar
+  + left rail.** Working-tree redesign that moves project rename and
+  Library out of the dock's overflow menu into a persistent
+  [#appTopbar](../web/index.html) (Floorball Studio / &lt;Project
+  Name&gt;, click name to rename) plus a fixed
+  [#appRail](../web/index.html) on the left with **Plan** / **Analyze**
+  / **Library** buttons. `shell.js` toggles `[data-view="plan"]` vs
+  `[data-view="analyze"]` panel visibility, keeps `#photo-canvas`
+  hidden outside Analyze, restores the three.js renderer canvas when
+  leaving Analyze, treats Library as a modal dialog (not a
+  full-viewport mode), and dispatches a `shell:mode` custom event so
+  photo-overlay.js can lazy-restore its cached photo when the user
+  actually enters Analyze instead of eagerly on `window.load`. Commit
+  `4bcbd41` wired dock.js + photo-overlay.js up to this shape and
+  added compat aliases (`data-dock="project"` on the topbar name,
+  `data-action="library"` on the rail button) so the existing e2e
+  specs still resolve. **Not yet done:** the working-tree net -487
+  lines from `photo-overlay.js` and -100 from `photo-canvas.js` that
+  came with the shell change are structural cleanups the author has
+  not yet described here - claim / document what was consolidated
+  before this item can be marked shipped. Also unrelated: the pnp.js
+  stale-comment reversal that also rode in with the WIP was undone
+  (the correct comment says opencv IS vendored at web/lib/opencv.js
+  and lazy-loaded, per S-BACK-010 - the reversal contradicted that
+  and CLAUDE.md's own note).
 
 ---
 
