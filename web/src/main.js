@@ -19,6 +19,7 @@ import { updateDrawPreview } from './authoring/draw-tool.js';
 import { tickPlayback } from './authoring/playback.js';
 import { updateMoveMarkers } from './authoring/move-marker.js';
 import { updateWalks } from './authoring/walk-tween.js';
+import { updateFloorLabelOrientations } from './authoring/shapes.js';
 
 initHud();
 
@@ -72,6 +73,7 @@ function animate() {
   updateTrajectory(ballCenter);
   updateCoverage(ballCenter);
   updateGoalieLabel();
+  const labelsChanged = updateFloorLabelOrientations(state.activeCamera);
 
   const cam = state.activeCamera;
   const nextRenderState = {
@@ -87,7 +89,7 @@ function animate() {
   // consumeRenderDirty() must run every frame (it's edge-triggered) - keep
   // it first so `||` short-circuiting never skips clearing it.
   const needsRender = consumeRenderDirty() || pollChanged || chipsActive || markersActive
-    || walksActive || choreoActive || !!state.drawState || !!state.playback?.playing;
+    || walksActive || choreoActive || labelsChanged || !!state.drawState || !!state.playback?.playing;
   if (needsRender) renderer.render(scene, state.activeCamera);
 }
 animate();

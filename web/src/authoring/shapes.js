@@ -16,6 +16,7 @@ import { ensureDoc, newId } from './doc.js';
 import { saveDoc } from './storage.js';
 import { reorderAtSlots } from './reorder.js';
 import { translateShapeCoords } from './shape-coords.js';
+import { shouldFlipFloorLabel } from './label-flip.js';
 
 const ARROW_DEFAULT_WIDTH = 80;   // mm; shaft full width
 const ARROW_HEAD_LEN_RATIO = 5;   // head_len  = width * this
@@ -466,6 +467,7 @@ function makeZoneLabelPlane(shape, color) {
   mesh.position.set(cx, SHAPE_Y + 2, cz);
   mesh.renderOrder = 2;
   mesh.userData.isZoneLabel = true;
+  tagFloorLabelForFlip(mesh);
   return mesh;
 }
 
@@ -522,7 +524,44 @@ function makeArrowLabelPlane(shape, color) {
   mesh.position.set(midX, SHAPE_Y + 2, midZ);
   mesh.renderOrder = 2;
   mesh.userData.isArrowLabel = true;
+  tagFloorLabelForFlip(mesh);
   return mesh;
+}
+
+// Snapshot the label's baseline rotation and world-space text-run direction
+// so updateFloorLabelOrientations() can flip 180 deg without accumulating.
+const _tmpDir = new THREE.Vector3();
+function tagFloorLabelForFlip(mesh) {
+  mesh.userData.baseRotZ = mesh.rotation.z;
+  mesh.updateMatrix();
+  mesh.updateMatrixWorld(true);
+  _tmpDir.set(1, 0, 0).transformDirection(mesh.matrixWorld);
+  mesh.userData.textDirWorld = { x: _tmpDir.x, z: _tmpDir.z };
+}
+
+// Per-frame: flip floor labels (arrow + zone) 180 deg in the floor plane
+// when the active camera has orbited past the label's reading direction,
+// so text stays readable from any view. Returns true if any label changed.
+const _camRight = new THREE.Vector3();
+export function updateFloorLabelOrientations(camera) {
+  _camRight.setFromMatrixColumn(camera.matrixWorld, 0);
+  const camRightXZ = { x: _camRight.x, z: _camRight.z };
+  let changed = false;
+  for (const obj of state.shapeObjects) {
+    obj.traverse((n) => {
+      if (!n.userData || (!n.userData.isArrowLabel && !n.userData.isZoneLabel)) return;
+      const dir = n.userData.textDirWorld;
+      const base = n.userData.baseRotZ;
+      if (!dir || typeof base !== 'number') return;
+      const flip = shouldFlipFloorLabel(dir, camRightXZ);
+      const target = flip ? base + Math.PI : base;
+      if (n.rotation.z !== target) {
+        n.rotation.z = target;
+        changed = true;
+      }
+    });
+  }
+  return changed;
 }
 
 // --- shape -> Object3D ------------------------------------------------
