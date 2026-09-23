@@ -5,6 +5,8 @@
 //   pnpm eval:goals -- --only Hardau   photos whose name contains "Hardau"
 //   pnpm eval:goals -- --roi tight     only that ROI variant
 //   pnpm eval:goals -- --truth x.json  score against another truth file
+//   pnpm eval:goals -- --model-fit     detectGoal({ modelFit: true }) (step 3.1),
+//                                      written to test-results/goal-eval-model/
 //
 // Runs the real detectGoal() (web/src/authoring/photo-overlay/detect.js)
 // in headless Chromium against truth.json (written by `pnpm label:goals`).
@@ -25,7 +27,8 @@ import { cornerErrors, goalHeight, roiVariants, PASS_FRAC } from './goal-eval-li
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const FIXTURES = path.join(ROOT, 'test', 'fixtures', 'goals');
-const OUT = path.join(ROOT, 'test-results', 'goal-eval');
+const modelFit = process.argv.includes('--model-fit');
+const OUT = path.join(ROOT, 'test-results', modelFit ? 'goal-eval-model' : 'goal-eval');
 const BASE = 'http://localhost:8000';
 
 const args = process.argv.slice(2);
@@ -97,7 +100,7 @@ const results = [];
 for (const [name, entry] of photos) {
   const rois = roiVariants(entry.corners, entry.w, entry.h);
   const cases = Object.entries(rois).filter(([k]) => !roiOnly || k === roiOnly);
-  const out = await page.evaluate(async ({ url, cases, truthCorners }) => {
+  const out = await page.evaluate(async ({ url, cases, truthCorners, modelFit }) => {
     const img = new Image();
     img.src = url;
     await img.decode();
@@ -107,7 +110,7 @@ for (const [name, entry] of photos) {
       let corners = null, error = null;
       const t0 = performance.now();
       try {
-        corners = (await window.__detect.detectGoal(img, roi, { debug }))?.corners ?? null;
+        corners = (await window.__detect.detectGoal(img, roi, { debug, modelFit }))?.corners ?? null;
       } catch (e) {
         error = String(e?.stack || e);
       }
@@ -141,7 +144,7 @@ for (const [name, entry] of photos) {
       res.push({ roiName, roi, corners, error, ms, debug, overlay: cv.toDataURL('image/jpeg', 0.85) });
     }
     return res;
-  }, { url: '/__fixtures/' + encodeURIComponent(name), cases, truthCorners: entry.corners });
+  }, { url: '/__fixtures/' + encodeURIComponent(name), cases, truthCorners: entry.corners, modelFit });
 
   for (const r of out) {
     const score = cornerErrors(entry.corners, r.corners);

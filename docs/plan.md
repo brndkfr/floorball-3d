@@ -1271,7 +1271,80 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
          alongside the 3% headline.
     3. **Known failures, attack in this order** (each fix gets a synthetic
        mask unit test in `goal-frame.test.js` first, then a harness
-       re-run):
+       re-run). **Reordered after the baseline:** 3.0 and 3.1 come first.
+       The old a/b become symptoms that the 3D model fit (3.1) should
+       resolve without separate heuristics. Keep them only as a fallback
+       if 3.1 doesn't pay off.
+
+       3.0 **Red mask on small / washed-out goals** (baseline group 1).
+          Measure the goal pixels' real HSV values on the 5 photos (mask
+          coverage along the labelled frame vs. the scoped 145-180 hue
+          band and `RED_MIN_SAT` / `RED_MIN_VAL`) before touching any
+          threshold. If the frame falls out of the band, widen or adapt the
+          band (e.g. relative to the local floor colour) and re-run the
+          harness. A model fit can't align to pixels that never reach the
+          mask.
+
+          **Result (2026-09-23): don't tune the thresholds.** The labelled
+          frame pixels were sampled (reddest pixel across the tube, every
+          px along crossbar + posts):
+          - Goals 118-416 px tall: 73-94% of frame samples pass the mask
+            (hue 165-176).
+          - Goals 55-97 px tall: **0-23% pass**. The frame is violet (hue
+            128-131; Backhand 01: 102 = floor blue). Cause: the tube is
+            only 2-3 px wide, and video chroma subsampling blends its red
+            into the blue floor. There is hardly any red left to find.
+          - Hardau: the dark maroon frame in dim light fails on value
+            (70% of samples have V < 70).
+          - R-G contrast vs. the floor a few tube widths away is positive
+            on every photo, but thin on small goals (median 8-44, p10
+            around 0-10). No per-pixel threshold separates it from floor
+            edges, jerseys and floor lines.
+          So the fix is to **integrate weak evidence along a known shape**:
+          3.1 scores a continuous "redder than local background" map along
+          the whole projected 3D frame, not a binary mask.
+       3.1 **3D goal model fit.** Use the real goal geometry from
+          [generate_goal.py](../generators/generate_goal.py) (IFF spec:
+          mouth 1600 x 1150, upper depth 400, lower depth 650, 100 mm
+          corner radius, back bars) as the reference. Project its tube
+          centrelines with a camera pose and adjust the pose (6DoF + focal)
+          until the projected tubes sit on the red-mask edges (e.g. a
+          distance transform of the mask edges). Start from the existing
+          pipeline's best candidate (or the user ROI).
+          - **Resolves:** front vs back frame confusion (goals seen from
+            behind), hidden posts (implied by the rest of the frame),
+            quads a real goal can't produce (aspect + perspective built
+            in), and it yields the camera pose Mode B needs anyway.
+          - **Doesn't resolve:** goals that never reach the mask (3.0),
+            although scoring evidence along projected tubes can accept
+            weaker cues than a hard red/not-red mask. Also local minima
+            (needs a decent start), and focal vs distance ambiguity on
+            tiny goals (constrain FOV or camera height).
+          - Unit-test on synthetic masks rendered from a known pose
+            (round-trip the pose), then keep it only if `pnpm eval:goals`
+            improves.
+          - **Status: implemented, opt-in, real-photo eval pending.**
+            [goal-model-fit.js](../web/src/authoring/photo-overlay/goal-model-fit.js),
+            tests in [goal-model-fit.test.js](../test/goal-model-fit.test.js)
+            (synthetic front view with clutter, goal seen from behind
+            started on its back frame, small washed-out violet goal: all
+            under 2% corner error). `detectGoal(img, roi, { modelFit: true })`
+            fits from the frame/posts quad, the contour quad and the inset
+            ROI; `pnpm eval:goals -- --model-fit` compares against the
+            baseline. Off by default until the eval shows it helps.
+            Lessons from getting the synthetic cases green:
+            - Evidence is R-G minus its local mean (not the HSV mask),
+              judged on a 1 px blur; each segment counts by projected
+              length.
+            - The back frame is itself a planar 1600 x 1177 mm rectangle:
+              a start quad that is really the back frame is converted to
+              the mouth it implies (exact pose), not shifted by a guess.
+            - Do NOT optimise over the 4 corner coordinates: the focal
+              length they imply swings from 1400 to 170 with 1-2 px of
+              corner noise, trapping the fit at "mouth right, 3D wrong".
+              The fit uses [u, v, log(f/Z), rotation vector, log f]
+              instead, so f only changes perspective strength.
+
        a. **Bottom corners 25-50 px too low.** The foot walk runs past the
           real post end into floor ads or shadow. Candidate fixes, all
           goal-specific:

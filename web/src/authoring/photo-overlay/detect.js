@@ -8,6 +8,7 @@ import { loadOpenCV } from './pnp.js';
 import { scoreGoalCandidate, redHueRanges, workingScale, RED_MIN_SAT, RED_MIN_VAL } from './detect-score.js';
 import { cornersFromPosts } from './detect-posts.js';
 import { fitGoalFrame } from './goal-frame.js';
+import { fitGoalModel, cropCamera, roiStartQuad } from './goal-model-fit.js';
 
 // Draws the HTMLImageElement onto an offscreen canvas at a bounded
 // max-side so opencv work stays snappy on large photos. Returns
@@ -153,7 +154,9 @@ export async function computeEdgeOverlay(image, maxSide = 2048) {
 // or null if nothing plausible was found. Optional roi (in original image
 // px) constrains the search area - use it to eliminate false positives
 // from red spectators / ads / referee jerseys outside the goal region.
-export async function detectGoal(image, roi = null, { debug = null } = {}) {
+// modelFit (ROI only, B-BACK-010 step 3.1): refine the candidates by fitting
+// the 3D goal model to red-contrast evidence (goal-model-fit.js).
+export async function detectGoal(image, roi = null, { debug = null, modelFit = false } = {}) {
   const cv = await loadOpenCV();
   // With an ROI, crop to it (plus a margin) BEFORE downscaling, instead of
   // filtering contours after downscaling the WHOLE photo. A zoomed-in ROI
@@ -266,8 +269,8 @@ export async function detectGoal(image, roi = null, { debug = null } = {}) {
   }
 
   let result = null;
-  let workCorners = postCorners;
-  if (!workCorners && best) {
+  let contourCorners = null;
+  if (best) {
     // `cv.minAreaRect` fits the smallest rectangle enclosing the WHOLE red
     // blob - at a rounded corner joint (a ball/fillet wider than the
     // straight tube), that bounding-rect corner sits at the ball's outer
@@ -284,8 +287,30 @@ export async function detectGoal(image, roi = null, { debug = null } = {}) {
       x + (cx0 - x) * CORNER_INSET_FRAC,
       y + (cy0 - y) * CORNER_INSET_FRAC,
     ]);
-    workCorners = orderCorners(insetPts);
+    contourCorners = orderCorners(insetPts);
+  }
+  let workCorners = postCorners;
+  if (!workCorners && contourCorners) {
+    workCorners = contourCorners;
     if (debug) debug.source = 'contour';
+  }
+  if (roi && modelFit) {
+    const map = { offsetX, offsetY, scale };
+    const starts = [
+      postCorners && { corners: postCorners, from: debug?.source ?? 'posts' },
+      contourCorners && { corners: contourCorners, from: 'contour' },
+      { corners: roiStartQuad(roi, map), from: 'roi' },
+    ].filter(Boolean);
+    const fit = fitGoalModel({
+      image: { width: rgba.cols, height: rgba.rows, data: rgba.data },
+      starts,
+      cam: cropCamera({ imageW: image.width, imageH: image.height, ...map }),
+      debug,
+    });
+    if (fit) {
+      workCorners = orderCorners(fit.corners);
+      if (debug) debug.source = `model(${fit.from})`;
+    }
   }
   // Maps debug's working-mat coords (vLines/hLines/cands) back to original
   // image px: imgX = x / scale + offsetX.
