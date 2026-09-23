@@ -203,10 +203,11 @@ function rotationRow(obj) {
 function renderCone(cone) {
   const heading = document.createElement('div');
   heading.className = 'ins-heading';
-  heading.textContent = (cone.kind === 'disc' ? 'Disc' : 'Cone') + (cone.label ? ` \u00b7 ${cone.label}` : '');
+  const kindLabel = cone.kind === 'disc' ? 'Disc' : cone.kind === 'pole' ? 'Pole' : 'Cone';
+  heading.textContent = kindLabel + (cone.label ? ` \u00b7 ${cone.label}` : '');
   body.appendChild(heading);
 
-  // Kind switcher (Disc <-> Full)
+  // Kind switcher (Disc <-> Full <-> Pole)
   const kindRow = document.createElement('div');
   kindRow.className = 'ins-row';
   const kl = document.createElement('span');
@@ -215,7 +216,7 @@ function renderCone(cone) {
   kindRow.appendChild(kl);
   const kindSel = document.createElement('select');
   kindSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
-  for (const opt of [{ v: 'disc', t: 'Disc (flat)' }, { v: 'full', t: 'Full (cone)' }]) {
+  for (const opt of [{ v: 'disc', t: 'Disc (flat)' }, { v: 'full', t: 'Full (cone)' }, { v: 'pole', t: 'Pole (disc + rod)' }]) {
     const o = document.createElement('option');
     o.value = opt.v; o.textContent = opt.t;
     kindSel.appendChild(o);
@@ -250,7 +251,7 @@ function renderCone(cone) {
   const labelInput = document.createElement('input');
   labelInput.type = 'text';
   labelInput.maxLength = 32;
-  labelInput.placeholder = cone.kind === 'disc' ? 'Disc' : 'Cone';
+  labelInput.placeholder = cone.kind === 'disc' ? 'Disc' : cone.kind === 'pole' ? 'Pole' : 'Cone';
   labelInput.value = cone.label || '';
   labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
   labelInput.addEventListener('change', () => updateCone(cone.id, { label: labelInput.value }));

@@ -410,7 +410,7 @@ if (!root) throw new Error('layersPanel element missing from index.html');
 
       const name = document.createElement('span');
       name.className = 'lp-name';
-      const defaultName = cone.kind === 'disc' ? 'Disc' : 'Cone';
+      const defaultName = cone.kind === 'disc' ? 'Disc' : cone.kind === 'pole' ? 'Pole' : 'Cone';
       name.textContent = (cone.label && cone.label.trim()) || defaultName;
       name.title = 'Double-click to rename';
       attachInlineRename(name, row, {

@@ -1,6 +1,7 @@
 // Marker cones (training cones): coach-friendly non-player markers.
-// Two kinds: a traffic-cone style "full" cone and a low-profile "disc"
-// (puck-cone). Persisted in `frame.scheme.cones = [{id, kind, x, z}]`.
+// Three kinds: a traffic-cone style "full" cone, a low-profile "disc"
+// (puck-cone), and a "pole" (disc base + a 150cm vertical rod, 5cm diameter).
+// Persisted in `frame.scheme.cones = [{id, kind, x, z}]`.
 //
 // Mirrors the chips.js patterns for spawn / remove / rebuild / translate,
 // scaled down: no team colour, no sprite, no drop animation. Selection
@@ -18,6 +19,8 @@ const FULL_RADIUS = 130;
 const FULL_HEIGHT = 500;
 const DISC_RADIUS = 170;
 const DISC_HEIGHT = 40;
+const POLE_ROD_RADIUS = 25;   // 5cm diameter rod
+const POLE_ROD_HEIGHT = 1500; // 150cm rod
 
 state.coneObjects = [];
 state.conesRoot = new THREE.Group();
@@ -25,21 +28,45 @@ scene.add(state.conesRoot);
 
 const fullGeo = new THREE.ConeGeometry(FULL_RADIUS, FULL_HEIGHT, 24);
 const discGeo = new THREE.CylinderGeometry(DISC_RADIUS, DISC_RADIUS, DISC_HEIGHT, 32);
+const poleRodGeo = new THREE.CylinderGeometry(POLE_ROD_RADIUS, POLE_ROD_RADIUS, POLE_ROD_HEIGHT, 16);
 
-export const CONE_KINDS = new Set(['full', 'disc']);
+export const CONE_KINDS = new Set(['full', 'disc', 'pole']);
 export const CONE_DEFAULT_COLOR = DEFAULT_CONE_COLOR;
 
 function buildConeMesh(cone) {
-  const geom = cone.kind === 'disc' ? discGeo : fullGeo;
-  const height = cone.kind === 'disc' ? DISC_HEIGHT : FULL_HEIGHT;
   const material = new THREE.MeshStandardMaterial({ color: cone.color || DEFAULT_CONE_COLOR, roughness: 0.7, metalness: 0.0 });
-  const mesh = new THREE.Mesh(geom, material);
-  mesh.position.set(cone.x, height / 2, cone.z);   // ConeGeom/CylinderGeom origin is at centre; raise to sit on floor
-  mesh.userData.cone = { id: cone.id };
-  mesh.visible = !cone.hidden;
-  state.conesRoot.add(mesh);
-  state.coneObjects.push(mesh);
-  return mesh;
+  let node;
+  if (cone.kind === 'pole') {
+    node = new THREE.Group();
+    const disc = new THREE.Mesh(discGeo, material);
+    disc.position.y = DISC_HEIGHT / 2;
+    node.add(disc);
+    const rod = new THREE.Mesh(poleRodGeo, material);
+    rod.position.y = DISC_HEIGHT + POLE_ROD_HEIGHT / 2;
+    node.add(rod);
+    node.position.set(cone.x, 0, cone.z);
+  } else {
+    const geom = cone.kind === 'disc' ? discGeo : fullGeo;
+    const height = cone.kind === 'disc' ? DISC_HEIGHT : FULL_HEIGHT;
+    node = new THREE.Mesh(geom, material);
+    node.position.set(cone.x, height / 2, cone.z);
+  }
+  node.userData.cone = { id: cone.id };
+  node.visible = !cone.hidden;
+  state.conesRoot.add(node);
+  state.coneObjects.push(node);
+  return node;
+}
+
+// Dispose every material in the subtree (a pole is a Group with child meshes;
+// disc/full are single meshes). Safe for both shapes.
+function disposeConeNode(node) {
+  node.traverse((n) => n.material?.dispose?.());
+}
+
+// Apply a colour to every mesh material in the subtree.
+function applyConeColor(node, color) {
+  node.traverse((n) => { if (n.material?.color) n.material.color.set(color); });
 }
 
 export function spawnCone({ kind = 'disc', x, z, pushHistory = true }) {
@@ -65,7 +92,7 @@ export function removeCone(id, pushHistory = true) {
   if (i >= 0) {
     const mesh = state.coneObjects[i];
     state.conesRoot.remove(mesh);
-    mesh.material?.dispose?.();
+    disposeConeNode(mesh);
     state.coneObjects.splice(i, 1);
   }
   saveDoc();
@@ -93,12 +120,12 @@ export function updateCone(id, patch) {
   if (mesh) {
     if (needsRebuild) {
       state.conesRoot.remove(mesh);
-      mesh.material?.dispose?.();
+      disposeConeNode(mesh);
       const i = state.coneObjects.indexOf(mesh);
       if (i >= 0) state.coneObjects.splice(i, 1);
       buildConeMesh(cone);
     } else if ('color' in patch) {
-      mesh.material.color.set(cone.color || DEFAULT_CONE_COLOR);
+      applyConeColor(mesh, cone.color || DEFAULT_CONE_COLOR);
     }
   }
   saveDoc();
@@ -140,7 +167,7 @@ export function coneDataFor(obj) {
 export function rebuildConesFromDoc() {
   for (const m of state.coneObjects) {
     state.conesRoot.remove(m);
-    m.material?.dispose?.();
+    disposeConeNode(m);
   }
   state.coneObjects.length = 0;
   const doc = ensureDoc();

@@ -88,6 +88,7 @@ function refreshStatus() {
   else if (tool === 'ball') msg = 'ball tool - click the rink to drop an extra ball (Esc to exit)';
   else if (tool === 'cone-full') msg = 'cone tool - click the rink to drop a full cone (Esc to exit)';
   else if (tool === 'cone-disc') msg = 'disc tool - click the rink to drop a flat disc marker (Esc to exit)';
+  else if (tool === 'cone-pole') msg = 'pole tool - click the rink to drop a disc + 150cm rod (Esc to exit)';
   statusEl.textContent = msg;
   teamBtn.style.setProperty('--team-color', '#' + TEAM_COLORS[t].toString(16).padStart(6, '0'));
   teamBtn.textContent = `T${t}`;
@@ -315,8 +316,10 @@ export function handleFloorClickForTool(worldPoint) {
     refreshStatus();
     return true;
   }
-  if (state.activeTool === 'cone-full' || state.activeTool === 'cone-disc') {
-    const kind = state.activeTool === 'cone-full' ? 'full' : 'disc';
+  if (state.activeTool === 'cone-full' || state.activeTool === 'cone-disc' || state.activeTool === 'cone-pole') {
+    const kind = state.activeTool === 'cone-full' ? 'full'
+      : state.activeTool === 'cone-pole' ? 'pole'
+      : 'disc';
     spawnCone({ kind, x: worldPoint.x, z: worldPoint.z });
     refreshStatus();
     return true;
