@@ -5,14 +5,15 @@
 // footage (bright red goals, white crease line, blue-ish floor) and will
 // need nudging for very-off-white paint or non-red goal frames.
 import { loadOpenCV } from './pnp.js';
-import { scoreGoalCandidate } from './detect-score.js';
+import { scoreGoalCandidate, redHueRanges, workingScale, RED_MIN_SAT, RED_MIN_VAL } from './detect-score.js';
+import { cornersFromPosts } from './detect-posts.js';
 
 // Draws the HTMLImageElement onto an offscreen canvas at a bounded
 // max-side so opencv work stays snappy on large photos. Returns
 // { mat, scale } - scale is the multiplier to convert back to original
 // image pixel coords.
-function imageToMat(cv, image, maxSide = 1024) {
-  const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+function imageToMat(cv, image, maxSide = 1024, allowUpscale = false) {
+  const scale = workingScale(image.width, image.height, { maxSide, allowUpscale });
   const w = Math.round(image.width * scale);
   const h = Math.round(image.height * scale);
   const canvas = document.createElement('canvas');
@@ -72,11 +73,12 @@ function computeInteriorRedFraction(mask, bb) {
 
 // Threshold for saturated red-orange (Hue near 0 wraps in HSV so we OR
 // two ranges together). Returns a fresh binary Mat the caller must delete.
-function maskRed(cv, hsv) {
-  const lo1 = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [0, 90, 70, 0]);
-  const hi1 = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [18, 255, 255, 0]);
-  const lo2 = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [160, 90, 70, 0]);
-  const hi2 = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [180, 255, 255, 0]);
+function maskRed(cv, hsv, scoped = false) {
+  const [[l1, h1], [l2, h2]] = redHueRanges({ scoped });
+  const lo1 = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [l1, RED_MIN_SAT, RED_MIN_VAL, 0]);
+  const hi1 = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [h1, 255, 255, 0]);
+  const lo2 = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [l2, RED_MIN_SAT, RED_MIN_VAL, 0]);
+  const hi2 = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [h2, 255, 255, 0]);
   const m1 = new cv.Mat(), m2 = new cv.Mat(), out = new cv.Mat();
   cv.inRange(hsv, lo1, hi1, m1);
   cv.inRange(hsv, lo2, hi2, m2);
@@ -178,17 +180,31 @@ export async function detectGoal(image, roi = null) {
     );
     srcImage = cropCanvas;
   }
-  const { mat: rgba, scale } = imageToMat(cv, srcImage);
+  const { mat: rgba, scale } = imageToMat(cv, srcImage, roi ? 2048 : 1024, !!roi);
   const rgb = new cv.Mat(), hsv = new cv.Mat();
   cv.cvtColor(rgba, rgb, cv.COLOR_RGBA2RGB);
   cv.cvtColor(rgb, hsv, cv.COLOR_RGB2HSV);
 
-  const mask = maskRed(cv, hsv);
+  const mask = maskRed(cv, hsv, !!roi);
   // Close small gaps (net weave breaks up the frame silhouette), then open
   // to shed thin red audience clothing / sticks.
   const kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(5, 5));
   cv.morphologyEx(mask, mask, cv.MORPH_CLOSE, kernel);
   cv.morphologyEx(mask, mask, cv.MORPH_OPEN, kernel);
+
+  let postCorners = null;
+  if (roi) {
+    // Hough on a filled blob gets eaten by short diagonals across thick
+    // posts - run it on the mask's edges instead.
+    const edges = new cv.Mat(), lines = new cv.Mat();
+    cv.Canny(mask, edges, 50, 150);
+    cv.HoughLinesP(edges, lines, 1, Math.PI / 180, 30, Math.round(mask.rows * 0.05), Math.round(mask.rows * 0.03));
+    // this opencv.js build returns lines as a 1xN Mat, so walk the flat data
+    const d = lines.data32S, segs = [];
+    for (let i = 0; i + 3 < d.length; i += 4) segs.push([d[i], d[i + 1], d[i + 2], d[i + 3]]);
+    edges.delete(); lines.delete();
+    postCorners = cornersFromPosts(segs);
+  }
 
   const contours = new cv.MatVector(), hierarchy = new cv.Mat();
   // RETR_CCOMP (not EXTERNAL): keeps a 2-level hierarchy (shapes + their
@@ -242,7 +258,8 @@ export async function detectGoal(image, roi = null) {
   }
 
   let result = null;
-  if (best) {
+  let workCorners = postCorners;
+  if (!workCorners && best) {
     // `cv.minAreaRect` fits the smallest rectangle enclosing the WHOLE red
     // blob - at a rounded corner joint (a ball/fillet wider than the
     // straight tube), that bounding-rect corner sits at the ball's outer
@@ -259,7 +276,10 @@ export async function detectGoal(image, roi = null) {
       x + (cx0 - x) * CORNER_INSET_FRAC,
       y + (cy0 - y) * CORNER_INSET_FRAC,
     ]);
-    const corners = orderCorners(insetPts).map(([x, y]) => [x / scale + offsetX, y / scale + offsetY]);
+    workCorners = orderCorners(insetPts);
+  }
+  if (workCorners) {
+    const corners = workCorners.map(([x, y]) => [x / scale + offsetX, y / scale + offsetY]);
     const xs = corners.map((p) => p[0]), ys = corners.map((p) => p[1]);
     result = {
       corners,

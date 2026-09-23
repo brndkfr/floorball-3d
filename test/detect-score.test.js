@@ -4,6 +4,10 @@ import {
   scoreGoalCandidate,
   SOLID_RED_REJECT,
   IDEAL_ASPECT,
+  isRedHsv,
+  redHueRanges,
+  workingScale,
+  MAX_UPSCALE,
 } from '../web/src/authoring/photo-overlay/detect-score.js';
 
 test('solid-red candidate above SOLID_RED_REJECT is rejected (score = 0)', () => {
@@ -45,4 +49,48 @@ test('bigger area beats smaller area at the same aspect and hollowness', () => {
   const big = scoreGoalCandidate({ area: 20_000, aspect: IDEAL_ASPECT, interiorRedFraction: 0.3 });
   const small = scoreGoalCandidate({ area: 5_000, aspect: IDEAL_ASPECT, interiorRedFraction: 0.3 });
   assert.ok(big > small);
+});
+
+// HSV samples (OpenCV 0-180 hue scale) read off a real broadcast frame: a
+// thin red goal post over the blue floor blends toward magenta.
+const THIN_POST_PX = [[155, 153, 110], [159, 114, 146], [161, 107, 172], [157, 102, 172], [161, 112, 168]];
+const BLUE_FLOOR_PX = [[108, 213, 141], [113, 175, 131], [120, 108, 130]];
+
+test('isRedHsv: thin magenta-shifted goal post counts as red inside a user ROI', () => {
+  for (const [h, s, v] of THIN_POST_PX) assert.ok(isRedHsv(h, s, v, { scoped: true }), `${h}/${s}/${v}`);
+});
+
+test('isRedHsv: whole-image search keeps the strict red band (no magenta)', () => {
+  assert.equal(isRedHsv(155, 153, 110, { scoped: false }), false);
+  assert.ok(isRedHsv(5, 200, 200, { scoped: false }));
+  assert.ok(isRedHsv(170, 200, 200, { scoped: false }));
+});
+
+test('isRedHsv: blue floor is never red', () => {
+  for (const [h, s, v] of BLUE_FLOOR_PX) {
+    assert.equal(isRedHsv(h, s, v, { scoped: true }), false);
+    assert.equal(isRedHsv(h, s, v, { scoped: false }), false);
+  }
+});
+
+test('redHueRanges: scoped ranges are a superset of the whole-image ranges', () => {
+  const strict = redHueRanges({ scoped: false });
+  const scoped = redHueRanges({ scoped: true });
+  for (const [lo, hi] of strict) {
+    assert.ok(scoped.some(([l, h]) => l <= lo && h >= hi), `strict ${lo}-${hi} not covered`);
+  }
+});
+
+test('workingScale: whole image is only ever downscaled', () => {
+  assert.equal(workingScale(4000, 3000), 1024 / 4000);
+  assert.equal(workingScale(800, 600), 1);
+});
+
+test('workingScale: a small ROI crop is upscaled so thin posts survive morphology', () => {
+  assert.equal(workingScale(256, 200, { allowUpscale: true }), 4);
+  assert.equal(workingScale(512, 300, { allowUpscale: true }), 2);
+  // capped - a tiny crop is not blown up into a blurry mess
+  assert.equal(workingScale(50, 40, { allowUpscale: true }), MAX_UPSCALE);
+  // big crops still downscale
+  assert.equal(workingScale(2048, 1000, { allowUpscale: true }), 0.5);
 });

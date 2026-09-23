@@ -1104,6 +1104,31 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
     dependency - pure canvas-layout fix scoped to one render pass. Not
     unit-tested (canvas-only rendering, no pure logic to isolate, same as
     the rest of this module); `pnpm test` still 126/126 green.
+  - **[B-BACK-008]** [shipped] ROI goal detect found only a small red
+    blob on broadcast frames. On a real 2025x1139 frame the thin posts
+    measured hue 150-160 (red chroma-bleeding into the blue floor), which
+    is outside the red band (>=160), and at 1x scale the 3-4 px posts
+    didn't survive the 5x5 morphology. The crossbar also washed out over
+    white ads and a goalie hid part of the frame, so `minAreaRect` of
+    whatever blob was left landed on the wrong corners. Fix in
+    [detect.js](../web/src/authoring/photo-overlay/detect.js), ROI mode
+    only: (1) the working mat is upscaled up to 4x
+    (`workingScale`, max side 2048); (2) the hue band widens to 145-180
+    (`redHueRanges({scoped})`, where magenta ads can't win because the
+    user drew the box); (3) new
+    [detect-posts.js](../web/src/authoring/photo-overlay/detect-posts.js)
+    `cornersFromPosts()` fits the 4 corners from the two posts
+    (HoughLinesP on the mask edges, clustered by x) and extends a partly
+    hidden post to the full post's length along the full post's direction.
+    If the posts aren't found, it falls back to the old rectangle.
+    Whole-image detect is unchanged. Gotcha: this opencv.js build returns
+    `HoughLinesP` lines as a 1xN Mat, so read the flat `data32S` rather
+    than looping over `rows`. Verified on that frame: 4 different ROI
+    sizes all converge to within ~5 image px on the visible corners
+    (was: a 40x20 px blob). The full Draw-ROI flow in the live browser
+    placed all 4 posts correctly. 15 new node tests
+    (`detect-posts.test.js`, `detect-score.test.js`), with HSV samples
+    taken from the real frame.
 
 ---
 

@@ -32,3 +32,25 @@ export function scoreGoalCandidate({ area, aspect, interiorRedFraction, idealAsp
   const hollowBonus = 1 - 0.5 * ((clamped - 0.15) / (SOLID_RED_REJECT - 0.15));
   return (area / (1 + 3 * aspectPenalty)) * hollowBonus;
 }
+
+// Red mask thresholds (OpenCV HSV: hue 0-180, S/V 0-255). A thin red post
+// over the blue floor chroma-bleeds toward magenta (hue ~150-160 measured on
+// a broadcast frame), so inside a user-drawn ROI - where magenta ads can't
+// win anyway - the upper band is widened to catch it.
+export const RED_MIN_SAT = 90;
+export const RED_MIN_VAL = 70;
+export function redHueRanges({ scoped = false } = {}) {
+  return [[0, 18], [scoped ? 145 : 160, 180]];
+}
+export function isRedHsv(h, s, v, { scoped = false } = {}) {
+  if (s < RED_MIN_SAT || v < RED_MIN_VAL) return false;
+  return redHueRanges({ scoped }).some(([lo, hi]) => h >= lo && h <= hi);
+}
+
+// Working-mat scale for detectGoal. Whole photos only downscale; an ROI crop
+// may upscale (capped) so a 3-4 px post isn't erased by the 5x5 morphology.
+export const MAX_UPSCALE = 4;
+export function workingScale(w, h, { maxSide = 1024, allowUpscale = false } = {}) {
+  const s = maxSide / Math.max(w, h);
+  return allowUpscale ? Math.min(MAX_UPSCALE, s) : Math.min(1, s);
+}
