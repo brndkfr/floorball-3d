@@ -295,7 +295,7 @@ export const TEXT_DEFAULT_SIZE = 1500;
 export const TEXT_MIN_SIZE = 200;
 export const TEXT_MAX_SIZE = 8000;
 
-function makeTextSprite(text, color, sizeMm = TEXT_DEFAULT_SIZE) {
+export function makeTextSprite(text, color, sizeMm = TEXT_DEFAULT_SIZE) {
   const font = 'bold 96px system-ui, sans-serif';
   const padding = 24;
   // measure first so long strings don't get clipped by a fixed-size canvas

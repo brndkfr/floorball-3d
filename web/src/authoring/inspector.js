@@ -12,7 +12,7 @@ import { chipDataFor } from './chips.js';
 import { shapeDataFor, removeShape, updateShape, updateShapeLabel, TEXT_MIN_SIZE, TEXT_MAX_SIZE, TEXT_DEFAULT_SIZE } from './shapes.js';
 import { coneDataFor, updateCone, CONE_DEFAULT_COLOR } from './cones.js';
 import { ballDataFor, updateBall, BALL_DEFAULT_COLOR } from './balls.js';
-import { goalDataFor, updateGoal } from './goals.js';
+import { goalDataFor, updateGoal, GOAL_LABEL_DEFAULT_COLOR, GOAL_LABEL_DEFAULT_SIZE, GOAL_LABEL_MIN_SIZE, GOAL_LABEL_MAX_SIZE } from './goals.js';
 import { arrowRoleColor } from '../tokens.js';
 import { ensureDoc } from './doc.js';
 import { getBallCarrier, setBallCarrier, getBallColor, setBallColor } from './actors.js';
@@ -355,6 +355,64 @@ function renderExtraGoal(goal, node) {
   labelInput.addEventListener('change', () => updateGoal(goal.id, { label: labelInput.value }));
   labelRow.appendChild(labelInput);
   body.appendChild(labelRow);
+
+  // Show-label toggle. When on, colour + size rows appear below.
+  const showRow = document.createElement('div');
+  showRow.className = 'ins-row';
+  const sl = document.createElement('span');
+  sl.className = 'ins-label';
+  sl.textContent = 'Show';
+  showRow.appendChild(sl);
+  const showCb = document.createElement('input');
+  showCb.type = 'checkbox';
+  showCb.checked = !!goal.labelVisible;
+  showCb.addEventListener('change', () => {
+    updateGoal(goal.id, { labelVisible: showCb.checked });
+    colorRow.style.display = showCb.checked ? '' : 'none';
+    sizeRow.style.display = showCb.checked ? '' : 'none';
+  });
+  showRow.appendChild(showCb);
+  body.appendChild(showRow);
+
+  const colorRow = document.createElement('div');
+  colorRow.className = 'ins-row';
+  colorRow.style.display = goal.labelVisible ? '' : 'none';
+  const cl = document.createElement('span');
+  cl.className = 'ins-label';
+  cl.textContent = 'Colour';
+  colorRow.appendChild(cl);
+  const colorInput = document.createElement('input');
+  colorInput.type = 'color';
+  colorInput.value = goal.labelColor || GOAL_LABEL_DEFAULT_COLOR;
+  colorInput.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
+  colorInput.addEventListener('input', () => updateGoal(goal.id, { labelColor: colorInput.value }));
+  colorRow.appendChild(colorInput);
+  body.appendChild(colorRow);
+
+  const sizeRow = document.createElement('div');
+  sizeRow.className = 'ins-row';
+  sizeRow.style.display = goal.labelVisible ? '' : 'none';
+  const szl = document.createElement('span');
+  szl.className = 'ins-label';
+  szl.textContent = 'Size';
+  sizeRow.appendChild(szl);
+  const sizeInput = document.createElement('input');
+  sizeInput.type = 'range';
+  sizeInput.min = String(GOAL_LABEL_MIN_SIZE);
+  sizeInput.max = String(GOAL_LABEL_MAX_SIZE);
+  sizeInput.step = '50';
+  sizeInput.value = String(goal.labelSize || GOAL_LABEL_DEFAULT_SIZE);
+  sizeInput.style.flex = '1';
+  const sizeReadout = document.createElement('span');
+  sizeReadout.textContent = sizeInput.value;
+  sizeReadout.style.cssText = 'min-width:44px; text-align:right; font-variant-numeric:tabular-nums;';
+  sizeInput.addEventListener('input', () => {
+    sizeReadout.textContent = sizeInput.value;
+    updateGoal(goal.id, { labelSize: Number(sizeInput.value) });
+  });
+  sizeRow.appendChild(sizeInput);
+  sizeRow.appendChild(sizeReadout);
+  body.appendChild(sizeRow);
 
   const hint = document.createElement('div');
   hint.className = 'ins-empty';

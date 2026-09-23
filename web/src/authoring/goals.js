@@ -14,6 +14,14 @@ import { state } from '../state.js';
 import { scene } from '../scene.js';
 import { ensureDoc, newId } from './doc.js';
 import { saveDoc } from './storage.js';
+import { makeTextSprite } from './shapes.js';
+
+export const GOAL_LABEL_DEFAULT_COLOR = '#ffffff';
+export const GOAL_LABEL_DEFAULT_SIZE = 1200;
+export const GOAL_LABEL_MIN_SIZE = 300;
+export const GOAL_LABEL_MAX_SIZE = 5000;
+// Goal crossbar is at y=1150mm; float the label a bit above it.
+const GOAL_LABEL_Y = 1500;
 
 state.extraGoals = [];
 state.extraGoalsRoot = new THREE.Group();
@@ -51,7 +59,32 @@ function buildGoalMesh(goal, template) {
   node.visible = !goal.hidden;
   state.extraGoalsRoot.add(node);
   state.extraGoals.push(node);
+  syncGoalLabelSprite(node, goal);
   return node;
+}
+
+// Add / update / remove the floating text sprite that hovers above the
+// goal's crossbar when the user toggles a visible label on the extras. The
+// sprite is stored on node.userData.labelSprite so we can find + dispose it
+// on re-render.
+function syncGoalLabelSprite(node, goal) {
+  const existing = node.userData.labelSprite;
+  const wantLabel = !!goal.labelVisible && !!(goal.label && goal.label.trim());
+  if (existing) {
+    node.remove(existing);
+    existing.material?.map?.dispose?.();
+    existing.material?.dispose?.();
+    node.userData.labelSprite = null;
+  }
+  if (!wantLabel) return;
+  const color = goal.labelColor || GOAL_LABEL_DEFAULT_COLOR;
+  const size = Number.isFinite(goal.labelSize) && goal.labelSize > 0
+    ? goal.labelSize : GOAL_LABEL_DEFAULT_SIZE;
+  const sprite = makeTextSprite(goal.label.trim(), color, size);
+  sprite.position.set(0, GOAL_LABEL_Y, 0);
+  sprite.userData.isGoalLabel = true;
+  node.add(sprite);
+  node.userData.labelSprite = sprite;
 }
 
 export function spawnGoal({ x, z, rotY = 0, pushHistory = true }) {
@@ -99,8 +132,27 @@ export function updateGoal(id, patch) {
     const t = (patch.label ?? '').trim();
     if (t) goal.label = t.slice(0, 32); else delete goal.label;
   }
+  if ('labelVisible' in patch) {
+    if (patch.labelVisible) goal.labelVisible = true; else delete goal.labelVisible;
+  }
+  if ('labelColor' in patch) {
+    const c = String(patch.labelColor || '').trim();
+    if (c && c.toLowerCase() !== GOAL_LABEL_DEFAULT_COLOR) goal.labelColor = c;
+    else delete goal.labelColor;
+  }
+  if ('labelSize' in patch) {
+    const n = Number(patch.labelSize);
+    if (Number.isFinite(n) && n > 0 && n !== GOAL_LABEL_DEFAULT_SIZE) goal.labelSize = n;
+    else delete goal.labelSize;
+  }
   const node = state.extraGoals.find((m) => m.userData.goal?.id === id);
-  if (node && 'rotY' in patch) node.rotation.y = goal.rotY || 0;
+  if (node) {
+    if ('rotY' in patch) node.rotation.y = goal.rotY || 0;
+    if ('label' in patch || 'labelVisible' in patch
+      || 'labelColor' in patch || 'labelSize' in patch) {
+      syncGoalLabelSprite(node, goal);
+    }
+  }
   saveDoc();
   document.dispatchEvent(new CustomEvent('layers:dirty'));
   import('./history.js').then((h) => h.pushHistory());
