@@ -5,6 +5,7 @@
 // footage (bright red goals, white crease line, blue-ish floor) and will
 // need nudging for very-off-white paint or non-red goal frames.
 import { loadOpenCV } from './pnp.js';
+import { scoreGoalCandidate } from './detect-score.js';
 
 // Draws the HTMLImageElement onto an offscreen canvas at a bounded
 // max-side so opencv work stays snappy on large photos. Returns
@@ -39,6 +40,34 @@ function contourAreaRect(cv, contour) {
   const rect = cv.minAreaRect(contour);
   const pts = cv.RotatedRect.points(rect);
   return { pts: pts.map((p) => [p.x, p.y]), area: rect.size.width * rect.size.height, rect };
+}
+
+// Fraction of the candidate's inner-60% bounding box (skip 20% margin on
+// each side) that is still red in the mask. A real goal frame is hollow
+// in the middle - net / floor / ice, mostly NOT red - so this is low
+// (0.15-0.5). A solid sponsor banner or a row of red spectator chairs
+// packs its whole bbox with red pixels, so this is high (>0.75). See
+// scoreGoalCandidate in detect-score.js. Iterating mask.data directly
+// avoids the @techstark/opencv-js `new cv.Rect(x, y, w, h)` throw
+// (CLAUDE.md photo-overlay gotcha) and is fast for small windows.
+function computeInteriorRedFraction(mask, bb) {
+  const insetX = Math.floor(bb.width * 0.2);
+  const insetY = Math.floor(bb.height * 0.2);
+  const x0 = Math.max(0, bb.x + insetX);
+  const y0 = Math.max(0, bb.y + insetY);
+  const x1 = Math.min(mask.cols, bb.x + bb.width - insetX);
+  const y1 = Math.min(mask.rows, bb.y + bb.height - insetY);
+  const w = x1 - x0, h = y1 - y0;
+  if (w <= 0 || h <= 0) return 0;
+  const data = mask.data, stride = mask.cols;
+  let redCount = 0;
+  for (let y = y0; y < y1; y++) {
+    const rowStart = y * stride;
+    for (let x = x0; x < x1; x++) {
+      if (data[rowStart + x]) redCount++;
+    }
+  }
+  return redCount / (w * h);
 }
 
 // Threshold for saturated red-orange (Hue near 0 wraps in HSV so we OR
@@ -173,12 +202,6 @@ export async function detectGoal(image, roi = null) {
   // Relative to the working mat's own area either way - self-scaling
   // whether or not we cropped, so no more special-cased near-zero floor.
   const minArea = (mask.rows * mask.cols) * 0.0005;
-  // Goal frame is ~1.4x wider than tall (mouth 1.6m x posts 1.15m plus
-  // perspective) - anything more than ~2.5:1 is almost certainly a red
-  // banner ad rather than the goal frame. Score each candidate by how
-  // close its aspect ratio is to the ideal goal aspect, weighted by area,
-  // so the largest goal-shaped blob wins - not just the largest red blob.
-  const IDEAL_ASPECT = 1.4;
   for (let i = 0; i < contours.size(); i++) {
     if (parentOf(i) !== -1) continue; // a hole (letter stroke, gap), not a candidate shape
     const c = contours.get(i);
@@ -207,12 +230,13 @@ export async function detectGoal(image, roi = null) {
       hc.delete();
     }
     if (holeCount >= 4 && maxHoleArea < info.area * 0.2) { c.delete(); continue; }
-    // Score inversely to aspect-ratio distance from IDEAL_ASPECT (log so
-    // that being 2x off matters roughly the same in either direction),
-    // multiplied by area so we still prefer bigger goal-shaped blobs
-    // over tiny goal-shaped noise.
-    const aspectPenalty = Math.abs(Math.log(aspect / IDEAL_ASPECT));
-    const score = info.area / (1 + 3 * aspectPenalty);
+    // Hollow-frame scoring: a real goal is a frame around empty net, so
+    // its bbox interior in the red mask is mostly NOT red. Chairs /
+    // solid banners fill their interior with red and get penalised or
+    // rejected outright (scoreGoalCandidate returns 0 above 0.75).
+    const interiorRedFraction = computeInteriorRedFraction(mask, bb);
+    const score = scoreGoalCandidate({ area: info.area, aspect, interiorRedFraction });
+    if (score <= 0) { c.delete(); continue; }
     if (!best || score > best.score) best = { ...info, contour: c, cx, cy, score };
     else c.delete();
   }

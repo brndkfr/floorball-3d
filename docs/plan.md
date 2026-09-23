@@ -1006,8 +1006,31 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
     itself since that's canvas-only with no pure logic to isolate, same as
     the rest of `photo-canvas.js`.
 - **Auto-detect / calibration follow-ups still open**:
-  - **[B-BACK-004]** [open] Whole-image auto-detect false positives on red
+  - **[B-BACK-004]** [shipped] Whole-image auto-detect false positives on red
     spectator chairs and sponsor banners winning over the actual goal.
+    Fixed by adding a hollow-frame check to `detectGoal`'s scoring pass in
+    [detect.js](../web/src/authoring/photo-overlay/detect.js). A real
+    floorball goal is a red frame around an empty mouth (net / floor
+    visible inside the bounding box); a row of red spectator chairs or a
+    solid sponsor banner packs its whole bbox with red pixels. New helper
+    `computeInteriorRedFraction(mask, bb)` samples the inner 60% of each
+    candidate's bounding box on the red mask, and pure-scoring lives in
+    new [detect-score.js](../web/src/authoring/photo-overlay/detect-score.js):
+    `scoreGoalCandidate({ area, aspect, interiorRedFraction })` hard-rejects
+    interior red fraction > 0.75 (`SOLID_RED_REJECT`) and applies a linear
+    hollow bonus (x1.0 at &lt;=15% interior red, x0.5 at the reject edge)
+    on top of the existing area / aspect-log scoring. Uses direct
+    `mask.data` iteration on the inset window to skip the
+    `@techstark/opencv-js` `new cv.Rect(x, y, w, h)` throw (see
+    CLAUDE.md's photo-overlay note). 6 new node tests
+    ([test/detect-score.test.js](../test/detect-score.test.js)) cover
+    solid-red rejection, hollow-beats-solid ordering, aspect penalty
+    still dominating, edge multiplier at the reject boundary, degenerate
+    inputs, and area preference. Verified live in Chromium that the
+    module loads with no page errors and the exports are wired into the
+    running app; the CV path itself only runs against a loaded photo, so
+    the pure tests carry the correctness weight. 228/228 unit tests +
+    build + size checks green. Commit `&lt;pending&gt;`.
   - **[B-BACK-005]** [mitigated] Occluded-goalie detection (kneeling white
     gear against white ice). As predicted, addressed with Phase 4 pose
     cues (B-PHASE-005) rather than classically:
