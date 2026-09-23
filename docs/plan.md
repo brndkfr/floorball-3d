@@ -492,6 +492,44 @@ Still on the backlog from that exploration:
   ±180°). Fixed to `atan2(sin(d), cos(d))`. 9 new node tests cover
   Bezier endpoints, straight-line degeneracy, control-offset resolution,
   and the ±π short-path wrap. This closes part of S-BACK-009.
+- **[A-BACK-015]** [shipped] **Pole cone kind (disc base + 150cm rod).**
+  Third geometry under the Cone flyout in the tool palette: reuses the
+  existing 40mm disc, adds a 1500mm × 50mm-diameter vertical rod on top
+  for slalom-drill markers. Mesh is a `THREE.Group` for the pole case
+  (disc + rod as children); new `disposeConeNode()` / `applyConeColor()`
+  helpers in [cones.js](../web/src/authoring/cones.js) traverse the
+  subtree so single-Mesh (disc/full) and Group (pole) cases share the
+  same paths. `CONE_KINDS` gains `'pole'`, dock dispatches `cone-pole`,
+  Inspector Kind dropdown offers `Pole (disc + rod)`, Layers panel row
+  label is `Pole`. Commit `42af27c`.
+- **[A-BACK-016]** [shipped] **Placeable extra goals + Ball-tool colour
+  + real-size extras in 3D.** Three related Plan-mode toolbar additions
+  in one change:
+  - **Goal tool** (new [authoring/goals.js](../web/src/authoring/goals.js)):
+    drops user-placed extra goals cloned from the loaded
+    `assets/floorball_goal.obj`, persisted per-frame as
+    `scheme.goals.extras = [{id, x, z, rotY?, label?, hidden?}]`.
+    `state.extraGoals` is a separate collection from
+    `state.goalInstances` so trajectory / coverage / photo-overlay code
+    that hard-references the two fixed IFF goals by index is
+    unaffected. `Q`/`E` rotates the selected extra goal (matches the
+    goalie pattern), Inspector has a rotation slider + label + delete,
+    Layers panel gains a Goals section, drag / right-click
+    move-command / Del all work. New `layers:goal-loaded` event from
+    [layers.js](../web/src/layers.js) resolves goals.js's template
+    promise without polling.
+  - **Ball-tool colour**: `spawnBall` now reads `state.drawColor`, so
+    the dock's shape-color swatch doubles as the next-ball colour - no
+    follow-up Inspector click needed to recolour.
+  - **Real-size extras**: extra-ball geometry switched from a baked-5x
+    sphere (180mm) to the real `BALL_RADIUS` (36mm);
+    [topdown-camera.js](../web/src/authoring/topdown-camera.js)'s
+    `applyBallTopDownScale` now scales every ball in `state.extraBalls`
+    by 5x on `enterTopDown()` and back to 1 on `exitTopDown()`
+    (piggy-backs on the main ball's existing hook). Fixes the "ball
+    placed in 2D looks oversized in 3D" bug.
+
+  Commit `9b4bc84`.
 
 ---
 
