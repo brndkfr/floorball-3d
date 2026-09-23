@@ -7,17 +7,11 @@ import { photoCamera, renderer } from '../../scene.js';
 import { ensureDoc } from '../doc.js';
 import { saveDoc } from '../storage.js';
 import { WORLD_LANDMARKS, LANDMARK_LABELS, MIN_LANDMARKS } from './landmarks.js';
-import { isHistoryCommitAction } from './photo-history.js';
 import { solveCameraPose } from './pnp.js';
-import { assessPlanarity, findLeverageOutliers, isAmbiguousChoice } from './pose-diagnostics.js';
 import * as photoCanvas from './photo-canvas.js';
 import { enterPhoto, exitPhoto, isPhoto, fitToPhotoRect, setOverlayOpacity } from './view.js';
-import { enableWireframeOverlay, disableWireframeOverlay } from './wireframe.js';
 import { detectGoal, computeEdgeOverlay } from './detect.js';
 import { detectPlayers } from './detect-players.js';
-import { detectPose, matchPoseToPlayers, detectPoseInBoxes } from './detect-pose.js';
-import { facingFromKeypoints } from './facing-from-pose.js';
-import { isLowConfidenceFacing } from './facing-confidence.js';
 import { detectGoalieForEnd } from './detect-goalie.js';
 import { segmentPlayer } from './segment-player.js';
 import { backProjectPlayers, backProjectFoot } from './back-project.js';
@@ -29,15 +23,6 @@ import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from '../chips.js';
 import * as photoCache from './photo-cache.js';
 import { recomputeInsights } from './insights-overlay.js';
 import { enterPhotoPreview3D, exitPhotoPreview3D, isPhotoPreview3D } from './preview-3d.js';
-import {
-  currentStep as computeCurrentStep,
-  stepStatuses as computeStepStatuses,
-  guidedHint as computeGuidedHint,
-  STEP_PHOTO,
-  STEP_ALIGN,
-  STEP_PLAYERS,
-  STEP_INSIGHTS,
-} from './photo-step-tracker.js';
 
 // Structured, in-page debug log (capped) so calibration state can be
 // inspected from devtools/automation at any later point in the session,
@@ -47,16 +32,6 @@ function debugLog(event, data) {
   const log = (window.__photoOverlayDebugLog ??= []);
   log.push({ t: Date.now(), event, data });
   if (log.length > 200) log.shift();
-}
-
-// S-BACK-012 (remainder): push an undo entry for a discrete photo-overlay
-// edit. `action` is checked against photo-history.js's commit list so a
-// stray call from a continuous-input path (sliders, drag-in-progress) is
-// a silent no-op instead of spamming the stack. Late import to avoid a
-// circular dep, same pattern as chips.js/shapes.js's own pushHistory calls.
-function commitPhotoAction(action) {
-  if (!isHistoryCommitAction(action)) return;
-  import('../history.js').then((h) => h.pushHistory());
 }
 
 const fileInput = document.getElementById('photoFileInput');
@@ -87,7 +62,6 @@ const advancedPanel = document.getElementById('photoAdvanced');
 const autoBanner = document.getElementById('photoAutoBanner');
 const refineBtn = document.getElementById('photoRefineBtn');
 const alignSlider = document.getElementById('photoAlignSlider');
-const wireframeToggle = document.getElementById('photoWireframeToggle');
 const hintPanel = document.getElementById('photoHintPanel');
 const hintText = document.getElementById('photoHintText');
 const hintDiagram = document.getElementById('photoHintDiagram');
@@ -101,25 +75,12 @@ const setBallBtn = document.getElementById('photoSetBallBtn');
 const bodyOutlineToggle = document.getElementById('photoBodyOutlineToggle');
 const step3Status = document.getElementById('photoStep3Status');
 const STEP3_MAX_REPROJ_ERROR_PX = 20;
-const step3Cta = document.getElementById('photoStep3Cta');
-const step3Hint = document.getElementById('photoStep3Hint');
-const step3PrimaryBtn = document.getElementById('photoStep3PrimaryBtn');
-const step4Cta = document.getElementById('photoStep4Cta');
-const step4Hint = document.getElementById('photoStep4Hint');
-const step4PrimaryBtn = document.getElementById('photoStep4PrimaryBtn');
-const stepperEl = document.getElementById('photoStepper');
 const setTeamHomeBtn = document.getElementById('photoSetTeamHomeBtn');
 const setTeamAwayBtn = document.getElementById('photoSetTeamAwayBtn');
 const deletePlayerBtn = document.getElementById('photoDeletePlayerBtn');
-const clearSelFacingBtn = document.getElementById('photoClearSelFacingBtn');
 const addPlayerHomeBtn = document.getElementById('photoAddPlayerHomeBtn');
 const addPlayerAwayBtn = document.getElementById('photoAddPlayerAwayBtn');
-const estimateFacingsBtn = document.getElementById('photoEstimateFacingsBtn');
-const feedbackToggle = document.getElementById('photoFeedbackToggle');
-const feedbackControls = document.getElementById('photoFeedbackControls');
-const copyFeedbackBtn = document.getElementById('photoCopyFeedbackBtn');
-const clearFeedbackBtn = document.getElementById('photoClearFeedbackBtn');
-const feedbackStatus = document.getElementById('photoFeedbackStatus');
+
 const step4Details = document.getElementById('photoStep4Details');
 const targetGoalFieldset = document.getElementById('photoTargetGoalFieldset');
 const targetGoalARadio = document.getElementById('photoTargetGoalA');
@@ -127,7 +88,6 @@ const targetGoalBRadio = document.getElementById('photoTargetGoalB');
 const goalieHomeSelect = document.getElementById('photoGoalieHome');
 const goalieAwaySelect = document.getElementById('photoGoalieAway');
 const autoAssignGoaliesBtn = document.getElementById('photoAutoAssignGoaliesBtn');
-const resetFacingBtn = document.getElementById('photoResetFacingBtn');
 const insightsReadout = document.getElementById('photoInsightsReadout');
 const view3dBtn = document.getElementById('photoView3dBtn');
 
@@ -246,7 +206,7 @@ function buildList() {
         photoCanvas.removeLandmark(key);
         row.classList.remove('placed');
         row.querySelector('.err').textContent = '';
-        trySolve('landmark-delete');
+        trySolve();
       }
     });
     left.appendChild(cb);
@@ -379,12 +339,12 @@ photoCanvas.setLandmarkClickHandler((imgX, imgY) => {
     const next = firstUncheckedUnplaced();
     if (next) armLandmark(next);
   }
-  trySolve('landmark-place');
+  trySolve();
 });
 
 // Dragging an already-placed marker (photo-canvas.js) nudges its stored
 // pixel position live; only re-solve once the drag ends, not every frame.
-photoCanvas.setMarkerMovedHandler(() => { trySolve('landmark-move'); });
+photoCanvas.setMarkerMovedHandler(() => { trySolve(); });
 photoCanvas.setLabelResolver((key) => LANDMARK_LABELS[key] || key);
 
 // Border-mode landmarks are added at runtime (dynamic keys boardTop_N) so
@@ -409,7 +369,7 @@ function addBorderRow(key, world) {
     photoCanvas.removeLandmark(key);
     borderMode.unregisterCommitted(key);
     row.remove();
-    trySolve('landmark-delete');
+    trySolve();
   });
   const err = document.createElement('span');
   err.className = 'err';
@@ -426,7 +386,7 @@ borderMode.setOnCommit((key, world, photoXY) => {
   photoCanvas.setPendingMarker(null);
   borderMode.registerCommitted(key, world);
   addBorderRow(key, world);
-  trySolve('landmark-place');
+  trySolve();
 });
 
 borderModeBtn.addEventListener('click', () => {
@@ -475,7 +435,7 @@ let solveSeq = 0;
 let lastPose = null;
 export function getLastPose() { return lastPose; }
 
-async function trySolve(historyAction = null) {
+async function trySolve() {
   const seq = ++solveSeq;
   const placed = photoCanvas.getPlacedPoints();
   if (placed.length < MIN_LANDMARKS) {
@@ -498,31 +458,18 @@ async function trySolve(historyAction = null) {
   try {
     const pose = await solveCameraPose(points, intrinsics, size.w, size.h);
     if (seq !== solveSeq) return null; // a newer call has since started - drop this stale result
-    // Warn if the point set is (near-)coplanar - solvePnP has a depth/FOV
+    // Warn if the point set is dominated by coplanar landmarks (all at
+    // y=500 board-top OR all at y=0 floor). solvePnP has a depth/FOV
     // ambiguity on planar sets that Auto-tune FOV can drive to nonsense.
-    // assessPlanarity checks the actual 3D spread (via covariance
-    // determinant) rather than assuming Y is the missing axis, so it also
-    // catches degenerate sets that aren't the "all floor" / "all board-top"
-    // cases this app's landmark set usually produces.
-    const coplanar = assessPlanarity(points.map((p) => p.world)).degenerate;
+    const ys = points.map((p) => p.world[1]);
+    const distinctY = new Set(ys).size;
+    const coplanar = distinctY <= 1;
     borderMode.setCoplanarWarning(coplanar);
-    // B-BUG-003: a far-away point (board/centre-line, ~16-20m from the goal
-    // cluster) has outsized leverage on the solve - a small pixel slip there
-    // can drag the whole pose off while an equally-sloppy near-goal point
-    // barely moves it. Flag it by name so the user knows WHICH point to
-    // re-check instead of guessing from the aggregate error alone.
-    const leveragePoints = findLeverageOutliers(
-      placed.map((p) => ({ key: p.key, world: WORLD_LANDMARKS[p.key] })),
-      pose.perPointErrorPx,
-    );
     errorEl.textContent = `reprojection error: ${pose.reprojErrorPx.toFixed(1)} px (${placed.length} pts)`
-      + (coplanar ? ' - warning: all points coplanar, add crease/post landmarks' : '')
-      + (leveragePoints.length
-        ? ` - warning: ${leveragePoints.map((k) => LANDMARK_LABELS[k] || k).join(', ')} far from the other points and may be destabilizing the pose - re-check its placement`
-        : '');
-    errorEl.classList.toggle('bad', pose.reprojErrorPx > 10 || coplanar || leveragePoints.length > 0);
-    errorEl.classList.toggle('ok', pose.reprojErrorPx <= 10 && !coplanar && leveragePoints.length === 0);
-    updatePerPointErrors(placed, pose.perPointErrorPx, leveragePoints);
+      + (coplanar ? ' - warning: all points coplanar, add crease/post landmarks' : '');
+    errorEl.classList.toggle('bad', pose.reprojErrorPx > 10 || coplanar);
+    errorEl.classList.toggle('ok', pose.reprojErrorPx <= 10 && !coplanar);
+    updatePerPointErrors(placed, pose.perPointErrorPx);
     debugLog('trySolve:result', {
       reprojErrorPx: Number(pose.reprojErrorPx.toFixed(2)),
       pointCount: placed.length,
@@ -574,7 +521,6 @@ async function trySolve(historyAction = null) {
       goalies: prevPhoto.goalies ?? { home: null, away: null },
     };
     saveDoc();
-    commitPhotoAction(historyAction);
     if (isPhoto()) fitToPhotoRect(photoCanvas.getPhotoRect());
     // Only show reference geometry that's actually backed by a placed
     // landmark out there - an unconstrained extrapolation 40m away just
@@ -723,10 +669,41 @@ function restoreSavedOverlay() {
 
 restoreLandmarksBtn.addEventListener('click', restoreSavedOverlay);
 
-// Auto-load of the last cached photo was removed - it hijacked Plan mode
-// on every reload. The cache is still populated on solve, and the "Load
-// saved overlay" button (Step 2) still replays saved landmarks + pose
-// once the user re-picks the same photo file in Step 1.
+// Auto-load the last calibrated photo from the local IndexedDB cache (if
+// any) so a reload doesn't force re-picking the file via <input> every
+// time - see photo-cache.js. Falls back to the normal empty-panel state
+// (nothing to do) if there's no cached photo or the browser blocks it.
+// Deferred to window 'load': this module is imported (and runs its
+// top-level code) BEFORE authoring/index.js's own top-level await/loadDoc()
+// populate state.doc - reading state.doc any earlier would race against an
+// still-empty placeholder doc and silently "find" no saved landmarks even
+// when they exist.
+let cachedPhotoRestored = false;
+async function restoreCachedPhotoIfAny() {
+  if (cachedPhotoRestored) return;
+  const cached = await photoCache.loadCachedPhoto();
+  if (!cached) { cachedPhotoRestored = true; return; }
+  await photoCanvas.loadPhoto(cached.blob);
+  setCalibrating(true);
+  if (!checkRestoreAvailable()) {
+    startGuidedHints(autoDetectEnd.value === 'B' ? 'goalB' : 'goalA');
+  }
+  cachedPhotoRestored = true;
+}
+
+window.addEventListener('load', () => {
+  // Only auto-restore if the user is already in Analyze at boot (rare -
+  // Plan is the default), otherwise wait for them to open Analyze.
+  // setCalibrating() hides the WebGL renderer, so eagerly entering photo
+  // mode from Plan would leak through the Plan-mode HUD.
+  const railBtn = document.querySelector('#appRail button[data-mode="analyze"]');
+  if (railBtn && !railBtn.classList.contains('active')) return;
+  restoreCachedPhotoIfAny();
+});
+
+window.addEventListener('shell:mode', (e) => {
+  if (e.detail?.mode === 'analyze') restoreCachedPhotoIfAny();
+});
 
 opacitySlider.addEventListener('input', () => {
   if (isPhoto()) setOverlayOpacity(Number(opacitySlider.value) / 100);
@@ -769,7 +746,7 @@ edgesToggle.addEventListener('change', async () => {
   }
 });
 
-function updatePerPointErrors(placed, perPoint, leverageKeys = []) {
+function updatePerPointErrors(placed, perPoint) {
   if (!perPoint) return;
   let worstIdx = -1, worst = -1;
   for (let i = 0; i < perPoint.length; i++) {
@@ -780,20 +757,14 @@ function updatePerPointErrors(placed, perPoint, leverageKeys = []) {
   // already sub-pixel accurate.
   const mean = perPoint.reduce((a, b) => a + b, 0) / perPoint.length;
   const flagWorst = worst > 5 && worst > mean * 1.5;
-  const leverageSet = new Set(leverageKeys);
   const byKey = new Map();
   placed.forEach((p, i) => byKey.set(p.key, i));
   listEl.querySelectorAll('.photo-landmark-row').forEach((row) => {
     const idx = byKey.get(row.dataset.key);
     const errEl = row.querySelector('.err');
-    if (idx === undefined) { errEl.textContent = ''; errEl.classList.remove('worst', 'leverage'); return; }
+    if (idx === undefined) { errEl.textContent = ''; errEl.classList.remove('worst'); return; }
     errEl.textContent = perPoint[idx].toFixed(1) + ' px';
     errEl.classList.toggle('worst', flagWorst && idx === worstIdx);
-    const isLeverage = leverageSet.has(row.dataset.key);
-    errEl.classList.toggle('leverage', isLeverage);
-    errEl.title = isLeverage
-      ? 'Far from the other placed points - a small placement error here has outsized effect on the solved pose (B-BUG-003)'
-      : '';
   });
 }
 
@@ -841,34 +812,18 @@ async function detectAndPlace(end) {
   const size = photoCanvas.getImageSize();
   const intr = currentIntrinsics(size);
   const toSolveInput = (kp) => kp.map(([key, image]) => ({ world: WORLD_LANDMARKS[key], image }));
-  const candidateKeys = new Set(buildKeyed(false).map(([key]) => key));
-  // B-BACK-006: a goal viewed near head-on is close to bilaterally
-  // symmetric, so deciding L/R from JUST these 4 points can be a near-exact
-  // tie (observed: reprojection errors differing in the 6th decimal place).
-  // Any landmark already placed elsewhere on the rink (other end, crease,
-  // board, face-off) almost always breaks that local symmetry, since a real
-  // camera is rarely dead-centered on the rink's mirror axis - so fold in
-  // whatever's already placed before comparing the two hypotheses.
-  const otherPlaced = toSolveInput(
-    photoCanvas.getPlacedPoints()
-      .filter((p) => !candidateKeys.has(p.key))
-      .map((p) => [p.key, p.image]),
-  );
-  let chosenKp, ambiguous;
+  let chosenKp;
   try {
     const kpA = buildKeyed(false), kpB = buildKeyed(true);
     const [poseA, poseB] = await Promise.all([
-      solveCameraPose([...toSolveInput(kpA), ...otherPlaced], intr, size.w, size.h),
-      solveCameraPose([...toSolveInput(kpB), ...otherPlaced], intr, size.w, size.h),
+      solveCameraPose(toSolveInput(kpA), intr, size.w, size.h),
+      solveCameraPose(toSolveInput(kpB), intr, size.w, size.h),
     ]);
     chosenKp = poseB.reprojErrorPx < poseA.reprojErrorPx ? kpB : kpA;
-    ambiguous = isAmbiguousChoice(poseA.reprojErrorPx, poseB.reprojErrorPx);
   } catch {
     // Fall back to non-swapped if one of the trial solves fails (rare -
-    // happens on very degenerate landmark layouts). Can't tell L from R
-    // here, so treat it as unresolved rather than silently guessing.
+    // happens on very degenerate landmark layouts).
     chosenKp = buildKeyed(false);
-    ambiguous = true;
   }
   for (const [key, xy] of chosenKp) await autoPlace(key, xy);
   // Safety net: only reset zoom if a placed point would actually be
@@ -880,10 +835,7 @@ async function detectAndPlace(end) {
   return {
     ok: true,
     count: chosenKp.length,
-    ambiguous,
-    message: ambiguous
-      ? 'auto-detect: goal placed, but left/right could not be confidently resolved (near head-on view) - check the overlay and use "Flip left/right" if it looks mirrored'
-      : 'auto-detect: goal placed - review + nudge, then place crease/board/face-off landmarks manually',
+    message: 'auto-detect: goal placed - review + nudge, then place crease/board/face-off landmarks manually',
   };
 }
 
@@ -892,26 +844,15 @@ async function detectAndPlace(end) {
 // triggers auto-align (docs/plan.md 4.3 Step 2: only once the user has
 // zoomed into the goal area, not on file load).
 async function tryAutoAlign(end) {
-  let ambiguous = false;
   try {
-    ambiguous = !!(await detectAndPlace(end)).ambiguous;
+    await detectAndPlace(end);
   } catch (err) {
     console.error('auto-align failed', err);
   }
-  const pose = await trySolve('auto-detect-goal');
-  // B-BACK-006: a good reprojection error alone doesn't mean the pose is
-  // right - a near head-on goal can solve cleanly in EITHER L/R mirror, so
-  // don't claim "aligned for you" when detectAndPlace couldn't confidently
-  // pick a side. Route to guided hints instead, with an explicit nudge to
-  // check the flip.
-  if (pose && pose.reprojErrorPx < 10 && photoCanvas.getPlacedPoints().length >= MIN_LANDMARKS && !ambiguous) {
+  const pose = await trySolve();
+  if (pose && pose.reprojErrorPx < 10 && photoCanvas.getPlacedPoints().length >= MIN_LANDMARKS) {
     autoBanner.style.display = 'block';
   } else {
-    if (ambiguous) {
-      errorEl.textContent += ' - left/right unresolved, check "Flip left/right" if the overlay looks mirrored';
-      errorEl.classList.add('bad');
-      errorEl.classList.remove('ok');
-    }
     startGuidedHints(end);
   }
 }
@@ -926,18 +867,9 @@ autoDetectBtn.addEventListener('click', async () => {
   try {
     const result = await detectAndPlace(end);
     errorEl.textContent = result.message;
-    errorEl.classList.toggle('bad', !result.ok || !!result.ambiguous);
+    errorEl.classList.toggle('bad', !result.ok);
     errorEl.classList.remove('ok');
-    // trySolve() below overwrites errorEl with the reprojection-error line
-    // once it resolves - await it here (instead of the previous fire-and-
-    // forget) so the ambiguous warning above isn't silently clobbered a
-    // moment later; re-append it once trySolve is done.
-    await trySolve('auto-detect-goal');
-    if (result.ambiguous) {
-      errorEl.textContent += ' - left/right unresolved, verify with "Flip left/right" if mirrored';
-      errorEl.classList.add('bad');
-      errorEl.classList.remove('ok');
-    }
+    trySolve();
   } catch (err) {
     console.error(err);
     errorEl.textContent = 'auto-detect failed: ' + (err.message || err);
@@ -976,7 +908,7 @@ flipLRBtn.addEventListener('click', () => {
     errorEl.classList.remove('ok');
     return;
   }
-  trySolve('landmark-flip-lr');
+  trySolve();
 });
 
 autoFovBtn.addEventListener('click', async () => {
@@ -1014,7 +946,7 @@ autoFovBtn.addEventListener('click', async () => {
     }
     fovSlider.value = Math.round(best.deg * 2) / 2;
     fovValue.textContent = fovSlider.value + '° (auto)';
-    trySolve('auto-tune-fov');
+    trySolve();
     errorEl.textContent = `auto FOV: ${fovSlider.value}° (reproj ${best.err.toFixed(1)} px)`;
     errorEl.classList.toggle('bad', best.err > 10);
     errorEl.classList.toggle('ok', best.err <= 10);
@@ -1063,22 +995,14 @@ enterBtn.addEventListener('click', async () => {
   enterPhoto();
   fitToPhotoRect(photoCanvas.getPhotoRect());
   setOverlayOpacity(Number(opacitySlider.value) / 100);
-  if (wireframeToggle.checked) enableWireframeOverlay();
   setCalibrating(false); // locked in: let clicks reach the 3D scene again (chips etc.)
   photoCanvas.setShowMarkers(false); // clean comparison view, not cluttered with calibration crosshairs
 });
 
 exitBtn.addEventListener('click', () => {
-  disableWireframeOverlay();
   exitPhoto();
   setCalibrating(photoCanvas.hasPhoto()); // still have a photo loaded - resume landmark picking
   photoCanvas.setShowMarkers(true);
-});
-
-wireframeToggle.addEventListener('change', () => {
-  if (!isPhoto()) return; // takes effect on the next Enter Photo View
-  if (wireframeToggle.checked) enableWireframeOverlay();
-  else disableWireframeOverlay();
 });
 
 function leaveRinkFit() {
@@ -1114,7 +1038,7 @@ rinkFitConfirmBtn.addEventListener('click', async () => {
     await autoPlace(key, imgXY);
   }
   leaveRinkFit();
-  trySolve('landmark-place');
+  trySolve();
 });
 
 rinkFitCancelBtn.addEventListener('click', leaveRinkFit);
@@ -1133,100 +1057,6 @@ function updateStep3Enabled() {
   setBallBtn.disabled = !enabled;
   addPlayerHomeBtn.disabled = !enabled;
   addPlayerAwayBtn.disabled = !enabled;
-  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
-  const hasPlayers = !!(photo?.players && photo.players.length);
-  estimateFacingsBtn.disabled = !enabled || !hasPlayers;
-  updateStepper();
-}
-
-// Snapshot of the current calibration + scene state used by the guided
-// stepper (B-BUG-002). Kept intentionally minimal - matches the input
-// shape of photo-step-tracker.currentStep().
-function stepperSnapshot() {
-  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
-  const placedCount = photoCanvas.getPlacedPoints?.().length || 0;
-  return {
-    hasPhoto: photoCanvas.hasPhoto?.() || false,
-    landmarkCount: placedCount,
-    reprojErrorPx: lastPose?.reprojErrorPx ?? null,
-    playerCount: photo?.players?.length || 0,
-    hasBall: !!(photo?.ball),
-    minLandmarks: MIN_LANDMARKS,
-    maxReprojErrorPx: STEP3_MAX_REPROJ_ERROR_PX,
-  };
-}
-
-let lastStepperStep = null;
-function updateStepper() {
-  if (!stepperEl) return;
-  const snap = stepperSnapshot();
-  const step = computeCurrentStep(snap);
-  const statuses = computeStepStatuses(snap);
-  const hint = computeGuidedHint(snap);
-  for (const el of stepperEl.querySelectorAll('.ps-step')) {
-    const n = Number(el.dataset.step);
-    el.classList.remove('active', 'complete', 'pending');
-    el.classList.add(statuses[n]);
-    el.setAttribute('aria-current', n === step ? 'step' : 'false');
-  }
-  // Steps 3/4 hint banner text + primary CTA state.
-  if (step3Hint) step3Hint.textContent = step >= STEP_PLAYERS ? hint : 'Solve the camera pose first.';
-  if (step4Hint) step4Hint.textContent = step === STEP_INSIGHTS ? hint : 'Needs players + a placed ball first.';
-  if (step3PrimaryBtn) step3PrimaryBtn.disabled = autoDetectPlayersBtn.disabled;
-  if (step4PrimaryBtn) {
-    step4PrimaryBtn.disabled = step !== STEP_INSIGHTS;
-    step4PrimaryBtn.textContent = snap.playerCount && !snap.hasBall ? 'Set ball' : 'Pick target goal';
-  }
-  // Auto-open the details block for the current step so the user doesn't
-  // have to hunt for it - only on a transition into that step so a manual
-  // collapse the user made isn't fought.
-  if (lastStepperStep !== step) {
-    if (step === STEP_PLAYERS && step3Details) step3Details.open = true;
-    if (step === STEP_INSIGHTS && step4Details) step4Details.open = true;
-    lastStepperStep = step;
-  }
-}
-
-// Stepper pill click: force-open the matching details block and scroll
-// it into view. Steps 1/2 scroll to the top of the panel (their controls
-// aren't in a details wrapper).
-if (stepperEl) {
-  stepperEl.addEventListener('click', (e) => {
-    const target = e.target.closest('.ps-step');
-    if (!target) return;
-    const n = Number(target.dataset.step);
-    if (n === STEP_PLAYERS && step3Details) {
-      step3Details.open = true;
-      step3Details.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    } else if (n === STEP_INSIGHTS && step4Details) {
-      step4Details.open = true;
-      step4Details.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    } else if (fileInput) {
-      fileInput.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    }
-  });
-}
-
-// The Step 3/4 primary CTAs are shortcuts to the existing controls the
-// stepper is guiding the user toward - reuse the wired buttons instead
-// of duplicating handlers.
-if (step3PrimaryBtn) {
-  step3PrimaryBtn.addEventListener('click', () => {
-    if (!autoDetectPlayersBtn.disabled) autoDetectPlayersBtn.click();
-  });
-}
-if (step4PrimaryBtn) {
-  step4PrimaryBtn.addEventListener('click', () => {
-    const snap = stepperSnapshot();
-    if (snap.playerCount && !snap.hasBall && !setBallBtn.disabled) {
-      setBallBtn.click();
-      return;
-    }
-    const active = targetGoalARadio.checked || targetGoalBRadio.checked
-      ? (targetGoalARadio.checked ? targetGoalARadio : targetGoalBRadio)
-      : targetGoalARadio;
-    active?.focus();
-  });
 }
 
 // Ring of image-px points tracing a real-world-radius circle around a floor
@@ -1271,36 +1101,16 @@ function renderPlayersAndBall() {
       const tip = facingTipWorld(p.world, facingDeg);
       facingImagePx = lastPose.projectWorld(tip[0], tip[1], tip[2]);
     }
-    const facingLowConfidence = facingImagePx ? isLowConfidenceFacing(p) : false;
-    let ghost = null;
-    if (p.feedback) {
-      ghost = {};
-      if (p.feedback.origWorld) {
-        const gpx = lastPose.projectWorld(p.feedback.origWorld[0], p.feedback.origWorld[1], p.feedback.origWorld[2]);
-        if (gpx) ghost.imagePx = gpx;
-      }
-      if (p.feedback.origFacingDeg != null) {
-        const origPos = p.feedback.origWorld || p.world;
-        const tip = facingTipWorld(origPos, p.feedback.origFacingDeg);
-        const gtx = lastPose.projectWorld(tip[0], tip[1], tip[2]);
-        if (gtx) ghost.facingImagePx = gtx;
-      }
-    }
-    chips.push({ id: p.id, imagePx: px, team: p.team, isCarrier: p.id === photo.ballCarrier, ring, outline: showOutline ? p.outline : null, label: labels.get(p.id), facingImagePx, facingLowConfidence, ghost, corrected: !!p.feedback });
+    chips.push({ id: p.id, imagePx: px, team: p.team, isCarrier: p.id === photo.ballCarrier, ring, outline: showOutline ? p.outline : null, label: labels.get(p.id), facingImagePx });
   }
   photoCanvas.setPlayerChips(chips);
   photoCanvas.setBallMarker(photo.ball ? lastPose.projectWorld(photo.ball[0], photo.ball[1], photo.ball[2]) : null);
-  const ballGhostWorld = photo.ballFeedback?.origWorld;
-  photoCanvas.setBallGhost(ballGhostWorld ? lastPose.projectWorld(ballGhostWorld[0], ballGhostWorld[1], ballGhostWorld[2]) : null);
   updateStep4();
-  updateFeedbackStatus();
 }
 
-// Draggable facing "nose" (Phase 3.5 polish, docs/plan.md 9 Deferred).
-// Originally shown only for the ball carrier + designated goalies (no
-// meaningful default existed for anyone else); Phase 5's "Estimate facings
-// (pose)" now seeds player.facingDeg for every detected chip, so the arrow
-// renders for any chip effectiveFacingDeg() resolves - see B-BACK-003.
+// Draggable facing "nose" (Phase 3.5 polish, docs/plan.md 9 Deferred -
+// v1 stop-gap until Phase 4 ML pose lands). Shown only for the ball
+// carrier + designated goalies; other chips have no meaningful default.
 // Convention matches updateBallCarrierAndFacing(): facingDeg = atan2(dx, dz),
 // 0° points down +z, 90° points down +x.
 const FACING_TIP_DISTANCE_MM = 1200;
@@ -1361,9 +1171,6 @@ async function handleChipSelected(id) {
   setTeamHomeBtn.disabled = id == null;
   setTeamAwayBtn.disabled = id == null;
   deletePlayerBtn.disabled = id == null;
-  const selForFacing = id == null ? null
-    : state.doc?.frames?.[state.doc.currentFrame]?.photo?.players?.find((p) => p.id === id);
-  clearSelFacingBtn.disabled = selForFacing?.facingDeg == null;
   if (id == null || !bodyOutlineToggle.checked) { renderPlayersAndBall(); return; }
   const frame = state.doc?.frames?.[state.doc.currentFrame];
   const player = frame?.photo?.players?.find((p) => p.id === id);
@@ -1403,7 +1210,6 @@ function setSelectedChipTeam(team) {
   if (!player) return;
   player.team = team;
   saveDoc();
-  commitPhotoAction('player-team-override');
   renderPlayersAndBall();
 }
 setTeamHomeBtn.addEventListener('click', () => setSelectedChipTeam('home'));
@@ -1423,32 +1229,10 @@ function deleteSelectedChip() {
   }
   photoCanvas.setChipSelectedHandler && photoCanvas.setChipSelectedHandler(handleChipSelected);
   saveDoc();
-  commitPhotoAction('player-delete');
   handleChipSelected(null);
   renderPlayersAndBall();
 }
 deletePlayerBtn.addEventListener('click', deleteSelectedChip);
-
-// Per-chip facing reset - the "Reset facing" button in Step 4 only clears
-// the ball carrier + designated goalies; this clears whichever single chip
-// is selected (handy for undoing one bad pose-seeded arrow among many).
-function clearSelectedChipFacing() {
-  const id = photoCanvas.getSelectedChipId();
-  if (id == null) return;
-  const frame = state.doc?.frames?.[state.doc.currentFrame];
-  const player = frame?.photo?.players?.find((p) => p.id === id);
-  if (!player || player.facingDeg == null) return;
-  delete player.facingDeg;
-  delete player.facingSource;
-  delete player.facingCue;
-  delete player.facingQuality;
-  saveDoc();
-  commitPhotoAction('facing-clear-one');
-  clearSelFacingBtn.disabled = true;
-  renderPlayersAndBall();
-  updateStep4(); // recompute insights + refresh the Step-4 "Reset facing" button
-}
-clearSelFacingBtn.addEventListener('click', clearSelectedChipFacing);
 
 function beginAddPlayer(team) {
   const current = photoCanvas.isAddPlayerMode();
@@ -1477,7 +1261,6 @@ photoCanvas.setAddPlayerClickHandler((team, imgX, imgY) => {
   const nextId = players.reduce((m, p) => Math.max(m, p.id), -1) + 1;
   players.push({ id: nextId, world, team, bbox: null });
   saveDoc();
-  commitPhotoAction('player-add');
   renderPlayersAndBall();
 });
 
@@ -1542,9 +1325,7 @@ autoDetectPlayersBtn.addEventListener('click', async () => {
     const frame = ensureDoc().frames[state.doc.currentFrame];
     frame.photo.players = players;
     saveDoc();
-    commitPhotoAction('player-auto-detect');
     renderPlayersAndBall();
-    updateStep3Enabled();
     step3Status.textContent = `${players.length} player(s) detected`;
     debugLog('detectPlayers:step3', {
       imageWH: [size.w, size.h],
@@ -1572,64 +1353,7 @@ flipTeamsBtn.addEventListener('click', () => {
     team: p.team === 'home' ? 'away' : p.team === 'away' ? 'home' : p.team,
   }));
   saveDoc();
-  commitPhotoAction('player-flip-teams');
   renderPlayersAndBall();
-});
-
-estimateFacingsBtn.addEventListener('click', async () => {
-  if (!lastPose) return;
-  const image = photoCanvas.getImage();
-  const size = photoCanvas.getImageSize();
-  if (!image || !size) return;
-  const frame = ensureDoc().frames[state.doc.currentFrame];
-  const players = frame.photo?.players;
-  if (!players?.length) return;
-
-  const prevLabel = estimateFacingsBtn.textContent;
-  estimateFacingsBtn.disabled = true;
-  estimateFacingsBtn.textContent = 'Estimating...';
-  const t0 = performance.now();
-  try {
-    // Top-down pose: one inference per existing player bbox so each
-    // player fills the 640x640 tensor, instead of a single whole-image
-    // pass that shrinks distant players below the model's usable
-    // keypoint scale (same crop-first pattern as detect.js / memory #16).
-    const matches = await detectPoseInBoxes(image, players);
-    const seeded = [], skipped = [];
-    for (const p of players) {
-      // A pose-seeded value from a prior click is refreshable; a true
-      // manual drag (facingSource unset by the drag handler) is locked.
-      if (p.facingDeg != null && p.facingSource !== 'pose') { skipped.push({ id: p.id, reason: 'manual override' }); continue; }
-      const detection = matches.get(p.id);
-      if (!detection) { skipped.push({ id: p.id, reason: 'no pose match' }); continue; }
-      const result = facingFromKeypoints(detection.keypoints, photoCamera, [size.w, size.h]);
-      if (!result) { skipped.push({ id: p.id, reason: 'low-confidence pose' }); continue; }
-      p.facingDeg = result.facingDeg;
-      p.facingSource = 'pose';
-      p.facingQuality = result.quality;
-      p.facingCue = result.cue;
-      seeded.push({ id: p.id, facingDeg: Math.round(result.facingDeg), quality: +result.quality.toFixed(2), cue: result.cue });
-    }
-    saveDoc();
-    commitPhotoAction('facing-estimate-pose');
-    renderPlayersAndBall();
-    updateStep4();
-    step3Status.textContent = `pose: seeded ${seeded.length}, skipped ${skipped.length}`;
-    debugLog('estimateFacings', {
-      imageWH: [size.w, size.h],
-      matched: matches.size,
-      seeded,
-      skipped,
-      elapsedMs: Math.round(performance.now() - t0),
-    });
-  } catch (err) {
-    console.error('[photo-overlay] estimate facings failed', err);
-    step3Status.textContent = 'estimate facings failed: ' + (err.message || err);
-  } finally {
-    estimateFacingsBtn.disabled = false;
-    estimateFacingsBtn.textContent = prevLabel;
-    updateStep3Enabled();
-  }
 });
 
 setBallBtn.addEventListener('click', () => {
@@ -1649,120 +1373,6 @@ photoCanvas.setBallPlacementClickHandler((imgX, imgY) => {
   frame.photo.ball = world;
   updateBallCarrierAndFacing(frame.photo);
   saveDoc();
-  commitPhotoAction('ball-place');
-  renderPlayersAndBall();
-});
-
-// Feedback mode (validation aid): when on, dragging a chip / facing arrow /
-// ball snapshots the pre-correction value into the persistent doc so it
-// can be exported as JSON later. The pre-correction position renders as a
-// grey ghost on the photo, the corrected value gets a green marker.
-let feedbackMode = false;
-function snapshotPlayerPos(player) {
-  if (!feedbackMode) return;
-  player.feedback = player.feedback || {};
-  if (!('origWorld' in player.feedback)) {
-    player.feedback.origWorld = player.world.slice();
-    player.feedback.correctedAt = player.feedback.correctedAt || new Date().toISOString();
-  }
-}
-function snapshotPlayerFacing(player, photo) {
-  if (!feedbackMode) return;
-  player.feedback = player.feedback || {};
-  if (!('origFacingDeg' in player.feedback)) {
-    player.feedback.origFacingDeg = effectiveFacingDeg(player, photo);
-    player.feedback.origFacingSource = player.facingSource || (player.facingDeg != null ? 'manual' : 'auto');
-    if (player.facingCue != null) player.feedback.origFacingCue = player.facingCue;
-    if (player.facingQuality != null) player.feedback.origFacingQuality = player.facingQuality;
-    player.feedback.correctedAt = player.feedback.correctedAt || new Date().toISOString();
-  }
-}
-function snapshotBall(photo) {
-  if (!feedbackMode) return;
-  if (!photo.ballFeedback) {
-    photo.ballFeedback = { origWorld: photo.ball ? photo.ball.slice() : null, correctedAt: new Date().toISOString() };
-  }
-}
-function updateFeedbackStatus() {
-  if (!feedbackStatus) return;
-  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
-  if (!photo) { feedbackStatus.textContent = 'no photo loaded'; return; }
-  const n = (photo.players || []).filter((p) => p.feedback).length + (photo.ballFeedback ? 1 : 0);
-  feedbackStatus.textContent = n ? `${n} correction(s) captured` : 'no corrections yet';
-}
-feedbackToggle.addEventListener('change', () => {
-  feedbackMode = feedbackToggle.checked;
-  feedbackControls.style.display = feedbackMode ? 'flex' : 'none';
-  updateFeedbackStatus();
-});
-copyFeedbackBtn.addEventListener('click', async () => {
-  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
-  if (!photo) return;
-  const size = photoCanvas.getImageSize();
-  const corrections = (photo.players || []).filter((p) => p.feedback).map((p) => ({
-    playerId: p.id,
-    team: p.team,
-    role: p.role || null,
-    position: p.feedback.origWorld ? { orig: p.feedback.origWorld, corrected: p.world } : null,
-    facing: 'origFacingDeg' in p.feedback ? {
-      orig: p.feedback.origFacingDeg,
-      origSource: p.feedback.origFacingSource,
-      origCue: p.feedback.origFacingCue ?? null,
-      origQuality: p.feedback.origFacingQuality != null ? +p.feedback.origFacingQuality.toFixed(2) : null,
-      corrected: effectiveFacingDeg(p, photo),
-      correctedSource: p.facingSource || (p.facingDeg != null ? 'manual' : 'auto'),
-    } : null,
-    correctedAt: p.feedback.correctedAt,
-  }));
-  const ball = photo.ballFeedback ? {
-    orig: photo.ballFeedback.origWorld,
-    corrected: photo.ball || null,
-    correctedAt: photo.ballFeedback.correctedAt,
-  } : null;
-  const payload = {
-    frame: state.doc.currentFrame,
-    imageSize: size ? [size.w, size.h] : null,
-    reprojErrorPx: photo.reprojErrorPx ?? null,
-    corrections,
-    ball,
-  };
-  const text = JSON.stringify(payload, null, 2);
-  try {
-    await navigator.clipboard.writeText(text);
-    feedbackStatus.textContent = `copied ${corrections.length + (ball ? 1 : 0)} correction(s) to clipboard`;
-  } catch (err) {
-    console.log('[photo-overlay] feedback JSON (clipboard failed):\n' + text);
-    feedbackStatus.textContent = 'clipboard failed - JSON logged to console';
-  }
-});
-clearFeedbackBtn.addEventListener('click', () => {
-  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
-  if (!photo) return;
-  // Restore pre-correction values so pose re-runs cleanly and the diagnostic
-  // fields (facingCue/facingQuality) don't get stranded on manual overrides.
-  for (const p of photo.players || []) {
-    if (!p.feedback) continue;
-    if (p.feedback.origWorld) p.world = p.feedback.origWorld.slice();
-    if ('origFacingDeg' in p.feedback) {
-      if (p.feedback.origFacingSource === 'auto' || p.feedback.origFacingDeg == null) {
-        delete p.facingDeg;
-        delete p.facingSource;
-      } else {
-        p.facingDeg = p.feedback.origFacingDeg;
-        p.facingSource = p.feedback.origFacingSource;
-      }
-      if (p.feedback.origFacingCue != null) p.facingCue = p.feedback.origFacingCue; else delete p.facingCue;
-      if (p.feedback.origFacingQuality != null) p.facingQuality = p.feedback.origFacingQuality; else delete p.facingQuality;
-    }
-    delete p.feedback;
-  }
-  if (photo.ballFeedback) {
-    if (photo.ballFeedback.origWorld) photo.ball = photo.ballFeedback.origWorld.slice();
-    else delete photo.ball;
-    delete photo.ballFeedback;
-  }
-  saveDoc();
-  commitPhotoAction('feedback-clear');
   renderPlayersAndBall();
 });
 
@@ -1772,12 +1382,8 @@ photoCanvas.setPlayerChipMovedHandler((id, imagePx) => {
   if (!world) { renderPlayersAndBall(); return; } // dragged above the horizon - snap back to last valid position
   const frame = ensureDoc().frames[state.doc.currentFrame];
   const player = frame.photo?.players?.find((p) => p.id === id);
-  if (player) {
-    snapshotPlayerPos(player);
-    player.world = world;
-  }
+  if (player) player.world = world;
   saveDoc();
-  commitPhotoAction('player-move');
   renderPlayersAndBall();
 });
 
@@ -1791,14 +1397,8 @@ photoCanvas.setChipFacingMovedHandler((id, tipImgXY) => {
   const dx = tipWorld[0] - player.world[0];
   const dz = tipWorld[2] - player.world[2];
   if (dx * dx + dz * dz < 1) { renderPlayersAndBall(); return; } // dropped on top of the chip: keep prior angle
-  snapshotPlayerFacing(player, frame.photo);
   player.facingDeg = Math.atan2(dx, dz) * 180 / Math.PI;
-  player.facingSource = 'manual';
-  delete player.facingCue;
-  delete player.facingQuality;
   saveDoc();
-  commitPhotoAction('facing-drag');
-  if (photoCanvas.getSelectedChipId() === id) clearSelFacingBtn.disabled = false;
   renderPlayersAndBall();
 });
 
@@ -1808,35 +1408,21 @@ photoCanvas.setBallMovedHandler((imagePx) => {
   if (!world) { renderPlayersAndBall(); return; }
   const frame = ensureDoc().frames[state.doc.currentFrame];
   if (!frame.photo) return;
-  snapshotBall(frame.photo);
   frame.photo.ball = world;
   updateBallCarrierAndFacing(frame.photo);
   saveDoc();
-  commitPhotoAction('ball-move');
   renderPlayersAndBall();
 });
 
 // Step 4 - Insights (Phase 3, docs/phase-3-plan.md T5). Disabled until a
 // usable pose exists AND the ball is placed (Phase-2 prerequisites).
-// ids are validated at doc-ingestion time (doc.js's sanitizeDoc), but this
-// builds the <select> via DOM nodes rather than an HTML template string
-// as a second, independent line of defense against a crafted id reaching
-// innerHTML.
 function goalieOptionsHtml(players, team, selectedId) {
-  const frag = document.createDocumentFragment();
-  const blank = document.createElement('option');
-  blank.value = '';
-  blank.textContent = '-';
-  frag.appendChild(blank);
+  const opts = ['<option value="">-</option>'];
   for (const p of players) {
     if (p.team !== team) continue;
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = `#${p.id}`;
-    if (p.id === selectedId) opt.selected = true;
-    frag.appendChild(opt);
+    opts.push(`<option value="${p.id}"${p.id === selectedId ? ' selected' : ''}>#${p.id}</option>`);
   }
-  return frag;
+  return opts.join('');
 }
 
 function updateStep4() {
@@ -1849,9 +1435,7 @@ function updateStep4() {
   autoAssignGoaliesBtn.disabled = !enabled;
   view3dBtn.disabled = !enabled;
   if (!enabled) {
-    resetFacingBtn.disabled = true;
     insightsReadout.textContent = '-';
-    updateStepper();
     return;
   }
 
@@ -1864,12 +1448,8 @@ function updateStep4() {
 
   const players = photo.players || [];
   const goalies = photo.goalies || (photo.goalies = { home: null, away: null });
-  goalieHomeSelect.replaceChildren(goalieOptionsHtml(players, 'home', goalies.home));
-  goalieAwaySelect.replaceChildren(goalieOptionsHtml(players, 'away', goalies.away));
-
-  const overrideIds = new Set([photo.ballCarrier, goalies.home, goalies.away].filter((v) => v != null));
-  const hasOverride = players.some((p) => overrideIds.has(p.id) && p.facingDeg != null);
-  resetFacingBtn.disabled = !hasOverride;
+  goalieHomeSelect.innerHTML = goalieOptionsHtml(players, 'home', goalies.home);
+  goalieAwaySelect.innerHTML = goalieOptionsHtml(players, 'away', goalies.away);
 
   const result = recomputeInsights();
   if (!result) { insightsReadout.textContent = 'place a ball and pick a target goal to see insights'; return; }
@@ -1878,7 +1458,6 @@ function updateStep4() {
   insightsReadout.textContent = `angle: ${Math.round(shot.angleDeg)}° · dist: ${Math.round(shot.distance)}mm · `
     + `coverage: ${coveragePct != null ? Math.round(coveragePct) + '%' : '-'} · `
     + `clear passes: ${clearCount}/${passes.length}`;
-  updateStepper();
 }
 
 function setTargetGoal(letter) {
@@ -1886,7 +1465,6 @@ function setTargetGoal(letter) {
   if (!frame.photo) return;
   frame.photo.targetGoal = letter;
   saveDoc();
-  commitPhotoAction('target-goal-select');
   updateStep4();
 }
 targetGoalARadio.addEventListener('change', () => { if (targetGoalARadio.checked) setTargetGoal('A'); });
@@ -1898,7 +1476,6 @@ function setGoalie(team, idText) {
   const id = idText === '' ? null : Number(idText);
   frame.photo.goalies = { ...(frame.photo.goalies || { home: null, away: null }), [team]: id };
   saveDoc();
-  commitPhotoAction('goalie-assign');
   updateStep4();
 }
 goalieHomeSelect.addEventListener('change', () => setGoalie('home', goalieHomeSelect.value));
@@ -1952,11 +1529,10 @@ autoAssignGoaliesBtn.addEventListener('click', async () => {
           if (p) { p.team = team; p.role = 'goalie'; }
         }
         goalies[team] = chipId;
-        autoDetected[team] = { chipId, source: detected.source, confidence: detected.score };
+        autoDetected[team] = { chipId, source: 'yolo', confidence: detected.score };
         continue;
       }
-      // Layer 1 (+ Layer 1b pose fallback, B-BACK-005) both missed - fall
-      // back to nearest own-team chip to this goal.
+      // Layer 1 miss - fall back to nearest own-team chip to this goal.
       const gz = end === 'A' ? GOAL_LINE_FROM_BOARD : RINK_L - GOAL_LINE_FROM_BOARD;
       let bestId = null, bestDistSq = Infinity;
       for (const p of players) {
@@ -1970,7 +1546,6 @@ autoAssignGoaliesBtn.addEventListener('click', async () => {
     }
     photo.goalies = { ...goalies, autoDetected };
     saveDoc();
-    commitPhotoAction('goalie-auto-detect');
     renderPlayersAndBall();
     updateStep4();
     // updateStep4 has already rewritten insightsReadout with the shot/coverage
@@ -1979,7 +1554,6 @@ autoAssignGoaliesBtn.addEventListener('click', async () => {
       const a = autoDetected[t];
       if (!a) return `${t}: none`;
       if (a.source === 'yolo') return `${t}: #${a.chipId} (yolo ${a.confidence.toFixed(2)})`;
-      if (a.source === 'pose') return `${t}: #${a.chipId} (pose ${a.confidence.toFixed(2)})`;
       return `${t}: #${a.chipId} (nearest chip)`;
     });
     insightsReadout.textContent = `goalies · ${parts.join(' · ')}`;
@@ -2008,27 +1582,6 @@ view3dBtn.addEventListener('click', () => {
   if (!frame?.photo) return;
   enterPhotoPreview3D(frame);
   view3dBtn.textContent = isPhotoPreview3D() ? 'Exit 2D preview' : 'View in 2D';
-});
-
-resetFacingBtn.addEventListener('click', () => {
-  const frame = ensureDoc().frames[state.doc.currentFrame];
-  const photo = frame?.photo;
-  if (!photo?.players) return;
-  const goalies = photo.goalies || {};
-  const overrideIds = new Set([photo.ballCarrier, goalies.home, goalies.away].filter((v) => v != null));
-  let changed = false;
-  for (const p of photo.players) {
-    if (overrideIds.has(p.id) && p.facingDeg != null) {
-      delete p.facingDeg;
-      delete p.facingSource;
-      changed = true;
-    }
-  }
-  if (!changed) return;
-  saveDoc();
-  commitPhotoAction('facing-reset');
-  renderPlayersAndBall();
-  updateStep4();
 });
 
 updateStep3Enabled();

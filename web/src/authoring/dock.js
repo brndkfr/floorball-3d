@@ -177,19 +177,30 @@ async function renameCurrentProject() {
   refreshProjectName();
 }
 
-overflowMenu.querySelector('[data-action="rename"]').addEventListener('click', async () => {
+// Rename / Library moved out of the overflow menu into the app-shell
+// topbar + left rail (see index.html #appTopbar, #appRail). The overflow
+// buttons no longer exist in the DOM, so we only bind if they're present.
+overflowMenu.querySelector('[data-action="rename"]')?.addEventListener('click', async () => {
   overflowMenu.classList.remove('open');
   await renameCurrentProject();
 });
 
-overflowMenu.querySelector('[data-action="library"]').addEventListener('click', () => {
+overflowMenu.querySelector('[data-action="library"]')?.addEventListener('click', () => {
   overflowMenu.classList.remove('open');
   openLibraryDialog();
 });
 
-projectBtn.addEventListener('click', async (e) => {
+// Topbar project name doubles as the rename button.
+projectBtn?.addEventListener('click', async (e) => {
   e.stopPropagation();
   await renameCurrentProject();
+});
+document.getElementById('appTopbarProjectName')?.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  await renameCurrentProject();
+});
+document.querySelector('#appRail button[data-mode="library"]')?.addEventListener('click', () => {
+  openLibraryDialog();
 });
 
 function refreshProjectName() {

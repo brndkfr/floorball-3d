@@ -38,29 +38,13 @@
   .hud-panel .hud-body { margin-top:8px; }
   .hud-panel.collapsed .hud-body { display:none; }
 
-  #info { top:52px; left:150px; font-size:12px; line-height:1.5; max-width:340px; }
+  #info { top:52px; left:64px; font-size:12px; line-height:1.5; max-width:340px; }
   #info a { color:var(--hud-accent); }
-  /* Pass rink clicks through the (large, expanded) info panel body -
-     only the interactive controls capture pointer events. Otherwise
-     right-click move-commands on the floor behind the panel silently
-     hit the panel instead. Header + layer toggles + buttons are opted
-     back in below. */
-  #info { pointer-events:none; }
-  #info .hud-header, #info .hud-toggle,
-  #info #layers, #info label, #info input, #info select, #info button, #info a {
-    pointer-events:auto;
-  }
 
   #status {
     position:absolute; bottom:12px; left:64px; z-index:10;
     color:#7fd6e8; font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
   }
-
-  #saveStatus {
-    position:absolute; bottom:12px; right:12px; z-index:10;
-    color:#7fd6e8; font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
-  }
-  #saveStatus.save-error { color:#ff6b6b; font-weight:600; }
 
   #coords { top:52px; right:12px; font-size:13px; min-width:180px; line-height:1.6; }
   #coords .label { color:var(--hud-accent); text-transform:uppercase; font-size:10px; letter-spacing:0.05em; }
@@ -169,15 +153,6 @@
     font-weight:700;
   }
   #dock [data-dock="team"]:hover { filter:brightness(1.15); }
-  #dock .dock-project {
-    max-width:180px; text-transform:none; letter-spacing:0.02em;
-    font-weight:600; color:#ffb347; border-color:rgba(255,179,71,0.5);
-  }
-  #dock .dock-project #dockProjectName {
-    display:inline-block; max-width:150px;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    vertical-align:bottom;
-  }
   #dockOverflow {
     position:absolute; right:0; bottom:48px;
     display:none; flex-direction:column; min-width:140px;
@@ -196,6 +171,36 @@
   #dockOverflow hr {
     border:none; height:1px; background:rgba(255,179,71,0.25); margin:2px 0;
   }
+  #dockSlots {
+    position:absolute; right:0; bottom:48px;
+    display:none; flex-direction:column; min-width:200px; max-height:280px;
+    overflow-y:auto;
+    background:rgba(20,16,10,0.94);
+    border:1px solid rgba(255,179,71,0.45);
+    border-radius:10px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.4);
+    z-index:20;
+  }
+  #dockSlots.open { display:flex; }
+  #dockSlots .slots-empty {
+    padding:10px 14px; font-family:inherit; font-size:11px;
+    color:#f7e6cf; opacity:0.7; text-transform:uppercase; letter-spacing:0.05em;
+  }
+  #dockSlots .slots-row {
+    display:flex; align-items:stretch; border-bottom:1px solid rgba(255,179,71,0.12);
+  }
+  #dockSlots .slots-row:last-child { border-bottom:none; }
+  #dockSlots .slots-load {
+    flex:1; background:transparent; color:#f7e6cf; border:none; text-align:left;
+    padding:8px 12px; font-family:inherit; font-size:12px;
+    letter-spacing:0.04em; cursor:pointer;
+  }
+  #dockSlots .slots-load:hover { background:rgba(255,179,71,0.18); }
+  #dockSlots .slots-delete {
+    background:transparent; color:#ff8080; border:none;
+    padding:0 12px; font-size:16px; cursor:pointer;
+  }
+  #dockSlots .slots-delete:hover { background:rgba(255,80,80,0.2); color:#fff; }
   #dock .dock-swatch {
     display:inline-block; width:16px; height:16px; border-radius:50%;
     background:var(--draw-color, #ffb347);
@@ -270,12 +275,6 @@
     font-size:12px; font-weight:700; color:#ffb347; line-height:1;
   }
   #timeline .tl-card.editing .tl-num { color:#fff2d0; }
-  #timeline .tl-card .tl-thumb {
-    display:block; border-radius:3px;
-    background:rgba(0,0,0,0.35);
-    image-rendering:auto;
-    pointer-events:none;
-  }
   #timeline .tl-card .tl-dur {
     width:100%; min-width:36px;
     background:rgba(0,0,0,0.35); color:#f7e6cf;
@@ -306,13 +305,9 @@
     pointer-events:none; white-space:nowrap;
     box-shadow:0 2px 8px rgba(0,0,0,0.4);
   }
-  /* per-tool cursor feedback on the WebGL canvas (A-GAP-001). More specific
-     body classes win over `.tool-active` alone: chip stamp gets `copy` to
-     read as "drop a new item here", the draw tools stay crosshair, and
-     plain top-down select gets `grab` so pan-with-right-drag reads. */
+  /* crosshair cursor while the chip tool is active */
+  body.tool-chip canvas { cursor:crosshair; }
   body.tool-active canvas { cursor:crosshair; }
-  body.tool-chip canvas { cursor:copy; }
-  body.topdown-mode:not(.tool-active) canvas { cursor:grab; }
 
   /* inline text input for the text shape tool - anchored at the click point */
   .draw-text-input {
@@ -338,7 +333,6 @@
   .photo-landmark-row.placed { opacity:0.6; }
   .photo-landmark-row .err { font-size:10px; color:#c8c8c8; font-variant-numeric:tabular-nums; }
   .photo-landmark-row .err.worst { color:#ff8080; font-weight:bold; }
-  .photo-landmark-row .err.leverage { color:#ffb060; font-weight:bold; text-decoration:underline dotted; }
   #photoReprojError {
     margin-top:4px; font-size:10px; display:inline-block; padding:2px 8px;
     border-radius:10px; background:rgba(255,255,255,0.08);
@@ -352,46 +346,6 @@
   #photoHintText { font-size:12px; font-weight:bold; color:var(--hud-accent); }
   #photoHintDiagram svg { width:100%; max-width:150px; display:block; margin:6px auto; }
   #photoHintSkipBtn { margin-top:2px; }
-
-  /* --- B-BUG-002 Photo Overlay stepper: horizontal 4-pill breadcrumb
-     at the top of #photoPanel showing Photo -> Align -> Players ->
-     Insights. Pure visual - clicking a pill scrolls to (and, for Steps
-     3/4, force-opens) that step's block. */
-  #photoStepper {
-    display:flex; gap:3px; margin:0 0 8px 0; padding:0;
-    list-style:none; font-size:10px;
-  }
-  #photoStepper .ps-step {
-    flex:1; display:flex; align-items:center; gap:3px;
-    padding:4px 3px; border-radius:6px; min-width:0;
-    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
-    color:rgba(255,255,255,0.55); cursor:pointer;
-    text-align:left; font-family:inherit;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
-  #photoStepper .ps-step.complete {
-    background:rgba(126,224,106,0.10); border-color:rgba(126,224,106,0.35);
-    color:#a7ecb7;
-  }
-  #photoStepper .ps-step.active {
-    background:rgba(79,224,255,0.14); border-color:rgba(79,224,255,0.55);
-    color:#cff3fb; font-weight:bold;
-  }
-  #photoStepper .ps-step .ps-num {
-    display:inline-flex; align-items:center; justify-content:center;
-    width:12px; height:12px; border-radius:50%; flex:none;
-    background:rgba(255,255,255,0.10); font-size:9px; font-weight:bold;
-    color:rgba(255,255,255,0.75);
-  }
-  #photoStepper .ps-step.complete .ps-num { background:rgba(126,224,106,0.35); color:#0a1a10; }
-  #photoStepper .ps-step.active .ps-num { background:rgba(79,224,255,0.55); color:#031015; }
-  .ps-cta-banner {
-    display:flex; flex-direction:column; gap:4px;
-    margin:6px 0; padding:6px 8px; border-radius:6px;
-    background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35);
-  }
-  .ps-cta-banner .ps-cta-hint { font-size:11px; color:#cff3fb; }
-  .ps-cta-banner .dock-btn { align-self:flex-start; font-size:11px; padding:3px 10px; }
 
   /* --- App shell: persistent left rail + top bar (docs/plan.md section 2).
      Fixed, unpositioned ancestors of nothing - all existing HUD panels stay
@@ -429,406 +383,38 @@
     background:rgba(6,14,18,0.94); color:#dff9ff;
     font-family:var(--hud-font); font-size:13px; letter-spacing:0.04em;
   }
-
-  /* --- Tool palette: vertical strip of tools, Mode A only. Consolidates
-     the tool buttons that used to live in the bottom dock so the dock
-     can be a status/frame area later. */
-  #toolPalette {
-    position:absolute; top:50%; left:64px; z-index:14;
-    transform:translateY(-50%);
-    display:flex; flex-direction:column; gap:6px;
-    padding:8px; background:rgba(20,16,10,0.78);
-    border:1px solid rgba(255,179,71,0.45); border-radius:12px;
-    font-family:var(--hud-font);
-    box-shadow:0 6px 24px rgba(0,0,0,0.35);
-    backdrop-filter:blur(4px);
-  }
-  #toolPalette button {
-    width:56px; height:52px; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:2px;
-    border:1px solid rgba(255,179,71,0.35);
-    background:rgba(255,179,71,0.08);
-    color:#f7e6cf; font-family:inherit; font-size:10px;
-    text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;
-    border-radius:8px;
-  }
-  #toolPalette button:hover { background:rgba(255,179,71,0.22); }
-  #toolPalette button.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
-  #toolPalette .tp-glyph { font-size:20px; line-height:1; }
-
-  /* --- Palette submenu: hover the Zone group to open a right-side flyout
-     with the shape sub-tools. Kept as pure CSS hover so no JS state to
-     manage - selection is a normal button click that runs the same
-     activateTool path. */
-  #toolPalette .tp-group { position:relative; }
-  #toolPalette .tp-group > button { position:relative; padding-right:14px; }
-  /* Extend the group's own hoverable area 8px to the right so the cursor
-     can traverse the gap between the button and the submenu without
-     losing :hover mid-flight (submenu-only hover-continuity is a
-     chicken-and-egg problem while the submenu is display:none). */
-  #toolPalette .tp-group::after {
-    content:''; position:absolute; top:0; left:100%;
-    width:8px; height:100%;
-  }
-  #toolPalette .tp-caret {
-    position:absolute; right:4px; top:50%; transform:translateY(-50%);
-    font-size:9px; opacity:0.7;
-  }
-  #toolPalette .tp-submenu {
-    position:absolute; left:100%; top:0;
-    display:none; flex-direction:column; gap:4px;
-    padding:6px; background:rgba(20,16,10,0.94);
-    border:1px solid rgba(255,179,71,0.45); border-radius:10px;
-    box-shadow:0 6px 24px rgba(0,0,0,0.4);
-    margin-left:6px;
-  }
-  #toolPalette .tp-group:hover .tp-submenu,
-  #toolPalette .tp-submenu:hover { display:flex; }
-  #toolPalette .tp-submenu button {
-    width:76px; height:44px; font-size:9px;
-  }
-
-  /* --- Inspector: selection-driven props panel on the right. */
-  #inspector {
-    position:absolute; top:220px; right:12px; z-index:14;
-    width:220px; padding:10px 12px;
-    background:var(--hud-bg); color:#dff9ff;
-    border:1px solid var(--hud-accent-dim);
-    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
-    font-family:var(--hud-font); font-size:12px;
-    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-    backdrop-filter:blur(2px);
-  }
-  #inspector .ins-title {
-    font-size:11px; color:var(--hud-accent); text-transform:uppercase;
-    letter-spacing:0.08em; margin-bottom:8px;
-  }
-  #inspector .ins-heading { font-size:14px; margin-bottom:10px; color:#ffffff; }
-  #inspector .ins-empty { opacity:0.7; font-size:11px; line-height:1.5; }
-  #inspector .ins-row { margin-bottom:8px; display:flex; align-items:center; gap:6px; }
-  #inspector .ins-label {
-    font-size:10px; color:var(--hud-accent); text-transform:uppercase;
-    letter-spacing:0.05em; min-width:44px;
-  }
-  #inspector .ins-team-btn {
-    flex:1; height:26px; border-radius:5px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35);
-    background:rgba(79,224,255,0.08); color:#dff9ff;
-    font-family:inherit; font-size:11px; letter-spacing:0.04em;
-  }
-  #inspector .ins-team-btn.active {
-    background:var(--team-color, #ffb347); color:#0a0d0f;
-    border-color:var(--team-color, #ffb347);
-  }
-  #inspector .ins-btn {
-    width:100%; height:28px; border-radius:5px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35);
-    background:rgba(79,224,255,0.08); color:#dff9ff;
-    font-family:inherit; font-size:11px; text-transform:uppercase;
-    letter-spacing:0.06em; margin-top:4px;
-  }
-  #inspector .ins-btn:hover { background:rgba(79,224,255,0.22); }
-  #inspector .ins-btn.danger {
-    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1);
-    color:#ffb0b0;
-  }
-  #inspector .ins-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
-  #inspector .ins-swatch {
-    display:inline-block; width:16px; height:16px; border-radius:50%;
-    background:var(--shape-color, #ffb347);
-    border:1px solid rgba(255,255,255,0.5);
-    margin-left:4px; vertical-align:middle;
-  }
-
-  /* --- Layers panel: outline of everything the current frame contains.
-     Sits below the Inspector on the right rail. Same visual language. */
-  #layersPanel {
-    position:absolute; top:430px; right:12px; z-index:14;
-    width:220px; max-height:45vh; display:flex; flex-direction:column;
-    padding:10px 12px;
-    background:var(--hud-bg); color:#dff9ff;
-    border:1px solid var(--hud-accent-dim);
-    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
-    font-family:var(--hud-font); font-size:12px;
-    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-    backdrop-filter:blur(2px);
-  }
-  #layersPanel .lp-head {
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:8px;
-  }
-  #layersPanel .lp-title {
-    font-size:11px; color:var(--hud-accent); text-transform:uppercase;
-    letter-spacing:0.08em;
-  }
-  #layersPanel .lp-toggle {
-    background:transparent; border:none; color:var(--hud-accent);
-    cursor:pointer; font-size:14px; line-height:1; padding:0 4px;
-  }
-  #layersPanel .lp-toggle:hover { color:#fff; }
-  #layersPanel.collapsed .lp-body { display:none; }
-  #layersPanel .lp-body { overflow-y:auto; padding-right:2px; }
-  #layersPanel .lp-empty { opacity:0.7; font-size:11px; line-height:1.5; }
-  #layersPanel .lp-section { margin-bottom:6px; }
-  #layersPanel .lp-section-head {
-    font-size:10px; color:var(--hud-accent); text-transform:uppercase;
-    letter-spacing:0.05em; cursor:pointer; user-select:none;
-    padding:3px 0; border-bottom:1px solid rgba(79,224,255,0.15);
-  }
-  #layersPanel .lp-section-head::before {
-    content:'\25BE'; display:inline-block; width:12px;
-  }
-  #layersPanel .lp-section.collapsed .lp-section-head::before { content:'\25B8'; }
-  #layersPanel .lp-section.collapsed .lp-section-body { display:none; }
-  #layersPanel .lp-row {
-    display:flex; align-items:center; gap:6px;
-    padding:3px 4px; cursor:pointer;
-    border-radius:3px;
-  }
-  #layersPanel .lp-row:hover { background:rgba(79,224,255,0.1); }
-  #layersPanel .lp-row.selected {
-    background:rgba(79,224,255,0.2);
-    box-shadow:inset 0 0 0 1px var(--hud-accent);
-  }
-  #layersPanel .lp-row.lp-dragging { opacity:0.4; }
-  #layersPanel .lp-row.lp-drop-before { box-shadow:inset 0 2px 0 0 var(--hud-accent); }
-  #layersPanel .lp-row.lp-drop-after { box-shadow:inset 0 -2px 0 0 var(--hud-accent); }
-  #layersPanel .lp-eye {
-    background:transparent; border:none; color:#dff9ff;
-    cursor:pointer; padding:0; width:16px; font-size:11px; line-height:1;
-    opacity:0.85;
-  }
-  #layersPanel .lp-eye:hover { opacity:1; color:var(--hud-accent); }
-  #layersPanel .lp-swatch {
-    display:inline-block; width:12px; height:12px; border-radius:50%;
-    border:1px solid rgba(255,255,255,0.35);
-    flex-shrink:0;
-  }
-  #layersPanel .lp-name {
-    flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    font-size:11px;
-  }
-  #layersPanel .lp-name-input {
-    flex:1; min-width:0; height:18px; padding:0 4px; font-size:11px;
-    font-family:inherit; color:#dff9ff;
-    background:rgba(79,224,255,0.12);
-    border:1px solid var(--hud-accent-dim); border-radius:3px; outline:none;
-  }
-  #layersPanel .lp-name-input:focus { border-color:var(--hud-accent); background:rgba(79,224,255,0.2); }
-  #layersPanel .lp-trash {
-    background:transparent; border:none; color:#dff9ff;
-    cursor:pointer; padding:0; width:14px; font-size:12px; line-height:1;
-    opacity:0; flex-shrink:0;
-  }
-  #layersPanel .lp-row:hover .lp-trash { opacity:0.6; }
-  #layersPanel .lp-trash:hover { opacity:1 !important; color:#ffb0b0; }
-  #layersPanel .lp-role-badge {
-    display:inline-block; width:14px; height:14px; line-height:14px;
-    text-align:center; font-size:9px; font-weight:bold;
-    color:#fff; border-radius:50%; flex-shrink:0;
-  }
-  #layersPanel .lp-role-badge[data-role="defender"] { background:#3b5bdb; }
-  #layersPanel .lp-role-badge[data-role="center"] { background:#7048e8; }
-  #layersPanel .lp-role-badge[data-role="wing"] { background:#0ca678; }
-
-  /* Hide the dock's tool buttons - they now live in #toolPalette. Leaves
-     comes from chip-popover.js's screen-space projection. transform
-     translates the anchor point (bottom-centre) to the chip's top. */
-  #chipPopover {
-    position:absolute; z-index:20;
-    transform:translate(-50%, calc(-100% - 10px));
-    min-width:120px; padding:6px 8px;
-    background:var(--hud-bg); color:#dff9ff;
-    border:1px solid var(--hud-accent-dim);
-    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px rgba(79,224,255,0.15);
-    font-family:var(--hud-font); font-size:12px;
-    clip-path:polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
-    pointer-events:auto;
-  }
-  #chipPopover.collapsed { min-width:0; padding:4px 8px; }
-  #chipPopover .pop-header {
-    display:flex; align-items:center; gap:8px;
-    cursor:pointer; user-select:none;
-  }
-  #chipPopover .pop-title {
-    font-size:12px; color:#ffffff; letter-spacing:0.04em;
-    flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    max-width:180px;
-  }
-  #chipPopover .pop-chevron {
-    background:transparent; border:none; color:var(--hud-accent);
-    font-size:10px; cursor:pointer; padding:2px 4px;
-    line-height:1;
-  }
-  #chipPopover .pop-chevron:hover { color:#ffffff; }
-  #chipPopover .pop-label-row { margin-top:6px; }
-  #chipPopover .pop-label-input {
-    width:100%; box-sizing:border-box; height:24px;
-    background:rgba(79,224,255,0.08);
-    border:1px solid rgba(79,224,255,0.35);
-    color:#dff9ff; padding:2px 6px;
-    font-family:inherit; font-size:11px;
-    border-radius:4px;
-  }
-  #chipPopover .pop-label-input:focus {
-    outline:none; border-color:var(--hud-accent);
-    background:rgba(79,224,255,0.14);
-  }
-  #chipPopover .pop-row { display:flex; gap:6px; margin-top:6px; }
-  #chipPopover .pop-team-btn {
-    flex:1; height:24px; border-radius:4px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35);
-    background:rgba(79,224,255,0.08); color:#dff9ff;
-    font-family:inherit; font-size:11px; letter-spacing:0.04em;
-  }
-  #chipPopover .pop-team-btn.active {
-    background:var(--team-color, #ffb347); color:#0a0d0f;
-    border-color:var(--team-color, #ffb347);
-  }
-  #chipPopover .pop-role-row { gap:4px; }
-  #chipPopover .pop-role-btn {
-    flex:1; height:32px; border-radius:4px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.25);
-    background:rgba(79,224,255,0.05); color:#dff9ff;
-    font-family:inherit; font-size:10px; letter-spacing:0.04em;
-    padding:2px;
-    display:flex; align-items:center; justify-content:center;
-  }
-  #chipPopover .pop-role-btn:hover { background:rgba(79,224,255,0.15); }
-  #chipPopover .pop-role-btn canvas { display:block; }
-  #chipPopover .pop-role-btn[data-role="defender"].active {
-    background:rgba(59,91,219,0.3); border-color:#3b5bdb;
-  }
-  #chipPopover .pop-role-btn[data-role="center"].active {
-    background:rgba(112,72,232,0.3); border-color:#7048e8;
-  }
-  #chipPopover .pop-role-btn[data-role="wing"].active {
-    background:rgba(12,166,120,0.3); border-color:#0ca678;
-  }
-  #chipPopover .pop-btn {
-    width:100%; height:24px; border-radius:4px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35);
-    background:rgba(79,224,255,0.08); color:#dff9ff;
-    font-family:inherit; font-size:11px; text-transform:uppercase;
-    letter-spacing:0.06em; margin-top:6px;
-  }
-  #chipPopover .pop-btn.danger {
-    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1);
-    color:#ffb0b0;
-  }
-  #chipPopover .pop-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
-
-  /* Marquee (box) multi-select rubber-band + bulk action bar. */
-  #marqueeRect {
-    position:absolute; z-index:19; pointer-events:none;
-    border:1px solid var(--hud-accent, #4fe0ff);
-    background:rgba(79,224,255,0.12);
-  }
-  #chipBulkBar {
-    position:fixed; left:50%; bottom:96px; transform:translateX(-50%);
-    z-index:21; display:none; gap:8px; align-items:center;
-    padding:8px 12px; background:var(--hud-bg); color:#dff9ff;
-    border:1px solid var(--hud-accent-dim);
-    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px rgba(79,224,255,0.15);
-    font-family:var(--hud-font); font-size:12px; pointer-events:auto;
-    clip-path:polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
-  }
-  #chipBulkBar .bulk-count { letter-spacing:0.04em; opacity:0.9; margin-right:2px; }
-  #chipBulkBar .bulk-btn {
-    height:24px; min-width:36px; padding:0 10px; border-radius:4px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35); background:rgba(79,224,255,0.08);
-    color:#dff9ff; font-family:inherit; font-size:11px; letter-spacing:0.04em;
-  }
-  #chipBulkBar .bulk-btn:hover { background:rgba(79,224,255,0.16); }
-  #chipBulkBar .bulk-btn.danger {
-    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1); color:#ffb0b0;
-  }
-  #chipBulkBar .bulk-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
-
-  #layersPanel .lp-marquee-toggle {
-    display:flex; align-items:center; gap:3px; margin-left:auto; margin-right:6px;
-    font-size:10px; opacity:0.7; cursor:pointer; user-select:none; letter-spacing:0.03em;
-  }
-  #layersPanel .lp-marquee-toggle input { margin:0; cursor:pointer; }
-
-  /* Hide the dock's tool buttons - they now live in #toolPalette. Leaves
-     view/rotate/team/color/overflow. Kept in the DOM so their existing
-     click wiring keeps working (Esc, keyboard shortcuts, etc.) and any
-     other module reading them still finds them. */
-  #dock [data-dock="chip"],
-  #dock [data-dock-tool],
-  #dock .dock-sep { display:none; }
 </style>
-<link rel="stylesheet" href="./src/tokens.css">
 </head>
 <body>
-<div id="appTopbar">Floorball Studio</div>
+<div id="appTopbar">
+  <span>Floorball Studio</span>
+  <span style="opacity:0.6;">/</span>
+  <span id="appTopbarProjectName" data-dock="project" title="Rename project" style="cursor:pointer; color:#dff9ff; text-transform:none; letter-spacing:0.03em;">
+    <span id="dockProjectName">Untitled</span>
+  </span>
+</div>
 <div id="appRail">
   <button data-mode="plan" title="Plan: tactical authoring">Plan</button>
   <button data-mode="analyze" title="Analyze: photo/video overlay">Analyze</button>
-  <button data-mode="library" title="Library: saved projects">Library</button>
+  <button data-mode="library" data-action="library" title="Library: saved projects">Library</button>
 </div>
 <div id="libraryView">Library - coming soon</div>
-<div id="toolPalette" data-view="plan">
-  <button data-tool="" title="Select (Esc)" class="active"><span class="tp-glyph">&#8598;</span>Select</button>
-  <button data-tool="chip" title="Chip stamp - click the rink to drop a player"><span class="tp-glyph">&#9679;</span>Chip</button>
-  <button data-tool="ball" title="Ball - click the rink to drop an extra ball (the primary ball stays independent)"><span class="tp-glyph">&#9898;</span>Ball</button>
-  <button data-tool="arrow" title="Arrow - click start then end (straight, 2 clicks)"><span class="tp-glyph">&#8594;</span>Arrow</button>
-  <button data-tool="arrow-curved" title="Curved arrow - click waypoints, Enter / double-click / right-click to finish"><span class="tp-glyph">&#10551;</span>Curved</button>
-  <div class="tp-group">
-    <button data-tool="zone" title="Zone (freehand polygon) - hover for shapes"><span class="tp-glyph">&#9711;</span>Zone<span class="tp-caret">&#9656;</span></button>
-    <div class="tp-submenu" role="menu">
-      <button data-tool="zone" title="Freehand polygon"><span class="tp-glyph">&#11040;</span>Freehand</button>
-      <button data-tool="zone-rect" title="Rectangle (drag)"><span class="tp-glyph">&#9645;</span>Rect</button>
-      <button data-tool="zone-circle" title="Circle (drag)"><span class="tp-glyph">&#9711;</span>Circle</button>
-      <button data-tool="zone-triangle" title="Triangle (drag)"><span class="tp-glyph">&#9651;</span>Triangle</button>
-    </div>
-  </div>
-  <button data-tool="text" title="Text - click to place a label"><span class="tp-glyph">T</span>Text</button>
-  <div class="tp-group">
-    <button data-tool="cone-disc" title="Cone markers (training) - hover for shapes"><span class="tp-glyph">&#9651;</span>Cone<span class="tp-caret">&#9656;</span></button>
-    <div class="tp-submenu" role="menu">
-      <button data-tool="cone-disc" title="Flat disc marker (puck-cone) - low profile, ball rolls over"><span class="tp-glyph">&#11044;</span>Disc</button>
-      <button data-tool="cone-full" title="Full traffic cone - marks slalom gates / positions"><span class="tp-glyph">&#9651;</span>Full</button>
-    </div>
-  </div>
-</div>
-<div id="inspector" data-view="plan">
-  <div class="ins-title">Inspector</div>
-  <div id="inspectorBody"><div class="ins-empty">Nothing selected. Click a chip, shape, ball, goalie or goal - or use a tool from the palette.</div></div>
-</div>
-<div id="layersPanel" data-view="plan">
-  <div class="lp-head">
-    <span class="lp-title">Layers</span>
-    <label class="lp-marquee-toggle" title="Box-select drag also grabs shapes, not just chips">
-      <input type="checkbox" id="marqueeShapesToggle"> shapes
-    </label>
-    <label class="lp-marquee-toggle" title="Show player labels in the scene (falls back to number when off)">
-      <input type="checkbox" id="labelsVisibleToggle"> labels
-    </label>
-    <button class="lp-toggle" title="Collapse/expand" aria-label="Collapse layers panel">&minus;</button>
-  </div>
-  <div class="lp-body"></div>
-</div>
 <canvas id="photo-canvas"></canvas>
 <div id="info" class="hud-panel" data-view="plan">
   <div class="hud-header">
     <span class="hud-title">IFF Floorball Rink &ndash; 40 &times; 20 m</span>
-    <button class="hud-toggle" data-panel="info" title="Collapse/expand" aria-label="Collapse info panel">&minus;</button>
+    <button class="hud-toggle" data-panel="info" title="Collapse/expand">&minus;</button>
   </div>
   <div class="hud-body">
     Board, markings and two 160&times;115&nbsp;cm goals, per IFF SPCR&nbsp;011 /
     SP-METHOD&nbsp;1506 and the Rules of the Game 2026.<br>
-    <b>2D Plan mode (RTS controls):</b> Left-click = select &middot; Left-drag chip = move &middot;
-    Right-click floor = move-command to selected chip / ball / goalie &middot;
-    Right-drag / middle-drag = pan &middot; Wheel = zoom &middot;
-    Arrows / WASD = pan the camera &middot; F = fit rink to view<br>
-    <b>3D walking view:</b> Left-drag = look around &middot; Scroll = zoom &middot;
-    Arrows / WASD = walk<br>
-    <b>Shared:</b> Tab / Shift+Tab = cycle selection &middot; Esc = cancel tool / deselect &middot;
-    Del = delete selected chip or shape &middot; Q/E = rotate goalie when selected
-    (Shift for fine control) &middot; Ctrl+Z / Ctrl+Y = undo / redo<br>
-    Tools live in the left palette. Right-click cancels the active tool.
+    Drag = look around (first-person) &middot; Scroll = zoom<br>
+    Nothing selected: Arrows/WASD = walk the field<br>
+    Tab / Shift+Tab = cycle selection &middot; Esc = deselect<br>
+    Selected: Arrows/WASD = move ball, goalie or chip &middot; Q/E = rotate goalie<br>
+    Goalie only: hold Shift while moving/rotating for finer control<br>
+    Authoring dock (bottom): click <b>Chip</b>, then click the rink to drop a player. <b>Del</b> removes the selected chip.<br>
+    Shape tools: <b>Arrow</b> (2 clicks), <b>Zone</b> (N clicks + click near start to close), <b>Text</b> (click, type, Enter). Toggle <b>2D / 3D</b> on the dock; every tool works in both views.
     <div id="layers">
       <div class="layer-row"><label><input type="checkbox" id="rinkCheckbox" checked> Rink (board + markings)</label></div>
       <div class="layer-row"><label><input type="checkbox" id="goalsCheckbox" checked> Goals</label></div>
@@ -881,7 +467,6 @@
   </div>
 </div>
 <div id="status">loading model&hellip;</div>
-<div id="saveStatus"></div>
 <div id="crosshair"></div>
 <div id="touchControls">
   <div id="touchDpad">
@@ -901,57 +486,54 @@
 <div id="dockStatus" data-view="plan">Team 1 &ndash; next #1</div>
 <div id="timeline" data-view="plan">
   <div class="tl-transport">
-    <button data-tl="prev" title="Step back (,)" aria-label="Previous frame">&#9198;</button>
-    <button data-tl="play" title="Play (Space)" aria-label="Play">&#9654;</button>
-    <button data-tl="stop" title="Stop" aria-label="Stop">&#9632;</button>
-    <button data-tl="next" title="Step forward (.)" aria-label="Next frame">&#9197;</button>
-    <button data-tl="speed" title="Speed (1..9)" aria-label="Playback speed">1x</button>
-    <button data-tl="loop" title="Loop (R)" aria-label="Toggle loop">&#8635;</button>
+    <button data-tl="prev" title="Step back (,)">&#9198;</button>
+    <button data-tl="play" title="Play (Space)">&#9654;</button>
+    <button data-tl="stop" title="Stop">&#9632;</button>
+    <button data-tl="next" title="Step forward (.)">&#9197;</button>
+    <button data-tl="speed" title="Speed (1..9)">1x</button>
+    <button data-tl="loop" title="Loop (R)">&#8635;</button>
   </div>
   <span class="tl-sep"></span>
   <div class="tl-strip"></div>
   <span class="tl-sep"></span>
-  <button data-tl="add" class="tl-add" title="Add frame (copy of current)" aria-label="Add frame" style="height:28px;min-width:32px;background:rgba(255,179,71,0.08);border:1px solid rgba(255,179,71,0.35);color:#f7e6cf;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px;">+</button>
-  <button data-tl="choreo" class="tl-choreo" title="Choreograph the next frame&#10;&#10;1. Click Choreo. A draft frame is added; each chip gets a cyan ghost ring at its starting position.&#10;2. Drag chips (or right-click move-command) to where they should end up. Arrows appear from ghost to chip.&#10;3. Commit keeps the new frame · Cancel (or Esc) discards it.&#10;&#10;See ? for the full guide." style="height:28px;min-width:32px;margin-left:6px;background:rgba(79,224,255,0.08);border:1px solid rgba(79,224,255,0.35);color:#dff9ff;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;letter-spacing:0.04em;padding:0 10px;">Choreo</button>
+  <button data-tl="add" class="tl-add" title="Add frame (copy of current)" style="height:28px;min-width:32px;background:rgba(255,179,71,0.08);border:1px solid rgba(255,179,71,0.35);color:#f7e6cf;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px;">+</button>
 </div>
 <div id="dock" data-view="plan">
-  <button class="dock-btn dock-project" data-dock="project" title="Rename project"><span id="dockProjectName">Untitled</span></button>
-  <span class="dock-sep"></span>
   <button class="dock-btn" data-dock="view" title="Toggle 2D top-down / 3D perspective view">3D</button>
-  <button class="dock-btn" data-dock="rotate" title="Rotate top-down view 90&deg; (only active in 2D)" aria-label="Rotate top-down view 90 degrees">&#8635;</button>
+  <button class="dock-btn" data-dock="rotate" title="Rotate top-down view 90&deg; (only active in 2D)">&#8635;</button>
   <button class="dock-btn" data-dock="team" title="Flip active team">T1</button>
   <button class="dock-btn" data-dock="chip" title="Chip stamp (click the rink to drop a player)">
     <span aria-hidden="true">&#9679;</span> Chip
   </button>
   <span class="dock-sep"></span>
   <button class="dock-btn" data-dock-tool="arrow" title="Arrow (click start point then end point)">Arrow</button>
-  <button class="dock-btn" data-dock-tool="arrow-curved" title="Curved arrow (click waypoints, Enter / double-click to finish)">Curved</button>
   <button class="dock-btn" data-dock-tool="zone" title="Zone (click points, click near start to close)">Zone</button>
   <button class="dock-btn" data-dock-tool="text" title="Text (click, type a label)">Text</button>
-  <button class="dock-btn" data-dock="color" title="Shape color (applies to next shape; recolors the selected shape)" aria-label="Shape color">
+  <button class="dock-btn" data-dock="color" title="Shape color (applies to next shape; recolors the selected shape)">
     <span class="dock-swatch" aria-hidden="true"></span>
   </button>
   <div id="dockPalette" role="menu"></div>
   <span class="dock-sep"></span>
-  <button class="dock-btn" data-dock="overflow" title="More" aria-label="More actions">&hellip;</button>
+  <button class="dock-btn" data-dock="overflow" title="More">&hellip;</button>
   <div id="dockOverflow" role="menu">
     <button data-action="undo">Undo (Ctrl+Z)</button>
     <button data-action="redo">Redo (Ctrl+Y)</button>
     <button data-action="new">New scheme</button>
     <hr>
-    <button data-action="rename">Rename project&hellip;</button>
-    <button data-action="library">Library&hellip;</button>
+    <button data-action="save">Save scheme&hellip;</button>
+    <button data-action="load">Load scheme&hellip;</button>
     <button data-action="export">Export JSON</button>
     <button data-action="import">Import JSON&hellip;</button>
     <button data-action="share">Copy share link</button>
     <button data-action="export-video">Export video&hellip;</button>
   </div>
+  <div id="dockSlots" role="menu"></div>
   <input type="file" id="dockImportFile" accept="application/json,.json" hidden>
 </div>
 <div id="coords" class="hud-panel" data-view="plan">
   <div class="hud-header">
     <span class="hud-title">Coordinates</span>
-    <button class="hud-toggle" data-panel="coords" title="Collapse/expand" aria-label="Collapse coordinates panel">&minus;</button>
+    <button class="hud-toggle" data-panel="coords" title="Collapse/expand">&minus;</button>
   </div>
   <div class="hud-body">
     <span class="label">x:</span> <span id="coordX">-</span> mm<br>
@@ -961,23 +543,17 @@
     <span class="label">selected:</span> <span id="selectedLabel">-</span><br>
     <span class="label">trajectory target:</span> <span id="targetGoalLabel">-</span>
     <div style="opacity:0.7; margin-top:4px; font-family:system-ui, sans-serif; font-size:11px;">
-      Click (or Tab to) select. Drag a chip to move it,<br>or right-click to move-command the selected<br>ball / goalie / chip. Q/E rotates the goalie.
+      click (or Tab to) the ball, goalie or a<br>goal to select it - then click the floor,<br>or use arrows/WASD, to move it freely.<br>Goalie only: Q/E rotates it manually.
     </div>
   </div>
 </div>
 <div id="photoPanel" class="hud-panel collapsed" data-view="analyze">
   <div class="hud-header">
     <span class="hud-title">Photo Overlay</span>
-    <button class="hud-toggle" data-panel="photoPanel" title="Collapse/expand" aria-label="Collapse photo overlay panel">&minus;</button>
+    <button class="hud-toggle" data-panel="photoPanel" title="Collapse/expand">&minus;</button>
   </div>
   <div class="hud-body">
-    <nav id="photoStepper" aria-label="Photo overlay steps">
-      <button type="button" class="ps-step" data-step="1"><span class="ps-num" aria-hidden="true">1</span> Photo</button>
-      <button type="button" class="ps-step" data-step="2"><span class="ps-num" aria-hidden="true">2</span> Align</button>
-      <button type="button" class="ps-step" data-step="3"><span class="ps-num" aria-hidden="true">3</span> Players</button>
-      <button type="button" class="ps-step" data-step="4"><span class="ps-num" aria-hidden="true">4</span> Insights</button>
-    </nav>
-    <input type="file" id="photoFileInput" accept="image/*" aria-label="Upload photo to analyze"><br><br>
+    <input type="file" id="photoFileInput" accept="image/*"><br><br>
     <div id="photoRestoreRow" style="display:none; margin-bottom:8px;">
       <span id="photoRestoreLabel" style="font-size:11px; opacity:0.7;"></span>
       <button id="photoRestoreLandmarksBtn" class="dock-btn" style="padding:2px 6px; font-size:10px; margin-left:6px;" title="Re-place the landmarks and camera pose saved from the last time this exact photo was calibrated - saves re-clicking everything after a reload.">Load saved overlay</button>
@@ -1015,9 +591,8 @@
       <button id="photoHintSkipBtn" class="dock-btn" style="font-size:10px; padding:2px 6px;">Cannot see this point - skip</button>
     </div>
     <div style="margin-top:8px;">
-      <label for="photoAlignSlider" style="font-size:11px; opacity:0.85; display:block;">alignment check <span style="opacity:0.6;">(0% = photo only, 100% = full overlay)</span></label>
+      <label style="font-size:11px; opacity:0.85; display:block;">alignment check <span style="opacity:0.6;">(0% = photo only, 100% = full overlay)</span></label>
       <input type="range" id="photoAlignSlider" min="0" max="100" value="100" style="width:100%;">
-      <label style="font-size:11px; opacity:0.85; display:block; margin-top:4px;"><input type="checkbox" id="photoWireframeToggle"> wireframe overlay <span style="opacity:0.6;">(cyan contours only - use when solid overlay blends into the photo)</span></label>
     </div>
     <div id="photoReprojError">0/6 landmarks placed</div>
     <details id="photoLandmarksDetails" style="margin-top:6px;">
@@ -1055,10 +630,6 @@
     </div>
     <details id="photoStep3Details" style="margin-top:8px;">
       <summary style="cursor:pointer; font-size:11px; opacity:0.85;">Step 3 - Players &amp; ball</summary>
-      <div class="ps-cta-banner" id="photoStep3Cta">
-        <span class="ps-cta-hint" id="photoStep3Hint">Needs a solved camera pose first.</span>
-        <button type="button" id="photoStep3PrimaryBtn" class="dock-btn" disabled>Auto-detect players</button>
-      </div>
       <div style="opacity:0.7; margin-top:6px; font-size:11px;">
         detects player positions from the photo and lets you drag any chip
         to fix it. Needs a solved camera pose first (reprojection error
@@ -1075,31 +646,15 @@
           <button id="photoSetTeamAwayBtn" class="dock-btn" disabled style="flex:1; padding:2px 6px; font-size:10px;" title="Set the selected player's team.">Set: Away</button>
         </div>
         <button id="photoDeletePlayerBtn" class="dock-btn" disabled title="Remove the selected player from the scene (misdetected chip, someone outside the rink, etc).">Delete selected player</button>
-        <button id="photoClearSelFacingBtn" class="dock-btn" disabled title="Clear the facing override on the selected player (from a manual arrow drag or a pose estimate) and revert to the auto default.">Clear facing</button>
         <div style="display:flex; gap:4px; margin-top:2px;">
           <button id="photoAddPlayerHomeBtn" class="dock-btn" disabled style="flex:1; padding:2px 6px; font-size:10px;" title="Click a point on the photo to add a new home-team player at that floor location.">Add home player</button>
           <button id="photoAddPlayerAwayBtn" class="dock-btn" disabled style="flex:1; padding:2px 6px; font-size:10px;" title="Click a point on the photo to add a new away-team player at that floor location.">Add away player</button>
         </div>
-        <button id="photoEstimateFacingsBtn" class="dock-btn" disabled title="Run YOLOv8n-Pose on the photo, then seed each player's facing arrow from their shoulder/nose keypoints. Players with a manual facing override (Phase 3.5) are left untouched.">Estimate facings (pose)</button>
         <div id="photoStep3Status" style="opacity:0.7; font-size:10px; margin-top:2px;"></div>
-        <label style="font-size:11px; display:flex; gap:4px; align-items:center; margin-top:6px;" title="Turn on to capture ground-truth corrections when you drag chips, facing arrows, or the ball. The pre-correction position is preserved as a grey ghost on the photo; the corrected value is marked in green. Use 'Copy feedback JSON' to export the deltas.">
-          <input type="checkbox" id="photoFeedbackToggle"> Feedback mode
-        </label>
-        <div id="photoFeedbackControls" style="display:none; flex-direction:column; gap:4px;">
-          <div style="display:flex; gap:4px;">
-            <button id="photoCopyFeedbackBtn" class="dock-btn" style="flex:1; padding:2px 6px; font-size:10px;" title="Copy the recorded corrections (player positions, facings, ball) to the clipboard as JSON.">Copy JSON</button>
-            <button id="photoClearFeedbackBtn" class="dock-btn" style="flex:1; padding:2px 6px; font-size:10px;" title="Discard all captured corrections in the current frame and revert positions/facings/ball to their pre-correction (original) values. Use this to reset before re-running pose.">Clear</button>
-          </div>
-          <div id="photoFeedbackStatus" style="opacity:0.7; font-size:10px;">no corrections yet</div>
-        </div>
       </div>
     </details>
     <details id="photoStep4Details" style="margin-top:8px;">
       <summary style="cursor:pointer; font-size:11px; opacity:0.85;">Step 4 - Insights</summary>
-      <div class="ps-cta-banner" id="photoStep4Cta">
-        <span class="ps-cta-hint" id="photoStep4Hint">Needs players + a placed ball first.</span>
-        <button type="button" id="photoStep4PrimaryBtn" class="dock-btn" disabled>Pick target goal</button>
-      </div>
       <div style="opacity:0.7; margin-top:6px; font-size:11px;">
         shot angle, coverage and passing options derived from the ball/player
         positions above. Needs a solved camera pose and a placed ball first.
@@ -1113,7 +668,6 @@
         <label style="font-size:11px;">home goalie: <select id="photoGoalieHome" disabled></select></label>
         <label style="font-size:11px;">away goalie: <select id="photoGoalieAway" disabled></select></label>
         <button id="photoAutoAssignGoaliesBtn" class="dock-btn" disabled title="Detect goalies inside each goal's crease with YOLO, appending a chip if the general Step 3 pass missed the goalie. Falls back to the nearest own-team chip if detection fails.">Auto-detect goalies</button>
-        <button id="photoResetFacingBtn" class="dock-btn" disabled title="Clear the manual facing arrow override on the ball carrier and designated goalies. Reverts to the auto default (carrier: face nearest goal from the ball; goalie: face the ball, else face out from their own goal).">Reset facing</button>
         <div id="photoInsightsReadout" style="opacity:0.7; font-size:10px; margin-top:2px;">-</div>
         <button id="photoView3dBtn" class="dock-btn" disabled title="Preview the reconstructed positions in the top-down 2D view.">View in 2D</button>
       </div>
