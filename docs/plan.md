@@ -1129,6 +1129,40 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
     placed all 4 posts correctly. 15 new node tests
     (`detect-posts.test.js`, `detect-score.test.js`), with HSV samples
     taken from the real frame.
+  - **[B-BACK-009]** [shipped] Goal-model frame fit for ROI detect. On a
+    second real photo (close-up with an orange goalie, red spectators,
+    red stand poles above both posts, and a red floor ad under the feet),
+    "two longest vertical lines" (B-BACK-008) locked onto the clutter. New
+    [goal-frame.js](../web/src/authoring/photo-overlay/goal-frame.js)
+    `fitGoalFrame()` scores post-pair x crossbar candidates (built from
+    Hough lines) against what every floorball goal shares:
+    - posts are near-parallel;
+    - a crossbar joins the post tops (weighted 3x, since clutter rarely
+      fakes it);
+    - the posts hang straight down from the crossbar;
+    - there is **no front ground bar**, so each post foot is where red ends
+      on the post line, with occlusion gaps bridged and floor-ad rows that
+      spread outward trimmed off;
+    - both posts have the same world length, so a partly hidden post is
+      extended;
+    - a solid bar across the upper mouth means the candidate crossbar is
+      really something above the goal;
+    - the interior is not solid red;
+    - among plausible frames, prefer the bigger one.
+
+    The winner is snapped onto the tube centres.
+    `detect.js` uses it first, then falls back to `cornersFromPosts`, then
+    to the old rectangle. Verified on that photo across 8 ROI sizes/offsets
+    around the goal: 7/8 land top corners within ~20 px and bottom
+    corners within ~25-50 px (a 1500x1000 image with a ~650 px tall goal).
+    The miss is an ROI covering nearly the whole photo, where a stand
+    railing plus the poles above the posts form a larger fake frame. 10
+    node tests in `goal-frame.test.js` use synthetic masks (clean,
+    perspective, clutter, occluded post, floor ad at the feet, merged
+    goalie, off-axis side frame, railing above, washed-out crossbar,
+    solid block). **Not re-verified** on the broadcast frame from
+    B-BACK-008 (no longer in the browser cache). Re-test there before
+    trusting.
 
 ---
 

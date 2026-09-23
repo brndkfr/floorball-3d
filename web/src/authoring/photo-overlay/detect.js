@@ -7,6 +7,7 @@
 import { loadOpenCV } from './pnp.js';
 import { scoreGoalCandidate, redHueRanges, workingScale, RED_MIN_SAT, RED_MIN_VAL } from './detect-score.js';
 import { cornersFromPosts } from './detect-posts.js';
+import { fitGoalFrame } from './goal-frame.js';
 
 // Draws the HTMLImageElement onto an offscreen canvas at a bounded
 // max-side so opencv work stays snappy on large photos. Returns
@@ -152,7 +153,7 @@ export async function computeEdgeOverlay(image, maxSide = 2048) {
 // or null if nothing plausible was found. Optional roi (in original image
 // px) constrains the search area - use it to eliminate false positives
 // from red spectators / ads / referee jerseys outside the goal region.
-export async function detectGoal(image, roi = null) {
+export async function detectGoal(image, roi = null, { debug = null } = {}) {
   const cv = await loadOpenCV();
   // With an ROI, crop to it (plus a margin) BEFORE downscaling, instead of
   // filtering contours after downscaling the WHOLE photo. A zoomed-in ROI
@@ -203,7 +204,13 @@ export async function detectGoal(image, roi = null) {
     const d = lines.data32S, segs = [];
     for (let i = 0; i + 3 < d.length; i += 4) segs.push([d[i], d[i + 1], d[i + 2], d[i + 3]]);
     edges.delete(); lines.delete();
-    postCorners = cornersFromPosts(segs);
+    const md = mask.data, mc = mask.cols, mr = mask.rows;
+    const redAt = (x, y) => {
+      const xi = Math.round(x), yi = Math.round(y);
+      return xi >= 0 && yi >= 0 && xi < mc && yi < mr && md[yi * mc + xi] > 0;
+    };
+    postCorners = fitGoalFrame({ segments: segs, redAt, width: mc, height: mr, debug })?.corners
+      || cornersFromPosts(segs);
   }
 
   const contours = new cv.MatVector(), hierarchy = new cv.Mat();
