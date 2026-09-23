@@ -1163,6 +1163,97 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
     solid block). **Not re-verified** on the broadcast frame from
     B-BACK-008 (no longer in the browser cache). Re-test there before
     trusting.
+  - **[B-BACK-010]** [open] **Goal auto-detect robustness plan (resume
+    here next session).** Goal: ROI goal detect works across many
+    different goal photos, not just the two it was tuned on. Photos vary a
+    lot (broadcast wide shots, close-ups, side angles, goalies of any
+    colour, red clutter in stands and floor ads, different venues), so
+    every improvement has to come from **goal specifics** (what every
+    floorball goal shares), never from tuning to one photo.
+
+    **State at end of 2026-09-23.** Pipeline:
+    `detect.js` `detectGoal(image, roi, {debug})` -> crop + upscale (max
+    2048 px / 4x) -> scoped red hue mask (145-180) -> Canny -> HoughLinesP
+    -> `goal-frame.js` `fitGoalFrame()` -> fallback `detect-posts.js`
+    `cornersFromPosts()` -> fallback `minAreaRect`. Pass `{debug: {}}` to
+    get every Hough line plus every candidate frame with its score or
+    reject reason. That is the first thing to look at when a photo fails.
+    Evaluation so far was manual: dynamic `import()` of `detect.js` inside
+    `page.evaluate` in the live browser, 8 ROIs on one close-up photo,
+    compared against hand-read corners. Commits `f430e8f`, `825376c`,
+    `c7eb9ed` were local-only at that point, so check `git log origin/main`
+    before starting.
+
+    **Lesson from B-BACK-009:** three plausible heuristics (crossbar
+    overhang penalty, strict edge-continuity foot walk, robust re-fit)
+    each made results *worse* on real photos and were reverted. So no
+    heuristic gets kept without a before/after number from the harness in
+    step 2.
+
+    **Steps:**
+    1. **Fixture set.** Collect 8-12 varied goal photos under
+       `test/fixtures/goals/`. Add the folder to `.gitignore` if the
+       photos can't be shared publicly. Add one `truth.json` holding, per
+       photo, the 4 hand-labelled mouth corners (TL, TR, BR, BL, in image
+       px, on the tube centre line) and 3-5 ROIs (tight, loose, offset
+       left/right, nearly whole image). Coverage checklist:
+       - the broadcast frame from B-BACK-008;
+       - the close-up with clutter from B-BACK-009;
+       - side angle around 45 deg;
+       - near head-on;
+       - a goalie hiding most of one post;
+       - a crossbar in front of white ads;
+       - low light or motion blur;
+       - a different floor colour;
+       - red seats or red stand poles above the goal;
+       - a goal seen from behind or at an extreme angle (expected fail,
+         must not crash).
+    2. **Batch eval harness.** A local-only script
+       (`scripts/eval-goal-detect.mjs`, driving Playwright against
+       `serve-static.mjs`) loads each fixture and runs `detectGoal` per
+       ROI with `debug`. It prints a table of per-corner error normalised
+       by the true goal height, plus a pass rate (pass = all 4 corners
+       within 3% of goal height). For every failure it writes the debug
+       candidate list to `test-results/goal-eval/`. It is not a CI gate
+       (fixtures may be git-ignored). Record the baseline numbers in this
+       item before changing any detection code.
+    3. **Known failures, attack in this order** (each fix gets a synthetic
+       mask unit test in `goal-frame.test.js` first, then a harness
+       re-run):
+       a. **Bottom corners 25-50 px too low.** The foot walk runs past the
+          real post end into floor ads or shadow. Candidate fixes, all
+          goal-specific:
+          - clamp post length from the crossbar width and the known
+            mouth aspect (W 1600 x H 1150 mm, see
+            [generate_goal.py](../generators/generate_goal.py)), allowing
+            for perspective via the two post directions;
+          - stop the foot where the post line meets the floor or net
+            bottom edge.
+       b. **ROI covering nearly the whole photo** picks a fake frame (a
+          stand railing plus the poles above the posts). Candidate fixes:
+          - an aspect prior (160:115 within perspective limits);
+          - require net texture (white or grey mesh) inside the mouth;
+          - two-pass: take the best candidate, re-run inside a tight ROI
+            around it, and keep the result only if it is stable.
+       c. **Broadcast frame regression check** (B-BACK-008 photo) - must
+          still pass after a and b.
+    4. **Goal specifics not used yet** (ideas pool for step 3):
+       - the net inside the mouth;
+       - the fixed mouth aspect;
+       - the side frame and back frame going away from the camera
+         (gives depth direction, which helps L/R and head-on
+         disambiguation);
+       - the crossbar is a single straight tube, so a crossbar line that
+         runs far past both posts is probably a railing. Only retry this
+         with harness numbers, since it was reverted once.
+    5. **Stretch:** run `fitGoalFrame` on whole-image detect too, which
+       would give an auto ROI with no user box.
+
+    **Done when:** harness pass rate is at least 90% on the fixture set,
+    no regression on the two known photos, every new constraint has a
+    synthetic-mask unit test, and `pnpm test`, `pnpm test:e2e`,
+    `pnpm run build` and `pnpm run check:size` are all green. No new e2e
+    spec is needed unless the UI changes (this is pure logic).
 
 ---
 
