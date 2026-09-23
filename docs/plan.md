@@ -1605,7 +1605,7 @@ added.
   finished. This is the "similar regression bites" case, not a fishing
   expedition: any future missing-export / null-querySelector / typo
   in a module-init path fails here without needing a targeted spec.
-- **[S-BACK-015]** [in-progress] **App-shell WIP: mode-switching topbar
+- **[S-BACK-015]** [shipped] **App-shell WIP: mode-switching topbar
   + left rail.** Working-tree redesign that moves project rename and
   Library out of the dock's overflow menu into a persistent
   [#appTopbar](../web/index.html) (Floorball Studio / &lt;Project
@@ -1621,15 +1621,41 @@ added.
   `4bcbd41` wired dock.js + photo-overlay.js up to this shape and
   added compat aliases (`data-dock="project"` on the topbar name,
   `data-action="library"` on the rail button) so the existing e2e
-  specs still resolve. **Not yet done:** the working-tree net -487
-  lines from `photo-overlay.js` and -100 from `photo-canvas.js` that
-  came with the shell change are structural cleanups the author has
-  not yet described here - claim / document what was consolidated
-  before this item can be marked shipped. Also unrelated: the pnp.js
-  stale-comment reversal that also rode in with the WIP was undone
-  (the correct comment says opencv IS vendored at web/lib/opencv.js
-  and lazy-loaded, per S-BACK-010 - the reversal contradicted that
-  and CLAUDE.md's own note).
+  specs still resolve.
+
+  **What the -487 / -100 line diff on `photo-overlay.js` /
+  `photo-canvas.js` actually was:** not consolidation, but the
+  **removal of an in-progress "feedback / ground-truth capture"
+  mode** that had shipped into the working tree without a plan
+  entry. Dropped in the same commit because the shell rewrite
+  touched every one of these DOM ids and it was cheaper to remove
+  the half-baked UI than reattach it. Concretely gone from
+  photo-overlay.js: the `photoFeedbackToggle` panel and its
+  `photoFeedback{Controls,Status}` / `photoCopy{,Clear}FeedbackBtn`
+  / `photoResetFacingBtn` / `photoClearSelFacingBtn` /
+  `photoEstimateFacingsBtn` buttons, the `snapshotPlayerPos` /
+  `snapshotPlayerFacing` / `snapshotBall` / `updateFeedbackStatus`
+  helpers, and ~84 references to `feedback` / `ghost` / `corrected`
+  / `facingLowConfidence` state. Gone from photo-canvas.js: the
+  `ballGhost` state + `setBallGhost` export, ghost-chip rendering
+  (pre-correction position + dashed connector to live chip),
+  "corrected" green ring, low-confidence dashed facing nose, and
+  the `placeLabelRect` overlap-avoidance placer. Also partly
+  reverted in photo-canvas.js: the tokens.js colour migration -
+  `TEAM_HOME` / `TEAM_AWAY` / `SHOT_LINE_TOKENS` /
+  `VECTOR_PASS_*` / `VECTOR_COVERAGE_*` imports were inlined back
+  to literal hex (`'#ff6b4a'` / `'#4a9bff'` / `'#ff3b30'` etc.);
+  design-system-vendoring covers why we still want the token path
+  eventually, but the shell rewrite prioritised getting the boot
+  clean over keeping the imports.
+
+  If any of the feedback-mode UX is wanted back, git blame the
+  removed helpers - the pre-removal shape is preserved in `4bcbd41^`.
+
+  Unrelated: the pnp.js stale-comment reversal that also rode in
+  with the WIP was undone (the correct comment says opencv IS
+  vendored at web/lib/opencv.js and lazy-loaded, per S-BACK-010 -
+  the reversal contradicted that and CLAUDE.md's own note).
 - **[S-BACK-016]** [shipped] **Restore Plan-mode surface panels as
   floating draggable widgets + close the "silent no-op when a DOM
   root goes missing" hole.** Commit `4bcbd41` (S-BACK-015) removed
