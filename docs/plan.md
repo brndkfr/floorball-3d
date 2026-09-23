@@ -530,19 +530,22 @@ Still on the backlog from that exploration:
     placed in 2D looks oversized in 3D" bug.
 
   Commit `9b4bc84`.
-- **[A-BACK-017]** [open] **3D labels for the two fixed IFF goals A/B.**
-  Follow-up to `f040894` which added `labelVisible` + `labelColor` +
-  `labelSize` sprites for extra goals only. The two fixed goals in
-  `state.goalInstances` are not in `doc.scheme.goals.extras`, so they
-  need a separate state slot. Options: (a) global user prefs (fixed
-  label always 'A'/'B', per-goal on/off + colour + size in
-  `localStorage`, not per-frame) - simplest, but not part of the shared
-  doc; (b) new `doc.scheme.goals.fixed = { A: {...}, B: {...} }` per
-  frame - consistent with rest of the doc but adds schema surface.
-  Reuse `syncGoalLabelSprite` + `makeTextSprite` from
-  [authoring/goals.js](../web/src/authoring/goals.js). Inspector's
-  read-only "Goal A"/"Goal B" panel gains the same Show / Colour /
-  Size rows the extra goal already has.
+- **[A-BACK-017]** [shipped] **3D labels for the two fixed IFF goals A/B.**
+  Follow-up to `f040894` (A-BACK-016) which shipped labels for extra
+  goals only. Per-frame state at `doc.scheme.goals.fixed = { A: {...},
+  B: {...} }` with the same schema as extras (`label?`,
+  `labelVisible?`, `labelColor?`, `labelSize?`), plus per-side default
+  text: A = 'Home', B = 'Away'. Reuses `syncGoalLabelSprite` +
+  `makeTextSprite` from [authoring/goals.js](../web/src/authoring/goals.js);
+  new helpers `fixedGoalLetterOf`, `fixedGoalDataFor`,
+  `updateFixedGoal`, `syncFixedGoalLabels` sit alongside the extras
+  API. Called from `rebuildGoalsFromDoc` (frame / project switch) and
+  once on `layers:goal-loaded`. Inspector renders a fixed-goal panel
+  (label input + Show / Colour / Size rows) when
+  `state.goalInstances[0|1]` is the selection - no rotation slider or
+  delete since fixed goals are pinned. Non-default fields are pruned
+  from the doc, and an empty `fixed` object is deleted entirely so
+  existing frames don't gain schema noise. Commit `<pending>`.
 
 ---
 

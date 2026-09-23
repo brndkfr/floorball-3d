@@ -12,7 +12,7 @@ import { chipDataFor } from './chips.js';
 import { shapeDataFor, removeShape, updateShape, updateShapeLabel, TEXT_MIN_SIZE, TEXT_MAX_SIZE, TEXT_DEFAULT_SIZE } from './shapes.js';
 import { coneDataFor, updateCone, CONE_DEFAULT_COLOR } from './cones.js';
 import { ballDataFor, updateBall, BALL_DEFAULT_COLOR } from './balls.js';
-import { goalDataFor, updateGoal, GOAL_LABEL_DEFAULT_COLOR, GOAL_LABEL_DEFAULT_SIZE, GOAL_LABEL_MIN_SIZE, GOAL_LABEL_MAX_SIZE } from './goals.js';
+import { goalDataFor, updateGoal, fixedGoalLetterOf, fixedGoalDataFor, updateFixedGoal, GOAL_LABEL_DEFAULT_COLOR, GOAL_LABEL_DEFAULT_SIZE, GOAL_LABEL_MIN_SIZE, GOAL_LABEL_MAX_SIZE } from './goals.js';
 import { arrowRoleColor } from '../tokens.js';
 import { ensureDoc } from './doc.js';
 import { getBallCarrier, setBallCarrier, getBallColor, setBallColor } from './actors.js';
@@ -85,6 +85,9 @@ function render(sel) {
 
   const extraGoal = goalDataFor(sel);
   if (extraGoal) return renderExtraGoal(extraGoal, sel);
+
+  const fixedLetter = fixedGoalLetterOf(sel);
+  if (fixedLetter) return renderFixedGoal(fixedLetter);
 
   // Ball / goalie / goal / other: read-only label.
   const heading = document.createElement('div');
@@ -419,6 +422,89 @@ function renderExtraGoal(goal, node) {
   hint.style.marginTop = '6px';
   hint.textContent = 'Extra goals are markers only. Trajectory / coverage still targets the two end-of-rink IFF goals.';
   body.appendChild(hint);
+}
+
+// Fixed IFF goals A/B. Same label controls as extras, but no rotation
+// slider (they're pinned to the ends of the rink) and no delete.
+function renderFixedGoal(letter) {
+  const data = fixedGoalDataFor(letter);
+  const heading = document.createElement('div');
+  heading.className = 'ins-heading';
+  heading.textContent = `Goal ${letter}`;
+  body.appendChild(heading);
+
+  const labelRow = document.createElement('div');
+  labelRow.className = 'ins-row';
+  const ll = document.createElement('span');
+  ll.className = 'ins-label';
+  ll.textContent = 'Label';
+  labelRow.appendChild(ll);
+  const labelInput = document.createElement('input');
+  labelInput.type = 'text';
+  labelInput.maxLength = 32;
+  labelInput.placeholder = letter === 'A' ? 'Home' : 'Away';
+  labelInput.value = data.label;
+  labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+  labelInput.addEventListener('change', () => updateFixedGoal(letter, { label: labelInput.value }));
+  labelRow.appendChild(labelInput);
+  body.appendChild(labelRow);
+
+  const showRow = document.createElement('div');
+  showRow.className = 'ins-row';
+  const sl = document.createElement('span');
+  sl.className = 'ins-label';
+  sl.textContent = 'Show';
+  showRow.appendChild(sl);
+  const showCb = document.createElement('input');
+  showCb.type = 'checkbox';
+  showCb.checked = data.labelVisible;
+  showCb.addEventListener('change', () => {
+    updateFixedGoal(letter, { labelVisible: showCb.checked });
+    colorRow.style.display = showCb.checked ? '' : 'none';
+    sizeRow.style.display = showCb.checked ? '' : 'none';
+  });
+  showRow.appendChild(showCb);
+  body.appendChild(showRow);
+
+  const colorRow = document.createElement('div');
+  colorRow.className = 'ins-row';
+  colorRow.style.display = data.labelVisible ? '' : 'none';
+  const cl = document.createElement('span');
+  cl.className = 'ins-label';
+  cl.textContent = 'Colour';
+  colorRow.appendChild(cl);
+  const colorInput = document.createElement('input');
+  colorInput.type = 'color';
+  colorInput.value = data.labelColor;
+  colorInput.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
+  colorInput.addEventListener('input', () => updateFixedGoal(letter, { labelColor: colorInput.value }));
+  colorRow.appendChild(colorInput);
+  body.appendChild(colorRow);
+
+  const sizeRow = document.createElement('div');
+  sizeRow.className = 'ins-row';
+  sizeRow.style.display = data.labelVisible ? '' : 'none';
+  const szl = document.createElement('span');
+  szl.className = 'ins-label';
+  szl.textContent = 'Size';
+  sizeRow.appendChild(szl);
+  const sizeInput = document.createElement('input');
+  sizeInput.type = 'range';
+  sizeInput.min = String(GOAL_LABEL_MIN_SIZE);
+  sizeInput.max = String(GOAL_LABEL_MAX_SIZE);
+  sizeInput.step = '50';
+  sizeInput.value = String(data.labelSize);
+  sizeInput.style.flex = '1';
+  const sizeReadout = document.createElement('span');
+  sizeReadout.textContent = sizeInput.value;
+  sizeReadout.style.cssText = 'min-width:44px; text-align:right; font-variant-numeric:tabular-nums;';
+  sizeInput.addEventListener('input', () => {
+    sizeReadout.textContent = sizeInput.value;
+    updateFixedGoal(letter, { labelSize: Number(sizeInput.value) });
+  });
+  sizeRow.appendChild(sizeInput);
+  sizeRow.appendChild(sizeReadout);
+  body.appendChild(sizeRow);
 }
 
 function renderShape(shape) {

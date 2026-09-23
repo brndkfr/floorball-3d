@@ -198,8 +198,82 @@ export function rebuildGoalsFromDoc() {
   state.extraGoals.length = 0;
   const doc = ensureDoc();
   const extras = doc.scheme.goals?.extras || [];
-  if (!extras.length) return;
   templatePromise.then((tpl) => {
     for (const goal of extras) buildGoalMesh(goal, tpl);
   });
+  syncFixedGoalLabels();
 }
+
+// A-BACK-017: same label sprite treatment for the two fixed IFF goals.
+// Persisted per-frame at doc.scheme.goals.fixed = { A: {...}, B: {...} } so
+// it round-trips through frame switches / project load the same way the
+// extras array does. State fields per side mirror the extras' schema:
+// label?, labelVisible?, labelColor?, labelSize?.
+export const FIXED_GOAL_LETTERS = ['A', 'B'];
+const FIXED_GOAL_DEFAULT_LABEL = { A: 'Home', B: 'Away' };
+
+export function fixedGoalLetterOf(obj) {
+  const i = state.goalInstances?.indexOf(obj) ?? -1;
+  return i === 0 ? 'A' : i === 1 ? 'B' : null;
+}
+
+export function fixedGoalDataFor(letter) {
+  if (letter !== 'A' && letter !== 'B') return null;
+  const doc = ensureDoc();
+  const stored = doc.scheme.goals?.fixed?.[letter] || {};
+  return {
+    letter,
+    label: stored.label ?? FIXED_GOAL_DEFAULT_LABEL[letter],
+    labelVisible: !!stored.labelVisible,
+    labelColor: stored.labelColor || GOAL_LABEL_DEFAULT_COLOR,
+    labelSize: Number.isFinite(stored.labelSize) && stored.labelSize > 0
+      ? stored.labelSize : GOAL_LABEL_DEFAULT_SIZE,
+  };
+}
+
+export function updateFixedGoal(letter, patch) {
+  if (letter !== 'A' && letter !== 'B') return;
+  const doc = ensureDoc();
+  if (!doc.scheme.goals) doc.scheme.goals = {};
+  if (!doc.scheme.goals.fixed) doc.scheme.goals.fixed = {};
+  const stored = doc.scheme.goals.fixed[letter] || {};
+  if ('label' in patch) {
+    const t = (patch.label ?? '').trim();
+    if (t && t !== FIXED_GOAL_DEFAULT_LABEL[letter]) stored.label = t.slice(0, 32);
+    else delete stored.label;
+  }
+  if ('labelVisible' in patch) {
+    if (patch.labelVisible) stored.labelVisible = true; else delete stored.labelVisible;
+  }
+  if ('labelColor' in patch) {
+    const c = String(patch.labelColor || '').trim();
+    if (c && c.toLowerCase() !== GOAL_LABEL_DEFAULT_COLOR) stored.labelColor = c;
+    else delete stored.labelColor;
+  }
+  if ('labelSize' in patch) {
+    const n = Number(patch.labelSize);
+    if (Number.isFinite(n) && n > 0 && n !== GOAL_LABEL_DEFAULT_SIZE) stored.labelSize = n;
+    else delete stored.labelSize;
+  }
+  if (Object.keys(stored).length === 0) delete doc.scheme.goals.fixed[letter];
+  else doc.scheme.goals.fixed[letter] = stored;
+  if (Object.keys(doc.scheme.goals.fixed).length === 0) delete doc.scheme.goals.fixed;
+  syncFixedGoalLabels();
+  saveDoc();
+  document.dispatchEvent(new CustomEvent('layers:dirty'));
+  import('./history.js').then((h) => h.pushHistory());
+}
+
+export function syncFixedGoalLabels() {
+  if (!state.goalInstances || state.goalInstances.length < 2) return;
+  for (const letter of FIXED_GOAL_LETTERS) {
+    const node = state.goalInstances[letter === 'A' ? 0 : 1];
+    if (!node) continue;
+    const data = fixedGoalDataFor(letter);
+    // Reuse the extras' sprite pipeline; the goal-shape it wants is the
+    // { label, labelVisible, labelColor, labelSize } bag we just resolved.
+    syncGoalLabelSprite(node, data);
+  }
+}
+
+document.addEventListener('layers:goal-loaded', syncFixedGoalLabels, { once: true });
