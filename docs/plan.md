@@ -530,6 +530,19 @@ Still on the backlog from that exploration:
     placed in 2D looks oversized in 3D" bug.
 
   Commit `9b4bc84`.
+- **[A-BACK-017]** [open] **3D labels for the two fixed IFF goals A/B.**
+  Follow-up to `f040894` which added `labelVisible` + `labelColor` +
+  `labelSize` sprites for extra goals only. The two fixed goals in
+  `state.goalInstances` are not in `doc.scheme.goals.extras`, so they
+  need a separate state slot. Options: (a) global user prefs (fixed
+  label always 'A'/'B', per-goal on/off + colour + size in
+  `localStorage`, not per-frame) - simplest, but not part of the shared
+  doc; (b) new `doc.scheme.goals.fixed = { A: {...}, B: {...} }` per
+  frame - consistent with rest of the doc but adds schema surface.
+  Reuse `syncGoalLabelSprite` + `makeTextSprite` from
+  [authoring/goals.js](../web/src/authoring/goals.js). Inspector's
+  read-only "Goal A"/"Goal B" panel gains the same Show / Colour /
+  Size rows the extra goal already has.
 
 ---
 
