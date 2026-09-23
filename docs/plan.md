@@ -1163,8 +1163,8 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
     solid block). **Not re-verified** on the broadcast frame from
     B-BACK-008 (no longer in the browser cache). Re-test there before
     trusting.
-  - **[B-BACK-010]** [open] **Goal auto-detect robustness plan (resume
-    here next session).** Goal: ROI goal detect works across many
+  - **[B-BACK-010]** [in-progress] **Goal auto-detect robustness plan
+    (steps 1-2 done, baseline recorded; resume at step 3).** Goal: ROI goal detect works across many
     different goal photos, not just the two it was tuned on. Photos vary a
     lot (broadcast wide shots, close-ups, side angles, goalies of any
     colour, red clutter in stands and floor ads, different venues), so
@@ -1180,9 +1180,9 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
     reject reason. That is the first thing to look at when a photo fails.
     Evaluation so far was manual: dynamic `import()` of `detect.js` inside
     `page.evaluate` in the live browser, 8 ROIs on one close-up photo,
-    compared against hand-read corners. Commits `f430e8f`, `825376c`,
-    `c7eb9ed` were local-only at that point, so check `git log origin/main`
-    before starting.
+    compared against hand-read corners. (Commits `f430e8f`, `825376c`,
+    `c7eb9ed` are on `origin/main` now.) Superseded by the batch harness
+    in step 2.
 
     **Lesson from B-BACK-009:** three plausible heuristics (crossbar
     overhang penalty, strict edge-continuity foot walk, robust re-fit)
@@ -1217,6 +1217,58 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
        candidate list to `test-results/goal-eval/`. It is not a CI gate
        (fixtures may be git-ignored). Record the baseline numbers in this
        item before changing any detection code.
+
+       **Done (2026-09-23).** Steps 1 + 2 shipped:
+       - Fixtures: 16 YouTube broadcast screenshots in
+         `test/fixtures/goals/` (git-ignored, not shareable). They cover
+         the checklist except the B-BACK-008 / B-BACK-009 originals, which
+         are gone. Extras: grey floor (goal seen from behind), green floor
+         with a dark maroon frame, and a near edge-on goal. Six still carry
+         the red YouTube progress bar; in two it crosses the goal bottom.
+       - Labels: `truth.json` in the same folder, written by
+         `pnpm label:goals` (`scripts/label-goals.mjs`, local page on
+         :8010: click TL/TR/BR/BL, wheel/pinch zoom, autosave; drafts show
+         `?` until confirmed with Enter). All 16 hand-confirmed. On goals
+         seen from behind, the labeller picked the **outer** frame as the
+         mouth in WFC 01, Hardau and Backhand 02.
+       - Harness: `pnpm eval:goals` (`scripts/eval-goal-detect.mjs`,
+         options `--only <substr>`, `--roi <name>`, `--truth <file>`).
+         The ROIs are generated from the labels by
+         `scripts/goal-eval-lib.mjs` `roiVariants()`: tight (+10%), loose
+         (+75%), left/right (goal against one edge), whole (image minus 2%,
+         never cutting the goal). Error = best-matching corner order, as a
+         fraction of the mean post length; `orderOk` flags a reversed
+         order. Output goes to `test-results/goal-eval/` (summary.md/json,
+         an overlay JPEG per case, debug JSON per failure). `pnpm test:e2e`
+         wipes that folder. `detectGoal`'s debug now also reports `source`
+         (frame / posts / contour) and `map` (`{scale, offsetX, offsetY}`)
+         to convert debug coords back to image px.
+
+       **Baseline (2026-09-23, commit that added the harness, 16 photos x
+       5 ROIs = 80 cases):**
+       ```
+       pass (<= 3%): 0/80   <= 10%: 13   <= 25%: 15   miss: 7   crash: 0
+       per ROI: tight 0/16, loose 0/16, left 0/16, right 0/16, whole 0/16
+       corner order reversed in 12 detections
+       ```
+       Failure groups, read from the table and overlays:
+       - **Small / washed-out goals (55-97 px tall): total failure.**
+         SUI-FIN 01, 02, 04, Backhand 01, WFC 02 are over 100% or missed on
+         every ROI. On blue floors the frame renders pinkish-magenta and
+         apparently drops out of the red mask, so the contour fallback
+         grabs a red jersey instead. **Largest group, check this first:**
+         corner refinement can't fix a goal that is never masked.
+       - **Wrong frame or bottom too low (20-90%).** WFC 01 + 03, Hardau,
+         Backhand 02, Penalties 01 + 05. The bottom edge follows the
+         floor-level back bar, or front and back frame parts get mixed
+         (= known failure 3a).
+       - **Whole-image ROI** is much worse than tighter ROIs on every
+         small goal (= known failure 3b).
+       - **Near misses:** SUI-FIN 03 (3.8-4.0%), Penalties 02 (4.0-4.7%),
+         Penalties 04 (6.3-7.5%). They look right in the overlay; one
+         corner is off by a few px. On a 67 px goal, 3% is 2 px, about
+         the label's own click precision, so also track <= 5% / <= 10%
+         alongside the 3% headline.
     3. **Known failures, attack in this order** (each fix gets a synthetic
        mask unit test in `goal-frame.test.js` first, then a harness
        re-run):

@@ -8,7 +8,9 @@
     "test": "node --test \"test/**/*.test.js\"",
     "test:e2e": "playwright test",
     "build": "node scripts/build.mjs",
-    "check:size": "node scripts/check-size.mjs"
+    "check:size": "node scripts/check-size.mjs",
+    "label:goals": "node scripts/label-goals.mjs",
+    "eval:goals": "node scripts/eval-goal-detect.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

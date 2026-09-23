@@ -7,3 +7,6 @@ test-results/
 playwright-report/
 .playwright/
 package-lock.json
+
+# Local-only goal-detect eval photos (B-BACK-010); may not be shareable
+test/fixtures/goals/

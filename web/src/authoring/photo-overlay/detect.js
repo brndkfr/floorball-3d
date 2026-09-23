@@ -209,8 +209,9 @@ export async function detectGoal(image, roi = null, { debug = null } = {}) {
       const xi = Math.round(x), yi = Math.round(y);
       return xi >= 0 && yi >= 0 && xi < mc && yi < mr && md[yi * mc + xi] > 0;
     };
-    postCorners = fitGoalFrame({ segments: segs, redAt, width: mc, height: mr, debug })?.corners
-      || cornersFromPosts(segs);
+    const frameCorners = fitGoalFrame({ segments: segs, redAt, width: mc, height: mr, debug })?.corners;
+    postCorners = frameCorners || cornersFromPosts(segs);
+    if (debug && postCorners) debug.source = frameCorners ? 'frame' : 'posts';
   }
 
   const contours = new cv.MatVector(), hierarchy = new cv.Mat();
@@ -284,7 +285,11 @@ export async function detectGoal(image, roi = null, { debug = null } = {}) {
       y + (cy0 - y) * CORNER_INSET_FRAC,
     ]);
     workCorners = orderCorners(insetPts);
+    if (debug) debug.source = 'contour';
   }
+  // Maps debug's working-mat coords (vLines/hLines/cands) back to original
+  // image px: imgX = x / scale + offsetX.
+  if (debug) debug.map = { scale, offsetX, offsetY };
   if (workCorners) {
     const corners = workCorners.map(([x, y]) => [x / scale + offsetX, y / scale + offsetY]);
     const xs = corners.map((p) => p[0]), ys = corners.map((p) => p[1]);
