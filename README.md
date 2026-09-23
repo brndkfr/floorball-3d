@@ -120,12 +120,13 @@ python -m http.server 8000
 
 Then open `http://localhost:8000`.
 
-Zero build step for local dev - `three` (unpkg) is loaded as ESM via
-`index.html`'s importmap, `mp4-muxer` (esm.sh) via a dynamic `import()`
-in `export.js` only when a video export actually runs. The share-URL
-codec uses the native `CompressionStream('deflate-raw')` API. Mode B's
-OpenCV.js and the YOLO ONNX models (`web/lib/`) are vendored locally and
-lazy-loaded only when Photo Overlay is opened - nothing extra to install.
+Zero build step for local dev - `three` and `mp4-muxer` are vendored at
+`web/lib/three/` and `web/lib/mp4-muxer/`, resolved via `index.html`'s
+importmap; the app runs offline with no third-party runtime host. The
+share-URL codec uses the native `CompressionStream('deflate-raw')` API.
+Mode B's OpenCV.js and the YOLO ONNX models (`web/lib/`) are vendored
+locally and lazy-loaded only when Photo Overlay is opened - nothing
+extra to install.
 
 ## Testing
 

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RINK_L, RINK_W, HALF_W } from './constants.js';
 import { state } from './state.js';
 import { markRenderDirty } from './render-dirty.js';
+import { pickRendererQuality } from './renderer-quality.js';
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1b1b1f);
@@ -96,9 +97,23 @@ export function getActiveCamera() {
   return state.activeCamera;
 }
 
-export const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+// S-BACK-011: renderer quality tier (antialias + pixelRatio) picked from
+// hardwareConcurrency / deviceMemory / devicePixelRatio, with a
+// localStorage override ('low' | 'high' | 'auto', default 'auto') so a
+// power user can force a specific tier without editing code. Exported as
+// `rendererQuality` for debugging / status displays.
+const qualityOverride = (() => {
+  try { return localStorage.getItem('floorball.renderQuality'); } catch { return null; }
+})();
+export const rendererQuality = pickRendererQuality({
+  hardwareConcurrency: navigator.hardwareConcurrency,
+  deviceMemory: navigator.deviceMemory,
+  devicePixelRatio: window.devicePixelRatio,
+  override: qualityOverride,
+});
+export const renderer = new THREE.WebGLRenderer({ antialias: rendererQuality.antialias, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(rendererQuality.pixelRatio);
 document.body.appendChild(renderer.domElement);
 // Explicit low z-index (below every HUD element, see index.html's z-index
 // list) so authoring/photo-overlay/'s #photo-canvas can sit behind it while

@@ -1517,7 +1517,7 @@ added.
   OpenCV is "NOT bundled" was also fixed in passing (it is committed to
   the repo at `web/lib/opencv.js`, just lazy-loaded on Photo Overlay open
   rather than at startup).
-- **[S-BACK-011]** [in-progress] **Perf micro-findings:**
+- **[S-BACK-011]** [shipped] **Perf micro-findings:**
   - **`animate()` unconditional render-loop - addressed this session.**
     `renderer.render()` was called every single frame regardless of
     whether anything visible changed (coverage.js already had its own
@@ -1573,15 +1573,30 @@ added.
     and go through `saveDoc()`; entering/exiting Preview-3D swaps the
     active camera, which the polled camera check catches), but that's
     inference, not a verified trace like the choke points above.
-  - **Not yet actioned:** `three.js`/`mp4-muxer` load from CDN
-    (unpkg/esm.sh) rather than being vendored, contradicting the "no
-    runtime third-party host dependency" claim in section 2 (that claim
-    was true only for the design-system stack while it was vendored -
-    see S-BACK-013, it no longer is); renderer always uses
-    `antialias:true` + pixelRatio 2 with no quality tier for weaker
-    devices - this one is a UX/perf tradeoff call (visual quality vs.
-    battery/weak-GPU performance) rather than a mechanical fix, and
-    wasn't attempted this session.
+  - **Actioned in a later pass:** `three.js` + `mp4-muxer` are now
+    vendored at `web/lib/three/` (r160 `three.module.min.js` +
+    `MTLLoader` + `OBJLoader` addons, ~686 KB total) and
+    `web/lib/mp4-muxer/` (`mp4-muxer.mjs`, ~67 KB), resolved via
+    `index.html`'s importmap; a live-browser check confirmed zero
+    external HTTP requests on boot and `mp4-muxer` resolves via bare
+    `import('mp4-muxer')` from `export.js`. The renderer picks its
+    quality tier at boot from `navigator.hardwareConcurrency` /
+    `navigator.deviceMemory` / `window.devicePixelRatio` via the pure
+    [renderer-quality.js](../web/src/renderer-quality.js) helper: weak
+    devices (&lt;=4 cores or &lt;=2 GB) get `antialias: false,
+    pixelRatio: 1`; everything else keeps the previous `antialias:
+    true, pixelRatio: min(dpr, 2)`. A `localStorage.floorball.renderQuality`
+    key (`'low' | 'high' | 'auto'`) lets a power user override the
+    heuristic. Nine new node tests
+    ([test/renderer-quality.test.js](../test/renderer-quality.test.js))
+    cover the tier picker: high/low boundaries, cores-only weakness,
+    mem-only weakness, dpr cap at 2 even on a 4x-dpr display, both
+    override directions, missing inputs, and Firefox's missing
+    `deviceMemory`. Verified live in a focused Chromium tab:
+    `three.REVISION === '160'` loaded from `./lib/three/`,
+    `rendererQuality.tier === 'high'` on this dev machine, zero
+    external HTTP requests, no page errors. 237/237 unit tests, build
+    + size checks green.
 - **[S-BACK-013]** [shipped] **CodeQL alert: bad HTML-comment regex inside
   vendored Shoelace.** GitHub code scanning (`js/bad-tag-filter`) flagged
   `web/lib/shoelace/chunks/chunk.CXZZ2LVK.js:16` - a regex that only

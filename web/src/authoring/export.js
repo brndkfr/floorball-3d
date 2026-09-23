@@ -2,9 +2,10 @@
 // at boot - browsers gain and lose codecs across versions, so a static
 // check would go stale. The three sinks:
 //
-//   MP4  - WebCodecs VideoEncoder + mp4-muxer (via esm.sh). Off-screen
-//          drive at max speed; playback isn't real-time-bounded so long
-//          animations finish quickly.
+//   MP4  - WebCodecs VideoEncoder + mp4-muxer (vendored at
+//          web/lib/mp4-muxer/, resolved via index.html's importmap).
+//          Off-screen drive at max speed; playback isn't real-time-bounded
+//          so long animations finish quickly.
 //   WebM - canvas.captureStream() + MediaRecorder. Real-time; the
 //          animation has to actually play back at wall-clock speed.
 //   PNG  - Snapshot the current renderer output. No animation involved.
@@ -98,7 +99,7 @@ function pickCamera() {
 // --- MP4 (WebCodecs + mp4-muxer) -------------------------------------
 
 export async function exportMp4({ width, height, fps, startMs = 0, endMs, onProgress, isCancelled }) {
-  const { Muxer, ArrayBufferTarget } = await import('https://esm.sh/mp4-muxer@5.1.4');
+  const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
   const cam = pickCamera();
   const savedRenderer = saveRendererState();
   applyRendererSize(width, height, cam);
