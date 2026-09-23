@@ -77,9 +77,11 @@ export function cancelChoreo() {
 }
 
 // Called from main.js's animate() every frame. Cheap enough to run
-// unconditionally; the early-out short-circuits when inactive.
+// unconditionally; the early-out short-circuits when inactive. Returns
+// whether choreograph mode is active (S-BACK-011: ghost arrows redraw
+// every frame while it is, so a render is needed every frame too).
 export function tickChoreo() {
-  if (!active) return;
+  if (!active) return false;
   for (const group of state.chipGroups) {
     const id = group.userData.chip?.id;
     const arrow = arrows.get(id);
@@ -94,6 +96,7 @@ export function tickChoreo() {
     const dx = group.position.x - snap.x, dz = group.position.z - snap.z;
     arrow.visible = (dx * dx + dz * dz) > 100 * 100;
   }
+  return true;
 }
 
 function snapshotChips() {

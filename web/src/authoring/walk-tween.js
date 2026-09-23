@@ -62,9 +62,10 @@ export function finishAllWalks() {
 
 export function walkingCount() { return walks.size; }
 
+// Returns whether anything was actively walking this frame (S-BACK-011).
 export function updateWalks(dt) {
-  if (!walks.size) return;
-  if (state.playback?.playing) { finishAllWalks(); return; }
+  if (!walks.size) return false;
+  if (state.playback?.playing) { finishAllWalks(); return true; }
   if (dt > MAX_DT) dt = MAX_DT;
   let advanced = false;
   for (const [obj, w] of [...walks]) {
@@ -82,4 +83,5 @@ export function updateWalks(dt) {
     if (w.t >= 1) walks.delete(obj);
   }
   if (advanced && onTick) { try { onTick(); } catch (e) { console.error(e); } }
+  return true;
 }

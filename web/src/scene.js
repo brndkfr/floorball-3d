@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RINK_L, RINK_W, HALF_W } from './constants.js';
 import { state } from './state.js';
+import { markRenderDirty } from './render-dirty.js';
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1b1b1f);
@@ -176,7 +177,7 @@ const sceneGrid = new THREE.GridHelper(Math.max(RINK_W, RINK_L) + 6000, 50, 0x9a
 sceneGrid.position.set(0, -4, RINK_L / 2); // just above the floor (y=-5) so it's visible on top when shown
 sceneGrid.visible = gridCheckbox.checked;
 scene.add(sceneGrid);
-gridCheckbox.addEventListener('change', () => { sceneGrid.visible = gridCheckbox.checked; });
+gridCheckbox.addEventListener('change', () => { sceneGrid.visible = gridCheckbox.checked; markRenderDirty(); }); // S-BACK-011
 
 // --- camera shortcuts: jump to the ball's exact vantage point (same origin
 // the coverage raycasts use), and back to the default overview ---

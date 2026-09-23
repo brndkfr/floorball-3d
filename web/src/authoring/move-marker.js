@@ -20,7 +20,9 @@ export function spawnMoveMarker(x, z, { color = 0x7ee06b } = {}) {
   rings.push({ mesh: ring, elapsed: 0, dur: 0.45, fromScale: 1.0, toScale: 3.2, fromOpacity: 0.95 });
 }
 
+// Returns whether anything was actively animating this frame (S-BACK-011).
 export function updateMoveMarkers(dt) {
+  const wasActive = rings.length > 0;
   for (let i = rings.length - 1; i >= 0; i--) {
     const r = rings[i];
     r.elapsed += dt;
@@ -35,4 +37,5 @@ export function updateMoveMarkers(dt) {
       rings.splice(i, 1);
     }
   }
+  return wasActive;
 }

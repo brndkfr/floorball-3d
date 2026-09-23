@@ -6,6 +6,7 @@ import { state } from './state.js';
 import { scene, renderer } from './scene.js';
 import { expectLoad, loaded, failed } from './status.js';
 import { selectObject } from './selection.js';
+import { markRenderDirty } from './render-dirty.js';
 
 // --- layer: goalie - switchable between two models. `state.goalieGroup`
 // always points at whichever one is currently active, so every other piece
@@ -16,6 +17,7 @@ const goalieCheckbox = document.getElementById('goalieCheckbox');
 const goalieModelSelect = document.getElementById('goalieModelSelect');
 goalieCheckbox.addEventListener('change', () => {
   if (state.goalieGroup) state.goalieGroup.visible = goalieCheckbox.checked;
+  markRenderDirty(); // S-BACK-011
 });
 
 function loadGoalieModel(mtlUrl, objUrl, onReady) {

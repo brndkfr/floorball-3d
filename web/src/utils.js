@@ -1,10 +1,12 @@
 import * as THREE from 'three';
+import { markRenderDirty } from './render-dirty.js';
 
 // wire a checkbox to a layer object/group once it's loaded
 export function bindLayerToggle(checkbox, getObject) {
   checkbox.addEventListener('change', () => {
     const obj = getObject();
     if (obj) obj.visible = checkbox.checked;
+    markRenderDirty(); // S-BACK-011: a visibility flip isn't a doc mutation, so saveDoc()'s hook doesn't see it
   });
 }
 

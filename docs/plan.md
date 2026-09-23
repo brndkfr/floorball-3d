@@ -1440,15 +1440,71 @@ added.
   OpenCV is "NOT bundled" was also fixed in passing (it is committed to
   the repo at `web/lib/opencv.js`, just lazy-loaded on Photo Overlay open
   rather than at startup).
-- **[S-BACK-011]** [open] **Perf micro-findings, not yet actioned:**
-  `animate()` render-loops unconditionally every frame even when nothing
-  moved (coverage.js already has a dirty-check; the main loop doesn't);
-  `three.js`/`mp4-muxer` load from CDN (unpkg/esm.sh) rather than being
-  vendored, contradicting the "no runtime third-party host dependency"
-  claim in section 2 (that claim was true only for the design-system stack
-  while it was vendored - see S-BACK-013, it no longer is); renderer
-  always uses `antialias:true` + pixelRatio 2 with no quality tier for
-  weaker devices.
+- **[S-BACK-011]** [in-progress] **Perf micro-findings:**
+  - **`animate()` unconditional render-loop - addressed this session.**
+    `renderer.render()` was called every single frame regardless of
+    whether anything visible changed (coverage.js already had its own
+    dirty-check for the raycast pass; the loop's actual draw call had
+    none). New [render-dirty.js](../web/src/render-dirty.js): a one-shot
+    `markRenderDirty()`/`consumeRenderDirty()` flag, deliberately
+    fail-open (forgetting to mark dirty costs one extra correct render,
+    never a frozen frame). `main.js`'s `animate()` now skips
+    `renderer.render()` unless at least one of: the flag was set since
+    last frame; the active camera's pose/zoom differs from last frame
+    (polled, not hooked - covers every camera-movement path: WASD walk,
+    mouse-look drag, top-down pan/zoom - without needing to find every
+    mutation site); the selection (primary + full set) differs from last
+    frame; or an in-flight animation subsystem reports itself active
+    (chip spawn/drop, move-command flash rings, walk-tweens, choreograph
+    ghosts - each of `updateChipAnimations`/`updateMoveMarkers`/
+    `updateWalks`/`tickChoreo` now returns whether it did anything this
+    frame), the draw tool has an in-progress preview
+    (`state.drawState`), or playback is advancing
+    (`state.playback.playing`). `markRenderDirty()` is called from
+    `storage.js`'s `saveDoc()` (the near-universal choke point every doc
+    mutation - chips/shapes/cones/balls/frames/undo - already funnels
+    through) and from the handful of visibility toggles that bypass the
+    doc entirely: `utils.js`'s `bindLayerToggle()` (rink/goals/ball/
+    grid-tiles/tactical layers), the goalie and scene-grid checkboxes,
+    and `chips.js`'s `setLabelsVisible()`.
+    [dirty-check.js](../web/src/dirty-check.js)'s `snapshotChanged`/
+    `copySnapshot` (extracted from coverage.js in the S-BACK-009 pass
+    just before this one) does the actual camera/selection comparison.
+    4 new node tests for `render-dirty.js`'s flag semantics (starts
+    dirty, edge-triggered, re-arms, collapses repeated marks).
+    Verified: `pnpm test` 211/211, `pnpm run build` passes, and - after
+    an initial full-suite run on this machine hit severe unrelated
+    slowdowns (dozens of concurrent Firefox/Edge processes already
+    running on this dev machine, not a clean CI runner) - the full
+    Playwright e2e suite (all 5 spec files, 16/16) was re-run
+    individually with a single worker once that contention eased,
+    including the reduced-motion chip-drop-animation test specifically
+    (the case most likely to break if the dirty-check wrongly suppressed
+    a render mid-animation). **Explicitly flagged as needing further
+    manual verification before being fully trusted** (this was the
+    user's own call when scoping the item): this is a best-effort,
+    best-understanding pass over the mutation surface, not an exhaustive
+    proof - a missed case would show as a frame that silently doesn't
+    update until something else invalidates it, which no automated test
+    here can catch (`requestAnimationFrame` is paused in an unfocused
+    Playwright tab, per this file's own testing notes). Known
+    not-exhaustively-checked surface: Mode B's `preview-3d.js` ("View in
+    3D" toggle, injects preview chips into the top-down camera without
+    touching `state.doc`) and the Inspector panel's per-field controls
+    (colour pickers, text inputs) weren't individually traced - both are
+    expected to be covered incidentally (Inspector edits mutate the doc
+    and go through `saveDoc()`; entering/exiting Preview-3D swaps the
+    active camera, which the polled camera check catches), but that's
+    inference, not a verified trace like the choke points above.
+  - **Not yet actioned:** `three.js`/`mp4-muxer` load from CDN
+    (unpkg/esm.sh) rather than being vendored, contradicting the "no
+    runtime third-party host dependency" claim in section 2 (that claim
+    was true only for the design-system stack while it was vendored -
+    see S-BACK-013, it no longer is); renderer always uses
+    `antialias:true` + pixelRatio 2 with no quality tier for weaker
+    devices - this one is a UX/perf tradeoff call (visual quality vs.
+    battery/weak-GPU performance) rather than a mechanical fix, and
+    wasn't attempted this session.
 - **[S-BACK-013]** [shipped] **CodeQL alert: bad HTML-comment regex inside
   vendored Shoelace.** GitHub code scanning (`js/bad-tag-filter`) flagged
   `web/lib/shoelace/chunks/chunk.CXZZ2LVK.js:16` - a regex that only

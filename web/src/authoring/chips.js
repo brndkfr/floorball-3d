@@ -21,6 +21,7 @@ import { saveDoc } from './storage.js';
 import { drawRoleGlyph } from './role-icons.js';
 import { reorderAtSlots } from './reorder.js';
 import { nextAvailableNumber } from './numbering.js';
+import { markRenderDirty } from '../render-dirty.js';
 
 export const CHIP_HEIGHT = 20;   // matches generate_player_chip.py
 export const CHIP_RADIUS = 100;  // matches generate_player_chip.py
@@ -201,6 +202,7 @@ export function setLabelsVisible(on) {
     const player = id && doc.scheme.players[id];
     if (player) refreshChipSprites(group, player);
   }
+  markRenderDirty(); // S-BACK-011: session-scoped display setting, not a doc mutation - saveDoc()'s hook doesn't see it
 }
 
 // --- spawn / remove ---------------------------------------------------
@@ -431,7 +433,10 @@ export function rebuildFromDoc() {
 
 // --- per-frame animation update ---------------------------------------
 
+// Returns whether anything was actively animating this frame (S-BACK-011:
+// main.js's animate() uses this to decide whether a render is needed).
 export function updateChipAnimations(dt) {
+  const wasActive = drops.length > 0 || rings.length > 0;
   for (let i = drops.length - 1; i >= 0; i--) {
     const d = drops[i];
     d.elapsed += dt;
@@ -455,6 +460,7 @@ export function updateChipAnimations(dt) {
       rings.splice(i, 1);
     }
   }
+  return wasActive;
 }
 
 // --- lookup helper for selection.js / controls.js ---------------------

@@ -12,6 +12,7 @@
 // that turns save status into a visible badge + beforeunload guard.
 
 import { ensureDoc, acceptDoc, emptyDoc, emptyMeta, newId } from './doc.js';
+import { markRenderDirty } from '../render-dirty.js';
 
 const LEGACY_DOC_KEY = 'floorball-3d:doc';
 const LEGACY_SLOT_PREFIX = 'floorball-3d:slot:';
@@ -221,6 +222,11 @@ export function saveDoc() {
   const doc = ensureDoc();
   if (!getCurrentProjectId()) setCurrentProjectId(doc.meta.id);
   saveProject(doc);
+  // S-BACK-011: near-every doc mutation (chips/shapes/cones/balls/frames/
+  // undo) funnels through here - single choke point for "the live 3D
+  // scene needs a redraw" that doesn't require main.js's animate() to
+  // separately track every mutation site.
+  markRenderDirty();
 }
 
 // Loads the current project's doc, or null if none exists. Used only by
