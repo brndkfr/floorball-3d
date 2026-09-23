@@ -16,10 +16,10 @@ import { ensureDoc, newId } from './doc.js';
 import { saveDoc } from './storage.js';
 
 const DEFAULT_BALL_COLOR = '#ffffff';
-// Extras are drawn 5x real size so they read from top-down without the
-// enterTopDown() scale hack that the main ball uses; keeps them uniform
-// in both camera modes.
-const EXTRA_RADIUS = BALL_RADIUS * 5;   // = 180 mm
+// Geometry is real-size (BALL_RADIUS = 36mm). Top-down mode scales every
+// extra ball by BALL_TOPDOWN_SCALE via topdown-camera.js so they stay
+// clickable, matching the main ball's behaviour.
+const EXTRA_RADIUS = BALL_RADIUS;
 
 state.extraBalls = [];
 state.extraBallsRoot = new THREE.Group();
@@ -35,17 +35,23 @@ function buildBallMesh(entry) {
   mesh.visible = !entry.hidden;
   state.extraBallsRoot.add(mesh);
   state.extraBalls.push(mesh);
+  // If the user is already in top-down when spawning, match the current
+  // scaling regime so the new ball is immediately clickable.
+  import('./topdown-camera.js').then((c) => {
+    if (c.isTopDown()) mesh.scale.setScalar(c.BALL_TOPDOWN_SCALE);
+  });
   return mesh;
 }
 
 export const BALL_DEFAULT_COLOR = DEFAULT_BALL_COLOR;
 
-export function spawnBall({ x, z, pushHistory = true }) {
+export function spawnBall({ x, z, color, pushHistory = true }) {
   const doc = ensureDoc();
   if (!doc.scheme.balls) doc.scheme.balls = {};
   if (!doc.scheme.balls.extras) doc.scheme.balls.extras = [];
   const id = newId('b');
   const entry = { id, x, z };
+  if (color && color.toLowerCase() !== DEFAULT_BALL_COLOR.toLowerCase()) entry.color = color;
   doc.scheme.balls.extras.push(entry);
   buildBallMesh(entry);
   saveDoc();

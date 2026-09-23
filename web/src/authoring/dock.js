@@ -10,6 +10,7 @@ import { spawnChip, nextNumber, TEAM_COLORS } from './chips.js';
 import { updateShape } from './shapes.js';
 import { spawnCone } from './cones.js';
 import { spawnBall } from './balls.js';
+import { spawnGoal } from './goals.js';
 import { ensureDoc } from './doc.js';
 import { saveDoc, downloadDocJson, readDocFromFile, createProject, adoptDocAsProject, setCurrentProjectId } from './storage.js';
 import { openLibraryDialog, switchToProject, onProjectChanged, currentProjectName } from './library-dialog.js';
@@ -89,6 +90,7 @@ function refreshStatus() {
   else if (tool === 'cone-full') msg = 'cone tool - click the rink to drop a full cone (Esc to exit)';
   else if (tool === 'cone-disc') msg = 'disc tool - click the rink to drop a flat disc marker (Esc to exit)';
   else if (tool === 'cone-pole') msg = 'pole tool - click the rink to drop a disc + 150cm rod (Esc to exit)';
+  else if (tool === 'goal') msg = 'goal tool - click the rink to drop an extra goal (Q/E to rotate; Esc to exit)';
   statusEl.textContent = msg;
   teamBtn.style.setProperty('--team-color', '#' + TEAM_COLORS[t].toString(16).padStart(6, '0'));
   teamBtn.textContent = `T${t}`;
@@ -312,7 +314,9 @@ export function handleFloorClickForTool(worldPoint) {
   if (state.activeTool === 'ball') {
     // Ball tool spawns extra balls (multi-ball). The primary ball
     // (state.ballGroup, boot-loaded) stays selectable via left-click.
-    spawnBall({ x: worldPoint.x, z: worldPoint.z });
+    // Picks up the current shape-color swatch so coaches can drop a
+    // red / blue / green ball without opening the Inspector each time.
+    spawnBall({ x: worldPoint.x, z: worldPoint.z, color: state.drawColor });
     refreshStatus();
     return true;
   }
@@ -321,6 +325,11 @@ export function handleFloorClickForTool(worldPoint) {
       : state.activeTool === 'cone-pole' ? 'pole'
       : 'disc';
     spawnCone({ kind, x: worldPoint.x, z: worldPoint.z });
+    refreshStatus();
+    return true;
+  }
+  if (state.activeTool === 'goal') {
+    spawnGoal({ x: worldPoint.x, z: worldPoint.z });
     refreshStatus();
     return true;
   }

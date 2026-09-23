@@ -213,10 +213,11 @@ export function selectedChips() {
 
 // Objects whose body can be grabbed and dragged on the top-down floor:
 // chips plus every shape (arrow / zone / text) plus marker cones plus
-// user-spawned extra balls. Goals, the main ball and goalie are
-// deliberately excluded - they have their own gestures.
+// user-spawned extra balls and extra goals. The two fixed goals, the
+// main ball and the goalie are deliberately excluded - they have their
+// own gestures.
 function isBodyDraggable(obj) {
-  return !!obj && (state.chipGroups.includes(obj) || state.shapeObjects.includes(obj) || state.coneObjects.includes(obj) || state.extraBalls.includes(obj));
+  return !!obj && (state.chipGroups.includes(obj) || state.shapeObjects.includes(obj) || state.coneObjects.includes(obj) || state.extraBalls.includes(obj) || state.extraGoals.includes(obj));
 }
 
 export function deselectAll() {
@@ -316,7 +317,7 @@ function selectablesUnderCursor(event) {
   mouseNDC.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouseNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouseNDC, state.activeCamera);
-  const selectables = [...state.goalInstances, ...state.chipGroups, ...state.shapeObjects, ...state.coneObjects, ...state.extraBalls];
+  const selectables = [...state.goalInstances, ...state.chipGroups, ...state.shapeObjects, ...state.coneObjects, ...state.extraBalls, ...state.extraGoals];
   if (state.ballGroup) selectables.push(state.ballGroup);
   if (state.goalieGroup) selectables.push(state.goalieGroup);
   const hits = raycaster.intersectObjects(selectables, true);
@@ -497,6 +498,7 @@ window.addEventListener('pointerup', (event) => {
     for (const o of objs) if (state.chipGroups.includes(o)) persistChipPosition(o);
     for (const o of objs) if (state.coneObjects.includes(o)) persistConePosition(o);
     for (const o of objs) if (state.extraBalls.includes(o)) persistBallPosition(o);
+    for (const o of objs) if (state.extraGoals.includes(o)) import('./authoring/goals.js').then((g) => g.persistGoalPosition(o));
     const shapeIds = objs.filter((o) => state.shapeObjects.includes(o))
       .map((o) => o.userData.shape.id);
     if (shapeIds.length && (dx || dz)) {
@@ -627,6 +629,12 @@ function handleRightClick(event) {
         o.position.z += dz;
         persistBallPosition(o);
         startWalk(o, fromX, fromZ, o.position.x, o.position.z);
+      } else if (state.extraGoals.includes(o)) {
+        const fromX = o.position.x, fromZ = o.position.z;
+        o.position.x += dx;
+        o.position.z += dz;
+        import('./authoring/goals.js').then((g) => g.persistGoalPosition(o));
+        startWalk(o, fromX, fromZ, o.position.x, o.position.z);
       }
     }
     const shapeIds = dragObjs.filter((o) => state.shapeObjects.includes(o))
@@ -669,6 +677,15 @@ function handleRightClick(event) {
     sel.position.x = p.x;
     sel.position.z = p.z;
     persistBallPosition(sel);
+    scheduleHistoryPush();
+    startWalk(sel, fromX, fromZ, p.x, p.z);
+    selectObject(sel);
+    spawnMoveMarker(p.x, p.z);
+  } else if (state.extraGoals.includes(sel)) {
+    const fromX = sel.position.x, fromZ = sel.position.z;
+    sel.position.x = p.x;
+    sel.position.z = p.z;
+    import('./authoring/goals.js').then((g) => g.persistGoalPosition(sel));
     scheduleHistoryPush();
     startWalk(sel, fromX, fromZ, p.x, p.z);
     selectObject(sel);

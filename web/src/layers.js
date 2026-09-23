@@ -81,6 +81,10 @@ goalMtlLoader.load(
         scene.add(goalsGroup);
         state.goalInstances.push(object, goalB);
 
+        // Signals authoring/goals.js that the goal OBJ is now cloneable
+        // for user-placed extra goals (rebuildGoalsFromDoc + spawnGoal).
+        document.dispatchEvent(new CustomEvent('layers:goal-loaded'));
+
         loaded('floorball_goal.obj');
       },
       undefined,

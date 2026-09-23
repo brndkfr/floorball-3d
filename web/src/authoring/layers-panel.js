@@ -12,6 +12,7 @@ import { chipDataFor, setChipHidden, TEAM_COLORS, setLabelsVisible, updateChipLa
 import { shapeDataFor, setShapeHidden, updateShapeLabel, updateShape, removeShape, reorderShapes } from './shapes.js';
 import { coneDataFor, setConeHidden, updateCone, removeCone, CONE_DEFAULT_COLOR } from './cones.js';
 import { ballDataFor, setBallHidden, updateBall, removeBall, BALL_DEFAULT_COLOR } from './balls.js';
+import { goalDataFor, setGoalHidden, updateGoal, removeGoal } from './goals.js';
 import { onSelectionChanged, selectObject, deselectAll } from '../selection.js';
 import { makeFloatable } from './floatable.js';
 
@@ -85,6 +86,8 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     if (cone) return cone.id;
     const ball = ballDataFor(state.selected);
     if (ball) return ball.id;
+    const goal = goalDataFor(state.selected);
+    if (goal) return goal.id;
     return null;
   }
 
@@ -95,6 +98,7 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     const shapes = doc.scheme.shapes || [];
     const cones = doc.scheme.cones || [];
     const balls = doc.scheme.balls?.extras || [];
+    const goals = doc.scheme.goals?.extras || [];
     const selId = selectedId();
 
     const teamA = players.filter((p) => p.team === 1);
@@ -103,10 +107,10 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     const arrows = shapes.filter((s) => s.type === 'arrow');
     const texts = shapes.filter((s) => s.type === 'text');
 
-    if (!players.length && !shapes.length && !cones.length && !balls.length) {
+    if (!players.length && !shapes.length && !cones.length && !balls.length && !goals.length) {
       const empty = document.createElement('div');
       empty.className = 'lp-empty';
-      empty.textContent = 'No chips, shapes, cones or balls on this frame yet.';
+      empty.textContent = 'No chips, shapes, cones, balls or goals on this frame yet.';
       body.appendChild(empty);
       return;
     }
@@ -116,8 +120,9 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     renderSection('zones', `Zones · ${zones.length}`, zones.map(shapeRow(selId)), (ids) => reorderShapes(ids));
     renderSection('arrows', `Arrows · ${arrows.length}`, arrows.map(shapeRow(selId)), (ids) => reorderShapes(ids));
     renderSection('texts', `Text · ${texts.length}`, texts.map(shapeRow(selId)), (ids) => reorderShapes(ids));
-    renderSection('cones', `Cones · ${cones.length}`, cones.map(coneRow(selId)));
-    renderSection('balls', `Balls · ${balls.length}`, balls.map(ballRow(selId)));
+    renderSection('cones', `Cones \u00b7 ${cones.length}`, cones.map(coneRow(selId)));
+    renderSection('balls', `Balls \u00b7 ${balls.length}`, balls.map(ballRow(selId)));
+    renderSection('goals', `Goals \u00b7 ${goals.length}`, goals.map(goalRow(selId)));
   }
 
   function renderSection(key, title, rows, onReorder) {
@@ -341,6 +346,12 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     removeBall(id);
   }
 
+  function deleteGoal(id) {
+    const node = state.extraGoals.find((m) => m.userData.goal?.id === id);
+    if (node && state.selected === node) deselectAll();
+    removeGoal(id);
+  }
+
   function ballRow(selId) {
     return (ball) => {
       const row = document.createElement('div');
@@ -429,6 +440,52 @@ if (!root) throw new Error('layersPanel element missing from index.html');
       row.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         deleteCone(cone.id);
+      });
+      return row;
+    };
+  }
+
+  function goalRow(selId) {
+    return (goal) => {
+      const row = document.createElement('div');
+      row.className = 'lp-row';
+      if (goal.id === selId) row.classList.add('selected');
+
+      const eye = document.createElement('button');
+      eye.className = 'lp-eye';
+      eye.title = goal.hidden ? 'Show' : 'Hide';
+      eye.textContent = goal.hidden ? '\u25CB' : '\u25CF';
+      eye.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setGoalHidden(goal.id, !goal.hidden);
+      });
+      row.appendChild(eye);
+
+      const swatch = document.createElement('span');
+      swatch.className = 'lp-swatch';
+      swatch.style.background = '#c0c0c0';
+      row.appendChild(swatch);
+
+      const name = document.createElement('span');
+      name.className = 'lp-name';
+      name.textContent = (goal.label && goal.label.trim()) || 'Goal';
+      name.title = 'Double-click to rename';
+      attachInlineRename(name, row, {
+        current: (goal.label && goal.label.trim()) || '',
+        placeholder: 'Goal',
+        commit: (v) => updateGoal(goal.id, { label: v }),
+      });
+      row.appendChild(name);
+
+      row.appendChild(makeTrash(() => deleteGoal(goal.id)));
+
+      row.addEventListener('click', () => {
+        const node = state.extraGoals.find((m) => m.userData.goal?.id === goal.id);
+        if (node) selectObject(node);
+      });
+      row.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        deleteGoal(goal.id);
       });
       return row;
     };

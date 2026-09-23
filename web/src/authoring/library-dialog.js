@@ -19,6 +19,7 @@ import { rebuildFromDoc } from './chips.js';
 import { rebuildShapesFromDoc } from './shapes.js';
 import { rebuildConesFromDoc } from './cones.js';
 import { rebuildBallsFromDoc } from './balls.js';
+import { rebuildGoalsFromDoc } from './goals.js';
 import { initHistory } from './history.js';
 import { showAlert, showConfirm, showPrompt } from './dialog.js';
 
@@ -128,6 +129,7 @@ export function switchToProject(id) {
   rebuildShapesFromDoc();
   rebuildConesFromDoc();
   rebuildBallsFromDoc();
+  rebuildGoalsFromDoc();
   initHistory();
   fireProjectChanged();
   return true;

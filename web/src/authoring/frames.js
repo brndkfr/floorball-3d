@@ -9,6 +9,7 @@ import { rebuildFromDoc } from './chips.js';
 import { rebuildShapesFromDoc } from './shapes.js';
 import { rebuildConesFromDoc } from './cones.js';
 import { rebuildBallsFromDoc } from './balls.js';
+import { rebuildGoalsFromDoc } from './goals.js';
 import { saveDoc } from './storage.js';
 import { applyActorsFromScheme } from './actors.js';
 import { isValidFrameIndex, clampInsertIndex, canRemoveFrame, clampCurrentAfterRemoval } from './frame-list.js';
@@ -19,6 +20,7 @@ function afterMutation(pushHistory = true) {
   rebuildShapesFromDoc();
   rebuildConesFromDoc();
   rebuildBallsFromDoc();
+  rebuildGoalsFromDoc();
   applyActorsFromScheme();
   if (pushHistory) import('./history.js').then((h) => h.pushHistory());
   window.dispatchEvent(new Event('framesChanged'));

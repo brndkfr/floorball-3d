@@ -46,6 +46,7 @@ function apply(snap) {
   rebuildShapesFromDoc();
   import('./cones.js').then((c) => c.rebuildConesFromDoc());
   import('./balls.js').then((b) => b.rebuildBallsFromDoc());
+  import('./goals.js').then((g) => g.rebuildGoalsFromDoc());
   import('./actors.js').then((a) => a.applyActorsFromScheme());
   saveDoc();
 }

@@ -47,6 +47,8 @@ export const state = {
   coneObjects: [],       // per-cone THREE.Mesh, selectable
   extraBallsRoot: null,  // THREE.Group holding user-spawned extra balls (main ball is state.ballGroup)
   extraBalls: [],        // per-extra-ball THREE.Mesh, selectable
+  extraGoalsRoot: null,  // THREE.Group holding user-spawned extra goals (the 2 fixed goals live in state.goalInstances)
+  extraGoals: [],        // per-extra-goal THREE.Group, selectable
   activeTool: null,      // null | 'chip' | 'arrow' | 'zone' | 'text'
   currentTeam: 1,        // 1 | 2 - which team the chip stamp is currently placing
   activeCamera: null,    // scene.js sets this to the perspective camera at boot; swapped to ortho in shape tools

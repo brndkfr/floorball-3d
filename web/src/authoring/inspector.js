@@ -12,6 +12,7 @@ import { chipDataFor } from './chips.js';
 import { shapeDataFor, removeShape, updateShape, updateShapeLabel, TEXT_MIN_SIZE, TEXT_MAX_SIZE, TEXT_DEFAULT_SIZE } from './shapes.js';
 import { coneDataFor, updateCone, CONE_DEFAULT_COLOR } from './cones.js';
 import { ballDataFor, updateBall, BALL_DEFAULT_COLOR } from './balls.js';
+import { goalDataFor, updateGoal } from './goals.js';
 import { arrowRoleColor } from '../tokens.js';
 import { ensureDoc } from './doc.js';
 import { getBallCarrier, setBallCarrier, getBallColor, setBallColor } from './actors.js';
@@ -81,6 +82,9 @@ function render(sel) {
 
   const extraBall = ballDataFor(sel);
   if (extraBall) return renderExtraBall(extraBall);
+
+  const extraGoal = goalDataFor(sel);
+  if (extraGoal) return renderExtraGoal(extraGoal, sel);
 
   // Ball / goalie / goal / other: read-only label.
   const heading = document.createElement('div');
@@ -299,6 +303,63 @@ function renderExtraBall(ball) {
   hint.className = 'ins-empty';
   hint.style.marginTop = '6px';
   hint.textContent = 'Extra balls are decorative. Coverage / trajectory analysis still tracks the primary ball only.';
+  body.appendChild(hint);
+}
+
+// Extra goal: rotation slider (Q/E works too) + label. The two fixed IFF
+// goals are handled by the read-only branch further up (they're in
+// state.goalInstances, not state.extraGoals).
+function renderExtraGoal(goal, node) {
+  const heading = document.createElement('div');
+  heading.className = 'ins-heading';
+  heading.textContent = 'Goal' + (goal.label ? ` \u00b7 ${goal.label}` : '');
+  body.appendChild(heading);
+
+  const rotRow = document.createElement('div');
+  rotRow.className = 'ins-row';
+  const rl = document.createElement('span');
+  rl.className = 'ins-label';
+  rl.textContent = 'Rot';
+  rotRow.appendChild(rl);
+  const rot = document.createElement('input');
+  rot.type = 'range';
+  rot.min = '-180'; rot.max = '180'; rot.step = '1';
+  rot.value = String(Math.round((goal.rotY || 0) * 180 / Math.PI));
+  rot.style.flex = '1';
+  const readout = document.createElement('span');
+  readout.textContent = rot.value + '\u00b0';
+  readout.style.cssText = 'min-width:36px; text-align:right; font-variant-numeric:tabular-nums;';
+  rot.addEventListener('input', () => {
+    const deg = Number(rot.value);
+    readout.textContent = deg + '\u00b0';
+    const rad = deg * Math.PI / 180;
+    if (node) node.rotation.y = rad;
+    updateGoal(goal.id, { rotY: rad });
+  });
+  rotRow.appendChild(rot);
+  rotRow.appendChild(readout);
+  body.appendChild(rotRow);
+
+  const labelRow = document.createElement('div');
+  labelRow.className = 'ins-row';
+  const ll = document.createElement('span');
+  ll.className = 'ins-label';
+  ll.textContent = 'Label';
+  labelRow.appendChild(ll);
+  const labelInput = document.createElement('input');
+  labelInput.type = 'text';
+  labelInput.maxLength = 32;
+  labelInput.placeholder = 'Goal';
+  labelInput.value = goal.label || '';
+  labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+  labelInput.addEventListener('change', () => updateGoal(goal.id, { label: labelInput.value }));
+  labelRow.appendChild(labelInput);
+  body.appendChild(labelRow);
+
+  const hint = document.createElement('div');
+  hint.className = 'ins-empty';
+  hint.style.marginTop = '6px';
+  hint.textContent = 'Extra goals are markers only. Trajectory / coverage still targets the two end-of-rink IFF goals.';
   body.appendChild(hint);
 }
 

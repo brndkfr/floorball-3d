@@ -21,6 +21,7 @@ import { rebuildFromDoc, updateChipAnimations } from './chips.js';
 import { rebuildShapesFromDoc } from './shapes.js';
 import { rebuildConesFromDoc } from './cones.js';
 import { rebuildBallsFromDoc } from './balls.js';
+import { rebuildGoalsFromDoc } from './goals.js';
 import { initHistory } from './history.js';
 import { initFaceoffSnapToggle } from './faceoff-snap.js';
 import './save-status-ui.js'; // side-effect: wires up the save-status badge + beforeunload guard
@@ -75,6 +76,7 @@ rebuildFromDoc();
 rebuildShapesFromDoc();
 rebuildConesFromDoc();
 rebuildBallsFromDoc();
+rebuildGoalsFromDoc();
 initHistory();
 initFaceoffSnapToggle();
 

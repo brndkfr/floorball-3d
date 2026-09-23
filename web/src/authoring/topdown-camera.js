@@ -15,6 +15,7 @@ const MIN_ZOOM = 0.5, MAX_ZOOM = 8;
 // and pick, without changing the 3D walk view. The underlying position
 // and BALL_RADIUS used by coverage/trajectory math are unaffected.
 const BALL_TOPDOWN_SCALE = 5;
+export { BALL_TOPDOWN_SCALE };
 const savedTopDown = {
   zoom: topDownCamera.zoom,
   x: topDownCamera.position.x,
@@ -62,15 +63,22 @@ export function exitTopDown() {
 
 // state.ballGroup may be null at first enterTopDown() call (OBJ loads
 // async); re-apply on every enter/exit so a late load still gets scaled.
+// Extra balls (state.extraBalls) get the same treatment - authored at
+// real 72mm size so they look correct in 3D, upscaled 5x in 2D to stay
+// clickable and read from a full top-down view.
 function applyBallTopDownScale(on) {
   const ball = state.ballGroup;
-  if (!ball) return;
-  if (on) {
-    if (savedBallScale == null) savedBallScale = ball.scale.x;
-    ball.scale.setScalar(BALL_TOPDOWN_SCALE);
-  } else if (savedBallScale != null) {
-    ball.scale.setScalar(savedBallScale);
-    savedBallScale = null;
+  if (ball) {
+    if (on) {
+      if (savedBallScale == null) savedBallScale = ball.scale.x;
+      ball.scale.setScalar(BALL_TOPDOWN_SCALE);
+    } else if (savedBallScale != null) {
+      ball.scale.setScalar(savedBallScale);
+      savedBallScale = null;
+    }
+  }
+  for (const m of state.extraBalls || []) {
+    m.scale.setScalar(on ? BALL_TOPDOWN_SCALE : 1);
   }
 }
 

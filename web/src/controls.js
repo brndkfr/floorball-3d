@@ -7,6 +7,7 @@ import { removeChip } from './authoring/chips.js';
 import { removeShape } from './authoring/shapes.js';
 import { removeCone } from './authoring/cones.js';
 import { removeBall } from './authoring/balls.js';
+import { removeGoal, updateGoal } from './authoring/goals.js';
 import { isTopDown, resetTopDownView } from './authoring/topdown-camera.js';
 import { isChoreoActive, cancelChoreo } from './authoring/choreograph.js';
 
@@ -53,6 +54,18 @@ function handleKeyboardMovement(dt) {
     if (keysPressed.has('q') || keysPressed.has('Q')) rot -= 1;
     if (keysPressed.has('e') || keysPressed.has('E')) rot += 1;
     if (rot !== 0) goalie.rotation.y += rot * GOALIE_ROTATE_SPEED * (shiftHeld ? GOALIE_FINE_FACTOR : 1) * dt;
+  }
+
+  // Q/E also rotate a selected extra goal (same speed / Shift-fine feel).
+  const selGoal = state.selected;
+  if (selGoal && state.extraGoals.includes(selGoal)) {
+    let rot = 0;
+    if (keysPressed.has('q') || keysPressed.has('Q')) rot -= 1;
+    if (keysPressed.has('e') || keysPressed.has('E')) rot += 1;
+    if (rot !== 0) {
+      selGoal.rotation.y += rot * GOALIE_ROTATE_SPEED * (shiftHeld ? GOALIE_FINE_FACTOR : 1) * dt;
+      updateGoal(selGoal.userData.goal.id, { rotY: selGoal.rotation.y });
+    }
   }
 
   // Arrows / WASD pan the camera. In 2D top-down we shift the ortho camera
@@ -115,18 +128,21 @@ window.addEventListener('keydown', (event) => {
     const shapeIds = [];
     const coneIds = [];
     const ballIds = [];
+    const goalIds = [];
     for (const o of state.selectedSet) {
       if (state.chipGroups.includes(o) && o.userData.chip) chipIds.push(o.userData.chip.id);
       else if (state.shapeObjects.includes(o) && o.userData.shape) shapeIds.push(o.userData.shape.id);
       else if (state.coneObjects.includes(o) && o.userData.cone) coneIds.push(o.userData.cone.id);
       else if (state.extraBalls.includes(o) && o.userData.ball) ballIds.push(o.userData.ball.id);
+      else if (state.extraGoals.includes(o) && o.userData.goal) goalIds.push(o.userData.goal.id);
     }
-    if (!chipIds.length && !shapeIds.length && !coneIds.length && !ballIds.length) return;
+    if (!chipIds.length && !shapeIds.length && !coneIds.length && !ballIds.length && !goalIds.length) return;
     deselectAll();
     for (const id of chipIds) removeChip(id, false);
     for (const id of shapeIds) removeShape(id, false);
     for (const id of coneIds) removeCone(id, false);
     for (const id of ballIds) removeBall(id, false);
+    for (const id of goalIds) removeGoal(id, false);
     // One combined history snapshot for the whole multi-delete.
     import('./authoring/history.js').then((h) => h.pushHistory());
     event.preventDefault();
