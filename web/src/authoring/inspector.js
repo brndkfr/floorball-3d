@@ -15,17 +15,27 @@ import { ballDataFor, updateBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { arrowRoleColor } from '../tokens.js';
 import { ensureDoc } from './doc.js';
 import { getBallCarrier, setBallCarrier, getBallColor, setBallColor } from './actors.js';
+import { makeFloatable } from './floatable.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
 // not here; the Inspector still handles shapes / text / read-only labels.
 
+// Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
+const inspectorEl = document.getElementById('inspector');
+if (!inspectorEl) throw new Error('inspector element missing from index.html');
 const body = document.getElementById('inspectorBody');
-if (body) {
-  onSelectionChanged(render);
-  window.addEventListener('ballCarrierChanged', () => render(state.selected));
-  window.addEventListener('ballColorChanged', () => render(state.selected));
-  render(state.selected);
-}
+if (!body) throw new Error('inspectorBody element missing from index.html');
+
+onSelectionChanged(render);
+window.addEventListener('ballCarrierChanged', () => render(state.selected));
+window.addEventListener('ballColorChanged', () => render(state.selected));
+render(state.selected);
+
+makeFloatable(inspectorEl, {
+  storageKey: 'floorball.inspector.pos',
+  reserved: { top: 48, left: 60, right: 8, bottom: 8 },
+  defaultPos: { x: Math.max(60, window.innerWidth - 244), y: 220 },
+});
 
 function render(sel) {
   body.innerHTML = '';

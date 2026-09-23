@@ -13,9 +13,12 @@ import { shapeDataFor, setShapeHidden, updateShapeLabel, updateShape, removeShap
 import { coneDataFor, setConeHidden, updateCone, removeCone, CONE_DEFAULT_COLOR } from './cones.js';
 import { ballDataFor, setBallHidden, updateBall, removeBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { onSelectionChanged, selectObject, deselectAll } from '../selection.js';
+import { makeFloatable } from './floatable.js';
 
+// Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
 const root = document.getElementById('layersPanel');
-if (root) {
+if (!root) throw new Error('layersPanel element missing from index.html');
+{
   const body = root.querySelector('.lp-body');
   const collapseBtn = root.querySelector('.lp-toggle');
   const STORAGE_KEY = 'floorball3d.layersPanel.collapsed';
@@ -466,3 +469,9 @@ if (root) {
     });
   }
 }
+
+makeFloatable(root, {
+  storageKey: 'floorball.layersPanel.pos',
+  reserved: { top: 48, left: 60, right: 8, bottom: 8 },
+  defaultPos: { x: Math.max(60, window.innerWidth - 244), y: 480 },
+});

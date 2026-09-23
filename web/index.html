@@ -383,6 +383,247 @@
     background:rgba(6,14,18,0.94); color:#dff9ff;
     font-family:var(--hud-font); font-size:13px; letter-spacing:0.04em;
   }
+
+  /* --- Tool palette: floating vertical strip of Mode-A tools. Position is
+     JS-managed (drag handle + localStorage), so no top/left here - see
+     tool-palette.js's applyPos(). */
+  #toolPalette {
+    position:fixed; z-index:26;
+    display:flex; flex-direction:column; gap:6px;
+    padding:6px 8px 8px;
+    background:rgba(20,16,10,0.82);
+    border:1px solid rgba(255,179,71,0.45); border-radius:12px;
+    font-family:var(--hud-font);
+    box-shadow:0 6px 24px rgba(0,0,0,0.35);
+    backdrop-filter:blur(4px);
+    user-select:none;
+  }
+  #toolPalette .floatable-grip {
+    height:14px; margin:-2px -4px 4px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:grab;
+    color:rgba(255,179,71,0.55);
+    font-size:14px; line-height:1;
+  }
+  #toolPalette .floatable-grip:active { cursor:grabbing; }
+  #toolPalette.dragging { opacity:0.9; box-shadow:0 10px 32px rgba(0,0,0,0.5); }
+  #toolPalette button {
+    width:56px; height:52px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:2px;
+    border:1px solid rgba(255,179,71,0.35);
+    background:rgba(255,179,71,0.08);
+    color:#f7e6cf; font-family:inherit; font-size:10px;
+    text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;
+    border-radius:8px;
+  }
+  #toolPalette button:hover { background:rgba(255,179,71,0.22); }
+  #toolPalette button.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
+  #toolPalette .tp-glyph { font-size:20px; line-height:1; }
+
+  /* Zone/Cone sub-tool flyout - pure CSS hover, same as before the shell rework. */
+  #toolPalette .tp-group { position:relative; }
+  #toolPalette .tp-group > button { position:relative; padding-right:14px; }
+  #toolPalette .tp-group::after {
+    content:''; position:absolute; top:0; left:100%;
+    width:8px; height:100%;
+  }
+  #toolPalette .tp-caret {
+    position:absolute; right:4px; top:50%; transform:translateY(-50%);
+    font-size:9px; opacity:0.7;
+  }
+  #toolPalette .tp-submenu {
+    position:absolute; left:100%; top:0;
+    display:none; flex-direction:column; gap:4px;
+    padding:6px; background:rgba(20,16,10,0.94);
+    border:1px solid rgba(255,179,71,0.45); border-radius:10px;
+    box-shadow:0 6px 24px rgba(0,0,0,0.4);
+    margin-left:6px;
+  }
+  #toolPalette .tp-group:hover .tp-submenu,
+  #toolPalette .tp-submenu:hover { display:flex; }
+  #toolPalette .tp-submenu button {
+    width:76px; height:44px; font-size:9px;
+  }
+  @media (pointer: coarse) {
+    #toolPalette { display:none; }
+  }
+
+  /* --- Inspector: selection-driven props panel, floating like the palette. */
+  #inspector {
+    position:fixed; z-index:26;
+    width:220px; padding:10px 12px;
+    background:var(--hud-bg); color:#dff9ff;
+    border:1px solid var(--hud-accent-dim);
+    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
+    font-family:var(--hud-font); font-size:12px;
+    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    backdrop-filter:blur(2px);
+    user-select:none;
+  }
+  #inspector .floatable-grip {
+    height:12px; margin:-4px -4px 6px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:grab;
+    color:rgba(79,224,255,0.55);
+    font-size:12px; line-height:1;
+  }
+  #inspector .floatable-grip:active { cursor:grabbing; }
+  #inspector.dragging { opacity:0.9; box-shadow:0 10px 32px rgba(0,0,0,0.5); }
+  #inspector .ins-title {
+    font-size:11px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.08em; margin-bottom:8px;
+  }
+  #inspector .ins-heading { font-size:14px; margin-bottom:10px; color:#ffffff; }
+  #inspector .ins-empty { opacity:0.7; font-size:11px; line-height:1.5; }
+  #inspector .ins-row { margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  #inspector .ins-label {
+    font-size:10px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.05em; min-width:44px;
+  }
+  #inspector .ins-team-btn {
+    flex:1; height:26px; border-radius:5px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.35);
+    background:rgba(79,224,255,0.08); color:#dff9ff;
+    font-family:inherit; font-size:11px; letter-spacing:0.04em;
+  }
+  #inspector .ins-team-btn.active {
+    background:var(--team-color, #ffb347); color:#0a0d0f;
+    border-color:var(--team-color, #ffb347);
+  }
+  #inspector .ins-btn {
+    width:100%; height:28px; border-radius:5px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.35);
+    background:rgba(79,224,255,0.08); color:#dff9ff;
+    font-family:inherit; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.06em; margin-top:4px;
+  }
+  #inspector .ins-btn:hover { background:rgba(79,224,255,0.22); }
+  #inspector .ins-btn.danger {
+    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1);
+    color:#ffb0b0;
+  }
+  #inspector .ins-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
+  #inspector .ins-swatch {
+    display:inline-block; width:16px; height:16px; border-radius:50%;
+    background:var(--shape-color, #ffb347);
+    border:1px solid rgba(255,255,255,0.5);
+    margin-left:4px; vertical-align:middle;
+  }
+
+  /* --- Layers panel: outline of everything in the current frame. */
+  #layersPanel {
+    position:fixed; z-index:26;
+    width:220px; max-height:45vh; display:flex; flex-direction:column;
+    padding:10px 12px;
+    background:var(--hud-bg); color:#dff9ff;
+    border:1px solid var(--hud-accent-dim);
+    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
+    font-family:var(--hud-font); font-size:12px;
+    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    backdrop-filter:blur(2px);
+    user-select:none;
+  }
+  #layersPanel .floatable-grip {
+    height:12px; margin:-4px -4px 6px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:grab;
+    color:rgba(79,224,255,0.55);
+    font-size:12px; line-height:1;
+  }
+  #layersPanel .floatable-grip:active { cursor:grabbing; }
+  #layersPanel.dragging { opacity:0.9; box-shadow:0 10px 32px rgba(0,0,0,0.5); }
+  #layersPanel .lp-head {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:8px;
+  }
+  #layersPanel .lp-title {
+    font-size:11px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.08em;
+  }
+  #layersPanel .lp-toggle {
+    background:transparent; border:none; color:var(--hud-accent);
+    cursor:pointer; font-size:14px; line-height:1; padding:0 4px;
+  }
+  #layersPanel .lp-toggle:hover { color:#fff; }
+  #layersPanel.collapsed .lp-body { display:none; }
+  #layersPanel .lp-body { overflow-y:auto; padding-right:2px; }
+  #layersPanel .lp-empty { opacity:0.7; font-size:11px; line-height:1.5; }
+  #layersPanel .lp-section { margin-bottom:6px; }
+  #layersPanel .lp-section-head {
+    font-size:10px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.05em; cursor:pointer; user-select:none;
+    padding:3px 0; border-bottom:1px solid rgba(79,224,255,0.15);
+  }
+  #layersPanel .lp-section-head::before {
+    content:'\25BE'; display:inline-block; width:12px;
+  }
+  #layersPanel .lp-section.collapsed .lp-section-head::before { content:'\25B8'; }
+  #layersPanel .lp-section.collapsed .lp-section-body { display:none; }
+  #layersPanel .lp-row {
+    display:flex; align-items:center; gap:6px;
+    padding:3px 4px; cursor:pointer;
+    border-radius:3px;
+  }
+  #layersPanel .lp-row:hover { background:rgba(79,224,255,0.1); }
+  #layersPanel .lp-row.selected {
+    background:rgba(79,224,255,0.2);
+    box-shadow:inset 0 0 0 1px var(--hud-accent);
+  }
+  #layersPanel .lp-row.lp-dragging { opacity:0.4; }
+  #layersPanel .lp-row.lp-drop-before { box-shadow:inset 0 2px 0 0 var(--hud-accent); }
+  #layersPanel .lp-row.lp-drop-after { box-shadow:inset 0 -2px 0 0 var(--hud-accent); }
+  #layersPanel .lp-eye {
+    background:transparent; border:none; color:#dff9ff;
+    cursor:pointer; padding:0; width:16px; font-size:11px; line-height:1;
+    opacity:0.85;
+  }
+  #layersPanel .lp-eye:hover { opacity:1; color:var(--hud-accent); }
+  #layersPanel .lp-swatch {
+    display:inline-block; width:12px; height:12px; border-radius:50%;
+    border:1px solid rgba(255,255,255,0.35);
+    flex-shrink:0;
+  }
+  #layersPanel .lp-name {
+    flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    font-size:11px;
+  }
+  #layersPanel .lp-name-input {
+    flex:1; min-width:0; height:18px; padding:0 4px; font-size:11px;
+    font-family:inherit; color:#dff9ff;
+    background:rgba(79,224,255,0.12);
+    border:1px solid var(--hud-accent-dim); border-radius:3px; outline:none;
+  }
+  #layersPanel .lp-name-input:focus { border-color:var(--hud-accent); background:rgba(79,224,255,0.2); }
+  #layersPanel .lp-trash {
+    background:transparent; border:none; color:#dff9ff;
+    cursor:pointer; padding:0; width:14px; font-size:12px; line-height:1;
+    opacity:0; flex-shrink:0;
+  }
+  #layersPanel .lp-row:hover .lp-trash { opacity:0.6; }
+  #layersPanel .lp-trash:hover { opacity:1 !important; color:#ffb0b0; }
+  #layersPanel .lp-role-badge {
+    display:inline-block; width:14px; height:14px; line-height:14px;
+    text-align:center; font-size:9px; font-weight:bold;
+    color:#fff; border-radius:50%; flex-shrink:0;
+  }
+  #layersPanel .lp-role-badge[data-role="defender"] { background:#3b5bdb; }
+  #layersPanel .lp-role-badge[data-role="center"] { background:#7048e8; }
+  #layersPanel .lp-role-badge[data-role="wing"] { background:#0ca678; }
+  #layersPanel .lp-marquee-toggle {
+    display:flex; align-items:center; gap:3px; margin-left:auto; margin-right:6px;
+    font-size:10px; opacity:0.7; cursor:pointer; user-select:none; letter-spacing:0.03em;
+  }
+  #layersPanel .lp-marquee-toggle input { margin:0; cursor:pointer; }
+  @media (pointer: coarse) {
+    #inspector, #layersPanel { display:none; }
+  }
+
+  /* Hide the dock's tool buttons - they now live in #toolPalette. Kept in
+     the DOM so their existing click wiring keeps working (keyboard
+     shortcuts, Esc handling in dock.js). */
+  #dock [data-dock="chip"],
+  #dock [data-dock-tool],
+  #dock .dock-sep { display:none; }
 </style>
 </head>
 <body>
@@ -399,6 +640,50 @@
   <button data-mode="library" data-action="library" title="Library: saved projects">Library</button>
 </div>
 <div id="libraryView">Library - coming soon</div>
+<div id="toolPalette" data-view="plan">
+  <div class="floatable-grip" title="Drag to move" aria-hidden="true">&#8942;&#8942;</div>
+  <button data-tool="" title="Select (Esc)" class="active"><span class="tp-glyph">&#8598;</span>Select</button>
+  <button data-tool="chip" title="Chip stamp - click the rink to drop a player"><span class="tp-glyph">&#9679;</span>Chip</button>
+  <button data-tool="ball" title="Ball - click the rink to drop an extra ball"><span class="tp-glyph">&#9898;</span>Ball</button>
+  <button data-tool="arrow" title="Arrow - click start then end (straight)"><span class="tp-glyph">&#8594;</span>Arrow</button>
+  <button data-tool="arrow-curved" title="Curved arrow - click waypoints, Enter / double-click / right-click to finish"><span class="tp-glyph">&#10551;</span>Curved</button>
+  <div class="tp-group">
+    <button data-tool="zone" title="Zone (freehand polygon) - hover for shapes"><span class="tp-glyph">&#9711;</span>Zone<span class="tp-caret">&#9656;</span></button>
+    <div class="tp-submenu" role="menu">
+      <button data-tool="zone" title="Freehand polygon"><span class="tp-glyph">&#11040;</span>Freehand</button>
+      <button data-tool="zone-rect" title="Rectangle (drag)"><span class="tp-glyph">&#9645;</span>Rect</button>
+      <button data-tool="zone-circle" title="Circle (drag)"><span class="tp-glyph">&#9711;</span>Circle</button>
+      <button data-tool="zone-triangle" title="Triangle (drag)"><span class="tp-glyph">&#9651;</span>Triangle</button>
+    </div>
+  </div>
+  <button data-tool="text" title="Text - click to place a label"><span class="tp-glyph">T</span>Text</button>
+  <div class="tp-group">
+    <button data-tool="cone-disc" title="Cone markers - hover for shapes"><span class="tp-glyph">&#9651;</span>Cone<span class="tp-caret">&#9656;</span></button>
+    <div class="tp-submenu" role="menu">
+      <button data-tool="cone-disc" title="Flat disc marker (puck-cone) - low profile, ball rolls over"><span class="tp-glyph">&#11044;</span>Disc</button>
+      <button data-tool="cone-full" title="Full traffic cone - marks slalom gates / positions"><span class="tp-glyph">&#9651;</span>Full</button>
+    </div>
+  </div>
+</div>
+<div id="inspector" data-view="plan">
+  <div class="floatable-grip" title="Drag to move" aria-hidden="true">&#8942;&#8942;</div>
+  <div class="ins-title">Inspector</div>
+  <div id="inspectorBody"><div class="ins-empty">Nothing selected. Click a chip, shape, ball, goalie or goal - or use a tool from the palette.</div></div>
+</div>
+<div id="layersPanel" data-view="plan">
+  <div class="floatable-grip" title="Drag to move" aria-hidden="true">&#8942;&#8942;</div>
+  <div class="lp-head">
+    <span class="lp-title">Layers</span>
+    <label class="lp-marquee-toggle" title="Box-select drag also grabs shapes, not just chips">
+      <input type="checkbox" id="marqueeShapesToggle"> shapes
+    </label>
+    <label class="lp-marquee-toggle" title="Show player labels in the scene (falls back to number when off)">
+      <input type="checkbox" id="labelsVisibleToggle"> labels
+    </label>
+    <button class="lp-toggle" title="Collapse/expand" aria-label="Collapse layers panel">&minus;</button>
+  </div>
+  <div class="lp-body"></div>
+</div>
 <canvas id="photo-canvas"></canvas>
 <div id="info" class="hud-panel" data-view="plan">
   <div class="hud-header">

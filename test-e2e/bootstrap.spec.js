@@ -24,6 +24,13 @@ test('app boots with no page errors and the rink renders', async ({ page }) => {
   // aborted early, none of these will ever appear.
   await expect(page.locator('#rinkCheckbox')).toBeVisible();
   await expect(page.locator('#dockProjectName')).toBeVisible();
+  // Plan-mode surfaces owned by side-effect modules (tool-palette.js etc).
+  // If the HTML container is deleted, the module's DOM-owning throw fires
+  // via `pageerror` below - this visibility check is the belt to that
+  // suspender, and specifically fails a silent-no-op regression.
+  await expect(page.locator('#toolPalette')).toBeVisible();
+  await expect(page.locator('#inspector')).toBeVisible();
+  await expect(page.locator('#layersPanel')).toBeVisible();
 
   // Give any deferred imports a beat to throw, then assert.
   await page.waitForTimeout(300);

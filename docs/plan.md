@@ -1579,6 +1579,51 @@ added.
   (the correct comment says opencv IS vendored at web/lib/opencv.js
   and lazy-loaded, per S-BACK-010 - the reversal contradicted that
   and CLAUDE.md's own note).
+- **[S-BACK-016]** [shipped] **Restore Plan-mode surface panels as
+  floating draggable widgets + close the "silent no-op when a DOM
+  root goes missing" hole.** Commit `4bcbd41` (S-BACK-015) removed
+  `#toolPalette`, `#inspector`, and `#layersPanel` from index.html
+  but left their side-effect modules imported; each guarded its
+  root with `if (el) { ... }` and silently no-op'd, so Plan mode
+  shipped without a Tool palette, Inspector, or Layers panel
+  (dock's tool buttons re-appeared as an unintended fallback) and
+  every gate stayed green: `pnpm test` had no DOM, the build
+  parsed fine, and `bootstrap.spec.js` only asserted
+  `#rinkCheckbox` + `#dockProjectName`. Fixed in two layers:
+  **(1) restored all three panels** with their original CSS ported
+  to `position:fixed` and a shared `.floatable-grip` drag handle;
+  new [floatable.js](../web/src/authoring/floatable.js) does the
+  pointer-capture drag + resize re-clamp + localStorage
+  persistence, delegating the pure clamp/parse math to
+  [palette-position.js](../web/src/authoring/palette-position.js)
+  so it's Node-testable ([test/palette-position.test.js](../test/palette-position.test.js),
+  6 new tests: in-bounds pass-through, top-left/bottom-right snap,
+  degenerate-tiny-viewport, garbage/valid `parseStoredPos`); each
+  panel persists to its own key (`floorball.toolPalette.pos`,
+  `floorball.inspector.pos`, `floorball.layersPanel.pos`) with
+  reserved edges accounting for the 40px topbar + 52px rail.
+  **(2) hardened the regression net:** `tool-palette.js`,
+  `inspector.js`, and `layers-panel.js` now `throw` when their
+  root is missing (matching `dock.js`'s existing pattern);
+  [bootstrap.spec.js](../test-e2e/bootstrap.spec.js) grew three
+  visibility asserts (`#toolPalette`, `#inspector`, `#layersPanel`)
+  as the belt to that throw's suspender; and CLAUDE.md's
+  Architecture section now documents the rule ("DOM-owning modules
+  must throw when their root element is missing, not silently
+  no-op") with the specific antipattern and commit reference. This
+  addresses part of S-BACK-015's "not yet done" cleanup: the three
+  removed panels are back and the silent-no-op class of regression
+  is now caught by the same tripwire that S-BACK-014 added. Not
+  addressed: chip-popover.js and other side-effect modules weren't
+  audited for the same pattern (grep for `getElementById` + `if
+  (\w+) {` if extending); the -487/-100 line consolidation inside
+  photo-overlay.js / photo-canvas.js from S-BACK-015 still needs
+  its own documentation pass. Verified `pnpm test` 217/217, the
+  full non-`photo-stepper` e2e suite 13/13 (`photo-stepper.spec.js`
+  4 failures are pre-existing on `origin/main`, unrelated to this
+  work, part of S-BACK-015's broader WIP), and a live-browser
+  drag+persist smoke-test through the CDP-cache-clear pattern from
+  CLAUDE.md.
 
 ---
 

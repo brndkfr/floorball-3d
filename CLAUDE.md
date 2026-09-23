@@ -137,6 +137,20 @@ aside.
   threshold, default camera/ball positions, the 5x chip display scale) are
   estimates, clearly commented as such at their definition site - don't
   cite them as spec'd values.
+- **DOM-owning modules must throw when their root element is missing, not
+  silently no-op.** A module that side-effect-wires a specific DOM root
+  (e.g. `tool-palette.js` and `#toolPalette`, `dock.js` and `#dock`) is the
+  only thing that will notice if that element is deleted from
+  `index.html`. `pnpm test` won't catch it (Node has no DOM), the build
+  won't catch it (parses fine), and `bootstrap.spec.js` only catches it
+  because it asserts zero unhandled `pageerror`s. Pattern:
+  `const el = document.getElementById('foo'); if (!el) throw new Error(...)`
+  - as in `dock.js`. Do NOT use `if (el) { ... }` - that's exactly the
+  silent-no-op trap that shipped the toolPalette-goes-missing regression
+  (commit `4bcbd41`). When intentionally removing a DOM root, remove its
+  side-effect `import` from `authoring/index.js` in the same change - if
+  the module still has a legitimate role without the DOM, refactor it to
+  take the root as a constructor argument instead of `getElementById`.
 
 ## Authoring / animation gotchas (A1-A7)
 
