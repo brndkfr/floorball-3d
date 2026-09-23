@@ -1030,7 +1030,7 @@ Directory-level pointers (see CLAUDE.md for the sharper gotchas):
     module loads with no page errors and the exports are wired into the
     running app; the CV path itself only runs against a loaded photo, so
     the pure tests carry the correctness weight. 228/228 unit tests +
-    build + size checks green. Commit `&lt;pending&gt;`.
+    build + size checks green. Commit `b605c71`.
   - **[B-BACK-005]** [mitigated] Occluded-goalie detection (kneeling white
     gear against white ice). As predicted, addressed with Phase 4 pose
     cues (B-PHASE-005) rather than classically:
