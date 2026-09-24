@@ -563,6 +563,30 @@ Still on the backlog from that exploration:
   [test-e2e/choreograph.spec.js](../test-e2e/choreograph.spec.js) covers
   no arrow before the hand-off, a trimmed arrow after it, and removal on
   commit.
+- **[A-BACK-020]** [shipped] **Ball follows its carrier in playback, and
+  passes are visible.** Reported from the tutorial: "Pass to #9" showed
+  no ball moving. Root cause: while the ball is carried,
+  `scheme.balls.main.x/z` only holds its last loose spot, because
+  actors.js never writes it while attached. `playback.js` animated
+  exactly that value, so in playback the ball sat still where the first
+  carrier started and never followed a dribble or a pass. In edit mode
+  the hand-off was a teleport under the receiver's chip.
+  Fix: the pure [ball-pose.js](../web/src/authoring/ball-pose.js)
+  `ballPoseAt()` works out each frame's ball from its carrier:
+  - same carrier in both frames: the ball follows the live,
+    interpolated chip;
+  - carrier change: the ball flies from carrier A in frame A to carrier
+    B in frame B;
+  - loose ball: the stored x/z.
+
+  `passFlightPos()` gives edit-mode hand-offs a 0.35 s ease-out flight.
+  It is skipped with reduced motion, and frame switches and undo don't
+  animate. `BALL_CARRY_OFFSET` now lives in ball-pose.js and is shared
+  by actors.js and the tutorial seed. The carrier ring is hidden during
+  playback, because it can't follow the moving chips. 8 node tests in
+  `ball-pose.test.js`. The e2e in `choreograph.spec.js` seeks playback
+  to 0, 500 and 1000 ms and checks the ball is at the old carrier, the
+  midpoint and the new carrier.
 - **[A-BACK-019]** [shipped] **Guided Choreo tutorial (first-time UX).**
   Goal: a first-time user builds one choreographed frame and watches it
   play back, learning by doing rather than by reading. Decisions

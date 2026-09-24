@@ -155,6 +155,7 @@ function lerp(a, b, t) { return a + (b - a) * t; }
 // angle lerp live in ./bezier.js so they can be unit-tested without the
 // three.js graph.
 import { bezierPos, segmentControls, lerpAngle } from './bezier.js';
+import { ballPoseAt } from './ball-pose.js';
 
 function applyPose(elapsed) {
   const frames = getFrames();
@@ -175,12 +176,13 @@ function applyPose(elapsed) {
     g.rotation.y = lerpAngle(pa.angle || 0, pb.angle || 0, t);
   }
 
-  // ball & goalie: interpolate if a frame carries their position
+  // ball: carrier-aware (dribble follows the chip, a carrier change flies A -> B); goalie: lerp.
   if (state.ballGroup) {
-    const ba = fa.balls?.main, bb = fb.balls?.main || ba;
-    if (ba) {
-      state.ballGroup.position.x = lerp(ba.x, bb.x, t);
-      state.ballGroup.position.z = lerp(ba.z, bb.z, t);
+    const livePos = (id) => state.chipGroups.find((g) => g.userData?.chip?.id === id)?.position ?? null;
+    const p = ballPoseAt(fa, fb, t, livePos);
+    if (p) {
+      state.ballGroup.position.x = p.x;
+      state.ballGroup.position.z = p.z;
     }
   }
   if (state.goalieGroup) {

@@ -2,10 +2,9 @@
 // further up the rink (+z), and one defender stands between them.
 
 import { emptyDoc, emptyMeta, newId } from './doc.js';
+import { BALL_CARRY_OFFSET } from './ball-pose.js';
 
 export const TUTORIAL_NAME = 'Tutorial: first choreo';
-
-const BALL_CARRY_DZ = 250;   // matches BALL_CARRY_OFFSET in actors.js
 
 export function buildTutorialDoc() {
   const doc = emptyDoc();
@@ -20,6 +19,6 @@ export function buildTutorialDoc() {
   const seven = add(1, 7, 1000, 21000);
   add(1, 9, 4000, 27000);
   add(2, 4, 2500, 24000);
-  scheme.balls.main = { x: seven.x, z: seven.z + BALL_CARRY_DZ, carrier: seven.id };
+  scheme.balls.main = { x: seven.x + BALL_CARRY_OFFSET.x, z: seven.z + BALL_CARRY_OFFSET.z, carrier: seven.id };
   return doc;
 }

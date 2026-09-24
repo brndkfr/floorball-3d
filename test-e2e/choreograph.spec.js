@@ -100,6 +100,35 @@ test.describe('A-BACK-018 choreograph pass-arrow preview', () => {
     await expect(page.locator('#inspectorPassTo [data-pass-to]').first()).toHaveText('#7');
   });
 
+  test('playback flies the ball from the old carrier to the new one', async ({ page }) => {
+    await bootApp(page);
+    await page.waitForFunction(async () => !!(await import('/src/state.js')).state.ballGroup);
+    const zAt = await page.evaluate(async () => {
+      const { ensureDoc } = await import('/src/authoring/doc.js');
+      const { spawnChip } = await import('/src/authoring/chips.js');
+      const { setBallCarrier, tickActors } = await import('/src/authoring/actors.js');
+      const { duplicateFrame, selectFrame } = await import('/src/authoring/frames.js');
+      const { seekTo, stop } = await import('/src/authoring/playback.js');
+      const { state } = await import('/src/state.js');
+      ensureDoc().scheme.players = {};
+      const a = spawnChip({ team: 1, x: 0, z: 10000, number: 7, pushHistory: false });
+      const b = spawnChip({ team: 1, x: 0, z: 20000, number: 9, pushHistory: false });
+      setBallCarrier(a);
+      tickActors();
+      duplicateFrame(0, 1);
+      selectFrame(1);
+      setBallCarrier(b);
+      tickActors();
+      const out = {};
+      for (const ms of [0, 500, 1000]) { seekTo(ms); out[ms] = Math.round(state.ballGroup.position.z); }
+      stop();
+      return out;
+    });
+    expect(zAt[0]).toBe(10250);
+    expect(zAt[500]).toBe(15250);
+    expect(zAt[1000]).toBe(20250);
+  });
+
   test('the carrier chip offers "Pass to" too; other chips do not', async ({ page }) => {
     await bootApp(page);
     const ids = await page.evaluate(async () => {

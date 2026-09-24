@@ -20,9 +20,12 @@ import { scene } from '../scene.js';
 import { ensureDoc } from './doc.js';
 import { saveDoc } from './storage.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from './chips.js';
+import { BALL_CARRY_OFFSET, passFlightPos } from './ball-pose.js';
+import { prefersReducedMotion } from '../reduced-motion.js';
 
-const BALL_CARRY_OFFSET = { x: 0, z: 250 };
 const CARRIER_RING_COLOR = 0xffb347;
+
+let flight = null;   // { from, startMs } while an edit-mode pass is animating
 
 let lastBall = { x: NaN, z: NaN, carrier: undefined, color: undefined };
 let lastGoalie = { x: NaN, z: NaN, angle: NaN };
@@ -77,7 +80,10 @@ scene.add(carrierRing);
 
 export function tickActors() {
   const doc = ensureDoc();
-  if (state.playback?.playing) return;
+  if (state.playback?.playing) {
+    carrierRing.visible = false;   // playback moves chips; the ring would sit at the edit-time spot
+    return false;
+  }
 
   const scheme = doc.scheme;
   if (!scheme.balls) scheme.balls = {};
@@ -87,10 +93,23 @@ export function tickActors() {
     ? state.chipGroups.find((g) => g.userData.chip?.id === carrierId)
     : null;
 
+  // A user hand-off (not a frame switch / undo, which reset lastBall.carrier) gets a visible flight.
+  if (state.ballGroup && carrierChip && lastBall.carrier !== undefined && carrierId !== lastBall.carrier && !prefersReducedMotion()) {
+    flight = { from: { x: state.ballGroup.position.x, z: state.ballGroup.position.z }, startMs: performance.now() };
+  }
+  if (!carrierChip) flight = null;
+
   // Ball carrier tracking: overrides mesh position while attached.
   if (carrierChip && state.ballGroup) {
-    state.ballGroup.position.x = carrierChip.position.x + BALL_CARRY_OFFSET.x;
-    state.ballGroup.position.z = carrierChip.position.z + BALL_CARRY_OFFSET.z;
+    const to = { x: carrierChip.position.x + BALL_CARRY_OFFSET.x, z: carrierChip.position.z + BALL_CARRY_OFFSET.z };
+    let pos = to;
+    if (flight) {
+      const f = passFlightPos(flight.from, to, (performance.now() - flight.startMs) / 1000);
+      pos = f.pos;
+      if (f.done) flight = null;
+    }
+    state.ballGroup.position.x = pos.x;
+    state.ballGroup.position.z = pos.z;
   }
 
   // Orange carrier ring on the carrier chip (visual "who has the ball").
@@ -156,6 +175,7 @@ export function tickActors() {
   }
 
   if (dirty) saveDoc();
+  return flight !== null;
 }
 
 // Snap ball + goalie meshes to the current frame's scheme. Called after
