@@ -623,11 +623,65 @@ Still on the backlog from that exploration:
       instead of using a fixed value.
     - The `web/src` size budget was raised from 0.8 to 1.0 MB in its own
       commit; it is now at 0.79.
-  - Known gaps:
+  - Known gaps (each logged as its own item below):
     - The goalie check uses the goalie's current edit position, not its
-      position at shot time.
-    - There is only one goalie in Mode A.
-    - The ball rises in a straight line, not an arc.
+      position at shot time (**A-BACK-023**).
+    - There is only one goalie in Mode A (**A-BACK-024**).
+    - The ball rises in a straight line, not an arc (**A-BACK-025**).
+- **[A-BACK-023]** [open] **Shot verdict uses the goalie's position at
+  shot time.** Today `shotVerdictFor()` (pass-overlay.js) raycasts
+  against the goalie mesh where it stands in the frame being edited.
+  During playback the goalie is interpolated between frames
+  (`scheme.goalie` per frame, `playback.js`), so a goalie who moves
+  across during the shot is judged at the wrong spot. The verdict can
+  say "open" for a shot he actually covers, or the other way round.
+  Approach:
+  - Add a pure `goaliePoseAt(fa, fb, t)` in ball-pose.js that lerps x/z
+    and does a shortest-path angle lerp, like playback. Evaluate it at
+    the ball's arrival time (`plan.arriveT`).
+  - Run the raycast against the goalie placed at that pose, for example
+    by moving the mesh temporarily and restoring it in `finally`, or on
+    a cached clone. Never leave the edit pose changed.
+  - Tests: a node test for `goaliePoseAt`, and an e2e where the goalie
+    moves from off the line (frame A) onto the line (frame B), so the
+    verdict flips from open to squared up.
+  - Scope: the lane check for field players already uses interpolated
+    positions; only the goalie part is static.
+- **[A-BACK-024]** [open] **A goalie for each goal in Plan mode.** Mode A
+  has a single `state.goalieGroup` and one `scheme.goalie = { x, z,
+  angle }`, standing at goal A by default. A shot at goal B therefore
+  always reads as "open", and the coverage grid and shooting line only
+  know one goalie. Mode B already stores `goalies.home/away`.
+  Approach:
+  - Schema: `scheme.goalies = { A: {x,z,angle}, B: {x,z,angle} }`.
+    `acceptDoc()` migrates the old `scheme.goalie` to `goalies.A`.
+  - A second goalie mesh instance, loaded once and cloned.
+  - `actors.js` syncs and persists both.
+  - Selection, Inspector (rotation) and Q/E work per goalie.
+  - `trajectory.js` / `coverage.js` / `shotVerdictFor()` use the goalie
+    of the target (or shot) goal.
+  - A per-goalie visibility toggle, so plays without a keeper stay
+    possible.
+  - Open question: link goalies to teams (who defends which goal) or
+    keep them per goal only? Per goal is simpler and enough for the
+    verdict.
+  - Tests: migration unit test, per-goal verdict unit test, e2e with a
+    shot at B being judged against goalie B. Depends on nothing; do it
+    before A-BACK-023 so that item is written for two goalies.
+- **[A-BACK-025]** [open] **Shot flight as an arc instead of a straight
+  rise.** `ballPoseAt()` rises linearly from the floor at release to
+  the aim height at the goal line, which reads as a laser, not a shot.
+  Approach:
+  - A pure height profile `shotHeightAt(s, { aimY, distance, speed })`,
+    for example a quadratic that ends exactly at `aimY` on the goal line
+    with a small apex for longer and slower shots. Low aims (a ground
+    shot) stay near the floor.
+  - Keep the verdict consistent: the goalie raycast should then sample
+    the same curve as a short polyline, not the straight line, or the
+    colour can disagree with what the 3D view shows.
+  - Cosmetic, 3D only; top-down is unchanged. Tests: node tests for
+    the profile (endpoints exact, monotonic for low aims, apex bound)
+    and an e2e sampling playback height mid-flight.
 - **[A-BACK-021]** [shipped] **Pass timing: release point, pass
   speed, lane check.** Follow-up to A-BACK-020. There, a pass spanned
   the whole frame, from the passer's frame-A spot to the receiver's
