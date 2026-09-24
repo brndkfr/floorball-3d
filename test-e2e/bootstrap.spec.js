@@ -107,3 +107,22 @@ test('stylesheets load from the origin and keep the current look', async ({ page
   });
   expect(foreign, `requests to other hosts:\n${foreign.join('\n')}`).toEqual([]);
 });
+
+// help.js shows the first-visit tip from an 800 ms timer, over the rink.
+// Specs that dismissed it "if already there" raced it under load and lost
+// rink clicks to it. fixtures.js marks onboarding done before load unless a
+// spec opts in with test.use({ showOnboarding: true }).
+test('the onboarding tip stays away unless a spec opts in', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'load' });
+  await expect(page.locator('#toolPalette')).toBeVisible();
+  await page.waitForTimeout(1500);
+  await expect(page.locator('#onboardingTip')).toHaveCount(0);
+});
+
+test.describe('with showOnboarding', () => {
+  test.use({ showOnboarding: true });
+  test('the tip appears on a first visit', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'load' });
+    await expect(page.locator('#onboardingTip')).toBeVisible();
+  });
+});

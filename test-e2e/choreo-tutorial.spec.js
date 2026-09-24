@@ -80,6 +80,9 @@ async function startFromWelcomeTip(page) {
 }
 
 test.describe('A-BACK-019 guided Choreo tutorial', () => {
+  // These tests start from, or dismiss, the first-visit welcome tip.
+  test.use({ showOnboarding: true });
+
   test('walks all 7 steps in a separate project and returns to the original untouched', async ({ page }) => {
     const before = await startFromWelcomeTip(page);
     expect(await projectName(page)).toBe(TUTORIAL_NAME);
