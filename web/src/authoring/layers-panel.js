@@ -63,6 +63,8 @@ if (!root) throw new Error('layersPanel element missing from index.html');
   }
 
   document.addEventListener('layers:dirty', render);
+  window.addEventListener('ballCarrierChanged', render);
+  window.addEventListener('ballColorChanged', render);
   onSelectionChanged(render);
   // Initial render after the DOM is wired; chips/shapes may still be
   // spawning async but re-fires will catch up via layers:dirty.
@@ -107,13 +109,7 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     const arrows = shapes.filter((s) => s.type === 'arrow');
     const texts = shapes.filter((s) => s.type === 'text');
 
-    if (!players.length && !shapes.length && !cones.length && !balls.length && !goals.length) {
-      const empty = document.createElement('div');
-      empty.className = 'lp-empty';
-      empty.textContent = 'No chips, shapes, cones, balls or goals on this frame yet.';
-      body.appendChild(empty);
-      return;
-    }
+    // No empty state: every frame has a match ball (A-BACK-026), so the Balls section always renders.
 
     renderSection('chips-a', `Team 1 · ${teamA.length}`, teamA.map(chipRow(selId)), (ids) => reorderChips(ids));
     renderSection('chips-b', `Team 2 · ${teamB.length}`, teamB.map(chipRow(selId)), (ids) => reorderChips(ids));
@@ -121,7 +117,7 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     renderSection('arrows', `Arrows · ${arrows.length}`, arrows.map(shapeRow(selId)), (ids) => reorderShapes(ids));
     renderSection('texts', `Text · ${texts.length}`, texts.map(shapeRow(selId)), (ids) => reorderShapes(ids));
     renderSection('cones', `Cones \u00b7 ${cones.length}`, cones.map(coneRow(selId)));
-    renderSection('balls', `Balls \u00b7 ${balls.length}`, balls.map(ballRow(selId)));
+    renderSection('balls', `Balls \u00b7 ${balls.length + 1}`, [matchBallRow(doc), ...balls.map(ballRow(selId))]);
     renderSection('goals', `Goals \u00b7 ${goals.length}`, goals.map(goalRow(selId)));
   }
 
@@ -350,6 +346,34 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     const node = state.extraGoals.find((m) => m.userData.goal?.id === id);
     if (node && state.selected === node) deselectAll();
     removeGoal(id);
+  }
+
+  // The match ball (scheme.balls.main): always first, never deletable, tagged with its carrier.
+  function matchBallRow(doc) {
+    const main = doc.scheme.balls?.main;
+    const row = document.createElement('div');
+    row.className = 'lp-row';
+    row.dataset.matchBall = '';
+    if (state.ballGroup && state.selected === state.ballGroup) row.classList.add('selected');
+
+    const spacer = document.createElement('span');
+    spacer.className = 'lp-eye';
+    row.appendChild(spacer);
+
+    const swatch = document.createElement('span');
+    swatch.className = 'lp-swatch';
+    swatch.style.background = main?.color || BALL_DEFAULT_COLOR;
+    row.appendChild(swatch);
+
+    const carrier = main?.carrier ? doc.scheme.players?.[main.carrier] : null;
+    const name = document.createElement('span');
+    name.className = 'lp-name';
+    name.textContent = carrier ? `Match ball → #${carrier.number}` : 'Match ball';
+    name.title = 'The ball that can be carried, passed and shot';
+    row.appendChild(name);
+
+    row.addEventListener('click', () => { if (state.ballGroup) selectObject(state.ballGroup); });
+    return row;
   }
 
   function ballRow(selId) {

@@ -552,7 +552,9 @@ function handleLeftClick(event, prehitObj) {
     }
     if (!p) return;
     coordClickEl.textContent = `x=${p.x.toFixed(0)}, z=${p.z.toFixed(0)} (tile ${tileLabelFor(p.x, p.z)})`;
-    handleFloorClickForTool(p);
+    // Ball tool on a chip hands that player the ball (A-BACK-026).
+    const chipId = state.activeTool === 'ball' ? chipUnderCursor(event)?.userData.chip?.id ?? null : null;
+    handleFloorClickForTool(p, { chipId, shift: event.shiftKey });
     return;
   }
 

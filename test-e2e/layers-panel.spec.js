@@ -27,7 +27,7 @@ test.describe('A-BACK-001 layers-panel drag reorder', () => {
       spawnChip({ team: 1, x: 2000, z: 0, number: 3, pushHistory: false });
     });
 
-    const rows = page.locator('#layersPanel .lp-section-body > .lp-row');
+    const rows = page.locator('#layersPanel .lp-section-body > .lp-row:not([data-match-ball])');   // match ball row is always there (A-BACK-026)
     await expect(rows).toHaveCount(3);
     await expect(rows.nth(0)).toContainText('#1');
     await expect(rows.nth(2)).toContainText('#3');
@@ -58,7 +58,7 @@ test.describe('A-BACK-001 layers-panel drag reorder', () => {
       addShape({ type: 'zone', kind: 'rect', label: 'Charlie', x: 4000, z: 0, w: 1000, h: 1000, color: '#0000ff' });
     });
 
-    const rows = page.locator('#layersPanel .lp-section-body > .lp-row');
+    const rows = page.locator('#layersPanel .lp-section-body > .lp-row:not([data-match-ball])');   // match ball row is always there (A-BACK-026)
     await expect(rows).toHaveCount(3);
     await expect(rows.nth(0)).toContainText('Alpha');
 

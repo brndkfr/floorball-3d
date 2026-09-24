@@ -682,6 +682,28 @@ Still on the backlog from that exploration:
   - Cosmetic, 3D only; top-down is unchanged. Tests: node tests for
     the profile (endpoints exact, monotonic for low aims, apex bound)
     and an e2e sampling playback height mid-flight.
+- **[A-BACK-026]** [shipped] **Ball tool places the match ball.**
+  The palette's Ball tool only dropped decorative extra balls, so the
+  one ball that can be carried, passed and shot (`scheme.balls.main`,
+  the "match ball") could not be placed from the toolbar, and it looked
+  identical to the extras. Decisions (2026-09-24):
+  - Every frame always has exactly one match ball. The tool moves it;
+    there is no "no ball in this frame" state.
+  - Placing it only changes the current frame, like chips.
+  - `Ball` places the match ball. Multiple balls stay possible via a
+    `Ball ▸ Extra ball` flyout entry (and Shift+click with the Ball
+    tool), but only one is the match ball.
+  Behaviour:
+  - Ball tool click on the floor: match ball moves there, carrier,
+    pass and shot are cleared (same as right-click floor today).
+  - Ball tool click on a chip: that player gets the ball (same as
+    selecting the ball + right-clicking the chip).
+  - Layers panel lists the match ball first under Balls ("Match ball",
+    carrier tag, no delete).
+  - Extra balls get a "Make match ball" Inspector button that swaps
+    position and colour with the match ball.
+  Pure decision + scheme logic in `ball-tool.js` (node-tested), e2e in
+  `test-e2e/ball-tool.spec.js`.
 - **[A-BACK-021]** [shipped] **Pass timing: release point, pass
   speed, lane check.** Follow-up to A-BACK-020. There, a pass spanned
   the whole frame, from the passer's frame-A spot to the receiver's

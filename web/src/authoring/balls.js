@@ -1,4 +1,4 @@
-// Additional ("extra") balls placed by the Ball tool. The main ball
+// Additional ("extra") balls placed by Ball > Extra or Shift+click with the Ball tool. The main ball
 // (state.ballGroup) is still boot-loaded from ball.obj and drives
 // coverage / trajectory / carrier logic; extras are decorative markers
 // coaches use to represent multiple balls in a drill (rebound piles,

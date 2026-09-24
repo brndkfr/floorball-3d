@@ -25,6 +25,8 @@ import { prefersReducedMotion } from '../reduced-motion.js';
 // Cycles (choreograph/frames import actors) are fine: only called at runtime, never at module init.
 import { isChoreoActive, getChoreoStartCarrier, commitChoreo } from './choreograph.js';
 import { duplicateFrame } from './frames.js';
+import { placeMatchBall, swapWithMatchBall } from './ball-tool.js';
+import { rebuildBallsFromDoc } from './balls.js';
 
 const CARRIER_RING_COLOR = 0xffb347;
 
@@ -281,6 +283,29 @@ export function setPassTiming({ releaseT, speedMps } = {}, { history = true } = 
   saveDoc();
   if (history) import('./history.js').then((h) => h.pushHistory());
   window.dispatchEvent(new CustomEvent('passChanged', { detail: { releaseT: releaseT !== undefined } }));
+}
+
+// Ball tool (A-BACK-026): drop the match ball loose at (x, z) in the current frame.
+export function placeMainBall({ x, z }) {
+  placeMatchBall(ensureDoc().scheme, { x, z });
+  flight = null;
+  if (state.ballGroup) state.ballGroup.position.set(x, 0, z);
+  saveDoc();
+  import('./history.js').then((h) => h.pushHistory());
+  window.dispatchEvent(new Event('ballCarrierChanged'));
+}
+
+// Extra ball `id` becomes the match ball; the two trade position and colour.
+export function promoteExtraBall(id) {
+  const shown = state.ballGroup ? { x: state.ballGroup.position.x, z: state.ballGroup.position.z } : { x: 0, z: 0 };
+  if (!swapWithMatchBall(ensureDoc().scheme, id, shown)) return false;
+  flight = null;
+  rebuildBallsFromDoc();
+  applyActorsFromScheme();
+  saveDoc();
+  import('./history.js').then((h) => h.pushHistory());
+  window.dispatchEvent(new Event('ballCarrierChanged'));
+  return true;
 }
 
 export function getBallColor() {

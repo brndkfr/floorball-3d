@@ -7,7 +7,7 @@
 // history + persistence + rebuilds "just work".
 
 import { state } from '../state.js';
-import { onSelectionChanged, deselectAll, labelFor } from '../selection.js';
+import { onSelectionChanged, deselectAll, labelFor, selectObject } from '../selection.js';
 import { chipDataFor } from './chips.js';
 import { shapeDataFor, removeShape, updateShape, updateShapeLabel, TEXT_MIN_SIZE, TEXT_MAX_SIZE, TEXT_DEFAULT_SIZE } from './shapes.js';
 import { coneDataFor, updateCone, CONE_DEFAULT_COLOR } from './cones.js';
@@ -15,7 +15,7 @@ import { ballDataFor, updateBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { goalDataFor, updateGoal, fixedGoalLetterOf, fixedGoalDataFor, updateFixedGoal, GOAL_LABEL_DEFAULT_COLOR, GOAL_LABEL_DEFAULT_SIZE, GOAL_LABEL_MIN_SIZE, GOAL_LABEL_MAX_SIZE } from './goals.js';
 import { arrowRoleColor } from '../tokens.js';
 import { ensureDoc } from './doc.js';
-import { getBallCarrier, setBallCarrier, getBallColor, setBallColor, setPassTiming, shootAt, setShotAim } from './actors.js';
+import { getBallCarrier, setBallCarrier, promoteExtraBall, getBallColor, setBallColor, setPassTiming, shootAt, setShotAim } from './actors.js';
 import { passTargets, passStatus } from './choreo-pass.js';
 import { currentPass, shotVerdictFor } from './pass-overlay.js';
 import { MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS, padToAim, aimToPad } from './ball-pose.js';
@@ -502,8 +502,22 @@ function renderExtraBall(ball) {
   const hint = document.createElement('div');
   hint.className = 'ins-empty';
   hint.style.marginTop = '6px';
-  hint.textContent = 'Extra balls are decorative. Coverage / trajectory analysis still tracks the primary ball only.';
+  hint.textContent = 'Extra balls are decorative. Only the match ball can be carried, passed and shot.';
   body.appendChild(hint);
+
+  // A-BACK-026: swap roles with the match ball (position + colour), then select the match ball.
+  const promoteRow = document.createElement('div');
+  promoteRow.className = 'ins-row';
+  promoteRow.style.marginTop = '6px';
+  const promote = document.createElement('button');
+  promote.className = 'ins-btn';
+  promote.textContent = 'Make match ball';
+  promote.title = 'This ball becomes the match ball; the current match ball takes its place as an extra';
+  promote.addEventListener('click', () => {
+    if (promoteExtraBall(ball.id) && state.ballGroup) selectObject(state.ballGroup);
+  });
+  promoteRow.appendChild(promote);
+  body.appendChild(promoteRow);
 }
 
 // Extra goal: rotation slider (Q/E works too) + label. The two fixed IFF

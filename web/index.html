@@ -807,7 +807,13 @@
   <div class="floatable-grip" title="Drag to move" aria-hidden="true">&#8942;&#8942;</div>
   <button data-tool="" title="Select (Esc)" class="active"><span class="tp-glyph">&#8598;</span>Select</button>
   <button data-tool="chip" title="Chip stamp - click the rink to drop a player"><span class="tp-glyph">&#9679;</span>Chip</button>
-  <button data-tool="ball" title="Ball - click the rink to drop an extra ball (colour from the shape swatch)"><span class="tp-glyph">&#9898;</span>Ball</button>
+  <div class="tp-group">
+    <button data-tool="ball" title="Ball - click to place the match ball, click a chip to give it the ball, Shift+click for an extra ball. Hover for options"><span class="tp-glyph">&#9898;</span>Ball<span class="tp-caret">&#9656;</span></button>
+    <div class="tp-submenu" role="menu">
+      <button data-tool="ball" title="Match ball - the one ball that can be carried, passed and shot"><span class="tp-glyph">&#9898;</span>Match</button>
+      <button data-tool="ball-extra" title="Extra ball - decorative, colour from the shape swatch"><span class="tp-glyph">&#8728;</span>Extra</button>
+    </div>
+  </div>
   <button data-tool="goal" title="Goal - drop an extra goal on the rink (Q/E rotates the selected goal)"><span class="tp-glyph">&#9974;</span>Goal</button>
   <button data-tool="arrow" title="Arrow - click start then end (straight)"><span class="tp-glyph">&#8594;</span>Arrow</button>
   <button data-tool="arrow-curved" title="Curved arrow - click waypoints, Enter / double-click / right-click to finish"><span class="tp-glyph">&#10551;</span>Curved</button>

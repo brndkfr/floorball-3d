@@ -14,8 +14,9 @@ tactical compute layer on it (**Mode B**).
 ### Analytical viewer
 - Full 40x20 m rink with board, markings and two goals, positioned per
   IFF SPCR 011 / SP-METHOD 1506 and the Rules of the Game 2026
-- A 72 mm, 26-hole floorball, freely placeable on the rink (plus extra
-  training balls via the Ball tool, each with its own colour tint)
+- A 72 mm, 26-hole floorball (the match ball), placed with the Ball tool
+  or handed to a player by clicking their chip (plus decorative extra
+  training balls via Ball > Extra, each with its own colour tint)
 - A goalie, switchable between a placeholder figure and a detailed
   textured model, freely movable and rotatable
 - Ball-to-goal trajectory lines (to all 4 corners) plus a dotted
