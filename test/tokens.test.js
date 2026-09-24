@@ -104,5 +104,10 @@ test('index.html loads its stylesheets in cascade order instead of an inline <st
     './src/app.css', './src/tokens.css', './src/theme-broadcast.css',
   ]);
   assert.match(html, /<script type="module" src="src\/ui\/webawesome\.js"><\/script>/, 'Web Awesome loader must be loaded');
-  assert.match(read('src/app.css'), /--hud-accent:\s*#4fe0ff/, 'app.css should carry the moved HUD styles');
+  // The legacy HUD variables now point at Broadcast tokens (S-BACK-021), so
+  // any rule still using them follows the theme instead of the old cyan.
+  const app = read('src/app.css');
+  assert.match(app, /--hud-accent:\s*var\(--fb-text-2\)/, 'app.css should map --hud-accent onto --fb-*');
+  assert.match(app, /--hud-font:\s*var\(--fb-font\)/);
+  assert.doesNotMatch(app, /#4fe0ff|rgba\(79,\s*224,\s*255/i, 'no old HUD cyan left in app.css');
 });

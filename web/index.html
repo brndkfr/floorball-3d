@@ -11,17 +11,17 @@
 </head>
 <body>
 <div id="appTopbar">
-  <span>Floorball Studio</span>
-  <span style="opacity:0.6;">/</span>
-  <span id="appTopbarProjectName" data-dock="project" title="Rename project" style="cursor:pointer; color:#dff9ff; text-transform:none; letter-spacing:0.03em;">
+  <span id="appTopbarProjectName" data-dock="project" title="Rename project">
     <span id="dockProjectName">Untitled</span>
+    <svg class="shell-edit" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 14l9-9 2 2-9 9H4z"/></svg>
   </span>
-  <button data-action="tutorial" title="Guided play: build your first choreographed frame" style="margin-left:auto; background:transparent; color:#ffb347; border:1px solid rgba(255,179,71,0.45); border-radius:6px; padding:3px 10px; font-family:inherit; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer;">Tutorial</button>
+  <button data-action="tutorial" class="shell-btn ghost" title="Guided play: build your first choreographed frame">Tutorial</button>
 </div>
 <div id="appRail">
-  <button data-mode="plan" title="Plan: tactical authoring">Plan</button>
-  <button data-mode="analyze" title="Analyze: photo/video overlay">Analyze</button>
-  <button data-mode="library" data-action="library" title="Library: saved projects">Library</button>
+  <div class="shell-logo" aria-hidden="true">F</div>
+  <button data-mode="plan" title="Plan: tactical authoring"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="14" height="10" rx="2"/><path d="M10 5v10"/><circle cx="10" cy="10" r="2"/></svg>Plan</button>
+  <button data-mode="analyze" title="Analyze: photo/video overlay"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7V5h2M14 5h2v2M16 13v2h-2M6 15H4v-2"/><circle cx="10" cy="10" r="2.4"/></svg>Analyze</button>
+  <button data-mode="library" data-action="library" title="Library: saved projects"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M10 3l7 4-7 4-7-4z"/><path d="M3 11l7 4 7-4"/></svg>Library</button>
 </div>
 <div id="libraryView">Library - coming soon</div>
 <div id="toolPalette" data-view="plan">

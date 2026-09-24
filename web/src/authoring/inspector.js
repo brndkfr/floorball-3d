@@ -21,6 +21,7 @@ import { currentPass, shotVerdictFor } from './pass-overlay.js';
 import { MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS, padToAim, aimToPad } from './ball-pose.js';
 import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED, SHOT_LINE_TOKENS } from '../tokens.js';
 import { makeFloatable } from './floatable.js';
+import { SHELL_RESERVED } from '../ui/shell-metrics.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
 // not here; the Inspector still handles shapes / text / read-only labels.
@@ -54,8 +55,8 @@ render(state.selected);
 
 makeFloatable(inspectorEl, {
   storageKey: 'floorball.inspector.pos',
-  reserved: { top: 48, left: 60, right: 8, bottom: 8 },
-  defaultPos: { x: Math.max(60, window.innerWidth - 244), y: 220 },
+  reserved: SHELL_RESERVED,
+  defaultPos: { x: Math.max(SHELL_RESERVED.left, window.innerWidth - 244), y: 220 },
 });
 
 function render(sel) {

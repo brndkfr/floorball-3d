@@ -1,21 +1,20 @@
-/* App layout + chrome (S-BACK-019). Moved verbatim from the inline <style>
-   in index.html; Broadcast restyling happens here surface by surface in
-   S-BACK-021. Loaded before tokens.css, as the inline block was. */
+/* App layout + chrome. Moved out of the inline <style> in index.html in
+   S-BACK-019, restyled onto the Broadcast --fb-* tokens in S-BACK-021.
+   Loaded before tokens.css, as the inline block was. */
   :root {
-    --hud-accent: #4fe0ff;
-    --hud-accent-dim: rgba(79, 224, 255, 0.35);
-    --hud-bg: rgba(6, 14, 18, 0.72);
-    --hud-font: 'Consolas', 'Courier New', monospace;
+    --hud-accent: var(--fb-text-2);
+    --hud-accent-dim: var(--fb-line);
+    --hud-bg: var(--fb-surf-1);
+    --hud-font: var(--fb-font);
   }
-  html, body { margin:0; padding:0; overflow:hidden; background:#0a0d0f; height:100%; }
+  html, body { margin:0; padding:0; overflow:hidden; background:var(--fb-ink); height:100%; }
 
   /* shared tactical-panel look: angled corner, thin glowing border, glass bg */
   .hud-panel {
-    position:absolute; z-index:10; color:#dff9ff; font-family:var(--hud-font);
+    position:absolute; z-index:10; color:var(--fb-text-1); font-family:var(--hud-font);
     background:var(--hud-bg); border:1px solid var(--hud-accent-dim);
-    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
-    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-    padding:10px 14px; backdrop-filter:blur(2px);
+    border-radius:var(--fb-radius-2);
+    padding:10px 14px;
   }
   .hud-label { color:var(--hud-accent); text-transform:uppercase; letter-spacing:0.06em; font-size:11px; }
 
@@ -27,15 +26,15 @@
   }
   .hud-toggle {
     flex:none; width:20px; height:20px; display:flex; align-items:center; justify-content:center;
-    cursor:pointer; background:rgba(79,224,255,0.08); color:var(--hud-accent);
+    cursor:pointer; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--hud-accent);
     border:1px solid var(--hud-accent-dim); font-family:var(--hud-font); font-size:13px;
     line-height:1; user-select:none;
   }
-  .hud-toggle:hover { background:rgba(79,224,255,0.22); }
+  .hud-toggle:hover { background:var(--fb-line); }
   .hud-panel .hud-body { margin-top:8px; }
   .hud-panel.collapsed .hud-body { display:none; }
 
-  #info { top:52px; left:150px; font-size:12px; line-height:1.5; max-width:340px; }
+  #info { top:calc(var(--shell-topbar) + 8px); left:150px; font-size:12px; line-height:1.5; max-width:340px; }
   #info a { color:var(--hud-accent); }
   /* Pass rink clicks through the (large, expanded) info panel body -
      only the interactive controls capture pointer events. Otherwise
@@ -49,17 +48,17 @@
   }
 
   #status {
-    position:absolute; bottom:12px; left:64px; z-index:10;
-    color:#7fd6e8; font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
+    position:absolute; bottom:12px; left:calc(var(--shell-rail) + 12px); z-index:10;
+    color:var(--fb-text-2); font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
   }
 
   #saveStatus {
     position:absolute; bottom:12px; right:12px; z-index:10;
-    color:#7fd6e8; font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
+    color:var(--fb-text-2); font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
   }
-  #saveStatus.save-error { color:#ff6b6b; font-weight:600; }
+  #saveStatus.save-error { color:var(--fb-danger); font-weight:600; }
 
-  #coords { top:52px; right:12px; font-size:13px; min-width:180px; line-height:1.6; }
+  #coords { top:calc(var(--shell-topbar) + 8px); right:12px; font-size:13px; min-width:180px; line-height:1.6; }
   #coords .label { color:var(--hud-accent); text-transform:uppercase; font-size:10px; letter-spacing:0.05em; }
 
   #goalieLabel {
@@ -67,7 +66,7 @@
     background:var(--hud-bg); color:var(--hud-accent); font-family:var(--hud-font);
     font-size:12px; font-weight:600; letter-spacing:0.03em; padding:3px 10px;
     border:1px solid var(--hud-accent-dim); white-space:nowrap; pointer-events:none;
-    display:none; box-shadow:0 0 8px rgba(79,224,255,0.25);
+    display:none; box-shadow:0 0 8px var(--fb-line);
   }
 
   #crosshair {
@@ -88,13 +87,13 @@
   #layers input[type="checkbox"] { accent-color:var(--hud-accent); }
   #layers button {
     font-family:var(--hud-font); font-size:11px; text-transform:uppercase; letter-spacing:0.04em;
-    cursor:pointer; background:rgba(79,224,255,0.08); color:var(--hud-accent);
+    cursor:pointer; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--hud-accent);
     border:1px solid var(--hud-accent-dim); padding:3px 9px; margin-right:6px;
   }
-  #layers button:hover { background:rgba(79,224,255,0.22); }
+  #layers button:hover { background:var(--fb-line); }
   #layers select {
     font-family:var(--hud-font); font-size:11px; cursor:pointer;
-    background:rgba(79,224,255,0.08); color:#dff9ff;
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
     border:1px solid var(--hud-accent-dim); padding:2px 4px;
   }
   #legend { display:none; margin-top:6px; margin-left:20px; font-size:11px; }
@@ -111,10 +110,10 @@
   #touchControls button {
     touch-action:none; user-select:none; -webkit-user-select:none;
     font-family:var(--hud-font); color:var(--hud-accent);
-    background:rgba(79,224,255,0.12); border:1px solid var(--hud-accent-dim);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--hud-accent-dim);
     border-radius:8px;
   }
-  #touchControls button:active { background:rgba(79,224,255,0.32); }
+  #touchControls button:active { background:var(--fb-line); }
 
   #touchDpad {
     position:absolute; left:16px; bottom:16px; z-index:12;
@@ -139,26 +138,25 @@
     transform:translateX(-50%);
     display:flex; align-items:center; gap:8px;
     padding:8px 12px;
-    background:rgba(20, 16, 10, 0.78);
-    border:1px solid rgba(255, 179, 71, 0.45);
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong);
     border-radius:999px;
-    box-shadow:0 6px 24px rgba(0,0,0,0.35), inset 0 0 16px rgba(255,179,71,0.06);
-    font-family:'Consolas','Courier New',monospace; color:#f7e6cf;
-    backdrop-filter:blur(4px);
+    box-shadow:0 6px 24px rgba(0,0,0,0.35), inset 0 0 16px var(--fb-brand-quiet);
+    font-family:'Consolas','Courier New',monospace; color:var(--fb-text-1);
   }
   #dock .dock-btn {
     height:36px; min-width:36px; padding:0 12px;
-    border:1px solid rgba(255,179,71,0.35);
-    background:rgba(255,179,71,0.08);
-    color:#f7e6cf; font-family:inherit; font-size:12px;
+    border:1px solid var(--fb-line-strong);
+    background:var(--fb-brand-quiet);
+    color:var(--fb-text-1); font-family:inherit; font-size:12px;
     letter-spacing:0.06em; text-transform:uppercase; cursor:pointer;
     border-radius:999px; display:inline-flex; align-items:center; gap:6px;
   }
-  #dock .dock-btn:hover { background:rgba(255,179,71,0.22); }
-  #dock .dock-btn.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
+  #dock .dock-btn:hover { background:var(--fb-brand-quiet); }
+  #dock .dock-btn.active { background:var(--fb-brand); color:#fff; border-color:var(--fb-brand); }
   #dock .dock-btn.stub { opacity:0.35; cursor:not-allowed; }
   #dock .dock-sep {
-    width:1px; height:22px; background:rgba(255,179,71,0.28); margin:0 4px;
+    width:1px; height:22px; background:var(--fb-line-strong); margin:0 4px;
   }
   #dock [data-dock="team"] {
     min-width:44px;
@@ -169,24 +167,24 @@
   #dockOverflow {
     position:absolute; right:0; bottom:48px;
     display:none; flex-direction:column; min-width:140px;
-    background:rgba(20,16,10,0.94);
-    border:1px solid rgba(255,179,71,0.45);
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong);
     border-radius:10px; overflow:hidden;
     box-shadow:0 6px 20px rgba(0,0,0,0.4);
   }
   #dockOverflow.open { display:flex; }
   #dockOverflow button {
-    background:transparent; color:#f7e6cf; border:none; text-align:left;
+    background:transparent; color:var(--fb-text-1); border:none; text-align:left;
     padding:8px 14px; font-family:inherit; font-size:12px;
     letter-spacing:0.05em; text-transform:uppercase; cursor:pointer;
   }
-  #dockOverflow button:hover { background:rgba(255,179,71,0.18); }
+  #dockOverflow button:hover { background:var(--fb-brand-quiet); }
   #dockOverflow hr {
-    border:none; height:1px; background:rgba(255,179,71,0.25); margin:2px 0;
+    border:none; height:1px; background:var(--fb-brand-quiet); margin:2px 0;
   }
   #dock .dock-swatch {
     display:inline-block; width:16px; height:16px; border-radius:50%;
-    background:var(--draw-color, #ffb347);
+    background:var(--draw-color, var(--fb-brand));
     border:1px solid rgba(255,255,255,0.5);
     box-shadow:inset 0 0 0 1px rgba(0,0,0,0.3);
   }
@@ -194,8 +192,8 @@
     position:absolute; bottom:172px; left:50%; transform:translateX(-50%);
     display:none; gap:6px; padding:6px 8px;
     z-index:20;
-    background:rgba(20,16,10,0.94);
-    border:1px solid rgba(255,179,71,0.45);
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong);
     border-radius:999px;
     box-shadow:0 6px 20px rgba(0,0,0,0.4);
   }
@@ -215,26 +213,25 @@
     display:flex; align-items:center; gap:8px;
     max-width:min(96vw, 1400px);
     padding:6px 10px;
-    background:rgba(20,16,10,0.82);
-    border:1px solid rgba(255,179,71,0.35);
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong);
     border-radius:14px;
     box-shadow:0 4px 18px rgba(0,0,0,0.4);
     font-family:'Consolas','Courier New',monospace;
-    color:#f7e6cf;
-    backdrop-filter:blur(4px);
+    color:var(--fb-text-1);
   }
   #timeline .tl-transport { display:flex; align-items:center; gap:4px; }
   #timeline .tl-transport button, #timeline .tl-transport [data-tl="speed"] {
     height:28px; min-width:32px; padding:0 8px;
-    background:rgba(255,179,71,0.08);
-    border:1px solid rgba(255,179,71,0.35);
-    color:#f7e6cf; font-family:inherit; font-size:12px;
+    background:var(--fb-brand-quiet);
+    border:1px solid var(--fb-line-strong);
+    color:var(--fb-text-1); font-family:inherit; font-size:12px;
     border-radius:8px; cursor:pointer;
     display:inline-flex; align-items:center; justify-content:center;
   }
-  #timeline .tl-transport button:hover, #timeline .tl-transport [data-tl="speed"]:hover { background:rgba(255,179,71,0.22); }
-  #timeline .tl-transport button.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
-  #timeline .tl-sep { width:1px; height:22px; background:rgba(255,179,71,0.28); margin:0 4px; }
+  #timeline .tl-transport button:hover, #timeline .tl-transport [data-tl="speed"]:hover { background:var(--fb-brand-quiet); }
+  #timeline .tl-transport button.active { background:var(--fb-brand); color:#fff; border-color:var(--fb-brand); }
+  #timeline .tl-sep { width:1px; height:22px; background:var(--fb-line-strong); margin:0 4px; }
   #timeline .tl-strip {
     display:flex; align-items:stretch; gap:6px;
     overflow-x:auto; overflow-y:hidden;
@@ -245,19 +242,19 @@
     position:relative;
     display:flex; flex-direction:column; align-items:center;
     padding:4px 3px 3px 3px; gap:2px;
-    background:rgba(255,179,71,0.05);
-    border:1px solid rgba(255,179,71,0.30);
+    background:var(--fb-brand-quiet);
+    border:1px solid var(--fb-line-strong);
     border-radius:8px;
     cursor:pointer; flex:none;
     transition:border-color 0.1s, background 0.1s;
   }
-  #timeline .tl-card:hover { background:rgba(255,179,71,0.14); }
-  #timeline .tl-card.editing { border-color:#ffb347; box-shadow:0 0 0 1px rgba(255,179,71,0.5) inset; }
+  #timeline .tl-card:hover { background:var(--fb-brand-quiet); }
+  #timeline .tl-card.editing { border-color:var(--fb-brand); box-shadow:0 0 0 1px var(--fb-line-strong) inset; }
   #timeline .tl-card.playing { border-color:#7ee06b; }
   #timeline .tl-card .tl-num {
-    font-size:12px; font-weight:700; color:#ffb347; line-height:1;
+    font-size:12px; font-weight:700; color:var(--fb-brand); line-height:1;
   }
-  #timeline .tl-card.editing .tl-num { color:#fff2d0; }
+  #timeline .tl-card.editing .tl-num { color:var(--fb-text-1); }
   #timeline .tl-card .tl-thumb {
     display:block; border-radius:3px;
     background:rgba(0,0,0,0.35);
@@ -266,8 +263,8 @@
   }
   #timeline .tl-card .tl-dur {
     width:100%; min-width:36px;
-    background:rgba(0,0,0,0.35); color:#f7e6cf;
-    border:1px solid rgba(255,179,71,0.28); border-radius:4px;
+    background:rgba(0,0,0,0.35); color:var(--fb-text-1);
+    border:1px solid var(--fb-line-strong); border-radius:4px;
     font-family:inherit; font-size:10px; padding:1px 2px; text-align:center;
     -moz-appearance:textfield;
   }
@@ -275,21 +272,21 @@
   #timeline .tl-card .tl-dur::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
   #timeline .tl-card .tl-acts { display:flex; flex-wrap:wrap; justify-content:center; gap:1px; max-width:100%; }
   #timeline .tl-card .tl-acts button {
-    background:transparent; border:none; color:#f7e6cf; cursor:pointer;
+    background:transparent; border:none; color:var(--fb-text-1); cursor:pointer;
     font-family:inherit; font-size:11px; padding:0 3px; line-height:1;
     opacity:0.7;
   }
-  #timeline .tl-card .tl-acts button:hover { opacity:1; color:#ffb347; }
+  #timeline .tl-card .tl-acts button:hover { opacity:1; color:var(--fb-brand); }
   #timeline .tl-card .tl-acts button.lit { opacity:1; color:#7ee06b; }
-  #timeline .tl-card .tl-acts button.lit:hover { color:#ff8080; }
+  #timeline .tl-card .tl-acts button.lit:hover { color:var(--fb-danger); }
   #timeline .tl-card .tl-acts button:disabled { opacity:0.25; cursor:not-allowed; }
 
   #dockStatus {
     position:absolute; left:50%; bottom:130px; transform:translateX(-50%);
     z-index:15; font-family:'Consolas','Courier New',monospace;
-    font-size:11px; color:#f7e6cf; letter-spacing:0.04em;
-    background:rgba(20,16,10,0.85);
-    border:1px solid rgba(255,179,71,0.35);
+    font-size:11px; color:var(--fb-text-1); letter-spacing:0.04em;
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong);
     border-radius:999px; padding:4px 12px;
     pointer-events:none; white-space:nowrap;
     box-shadow:0 2px 8px rgba(0,0,0,0.4);
@@ -306,8 +303,8 @@
   .draw-text-input {
     position:absolute; z-index:20; transform:translate(-50%, -50%);
     font-family:'Consolas','Courier New',monospace; font-size:14px;
-    background:rgba(20,16,10,0.94); color:#f7e6cf;
-    border:1px solid rgba(255,179,71,0.55); border-radius:6px;
+    background:var(--fb-surf-1); color:var(--fb-text-1);
+    border:1px solid var(--fb-line-strong); border-radius:6px;
     padding:4px 8px; outline:none; min-width:140px;
     box-shadow:0 4px 14px rgba(0,0,0,0.5);
   }
@@ -325,17 +322,17 @@
   .photo-landmark-row.armed { color:var(--hud-accent); }
   .photo-landmark-row.placed { opacity:0.6; }
   .photo-landmark-row .err { font-size:10px; color:#c8c8c8; font-variant-numeric:tabular-nums; }
-  .photo-landmark-row .err.worst { color:#ff8080; font-weight:bold; }
-  .photo-landmark-row .err.leverage { color:#ffb060; font-weight:bold; text-decoration:underline dotted; }
+  .photo-landmark-row .err.worst { color:var(--fb-danger); font-weight:bold; }
+  .photo-landmark-row .err.leverage { color:var(--fb-brand); font-weight:bold; text-decoration:underline dotted; }
   #photoReprojError {
     margin-top:4px; font-size:10px; display:inline-block; padding:2px 8px;
     border-radius:10px; background:rgba(255,255,255,0.08);
   }
   #photoReprojError.ok { color:#7ee06b; }
-  #photoReprojError.bad { color:#ff8080; }
+  #photoReprojError.bad { color:var(--fb-danger); }
   .photo-hint-panel {
     display:none; margin-top:6px; padding:8px; border-radius:6px;
-    border:1px solid var(--hud-accent-dim); background:rgba(79,224,255,0.06);
+    border:1px solid var(--hud-accent-dim); background:color-mix(in srgb, var(--fb-text-1) 7%, transparent);
   }
   #photoHintText { font-size:12px; font-weight:bold; color:var(--hud-accent); }
   #photoHintDiagram svg { width:100%; max-width:150px; display:block; margin:6px auto; }
@@ -362,8 +359,8 @@
     color:#a7ecb7;
   }
   #photoStepper .ps-step.active {
-    background:rgba(79,224,255,0.14); border-color:rgba(79,224,255,0.55);
-    color:#cff3fb; font-weight:bold;
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border-color:var(--fb-line-strong);
+    color:var(--fb-text-2); font-weight:bold;
   }
   #photoStepper .ps-step .ps-num {
     display:inline-flex; align-items:center; justify-content:center;
@@ -372,50 +369,69 @@
     color:rgba(255,255,255,0.75);
   }
   #photoStepper .ps-step.complete .ps-num { background:rgba(126,224,106,0.35); color:#0a1a10; }
-  #photoStepper .ps-step.active .ps-num { background:rgba(79,224,255,0.55); color:#031015; }
+  #photoStepper .ps-step.active .ps-num { background:var(--fb-line-strong); color:var(--fb-ink); }
   .ps-cta-banner {
     display:flex; flex-direction:column; gap:4px;
     margin:6px 0; padding:6px 8px; border-radius:6px;
-    background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line);
   }
-  .ps-cta-banner .ps-cta-hint { font-size:11px; color:#cff3fb; }
+  .ps-cta-banner .ps-cta-hint { font-size:11px; color:var(--fb-text-2); }
   .ps-cta-banner .dock-btn { align-self:flex-start; font-size:11px; padding:3px 10px; }
 
-  /* --- App shell: persistent left rail + top bar (docs/plan.md section 2).
-     Fixed, unpositioned ancestors of nothing - all existing HUD panels stay
-     position:absolute against the viewport, so they're unaffected by this. */
+  /* --- App shell (Broadcast, S-BACK-021): 64 px rail + 52 px top bar.
+     Sizes mirror web/src/ui/shell-metrics.js (test/shell-metrics.test.js).
+     Fixed, so the HUD panels keep positioning against the viewport. */
+  :root { --shell-rail: 64px; --shell-topbar: 52px; }
   #appTopbar {
-    position:fixed; left:0; right:0; top:0; height:40px; z-index:29;
-    display:flex; align-items:center; gap:10px; padding:0 14px 0 60px;
-    background:rgba(10,14,17,0.92); border-bottom:1px solid var(--hud-accent-dim);
-    color:var(--hud-accent); font-family:var(--hud-font); font-size:12px;
-    letter-spacing:0.08em; text-transform:uppercase;
+    position:fixed; left:var(--shell-rail); right:0; top:0; height:var(--shell-topbar); z-index:29;
+    box-sizing:border-box; display:flex; align-items:center; gap:16px; padding:0 16px;
+    background:var(--fb-surf-1); border-bottom:1px solid var(--fb-line);
+    color:var(--fb-text-1); font:600 13px/1 var(--fb-font);
   }
+  #appTopbarProjectName {
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    font:700 15px/1 var(--fb-font); letter-spacing:-0.01em; color:var(--fb-text-1);
+  }
+  #appTopbarProjectName .shell-edit { color:var(--fb-text-3); }
+  #appTopbarProjectName:hover .shell-edit { color:var(--fb-text-1); }
+  .shell-crumb { font:500 12px/1 var(--fb-mono); color:var(--fb-text-3); }
+  .shell-btn {
+    height:32px; padding:0 13px; border-radius:var(--fb-radius-1); cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px; font:600 12px/1 var(--fb-font);
+    border:1px solid var(--fb-line-strong); background:var(--fb-surf-2); color:var(--fb-text-1);
+  }
+  .shell-btn.ghost { background:transparent; color:var(--fb-text-2); }
+  .shell-btn.primary { background:var(--fb-brand); border-color:var(--fb-brand); color:#fff; }
+  .shell-btn:hover { border-color:var(--fb-text-3); color:var(--fb-text-1); }
+  .shell-btn:focus-visible, #appRail button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
+  #appTopbar [data-action="tutorial"] { margin-left:auto; }
   #appRail {
-    position:fixed; left:0; top:0; bottom:0; width:52px; z-index:30;
-    display:flex; flex-direction:column; align-items:stretch;
-    padding-top:40px;
-    background:rgba(10,14,17,0.94); border-right:1px solid var(--hud-accent-dim);
+    position:fixed; left:0; top:0; bottom:0; width:var(--shell-rail); z-index:30;
+    box-sizing:border-box; display:flex; flex-direction:column; align-items:stretch; gap:2px;
+    padding:14px 0; background:var(--fb-surf-1); border-right:1px solid var(--fb-line);
+  }
+  #appRail .shell-logo {
+    width:34px; height:34px; margin:0 auto 14px; border-radius:9px; background:var(--fb-brand);
+    display:grid; place-items:center; color:#fff; font:700 15px/1 var(--fb-font);
   }
   #appRail button {
-    background:transparent; border:none; border-left:2px solid transparent;
-    color:#7fd6e8; font-family:var(--hud-font); font-size:10px;
-    text-transform:uppercase; letter-spacing:0.05em; padding:14px 2px;
-    cursor:pointer;
+    position:relative; display:flex; flex-direction:column; align-items:center; gap:4px;
+    padding:9px 0; background:transparent; border:none; cursor:pointer;
+    color:var(--fb-text-3); font:600 9px/1 var(--fb-font); letter-spacing:0.04em;
   }
-  #appRail button:hover { background:rgba(79,224,255,0.08); color:#dff9ff; }
-  #appRail button.active {
-    color:var(--hud-accent); border-left-color:var(--hud-accent);
-    background:rgba(79,224,255,0.14);
+  #appRail button:hover { color:var(--fb-text-2); }
+  #appRail button.active { color:var(--fb-text-1); }
+  #appRail button.active::before {
+    content:""; position:absolute; left:0; top:8px; bottom:8px; width:var(--fb-accent-bar);
+    border-radius:0 2px 2px 0; background:var(--fb-brand);
   }
   @media (pointer: coarse) {
     #appRail, #appTopbar { display:none; }
   }
   #libraryView {
-    position:fixed; inset:40px 0 0 52px; z-index:25; display:none;
+    position:fixed; inset:var(--shell-topbar) 0 0 var(--shell-rail); z-index:25; display:none;
     align-items:center; justify-content:center;
-    background:rgba(6,14,18,0.94); color:#dff9ff;
-    font-family:var(--hud-font); font-size:13px; letter-spacing:0.04em;
+    background:var(--fb-ink); color:var(--fb-text-1); font:400 13px/1.5 var(--fb-font);
   }
 
   /* --- Tool palette: floating vertical strip of Mode-A tools. Position is
@@ -425,18 +441,17 @@
     position:fixed; z-index:26;
     display:flex; flex-direction:column; gap:6px;
     padding:6px 8px 8px;
-    background:rgba(20,16,10,0.82);
-    border:1px solid rgba(255,179,71,0.45); border-radius:12px;
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong); border-radius:12px;
     font-family:var(--hud-font);
     box-shadow:0 6px 24px rgba(0,0,0,0.35);
-    backdrop-filter:blur(4px);
     user-select:none;
   }
   #toolPalette .floatable-grip {
     height:14px; margin:-2px -4px 4px;
     display:flex; align-items:center; justify-content:center;
     cursor:grab;
-    color:rgba(255,179,71,0.55);
+    color:var(--fb-line-strong);
     font-size:14px; line-height:1;
   }
   #toolPalette .floatable-grip:active { cursor:grabbing; }
@@ -444,14 +459,14 @@
   #toolPalette button {
     width:56px; height:52px; display:flex; flex-direction:column;
     align-items:center; justify-content:center; gap:2px;
-    border:1px solid rgba(255,179,71,0.35);
-    background:rgba(255,179,71,0.08);
-    color:#f7e6cf; font-family:inherit; font-size:10px;
+    border:1px solid var(--fb-line-strong);
+    background:var(--fb-brand-quiet);
+    color:var(--fb-text-1); font-family:inherit; font-size:10px;
     text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;
     border-radius:8px;
   }
-  #toolPalette button:hover { background:rgba(255,179,71,0.22); }
-  #toolPalette button.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
+  #toolPalette button:hover { background:var(--fb-brand-quiet); }
+  #toolPalette button.active { background:var(--fb-brand); color:#fff; border-color:var(--fb-brand); }
   #toolPalette .tp-glyph { font-size:20px; line-height:1; }
 
   /* --- Palette submenu: hover the Zone group to open a right-side flyout
@@ -475,8 +490,8 @@
   #toolPalette .tp-submenu {
     position:absolute; left:100%; top:0;
     display:none; flex-direction:column; gap:4px;
-    padding:6px; background:rgba(20,16,10,0.94);
-    border:1px solid rgba(255,179,71,0.45); border-radius:10px;
+    padding:6px; background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong); border-radius:10px;
     box-shadow:0 6px 24px rgba(0,0,0,0.4);
     margin-left:6px;
   }
@@ -494,19 +509,17 @@
   #inspector {
     position:fixed; z-index:27;
     width:220px; padding:10px 12px;
-    background:var(--hud-bg); color:#dff9ff;
+    background:var(--hud-bg); color:var(--fb-text-1);
     border:1px solid var(--hud-accent-dim);
-    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
+    border-radius:var(--fb-radius-2);
     font-family:var(--hud-font); font-size:12px;
-    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-    backdrop-filter:blur(2px);
     user-select:none;
   }
   #inspector .floatable-grip {
     height:12px; margin:-4px -4px 6px;
     display:flex; align-items:center; justify-content:center;
     cursor:grab;
-    color:rgba(79,224,255,0.55);
+    color:var(--fb-line-strong);
     font-size:12px; line-height:1;
   }
   #inspector .floatable-grip:active { cursor:grabbing; }
@@ -524,30 +537,30 @@
   }
   #inspector .ins-team-btn {
     flex:1; height:26px; border-radius:5px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35);
-    background:rgba(79,224,255,0.08); color:#dff9ff;
+    border:1px solid var(--fb-line);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
     font-family:inherit; font-size:11px; letter-spacing:0.04em;
   }
   #inspector .ins-team-btn.active {
-    background:var(--team-color, #ffb347); color:#0a0d0f;
-    border-color:var(--team-color, #ffb347);
+    background:var(--team-color, var(--fb-brand)); color:var(--fb-ink);
+    border-color:var(--team-color, var(--fb-brand));
   }
   #inspector .ins-btn {
     width:100%; height:28px; border-radius:5px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35);
-    background:rgba(79,224,255,0.08); color:#dff9ff;
+    border:1px solid var(--fb-line);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
     font-family:inherit; font-size:11px; text-transform:uppercase;
     letter-spacing:0.06em; margin-top:4px;
   }
-  #inspector .ins-btn:hover { background:rgba(79,224,255,0.22); }
+  #inspector .ins-btn:hover { background:var(--fb-line); }
   #inspector .ins-btn.danger {
-    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1);
-    color:#ffb0b0;
+    border-color:color-mix(in srgb, var(--fb-danger) 50%, transparent); background:color-mix(in srgb, var(--fb-danger) 10%, transparent);
+    color:var(--fb-danger);
   }
-  #inspector .ins-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
+  #inspector .ins-btn.danger:hover { background:color-mix(in srgb, var(--fb-danger) 28%, transparent); color:#fff; }
   #inspector .ins-swatch {
     display:inline-block; width:16px; height:16px; border-radius:50%;
-    background:var(--shape-color, #ffb347);
+    background:var(--shape-color, var(--fb-brand));
     border:1px solid rgba(255,255,255,0.5);
     margin-left:4px; vertical-align:middle;
   }
@@ -557,19 +570,17 @@
     position:fixed; z-index:26;
     width:220px; max-height:45vh; display:flex; flex-direction:column;
     padding:10px 12px;
-    background:var(--hud-bg); color:#dff9ff;
+    background:var(--hud-bg); color:var(--fb-text-1);
     border:1px solid var(--hud-accent-dim);
-    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
+    border-radius:var(--fb-radius-2);
     font-family:var(--hud-font); font-size:12px;
-    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-    backdrop-filter:blur(2px);
     user-select:none;
   }
   #layersPanel .floatable-grip {
     height:12px; margin:-4px -4px 6px;
     display:flex; align-items:center; justify-content:center;
     cursor:grab;
-    color:rgba(79,224,255,0.55);
+    color:var(--fb-line-strong);
     font-size:12px; line-height:1;
   }
   #layersPanel .floatable-grip:active { cursor:grabbing; }
@@ -594,7 +605,7 @@
   #layersPanel .lp-section-head {
     font-size:10px; color:var(--hud-accent); text-transform:uppercase;
     letter-spacing:0.05em; cursor:pointer; user-select:none;
-    padding:3px 0; border-bottom:1px solid rgba(79,224,255,0.15);
+    padding:3px 0; border-bottom:1px solid color-mix(in srgb, var(--fb-text-1) 7%, transparent);
   }
   #layersPanel .lp-section-head::before {
     content:'\25BE'; display:inline-block; width:12px;
@@ -606,16 +617,16 @@
     padding:3px 4px; cursor:pointer;
     border-radius:3px;
   }
-  #layersPanel .lp-row:hover { background:rgba(79,224,255,0.1); }
+  #layersPanel .lp-row:hover { background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); }
   #layersPanel .lp-row.selected {
-    background:rgba(79,224,255,0.2);
+    background:var(--fb-line);
     box-shadow:inset 0 0 0 1px var(--hud-accent);
   }
   #layersPanel .lp-row.lp-dragging { opacity:0.4; }
   #layersPanel .lp-row.lp-drop-before { box-shadow:inset 0 2px 0 0 var(--hud-accent); }
   #layersPanel .lp-row.lp-drop-after { box-shadow:inset 0 -2px 0 0 var(--hud-accent); }
   #layersPanel .lp-eye {
-    background:transparent; border:none; color:#dff9ff;
+    background:transparent; border:none; color:var(--fb-text-1);
     cursor:pointer; padding:0; width:16px; font-size:11px; line-height:1;
     opacity:0.85;
   }
@@ -631,18 +642,18 @@
   }
   #layersPanel .lp-name-input {
     flex:1; min-width:0; height:18px; padding:0 4px; font-size:11px;
-    font-family:inherit; color:#dff9ff;
-    background:rgba(79,224,255,0.12);
+    font-family:inherit; color:var(--fb-text-1);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent);
     border:1px solid var(--hud-accent-dim); border-radius:3px; outline:none;
   }
-  #layersPanel .lp-name-input:focus { border-color:var(--hud-accent); background:rgba(79,224,255,0.2); }
+  #layersPanel .lp-name-input:focus { border-color:var(--hud-accent); background:var(--fb-line); }
   #layersPanel .lp-trash {
-    background:transparent; border:none; color:#dff9ff;
+    background:transparent; border:none; color:var(--fb-text-1);
     cursor:pointer; padding:0; width:14px; font-size:12px; line-height:1;
     opacity:0; flex-shrink:0;
   }
   #layersPanel .lp-row:hover .lp-trash { opacity:0.6; }
-  #layersPanel .lp-trash:hover { opacity:1 !important; color:#ffb0b0; }
+  #layersPanel .lp-trash:hover { opacity:1 !important; color:var(--fb-danger); }
   #layersPanel .lp-role-badge {
     display:inline-block; width:14px; height:14px; line-height:14px;
     text-align:center; font-size:9px; font-weight:bold;
@@ -662,11 +673,10 @@
     position:absolute; z-index:20;
     transform:translate(-50%, calc(-100% - 10px));
     min-width:120px; padding:6px 8px;
-    background:var(--hud-bg); color:#dff9ff;
+    background:var(--hud-bg); color:var(--fb-text-1);
     border:1px solid var(--hud-accent-dim);
-    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px rgba(79,224,255,0.15);
+    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px color-mix(in srgb, var(--fb-text-1) 7%, transparent);
     font-family:var(--hud-font); font-size:12px;
-    clip-path:polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
     pointer-events:auto;
   }
   #chipPopover.collapsed { min-width:0; padding:4px 8px; }
@@ -688,37 +698,37 @@
   #chipPopover .pop-label-row { margin-top:6px; }
   #chipPopover .pop-label-input {
     width:100%; box-sizing:border-box; height:24px;
-    background:rgba(79,224,255,0.08);
-    border:1px solid rgba(79,224,255,0.35);
-    color:#dff9ff; padding:2px 6px;
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent);
+    border:1px solid var(--fb-line);
+    color:var(--fb-text-1); padding:2px 6px;
     font-family:inherit; font-size:11px;
     border-radius:4px;
   }
   #chipPopover .pop-label-input:focus {
     outline:none; border-color:var(--hud-accent);
-    background:rgba(79,224,255,0.14);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent);
   }
   #chipPopover .pop-row { display:flex; gap:6px; margin-top:6px; }
   #chipPopover .pop-team-btn {
     flex:1; height:24px; border-radius:4px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35);
-    background:rgba(79,224,255,0.08); color:#dff9ff;
+    border:1px solid var(--fb-line);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
     font-family:inherit; font-size:11px; letter-spacing:0.04em;
   }
   #chipPopover .pop-team-btn.active {
-    background:var(--team-color, #ffb347); color:#0a0d0f;
-    border-color:var(--team-color, #ffb347);
+    background:var(--team-color, var(--fb-brand)); color:var(--fb-ink);
+    border-color:var(--team-color, var(--fb-brand));
   }
   #chipPopover .pop-role-row { gap:4px; }
   #chipPopover .pop-role-btn {
     flex:1; height:32px; border-radius:4px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.25);
-    background:rgba(79,224,255,0.05); color:#dff9ff;
+    border:1px solid var(--fb-line);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
     font-family:inherit; font-size:10px; letter-spacing:0.04em;
     padding:2px;
     display:flex; align-items:center; justify-content:center;
   }
-  #chipPopover .pop-role-btn:hover { background:rgba(79,224,255,0.15); }
+  #chipPopover .pop-role-btn:hover { background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); }
   #chipPopover .pop-role-btn canvas { display:block; }
   #chipPopover .pop-role-btn[data-role="defender"].active {
     background:rgba(59,91,219,0.3); border-color:#3b5bdb;
@@ -731,43 +741,42 @@
   }
   #chipPopover .pop-btn {
     width:100%; height:24px; border-radius:4px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35);
-    background:rgba(79,224,255,0.08); color:#dff9ff;
+    border:1px solid var(--fb-line);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
     font-family:inherit; font-size:11px; text-transform:uppercase;
     letter-spacing:0.06em; margin-top:6px;
   }
   #chipPopover .pop-btn.danger {
-    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1);
-    color:#ffb0b0;
+    border-color:color-mix(in srgb, var(--fb-danger) 50%, transparent); background:color-mix(in srgb, var(--fb-danger) 10%, transparent);
+    color:var(--fb-danger);
   }
-  #chipPopover .pop-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
+  #chipPopover .pop-btn.danger:hover { background:color-mix(in srgb, var(--fb-danger) 28%, transparent); color:#fff; }
 
   /* Marquee (box) multi-select rubber-band + bulk action bar. */
   #marqueeRect {
     position:absolute; z-index:19; pointer-events:none;
-    border:1px solid var(--hud-accent, #4fe0ff);
-    background:rgba(79,224,255,0.12);
+    border:1px solid var(--hud-accent);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent);
   }
   #chipBulkBar {
     position:fixed; left:50%; bottom:96px; transform:translateX(-50%);
     z-index:21; display:none; gap:8px; align-items:center;
-    padding:8px 12px; background:var(--hud-bg); color:#dff9ff;
+    padding:8px 12px; background:var(--hud-bg); color:var(--fb-text-1);
     border:1px solid var(--hud-accent-dim);
-    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px rgba(79,224,255,0.15);
+    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px color-mix(in srgb, var(--fb-text-1) 7%, transparent);
     font-family:var(--hud-font); font-size:12px; pointer-events:auto;
-    clip-path:polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
   }
   #chipBulkBar .bulk-count { letter-spacing:0.04em; opacity:0.9; margin-right:2px; }
   #chipBulkBar .bulk-btn {
     height:24px; min-width:36px; padding:0 10px; border-radius:4px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35); background:rgba(79,224,255,0.08);
-    color:#dff9ff; font-family:inherit; font-size:11px; letter-spacing:0.04em;
+    border:1px solid var(--fb-line); background:color-mix(in srgb, var(--fb-text-1) 7%, transparent);
+    color:var(--fb-text-1); font-family:inherit; font-size:11px; letter-spacing:0.04em;
   }
-  #chipBulkBar .bulk-btn:hover { background:rgba(79,224,255,0.16); }
+  #chipBulkBar .bulk-btn:hover { background:var(--fb-line); }
   #chipBulkBar .bulk-btn.danger {
-    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1); color:#ffb0b0;
+    border-color:color-mix(in srgb, var(--fb-danger) 50%, transparent); background:color-mix(in srgb, var(--fb-danger) 10%, transparent); color:var(--fb-danger);
   }
-  #chipBulkBar .bulk-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
+  #chipBulkBar .bulk-btn.danger:hover { background:color-mix(in srgb, var(--fb-danger) 28%, transparent); color:#fff; }
 
   #layersPanel .lp-marquee-toggle {
     display:flex; align-items:center; gap:3px; margin-left:auto; margin-right:6px;
