@@ -161,6 +161,19 @@ test('selectTests: module-init changes force a full run, inert top-level hunks d
   assert.equal(fn.full, null);
 });
 
+test('selectTests: an insertion right after a function\'s closing line is top-level, not inside it', () => {
+  // Inserted after line 10 (f's closing brace) and after line 40 (end of file).
+  const after = selectTests(sampleMap(), [mod('web/src/a.js', [hunk(10, 0, [], ['export function k() {', '  return 1;', '}'])])]);
+  assert.equal(after.full, null);
+  assert.deepEqual(after.uncovered, []);
+  assert.ok(!after.targets.includes('test-e2e/one.spec.js:12'));
+  const init = selectTests(sampleMap(), [mod('web/src/a.js', [hunk(40, 0, [], ['init();'])])]);
+  assert.match(init.full, /module-init/);
+  // An insertion strictly inside f still belongs to f.
+  const inside = selectTests(sampleMap(), [mod('web/src/a.js', [hunk(7, 0, [], ['  y();'])])]);
+  assert.ok(inside.targets.includes('test-e2e/one.spec.js:12'));
+});
+
 test('selectTests: full-run paths, deleted modules; edited specs run whole; docs are ignored', () => {
   assert.match(selectTests(sampleMap(), [{ path: 'web/index.html', status: 'modified', hunks: [] }]).full, /web\/index\.html/);
   assert.match(selectTests(sampleMap(), [{ path: 'web/src/a.js', status: 'deleted', hunks: [] }]).full, /deleted/);

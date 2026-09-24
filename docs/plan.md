@@ -2466,7 +2466,7 @@ added.
   on `623e61b`, green after), `photo-stepper.spec.js` covers the
   round trip. Verified: unit 237/237, e2e 19/19, build + size OK,
   live-browser Plan/Analyze round trip with a cached photo.
-- **[S-BACK-018]** [in-progress] **Run only the e2e tests a change
+- **[S-BACK-018]** [shipped] **Run only the e2e tests a change
   affects (locally); CI stays full.** The full suite (58 tests, every
   one boots the whole WebGL app) took 8.8 min locally with 6 workers
   and produced 18 load-induced timeouts that all passed on a serial

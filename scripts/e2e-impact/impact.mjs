@@ -179,10 +179,13 @@ export function selectTests(map, changes) {
       const points = hunk.oldCount > 0
         ? Array.from({ length: hunk.oldCount }, (_, k) => hunk.oldStart + k)
         : [Math.max(hunk.oldStart, 1)];
+      // A pure insertion goes *after* old line `line`: it is inside a function only
+      // if that function continues past it (not after its closing line).
+      const insertion = hunk.oldCount === 0;
       for (const line of points) {
         const around = fileMap.fns
           .map((fn, i) => ({ s: fn[0], e: fn[1], top: fn[2] === 1, hits: fileMap.hits[i] }))
-          .filter((fn) => fn.s <= line && line <= fn.e)
+          .filter((fn) => fn.s <= line && (insertion ? line < fn.e : line <= fn.e))
           .sort((a, b) => (a.e - a.s) - (b.e - b.s));
         if (!around.length || around[0].top) {
           if (isInertTopLevelHunk(hunk, { path: change.path, known })) continue;

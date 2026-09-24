@@ -12,7 +12,7 @@ const STALE_AFTER = 30;   // commits; an estimate of when paths drift enough to 
 const args = process.argv.slice(2);
 const dry = args.includes('--dry');
 const passthrough = args.includes('--') ? args.slice(args.indexOf('--') + 1) : [];
-const git = (cmd) => execSync(`git ${cmd}`, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+const git = (cmd) => execSync(`git ${cmd}`, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] });
 
 function decide() {
   if (!fs.existsSync(MAP)) return { full: 'no impact map yet - run `pnpm test:e2e:record` once', targets: [] };
