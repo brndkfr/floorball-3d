@@ -14,8 +14,6 @@ import { coneDataFor, setConeHidden, updateCone, removeCone, CONE_DEFAULT_COLOR 
 import { ballDataFor, setBallHidden, updateBall, removeBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { goalDataFor, setGoalHidden, updateGoal, removeGoal } from './goals.js';
 import { onSelectionChanged, selectObject, deselectAll } from '../selection.js';
-import { makeFloatable } from './floatable.js';
-import { SHELL_RESERVED } from '../ui/shell-metrics.js';
 
 // Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
 const root = document.getElementById('layersPanel');
@@ -552,8 +550,3 @@ if (!root) throw new Error('layersPanel element missing from index.html');
   }
 }
 
-makeFloatable(root, {
-  storageKey: 'floorball.layersPanel.pos',
-  reserved: SHELL_RESERVED,
-  defaultPos: { x: Math.max(SHELL_RESERVED.left, window.innerWidth - 244), y: 480 },
-});

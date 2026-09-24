@@ -20,10 +20,14 @@ test('app.css uses the same shell size', () => {
   assert.match(css, /--shell-topbar:\s*52px/);
 });
 
-test('floating panels reserve the shell via SHELL_RESERVED, not literals', () => {
-  for (const f of ['authoring/tool-palette.js', 'authoring/inspector.js', 'authoring/layers-panel.js']) {
-    const src = read(f);
-    assert.doesNotMatch(src, /reserved:\s*\{\s*top:/, `${f} hard-codes reserved edges`);
-    assert.match(src, /SHELL_RESERVED/, `${f} should use SHELL_RESERVED`);
+test('the floating tool palette reserves the shell via SHELL_RESERVED, not literals', () => {
+  const src = read('authoring/tool-palette.js');
+  assert.doesNotMatch(src, /reserved:\s*\{\s*top:/, 'tool-palette.js hard-codes reserved edges');
+  assert.match(src, /SHELL_RESERVED/);
+});
+
+test('Inspector and Layers are docked in the right panel, not floating', () => {
+  for (const f of ['authoring/inspector.js', 'authoring/layers-panel.js']) {
+    assert.doesNotMatch(read(f), /makeFloatable/, `${f} should no longer float`);
   }
 });

@@ -34,19 +34,6 @@
   .hud-panel .hud-body { margin-top:8px; }
   .hud-panel.collapsed .hud-body { display:none; }
 
-  #info { top:calc(var(--shell-topbar) + 8px); left:150px; font-size:12px; line-height:1.5; max-width:340px; }
-  #info a { color:var(--hud-accent); }
-  /* Pass rink clicks through the (large, expanded) info panel body -
-     only the interactive controls capture pointer events. Otherwise
-     right-click move-commands on the floor behind the panel silently
-     hit the panel instead. Header + layer toggles + buttons are opted
-     back in below. */
-  #info { pointer-events:none; }
-  #info .hud-header, #info .hud-toggle,
-  #info #layers, #info label, #info input, #info select, #info button, #info a {
-    pointer-events:auto;
-  }
-
   #status {
     position:absolute; bottom:12px; left:calc(var(--shell-rail) + 12px); z-index:10;
     color:var(--fb-text-2); font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
@@ -79,9 +66,6 @@
   #crosshair::before { top:50%; left:0; width:100%; height:1px; transform:translateY(-50%); }
   #crosshair::after { left:50%; top:0; height:100%; width:1px; transform:translateX(-50%); }
 
-  #layers {
-    margin-top:8px; padding-top:8px; border-top:1px solid var(--hud-accent-dim);
-  }
   #layers .layer-row { margin:4px 0; }
   #layers label { cursor:pointer; user-select:none; }
   #layers input[type="checkbox"] { accent-color:var(--hud-accent); }
@@ -134,7 +118,7 @@
      from the analytical HUD panels (rounded pills, amber accent) so
      "author" and "analyse" read as different modes of use. */
   #dock {
-    position:absolute; left:50%; bottom:18px; z-index:14;
+    position:absolute; left:var(--stage-center); bottom:18px; z-index:14;
     transform:translateX(-50%);
     display:flex; align-items:center; gap:8px;
     padding:8px 12px;
@@ -142,7 +126,7 @@
     border:1px solid var(--fb-line-strong);
     border-radius:999px;
     box-shadow:0 6px 24px rgba(0,0,0,0.35), inset 0 0 16px var(--fb-brand-quiet);
-    font-family:'Consolas','Courier New',monospace; color:var(--fb-text-1);
+    font-family:var(--fb-mono); color:var(--fb-text-1);
   }
   #dock .dock-btn {
     height:36px; min-width:36px; padding:0 12px;
@@ -208,16 +192,16 @@
   /* --- Timeline strip (A4): sits above the dock, holds playback transport
      and frame cards. Same amber-authoring language as the dock. */
   #timeline {
-    position:absolute; left:50%; bottom:70px; z-index:13;
+    position:absolute; left:var(--stage-center); bottom:70px; z-index:13;
     transform:translateX(-50%);
     display:flex; align-items:center; gap:8px;
-    max-width:min(96vw, 1400px);
+    max-width:min(var(--stage-width), 1400px); box-sizing:border-box;
     padding:6px 10px;
     background:var(--fb-surf-1);
     border:1px solid var(--fb-line-strong);
     border-radius:14px;
     box-shadow:0 4px 18px rgba(0,0,0,0.4);
-    font-family:'Consolas','Courier New',monospace;
+    font-family:var(--fb-mono);
     color:var(--fb-text-1);
   }
   #timeline .tl-transport { display:flex; align-items:center; gap:4px; }
@@ -282,8 +266,8 @@
   #timeline .tl-card .tl-acts button:disabled { opacity:0.25; cursor:not-allowed; }
 
   #dockStatus {
-    position:absolute; left:50%; bottom:130px; transform:translateX(-50%);
-    z-index:15; font-family:'Consolas','Courier New',monospace;
+    position:absolute; left:var(--stage-center); bottom:130px; transform:translateX(-50%);
+    z-index:15; font-family:var(--fb-mono);
     font-size:11px; color:var(--fb-text-1); letter-spacing:0.04em;
     background:var(--fb-surf-1);
     border:1px solid var(--fb-line-strong);
@@ -302,7 +286,7 @@
   /* inline text input for the text shape tool - anchored at the click point */
   .draw-text-input {
     position:absolute; z-index:20; transform:translate(-50%, -50%);
-    font-family:'Consolas','Courier New',monospace; font-size:14px;
+    font-family:var(--fb-mono); font-size:14px;
     background:var(--fb-surf-1); color:var(--fb-text-1);
     border:1px solid var(--fb-line-strong); border-radius:6px;
     padding:4px 8px; outline:none; min-width:140px;
@@ -382,6 +366,13 @@
      Sizes mirror web/src/ui/shell-metrics.js (test/shell-metrics.test.js).
      Fixed, so the HUD panels keep positioning against the viewport. */
   :root { --shell-rail: 64px; --shell-topbar: 52px; }
+  /* Stage = the canvas area between the rail and the docked right panel;
+     the timeline, dock and dock status centre on it (Plan-only, like the
+     panel). --right-panel is set with #rightPanel below. */
+  :root {
+    --stage-center: calc(var(--shell-rail) + (100vw - var(--shell-rail) - var(--right-panel)) / 2);
+    --stage-width: calc(100vw - var(--shell-rail) - var(--right-panel) - 32px);
+  }
   #appTopbar {
     position:fixed; left:var(--shell-rail); right:0; top:0; height:var(--shell-topbar); z-index:29;
     box-sizing:border-box; display:flex; align-items:center; gap:16px; padding:0 16px;
@@ -511,30 +502,50 @@
     #toolPalette { display:none; }
   }
 
-  /* --- Inspector: selection-driven props panel, floating like the palette.
-     One above #layersPanel: when the two floating panels overlap, the one being edited wins. */
-  #inspector {
-    position:fixed; z-index:27;
-    width:220px; padding:10px 12px;
-    background:var(--hud-bg); color:var(--fb-text-1);
-    border:1px solid var(--hud-accent-dim);
-    border-radius:var(--fb-radius-2);
-    font-family:var(--hud-font); font-size:12px;
-    user-select:none;
+  /* --- Right panel (Broadcast, S-BACK-021): Inspector, Layers, View and
+     the Coordinates readout stacked in one column docked under the top bar,
+     as in the design canvas "Plan". Replaces the floating panels. */
+  :root { --right-panel: 320px; }
+  #rightPanel {
+    position:fixed; top:var(--shell-topbar); right:0; bottom:0; width:var(--right-panel); z-index:26;
+    box-sizing:border-box; display:flex; flex-direction:column; overflow-y:auto;
+    background:var(--fb-surf-1); border-left:1px solid var(--fb-line);
+    color:var(--fb-text-1); font:400 12px/1.45 var(--fb-font);
+    user-select:none; scrollbar-width:thin;
   }
-  #inspector .floatable-grip {
-    height:12px; margin:-4px -4px 6px;
-    display:flex; align-items:center; justify-content:center;
-    cursor:grab;
-    color:var(--fb-line-strong);
-    font-size:12px; line-height:1;
+  #rightPanel .rp-section { padding:16px; border-bottom:1px solid var(--fb-line); }
+  #appTopbar [data-action="toggle-panel"] { display:none; }
+  .shell-icon { padding:0 9px; }
+  /* Design canvas breakpoint: below 1200 px the panel slides over the stage
+     from the right instead of taking a column; the stage keeps its width. */
+  @media (max-width: 1199px) {
+    :root { --right-panel: 0px; }
+    #rightPanel {
+      width:320px; transform:translateX(100%); visibility:hidden;
+      transition:transform 180ms ease, visibility 0s linear 180ms;
+      box-shadow:-18px 0 40px rgba(0,0,0,0.45);
+    }
+    body.right-panel-open #rightPanel { transform:none; visibility:visible; transition:transform 180ms ease; }
+    #appTopbar [data-action="toggle-panel"] { display:inline-flex; }
   }
-  #inspector .floatable-grip:active { cursor:grabbing; }
-  #inspector.dragging { opacity:0.9; box-shadow:0 10px 32px rgba(0,0,0,0.5); }
-  #inspector .ins-title {
-    font-size:11px; color:var(--hud-accent); text-transform:uppercase;
-    letter-spacing:0.08em; margin-bottom:8px;
+  @media (prefers-reduced-motion: reduce) { #rightPanel { transition:none !important; } }
+  #rightPanel .rp-head, #inspector .ins-title, #layersPanel .lp-head {
+    display:flex; align-items:center; gap:8px; margin-bottom:12px;
   }
+  #rightPanel .rp-title, #inspector .ins-title, #layersPanel .lp-title {
+    font:600 10px/1 var(--fb-font); letter-spacing:0.1em; text-transform:uppercase; color:var(--fb-text-2);
+  }
+  #rightPanel .rp-title::before, #inspector .ins-title::before, #layersPanel .lp-title::before {
+    content:""; display:inline-block; width:var(--fb-accent-bar); height:12px; margin-right:8px;
+    border-radius:2px; background:var(--fb-brand); vertical-align:-2px;
+  }
+  #viewPanel #layers { position:static; margin:0; }
+  #viewPanel .layer-row { margin:0 0 8px; }
+  #viewPanel .rp-hint { color:var(--fb-text-3); font-size:11px; line-height:1.45; margin:3px 0 0 22px; }
+  #viewPanel .rp-actions { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 0 22px; }
+  #viewPanel .rp-indent { margin-left:22px; }
+  #viewPanel #goalieModelSelect { margin-left:8px; }
+  #rightPanel #coords { position:static; margin:0; border:none; border-radius:0; background:transparent; min-width:0; padding:16px; }
   #inspector .ins-heading { font-size:14px; margin-bottom:10px; color:#ffffff; }
   #inspector .ins-empty { opacity:0.7; font-size:11px; line-height:1.5; }
   #inspector .ins-row { margin-bottom:8px; display:flex; align-items:center; gap:6px; }
@@ -573,33 +584,8 @@
   }
 
   /* --- Layers panel: outline of everything in the current frame. */
-  #layersPanel {
-    position:fixed; z-index:26;
-    width:220px; max-height:45vh; display:flex; flex-direction:column;
-    padding:10px 12px;
-    background:var(--hud-bg); color:var(--fb-text-1);
-    border:1px solid var(--hud-accent-dim);
-    border-radius:var(--fb-radius-2);
-    font-family:var(--hud-font); font-size:12px;
-    user-select:none;
-  }
-  #layersPanel .floatable-grip {
-    height:12px; margin:-4px -4px 6px;
-    display:flex; align-items:center; justify-content:center;
-    cursor:grab;
-    color:var(--fb-line-strong);
-    font-size:12px; line-height:1;
-  }
-  #layersPanel .floatable-grip:active { cursor:grabbing; }
-  #layersPanel.dragging { opacity:0.9; box-shadow:0 10px 32px rgba(0,0,0,0.5); }
-  #layersPanel .lp-head {
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:8px;
-  }
-  #layersPanel .lp-title {
-    font-size:11px; color:var(--hud-accent); text-transform:uppercase;
-    letter-spacing:0.08em;
-  }
+  #layersPanel { display:flex; flex-direction:column; min-height:120px; }
+  #layersPanel .lp-title { flex:1; }
   #layersPanel .lp-toggle {
     background:transparent; border:none; color:var(--hud-accent);
     cursor:pointer; font-size:14px; line-height:1; padding:0 4px;

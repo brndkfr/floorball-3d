@@ -22,6 +22,7 @@
     <button data-view-mode="2d" aria-pressed="false" title="Top-down 2D view">2D</button>
     <button data-view-mode="3d" aria-pressed="true" title="First-person 3D view"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M10 3l7 4v6l-7 4-7-4V7z"/><path d="M10 3v14M3 7l7 4 7-4"/></svg>3D</button>
   </span>
+  <button data-action="toggle-panel" class="shell-btn ghost shell-icon" data-view="plan" aria-controls="rightPanel" aria-expanded="false" title="Show Inspector, Layers and View" aria-label="Inspector, layers and view"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2"/><path d="M12 4v12"/></svg></button>
   <button data-action="export-video" class="shell-btn primary" data-view="plan" title="Export the play as a video or image"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M10 13V4M6 7l4-3 4 3M4 14v2h12v-2"/></svg>Export</button>
 </div>
 <div id="appRail">
@@ -64,51 +65,33 @@
     </div>
   </div>
 </div>
-<div id="inspector" data-view="plan">
-  <div class="floatable-grip" title="Drag to move" aria-hidden="true">&#8942;&#8942;</div>
-  <div class="ins-title">Inspector</div>
-  <div id="inspectorBody"><div class="ins-empty">Nothing selected. Click a chip, shape, ball, goalie or goal - or use a tool from the palette.</div></div>
-</div>
-<div id="layersPanel" data-view="plan">
-  <div class="floatable-grip" title="Drag to move" aria-hidden="true">&#8942;&#8942;</div>
-  <div class="lp-head">
-    <span class="lp-title">Layers</span>
-    <label class="lp-marquee-toggle" title="Box-select drag also grabs shapes, not just chips">
-      <input type="checkbox" id="marqueeShapesToggle"> shapes
-    </label>
-    <label class="lp-marquee-toggle" title="Show player labels in the scene (falls back to number when off)">
-      <input type="checkbox" id="labelsVisibleToggle"> labels
-    </label>
-    <button class="lp-toggle" title="Collapse/expand" aria-label="Collapse layers panel">&minus;</button>
-  </div>
-  <div class="lp-body"></div>
-</div>
-<canvas id="photo-canvas"></canvas>
-<div id="info" class="hud-panel" data-view="plan">
-  <div class="hud-header">
-    <span class="hud-title">IFF Floorball Rink &ndash; 40 &times; 20 m</span>
-    <button class="hud-toggle" data-panel="info" title="Collapse/expand" aria-label="Collapse info panel">&minus;</button>
-  </div>
-  <div class="hud-body">
-    Board, markings and two 160&times;115&nbsp;cm goals, per IFF SPCR&nbsp;011 /
-    SP-METHOD&nbsp;1506 and the Rules of the Game 2026.<br>
-    <b>2D Plan mode (RTS controls):</b> Left-click = select &middot; Left-drag chip = move &middot;
-    Right-click floor = move-command to selected chip / ball / goalie &middot;
-    Right-drag / middle-drag = pan &middot; Wheel = zoom &middot;
-    Arrows / WASD = pan the camera &middot; F = fit rink to view<br>
-    <b>3D walking view:</b> Left-drag = look around &middot; Scroll = zoom &middot;
-    Arrows / WASD = walk<br>
-    <b>Shared:</b> Tab / Shift+Tab = cycle selection &middot; Esc = cancel tool / deselect &middot;
-    Del = delete selected chip or shape &middot; Q/E = rotate goalie when selected
-    (Shift for fine control) &middot; Ctrl+Z / Ctrl+Y = undo / redo<br>
-    Tools live in the left palette. Right-click cancels the active tool.
+<aside id="rightPanel" data-view="plan" aria-label="Inspector, layers and view">
+  <section id="inspector" class="rp-section">
+    <div class="ins-title">Inspector</div>
+    <div id="inspectorBody"><div class="ins-empty">Nothing selected. Click a chip, shape, ball, goalie or goal - or use a tool from the palette.</div></div>
+  </section>
+  <section id="layersPanel" class="rp-section">
+    <div class="lp-head">
+      <span class="lp-title">Layers</span>
+      <label class="lp-marquee-toggle" title="Box-select drag also grabs shapes, not just chips">
+        <input type="checkbox" id="marqueeShapesToggle"> shapes
+      </label>
+      <label class="lp-marquee-toggle" title="Show player labels in the scene (falls back to number when off)">
+        <input type="checkbox" id="labelsVisibleToggle"> labels
+      </label>
+      <button class="lp-toggle" title="Collapse/expand" aria-label="Collapse layers panel">&minus;</button>
+    </div>
+    <div class="lp-body"></div>
+  </section>
+  <section id="viewPanel" class="rp-section">
+    <div class="rp-head"><span class="rp-title">View</span></div>
     <div id="layers">
       <div class="layer-row"><label><input type="checkbox" id="rinkCheckbox" checked> Rink (board + markings)</label></div>
       <div class="layer-row"><label><input type="checkbox" id="goalsCheckbox" checked> Goals</label></div>
       <div class="layer-row"><label><input type="checkbox" id="ballCheckbox" checked> Ball</label></div>
       <div class="layer-row">
         <label><input type="checkbox" id="goalieCheckbox" checked> Goalie</label>
-        <select id="goalieModelSelect" style="margin-left:8px;">
+        <select id="goalieModelSelect">
           <option value="blocky">Blocky (placeholder)</option>
           <option value="detailed" selected>Detailed (textured)</option>
         </select>
@@ -116,22 +99,22 @@
       <div class="layer-row"><label><input type="checkbox" id="gridCheckbox"> Grid (reference lines)</label></div>
       <div class="layer-row">
         <label><input type="checkbox" id="gridTilesCheckbox"> Grid overlay (numbered tiles)</label>
-        <div style="opacity:0.7; margin-top:2px; margin-left:20px;">2m tiles - align with the rink edges and<br>centre line; crease/goal-line edges fall mid-tile.</div>
+        <div class="rp-hint">2m tiles - align with the rink edges and centre line; crease/goal-line edges fall mid-tile.</div>
       </div>
       <div class="layer-row">
         <label><input type="checkbox" id="trajectoryCheckbox"> Ball-to-goal trajectory lines</label>
-        <div style="opacity:0.7; margin-top:2px; margin-left:20px;">click a goal to target it, then move the<br>ball - solid lines to its 4 corners plus a<br>dotted shooting line to its centre follow it.<br>Shooting line: red = open shot &middot; yellow =<br>blocked off-centre &middot; green = goalie centred.</div>
-        <div style="margin-top:4px; margin-left:20px;">
+        <div class="rp-hint">click a goal to target it, then move the ball - solid lines to its 4 corners plus a dotted shooting line to its centre follow it. Shooting line: red = open shot &middot; yellow = blocked off-centre &middot; green = goalie centred.</div>
+        <div class="rp-actions">
           <button id="alignGoalieBtn">Align goalie to shot line</button>
         </div>
-        <div class="layer-row" style="margin-left:20px;">
+        <div class="layer-row rp-indent">
           <label><input type="checkbox" id="goalieOutlineCheckbox" checked> Goalie outline (shot-line highlight)</label>
         </div>
       </div>
       <div class="layer-row">
         <label><input type="checkbox" id="coverageCheckbox" checked> Goal coverage (red=open, green=covered)</label>
-        <div style="margin-top:2px; margin-left:20px;">coverage: <span id="coveragePct">-</span></div>
-        <div style="margin-top:4px; margin-left:20px;">
+        <div class="rp-hint">coverage: <span id="coveragePct">-</span></div>
+        <div class="rp-actions">
           <button id="viewFromBallBtn">View from ball</button>
           <button id="resetViewBtn">Reset view</button>
         </div>
@@ -144,15 +127,33 @@
           <div><span class="swatch" style="background:#4073bf"></span> Tasche (pocket)</div>
           <div><span class="swatch" style="background:#26bf59"></span> Playmaker Position</div>
           <div><span class="swatch" style="background:#f2d926"></span> Zentrallinie</div>
-          <div style="opacity:0.7; margin-top:4px;">Not an IFF spec - estimated from the<br>swissunihockey.ch coaching lexicon.</div>
+          <div class="rp-hint">Not an IFF spec - estimated from the swissunihockey.ch coaching lexicon.</div>
         </div>
       </div>
       <div class="layer-row">
         <label><input type="checkbox" id="faceoffSnapCheckbox" checked> Snap chips to face-off dots</label>
       </div>
     </div>
+  </section>
+  <div id="coords" class="hud-panel rp-section collapsed" data-view="plan">
+    <div class="hud-header">
+      <span class="hud-title">Coordinates</span>
+      <button class="hud-toggle" data-panel="coords" title="Collapse/expand" aria-label="Expand coordinates panel">+</button>
+    </div>
+    <div class="hud-body">
+      <span class="label">x:</span> <span id="coordX">-</span> mm<br>
+      <span class="label">z:</span> <span id="coordZ">-</span> mm<br>
+      <span class="label">tile:</span> <span id="coordTile">-</span><br>
+      <span class="label">last click:</span> <span id="coordClick">-</span><br>
+      <span class="label">selected:</span> <span id="selectedLabel">-</span><br>
+      <span class="label">trajectory target:</span> <span id="targetGoalLabel">-</span>
+      <div style="opacity:0.7; margin-top:4px; font-family:system-ui, sans-serif; font-size:11px;">
+        Click (or Tab to) select. Drag a chip to move it,<br>or right-click to move-command the selected<br>ball / goalie / chip. Q/E rotates the goalie.
+      </div>
+    </div>
   </div>
-</div>
+</aside>
+<canvas id="photo-canvas"></canvas>
 <div id="status">loading model&hellip;</div>
 <div id="saveStatus"></div>
 <div id="crosshair"></div>
@@ -217,23 +218,6 @@
     <button data-action="export-video">Export video&hellip;</button>
   </div>
   <input type="file" id="dockImportFile" accept="application/json,.json" hidden>
-</div>
-<div id="coords" class="hud-panel" data-view="plan">
-  <div class="hud-header">
-    <span class="hud-title">Coordinates</span>
-    <button class="hud-toggle" data-panel="coords" title="Collapse/expand" aria-label="Collapse coordinates panel">&minus;</button>
-  </div>
-  <div class="hud-body">
-    <span class="label">x:</span> <span id="coordX">-</span> mm<br>
-    <span class="label">z:</span> <span id="coordZ">-</span> mm<br>
-    <span class="label">tile:</span> <span id="coordTile">-</span><br>
-    <span class="label">last click:</span> <span id="coordClick">-</span><br>
-    <span class="label">selected:</span> <span id="selectedLabel">-</span><br>
-    <span class="label">trajectory target:</span> <span id="targetGoalLabel">-</span>
-    <div style="opacity:0.7; margin-top:4px; font-family:system-ui, sans-serif; font-size:11px;">
-      Click (or Tab to) select. Drag a chip to move it,<br>or right-click to move-command the selected<br>ball / goalie / chip. Q/E rotates the goalie.
-    </div>
-  </div>
 </div>
 <div id="photoPanel" class="hud-panel collapsed" data-view="analyze">
   <div class="hud-header">
