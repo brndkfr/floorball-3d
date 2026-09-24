@@ -563,7 +563,7 @@ Still on the backlog from that exploration:
   [test-e2e/choreograph.spec.js](../test-e2e/choreograph.spec.js) covers
   no arrow before the hand-off, a trimmed arrow after it, and removal on
   commit.
-- **[A-BACK-019]** [in-progress] **Guided Choreo tutorial (first-time UX).**
+- **[A-BACK-019]** [shipped] **Guided Choreo tutorial (first-time UX).**
   Goal: a first-time user builds one choreographed frame and watches it
   play back, learning by doing rather than by reading. Decisions
   (2026-09-24):
@@ -623,10 +623,9 @@ Still on the backlog from that exploration:
   2. Seed-doc builder, a pure helper with a unit test checking the doc
      passes `acceptDoc()` and has the carrier set.
      **Done:** [choreo-tutorial-seed.js](../web/src/authoring/choreo-tutorial-seed.js)
-     `buildTutorialDoc()`, which places #7 (ball) at (7000, 22000), #9 at
-     (13000, 29000) and defender #4 between them. 6 tests in
-     `choreo-tutorial-seed.test.js`. Rendering in the browser is checked
-     in step 4.
+     `buildTutorialDoc()`, which places #7 with the ball, #9 upfield and
+     defender #4 between them (positions corrected in "As built" below).
+     6 tests in `choreo-tutorial-seed.test.js`.
   3. "Pass to" Inspector control.
   4. DOM wiring: welcome-tip button, Help entry, banner checklist, stall
      pulse, project switch and restore.
@@ -636,6 +635,62 @@ Still on the backlog from that exploration:
      original project.
   6. `pnpm test`, `pnpm test:e2e`, `pnpm run build`,
      `pnpm run check:size` green, plus a live-browser walkthrough.
+
+  **As built (2026-09-24)**, where it differs from the decisions above:
+  - **Card, not banner.** The checklist is its own `#tutorialCard`
+    ([choreo-tutorial-ui.js](../web/src/authoring/choreo-tutorial-ui.js)),
+    placed at bottom centre above the timeline. The Choreo banner only
+    exists during steps 2-4, and at top centre the card sat under the
+    floating tool palette. The bottom spot is also next to the Choreo /
+    Commit / Play buttons it points at.
+  - **Pass via the carrier chip.** A carried ball sits inside the
+    carrier's chip disc (chip radius 500 mm, ball offset 250 mm), so
+    clicking it failed in the live walkthrough. The Inspector now shows
+    **Pass to** buttons on the carrier chip as well as on the ball
+    (`passTargets()` in [choreo-pass.js](../web/src/authoring/choreo-pass.js),
+    carrier's teammates, or everyone when the ball is loose). The
+    ball's dropdown is relabelled "Has ball". The step hint says "click
+    #7, then press #9 under Pass to", and the stall cue targets the
+    carrier.
+  - **Keyboard:** the step text is in an `aria-live` region and every
+    button is a real button. Dragging a chip still needs the mouse,
+    since the app has no keyboard chip-move (arrows pan the camera),
+    so the "every step by keyboard" goal is not met for step 2.
+  - **Tutorial project stays in the Library** as "Tutorial: first
+    choreo". Restarting deletes the previous one (tracked by id in
+    `floorball3d.tutorial`, never by name), so there is only ever one.
+  - **3D stall cue:** DOM targets get `.tutorial-pulse`
+    (`.tutorial-highlight` with reduced motion). Chip targets get a
+    repeating orange `spawnMoveMarker` ring, or no ring with reduced
+    motion (the hint text is emphasised instead).
+  - **Seed positions** are (1000, 21000) / (4000, 27000) / (2500, 24000).
+    Rink x is centred on 0 (+-10000), which the first seed got wrong
+    (x up to 13000, off the rink). The seed test now asserts a 2 m
+    margin inside the boards.
+  - **Pre-existing bug fixed:** `switchToProject()`
+    ([library-dialog.js](../web/src/authoring/library-dialog.js)) never
+    called `applyActorsFromScheme()`, so opening a project wrote the
+    previous project's ball position into it on the next tick. This
+    affected every Library switch, not just the tutorial. The "original
+    project untouched" e2e fails without the fix.
+  - **"Byte-identical" means `frames`.** `meta.modifiedAt` can still be
+    bumped on return because `tickActors()` re-saves after
+    `applyActorsFromScheme()` resets its cache.
+
+  **Tests:** 15 in `choreo-tutorial.test.js`, 6 in
+  `choreo-tutorial-seed.test.js`, 4 `passTargets` tests in
+  `choreo-pass.test.js`. E2e: 6 in
+  [test-e2e/choreo-tutorial.spec.js](../test-e2e/choreo-tutorial.spec.js)
+  (full walk plus the original project's frames unchanged, resume after
+  commit, unfinished Choreo restarts, skip, Help entry plus a single
+  tutorial project, stall pulse) and 2 Pass-to specs in
+  `choreograph.spec.js`. Full gates: 312 unit / 28 e2e / build / size
+  green. Live walkthrough in the integrated browser used real mouse
+  input (Help → Try a guided play → click Choreo → drag #7 → click #7 →
+  Pass to #9 → Commit → Space → Back to my project), and the returning
+  project's frames were unchanged. `help.js`'s Help overlay keeps
+  **Close** as the first focusable element, since `a11y.spec.js`
+  asserts initial focus on it.
 
 ---
 

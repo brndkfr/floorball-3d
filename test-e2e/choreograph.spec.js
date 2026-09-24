@@ -99,4 +99,30 @@ test.describe('A-BACK-018 choreograph pass-arrow preview', () => {
     expect(carrier).toBe(ids.b);
     await expect(page.locator('#inspectorPassTo [data-pass-to]').first()).toHaveText('#7');
   });
+
+  test('the carrier chip offers "Pass to" too; other chips do not', async ({ page }) => {
+    await bootApp(page);
+    const ids = await page.evaluate(async () => {
+      const { ensureDoc } = await import('/src/authoring/doc.js');
+      const { spawnChip } = await import('/src/authoring/chips.js');
+      const { setBallCarrier } = await import('/src/authoring/actors.js');
+      ensureDoc().scheme.players = {};
+      const a = spawnChip({ team: 1, x: 0, z: 15000, number: 7, pushHistory: false });
+      const b = spawnChip({ team: 1, x: 3000, z: 20000, number: 9, pushHistory: false });
+      setBallCarrier(a);
+      return { a, b };
+    });
+    await page.waitForFunction(async () => (await import('/src/state.js')).state.chipGroups.length === 2);
+    const select = (id) => page.evaluate(async (id) => {
+      const { selectObject } = await import('/src/selection.js');
+      const { state } = await import('/src/state.js');
+      selectObject(state.chipGroups.find((g) => g.userData.chip?.id === id));
+    }, id);
+    await select(ids.b);
+    await expect(page.locator('#inspectorPassTo')).toHaveCount(0);
+    await select(ids.a);
+    await page.locator('#inspectorPassTo [data-pass-to]', { hasText: '#9' }).click();
+    expect(await page.evaluate(async () => (await import('/src/authoring/actors.js')).getBallCarrier())).toBe(ids.b);
+    await expect(page.locator('#inspectorPassTo')).toHaveCount(0);   // #7 no longer carries
+  });
 });

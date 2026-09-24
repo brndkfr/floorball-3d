@@ -16,9 +16,10 @@ export function buildTutorialDoc() {
     scheme.players[id] = { id, team, number: String(number), x, z, angle: 0 };
     return scheme.players[id];
   };
-  const seven = add(1, 7, 7000, 22000);
-  add(1, 9, 13000, 29000);
-  add(2, 4, 10000, 25500);
+  // Just above and right of centre in top-down (+x up, +z right): clear of the card and side panels.
+  const seven = add(1, 7, 1000, 21000);
+  add(1, 9, 4000, 27000);
+  add(2, 4, 2500, 24000);
   scheme.balls.main = { x: seven.x, z: seven.z + BALL_CARRY_DZ, carrier: seven.id };
   return doc;
 }

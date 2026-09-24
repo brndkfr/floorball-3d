@@ -21,6 +21,7 @@ import { rebuildConesFromDoc } from './cones.js';
 import { rebuildBallsFromDoc } from './balls.js';
 import { rebuildGoalsFromDoc } from './goals.js';
 import { initHistory } from './history.js';
+import { applyActorsFromScheme } from './actors.js';
 import { showAlert, showConfirm, showPrompt } from './dialog.js';
 
 let styleInjected = false;
@@ -130,6 +131,7 @@ export function switchToProject(id) {
   rebuildConesFromDoc();
   rebuildBallsFromDoc();
   rebuildGoalsFromDoc();
+  applyActorsFromScheme();   // else the old project's ball/goalie mesh positions get written into this one
   initHistory();
   fireProjectChanged();
   return true;

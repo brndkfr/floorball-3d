@@ -39,6 +39,13 @@ test('move and pass before Choreo do not count', () => {
   assert.equal(v.step, 'choreo');
 });
 
+test('pass step targets the carrier chip (the carried ball is too small to click)', () => {
+  const v = tutorialView(run([{ type: 'choreoStart' }, { type: 'chipMoved' }]));
+  assert.equal(v.step, 'pass');
+  assert.equal(v.target, 'carrier');
+  assert.match(v.hint, /click #7/i);
+});
+
 test('passing before dragging completes pass and leaves move active', () => {
   const v = tutorialView(run([{ type: 'choreoStart' }, { type: 'carrierChanged' }]));
   assert.equal(v.step, 'move');

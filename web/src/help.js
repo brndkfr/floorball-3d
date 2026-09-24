@@ -38,7 +38,10 @@ overlay.innerHTML = `
               box-shadow:0 12px 32px rgba(0,0,0,0.5); line-height:1.55;">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
       <div style="font-size:14px; letter-spacing:0.06em; text-transform:uppercase; color:#ffb347;">Shortcuts &amp; tips</div>
-      <button data-x="close" style="background:transparent; color:#f7e6cf; border:1px solid rgba(255,179,71,0.35); border-radius:6px; padding:2px 10px; font-family:inherit; cursor:pointer;">Close (Esc)</button>
+      <div style="display:flex; gap:6px;">
+        <button data-x="close" style="background:transparent; color:#f7e6cf; border:1px solid rgba(255,179,71,0.35); border-radius:6px; padding:2px 10px; font-family:inherit; cursor:pointer;">Close (Esc)</button>
+        <button data-x="tutorial" style="background:#ffb347; color:#1a120a; border:none; border-radius:6px; padding:2px 10px; font-family:inherit; font-weight:700; cursor:pointer;">Try a guided play</button>
+      </div>
     </div>
     <div style="display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:12px;">
       ${renderShortcutGrid()}
@@ -85,6 +88,9 @@ function closeHelp() {
 let releaseTrap = null;
 
 overlay.querySelector('[data-x="close"]').addEventListener('click', closeHelp);
+// Decoupled via an event so help.js stays free of authoring imports.
+const startTutorial = () => window.dispatchEvent(new Event('tutorial:start'));
+overlay.querySelector('[data-x="tutorial"]').addEventListener('click', () => { closeHelp(); startTutorial(); });
 overlay.addEventListener('click', (e) => { if (e.target === overlay) closeHelp(); });
 
 window.addEventListener('keydown', (e) => {
@@ -113,11 +119,13 @@ function showOnboarding() {
       Press <b>?</b> anytime for full shortcuts.
     </div>
     <button data-x="ok">Got it</button>
+    <button data-x="tutorial">Try a guided play</button>
     <button class="secondary" data-x="help">Show shortcuts</button>
   `;
   document.body.appendChild(tip);
   const dismiss = () => { tip.remove(); localStorage.setItem(ONBOARDED_KEY, '1'); };
   tip.querySelector('[data-x="ok"]').addEventListener('click', dismiss);
+  tip.querySelector('[data-x="tutorial"]').addEventListener('click', () => { dismiss(); startTutorial(); });
   tip.querySelector('[data-x="help"]').addEventListener('click', () => { dismiss(); openHelp(); });
 }
 

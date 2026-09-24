@@ -68,6 +68,8 @@ function render(sel) {
     heading.className = 'ins-heading';
     heading.textContent = chip.label?.trim() || `Player #${chip.number}`;
     body.appendChild(heading);
+    // The carried ball sits inside the chip disc, so passing is offered on the carrier too.
+    if (chip.id === getBallCarrier()) body.appendChild(passRow());
     const hint = document.createElement('div');
     hint.className = 'ins-empty';
     hint.textContent = 'Tap the label above the chip to edit.';

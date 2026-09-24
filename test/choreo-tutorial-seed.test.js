@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 const { buildTutorialDoc, TUTORIAL_NAME } = await import('../web/src/authoring/choreo-tutorial-seed.js');
 const { acceptDoc } = await import('../web/src/authoring/doc.js');
-const { RINK_L, RINK_W } = await import('../web/src/constants.js');
+const { RINK_L, HALF_W } = await import('../web/src/constants.js');
 
 const players = (doc) => Object.values(doc.frames[0].scheme.players);
 const byNumber = (doc, n) => players(doc).find((p) => p.number === String(n));
@@ -32,12 +32,13 @@ test('#7 carries the ball and the stored ball position sits next to him', () => 
   assert.ok(Math.hypot(ball.x - seven.x, ball.z - seven.z) < 500);
 });
 
-test('every player is on the rink and keyed by its own id', () => {
+test('every player is well inside the boards and keyed by its own id', () => {
   const doc = buildTutorialDoc();
+  const margin = 2000;   // rink x is centred on 0: [-HALF_W, HALF_W]; z is [0, RINK_L]
   for (const [key, p] of Object.entries(doc.frames[0].scheme.players)) {
     assert.equal(key, p.id);
-    assert.ok(p.x > 0 && p.x < RINK_W, `x ${p.x}`);
-    assert.ok(p.z > 0 && p.z < RINK_L, `z ${p.z}`);
+    assert.ok(Math.abs(p.x) < HALF_W - margin, `x ${p.x}`);
+    assert.ok(p.z > margin && p.z < RINK_L - margin, `z ${p.z}`);
   }
 });
 

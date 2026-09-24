@@ -39,14 +39,16 @@ let startCarrier = null;
 let startBall = null;              // {x, z} of the ball at choreo start
 let passArrow = null;
 let passKey = '';
+let movedFired = false;
 
 let banner = null;
 let bannerTitle = null;
 
 export function isChoreoActive() { return active; }
+export function getChoreoStartCarrier() { return startCarrier; }
 
-function fireChanged() {
-  window.dispatchEvent(new Event('choreoChanged'));
+function fireChanged(action) {
+  window.dispatchEvent(new CustomEvent('choreoChanged', { detail: { action } }));
 }
 
 export function startChoreo() {
@@ -56,10 +58,11 @@ export function startChoreo() {
   draftFrameIdx = duplicateFrame(originalFrameIdx, originalFrameIdx + 1);
   if (draftFrameIdx < 0) { originalFrameIdx = -1; return; }
   active = true;
+  movedFired = false;
   snapshotChips();
   buildGhosts();
   showBanner();
-  fireChanged();
+  fireChanged('start');
 }
 
 export function commitChoreo() {
@@ -69,7 +72,7 @@ export function commitChoreo() {
   active = false;
   originalFrameIdx = -1;
   draftFrameIdx = -1;
-  fireChanged();
+  fireChanged('commit');
 }
 
 export function cancelChoreo() {
@@ -83,7 +86,7 @@ export function cancelChoreo() {
   active = false;
   originalFrameIdx = -1;
   draftFrameIdx = -1;
-  fireChanged();
+  fireChanged('cancel');
 }
 
 // Called from main.js's animate() every frame. Cheap enough to run
@@ -105,6 +108,10 @@ export function tickChoreo() {
     // Hide the arrow when the chip hasn't been moved yet.
     const dx = group.position.x - snap.x, dz = group.position.z - snap.z;
     arrow.visible = (dx * dx + dz * dz) > 100 * 100;
+    if (arrow.visible && !movedFired) {
+      movedFired = true;
+      window.dispatchEvent(new Event('choreoChipMoved'));
+    }
   }
   updatePassArrow();
   return true;
@@ -233,6 +240,7 @@ function buildBanner() {
   bannerTitle = document.createElement('span');
   banner.appendChild(bannerTitle);
   const commit = document.createElement('button');
+  commit.id = 'choreoCommitBtn';
   commit.textContent = 'Commit';
   commit.style.cssText = 'padding:4px 12px; border-radius:5px; cursor:pointer; border:1px solid rgba(126,224,107,0.6); background:rgba(126,224,107,0.15); color:#dff9c8; font-family:inherit; font-size:11px; text-transform:uppercase;';
   commit.addEventListener('click', commitChoreo);

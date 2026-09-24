@@ -32,6 +32,7 @@ import './chip-popover.js'; // side-effect: wires up the chip-anchored popover
 import './layers-panel.js'; // side-effect: wires up the right layers panel
 import './timeline.js';   // side-effect: wires up the timeline UI
 import './photo-overlay/photo-overlay.js'; // side-effect: wires up the photo overlay panel
+import './choreo-tutorial-ui.js'; // side-effect: guided Choreo tutorial card (A-BACK-019)
 import { notifyProjectChanged } from './library-dialog.js';
 export { tickChoreo } from './choreograph.js';
 export { tickActors } from './actors.js';

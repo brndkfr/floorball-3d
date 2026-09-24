@@ -9,11 +9,11 @@ export const STALL_MS = 8000;
 const HINTS = {
   choreo: 'Press Choreo on the timeline to plan the next frame.',
   move: 'Drag #7 forward. The cyan ring shows where he started.',
-  pass: 'Pass the ball: select it, then pick #9 under "Pass to" (or right-click #9).',
+  pass: 'Pass: click #7 (he has the ball), then press #9 under "Pass to".',
   commit: 'Press Commit to keep the new frame.',
   play: 'Press Space to watch your play.',
 };
-const TARGETS = { choreo: 'choreoButton', move: 'chip:7', pass: 'ball', commit: 'commitButton', play: 'playButton' };
+const TARGETS = { choreo: 'choreoButton', move: 'chip:7', pass: 'carrier', commit: 'commitButton', play: 'playButton' };
 const NOTES = { incompleteCommit: 'That frame was saved without a pass and a move. Press Choreo to plan another one.' };
 const DONE_HINT = 'Nice - that is a choreographed play.';
 
