@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { state } from '../state.js';
-import { scene } from '../scene.js';
+import { scene, renderer } from '../scene.js';
 import { ensureDoc } from './doc.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from './chips.js';
 import { buildArrowGeometry } from './shapes.js';
@@ -19,6 +19,7 @@ const ARROW_WIDTH = 120;
 const TRAIL_WIDTH = 70;
 const TRAIL_FADE_MS = 400;
 const RUN_SAMPLES = 32;
+const GRAB_PX = 18;   // screen-space grab radius: the diamond is only ~10 px at a full-rink zoom
 
 const mat = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, depthTest: false, side: THREE.DoubleSide });
 
@@ -26,9 +27,11 @@ const arrow = new THREE.Mesh(new THREE.BufferGeometry(), mat(VECTOR_PASS_CLEAR.h
 arrow.name = 'passArrow';
 const trail = new THREE.Mesh(new THREE.BufferGeometry(), mat(VECTOR_PASS_CLEAR.hex, 0.8));
 trail.name = 'passTrail';
-const marker = new THREE.Mesh(new THREE.CircleGeometry(220, 4), mat(RUN_COLOR, 0.95));
+const marker = new THREE.Mesh(new THREE.CircleGeometry(340, 4), mat(RUN_COLOR, 0.95));
 marker.name = 'passReleaseMarker';
 marker.rotation.x = -Math.PI / 2;
+const markerOutline = new THREE.Mesh(new THREE.RingGeometry(340, 420, 4), mat(0xffffff, 0.9));
+marker.add(markerOutline);
 const run = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: RUN_COLOR, dashSize: 200, gapSize: 120, depthTest: false }));
 run.name = 'passRun';
 for (const o of [arrow, trail, marker, run]) {
@@ -154,11 +157,18 @@ function setRay(event) {
   raycaster.setFromCamera(ndc, state.activeCamera);
 }
 
-export function tryStartDrag(event) {
+function nearMarker(event) {
   if (!marker.visible) return false;
-  setRay(event);
-  if (raycaster.intersectObject(marker, false).length === 0) return false;
+  const r = renderer.domElement.getBoundingClientRect();
+  const v = marker.position.clone().project(state.activeCamera);
+  const sx = (v.x + 1) / 2 * r.width + r.left, sy = (1 - v.y) / 2 * r.height + r.top;
+  return Math.hypot(event.clientX - sx, event.clientY - sy) <= GRAB_PX;
+}
+
+export function tryStartDrag(event) {
+  if (!nearMarker(event)) return false;
   dragging = true;
+  renderer.domElement.style.cursor = 'grabbing';
   return true;
 }
 
@@ -177,5 +187,16 @@ export function onDragMove(event) {
 export function endDrag() {
   if (!dragging) return;
   dragging = false;
+  renderer.domElement.style.cursor = '';
   import('./history.js').then((h) => h.pushHistory());
 }
+
+// Hover feedback so the diamond reads as draggable; only touches the cursor it set itself.
+let hoverCursor = false;
+renderer.domElement.addEventListener('pointermove', (event) => {
+  if (dragging) return;
+  const near = nearMarker(event);
+  if (near === hoverCursor) return;
+  hoverCursor = near;
+  renderer.domElement.style.cursor = near ? 'grab' : '';
+});

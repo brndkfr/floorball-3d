@@ -173,6 +173,48 @@ test.describe('A-BACK-019 guided Choreo tutorial', () => {
     });
   }
 
+  test('after a real mouse drag of #7 the pass hint does not ask to click him again', async ({ page }) => {
+    await startFromWelcomeTip(page);
+    await page.locator('#timeline [data-tl="choreo"]').click();
+    const pts = await page.evaluate(async () => {
+      const THREE = await import('three');
+      const { state } = await import('/src/state.js');
+      const { renderer, scene } = await import('/src/scene.js');
+      renderer.render(scene, state.activeCamera);
+      const r = renderer.domElement.getBoundingClientRect();
+      const P = (x, z) => { const v = new THREE.Vector3(x, 0, z).project(state.activeCamera); return { x: (v.x + 1) / 2 * r.width + r.left, y: (1 - v.y) / 2 * r.height + r.top }; };
+      const seven = Object.values(state.doc.scheme.players).find((p) => p.number === '7');
+      return { from: P(seven.x, seven.z), to: P(seven.x, seven.z + 4000) };
+    });
+    await page.mouse.move(pts.from.x, pts.from.y);
+    await page.mouse.down();
+    await page.mouse.move(pts.to.x, pts.to.y, { steps: 10 });
+    await page.mouse.up();
+    await tick(page);
+    await expect(step(page, 'pass')).toHaveAttribute('data-status', 'active');
+    await expect(page.locator('#tutorialCard .tut-hint')).toContainText('already selected');
+    await expect(page.locator('#inspectorPassTo [data-pass-to]', { hasText: '#9' })).toBeVisible();
+
+    // Step 4 with the mouse: grab the diamond a little off-centre and drag it along #7's run.
+    await page.locator('#inspectorPassTo [data-pass-to]', { hasText: '#9' }).click();
+    await tick(page);
+    await expect(step(page, 'release')).toHaveAttribute('data-status', 'active');
+    const m = await page.evaluate(async () => {
+      const { state } = await import('/src/state.js');
+      const { renderer, scene } = await import('/src/scene.js');
+      renderer.render(scene, state.activeCamera);
+      const r = renderer.domElement.getBoundingClientRect();
+      const v = scene.getObjectByName('passReleaseMarker').position.clone().project(state.activeCamera);
+      return { x: (v.x + 1) / 2 * r.width + r.left, y: (1 - v.y) / 2 * r.height + r.top };
+    });
+    expect(await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.tagName, [m.x, m.y])).toBe('CANVAS');
+    await page.mouse.move(m.x + 8, m.y + 6);
+    await page.mouse.down();
+    await page.mouse.move(pts.from.x + 5, pts.from.y, { steps: 8 });
+    await page.mouse.up();
+    await expect(step(page, 'release')).toHaveAttribute('data-status', 'complete');
+  });
+
   test('stalling on a DOM step pulses its target', async ({ page }) => {
     await startFromWelcomeTip(page);
     // Shift the page clock so the app's own 1 s interval sees the stall too (else it clears the cue).

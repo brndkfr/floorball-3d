@@ -16,6 +16,8 @@ const HINTS = {
 };
 const TARGETS = { choreo: 'choreoButton', move: 'chip:7', pass: 'carrier', release: 'releaseMarker', commit: 'commitButton', play: 'playButton' };
 const NOTES = { incompleteCommit: 'That frame was saved without a pass and a move. Press Choreo to plan another one.' };
+// Clicking an already-selected chip deselects it, so don't ask for that click.
+const PASS_HINT_SELECTED = '#7 is already selected: press #9 under "Pass to" in the Inspector.';
 const DONE_HINT = 'Nice - that is a choreographed play.';
 
 export function initialTutorial() {
@@ -52,14 +54,15 @@ export function tutorialReducer(state, event) {
   }
 }
 
-export function tutorialView(state) {
+export function tutorialView(state, { carrierSelected = false } = {}) {
   const s = state ?? initialTutorial();
   const index = STEPS.findIndex((step) => !has(s, step));
   const done = index === -1;
   const step = done ? null : STEPS[index];
   const statuses = {};
   for (const st of STEPS) statuses[st] = has(s, st) ? 'complete' : st === step ? 'active' : 'pending';
-  const hint = done ? DONE_HINT : (s.note && NOTES[s.note]) || HINTS[step];
+  const stepHint = step === 'pass' && carrierSelected ? PASS_HINT_SELECTED : HINTS[step];
+  const hint = done ? DONE_HINT : (s.note && NOTES[s.note]) || stepHint;
   return { step, index, hint, target: done ? null : TARGETS[step], done, statuses };
 }
 

@@ -114,6 +114,19 @@ test.describe('A-BACK-021 pass timing', () => {
     expect(marker.wx).toBeGreaterThan(1500);
   });
 
+  test('the marker can be grabbed slightly off-centre (a real user miss of ~12 px)', async ({ page }) => {
+    await boot(page);
+    await setupPass(page);
+    await page.evaluate(async () => { const { state } = await import('/src/state.js'); const { scene, renderer } = await import('/src/scene.js'); renderer.render(scene, state.activeCamera); });
+    const from = await screenOf(page, 'passReleaseMarker');
+    const to = await worldToScreen(page, 1800, 10000);
+    await page.mouse.move(from.x + 9, from.y - 8);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 8 });
+    await page.mouse.up();
+    expect((await storedPass(page))?.releaseT).toBeGreaterThan(0.75);
+  });
+
   test('an opponent in the lane turns the arrow red and the Inspector names him', async ({ page }) => {
     await boot(page);
     // Pass runs (1000, 10250) -> (0, 15250); at z=12750 the line is at x=500.

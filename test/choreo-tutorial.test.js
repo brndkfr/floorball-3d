@@ -73,6 +73,13 @@ test('pass step targets the carrier chip (the carried ball is too small to click
   assert.match(v.hint, /click #7/i);
 });
 
+test('pass hint does not say "click #7" when he is already selected (a click would deselect him)', () => {
+  const v = tutorialView(run([{ type: 'choreoStart' }, { type: 'chipMoved' }]), { carrierSelected: true });
+  assert.doesNotMatch(v.hint, /click #7/i);
+  assert.match(v.hint, /already selected/i);
+  assert.match(v.hint, /Pass to/);
+});
+
 test('passing before dragging completes pass and leaves move active', () => {
   const v = tutorialView(run([{ type: 'choreoStart' }, { type: 'carrierChanged' }]));
   assert.equal(v.step, 'move');

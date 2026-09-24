@@ -1,8 +1,10 @@
 // Guided Choreo tutorial UI (A-BACK-019). Owns #tutorialCard; drives choreo-tutorial.js
 // from app events. Runs in its own seeded project so the user's projects are never mutated.
 
+import * as THREE from 'three';
 import { state } from '../state.js';
-import { scene } from '../scene.js';
+import { scene, topDownCamera } from '../scene.js';
+import { onSelectionChanged } from '../selection.js';
 import { tutorialReducer, tutorialView, resumeTutorial, stallCue, STEPS } from './choreo-tutorial.js';
 import { buildTutorialDoc, TUTORIAL_NAME } from './choreo-tutorial-seed.js';
 import { adoptDocAsProject, deleteProject, getCurrentProjectId, listProjects } from './storage.js';
@@ -94,6 +96,22 @@ export function startTutorial() {
   if (saved?.projectId && saved.projectId !== adopted.meta.id) deleteProject(saved.projectId);
   if (!isTopDown()) enterTopDown();
   resetTopDownView();
+  frameAboveCard();
+}
+
+// Pan so the players sit in the upper part of the view; the card covers the lower middle (1280x720 and up).
+const FRAME_NDC_Y = 0.4;
+function frameAboveCard() {
+  const pl = Object.values(state.doc?.scheme?.players || {});
+  if (!pl.length) return;
+  const c = { x: pl.reduce((s, p) => s + p.x, 0) / pl.length, z: pl.reduce((s, p) => s + p.z, 0) / pl.length };
+  topDownCamera.updateMatrixWorld();
+  const ndc = new THREE.Vector3(c.x, 0, c.z).project(topDownCamera);
+  const now = ndc.clone().unproject(topDownCamera);
+  const want = new THREE.Vector3(0, FRAME_NDC_Y, ndc.z).unproject(topDownCamera);
+  topDownCamera.position.x += now.x - want.x;
+  topDownCamera.position.z += now.z - want.z;
+  topDownCamera.updateMatrixWorld();
 }
 
 function leave({ toPrevious }) {
@@ -130,7 +148,8 @@ function dispatch(event) {
 }
 
 function render() {
-  const v = tutorialView(tut);
+  const carrier = carrierGroup();
+  const v = tutorialView(tut, { carrierSelected: !!carrier && state.selected === carrier });
   card.innerHTML = '';
   const h = document.createElement('h2');
   h.textContent = v.done ? 'Guided play - done' : `Guided play - step ${v.index + 1} of ${STEPS.length}`;
@@ -232,6 +251,7 @@ window.addEventListener('choreoChanged', (e) => {
   else if (action === 'cancel') dispatch({ type: 'choreoCancel' });
 });
 window.addEventListener('choreoChipMoved', () => dispatch({ type: 'chipMoved' }));
+onSelectionChanged(() => { if (tut) render(); });
 window.addEventListener('passChanged', (e) => {
   if (e.detail?.releaseT) dispatch({ type: 'releaseChanged' });
 });

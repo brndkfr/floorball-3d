@@ -637,6 +637,25 @@ Still on the backlog from that exploration:
     an unfinished-Choreo resume both drop the step. 5 new unit tests.
     The tutorial e2e walks all 6 steps and adds a stall test for the
     slider.
+  - **Fix (2026-09-24, user report "can't move the diamond in step 4"):**
+    three real causes. All were missed by the earlier e2e, which grabbed
+    the exact centre and moved #7 by code.
+    1. The diamond was a 220 mm shape, about 8 px at full-rink zoom, and
+       was hit-tested by raycast, so a grab 12 px off missed. It is now
+       grabbed within 18 px on screen (`GRAB_PX`), is bigger (340 mm)
+       with a white outline, and shows a `grab` cursor on hover.
+    2. Dragging #7 selects him, and the tutorial then said "click #7".
+       A click on a selected chip deselects it, so "Pass to" vanished.
+       The pass hint now knows about the selection:
+       `tutorialView(..., { carrierSelected })` says "#7 is already
+       selected: press #9 under 'Pass to'".
+    3. At 1280x720 the tutorial card covered #7, so a mouse drag hit the
+       card. `frameAboveCard()` now pans the top-down view so the
+       players sit above the card.
+
+    New e2e: an off-centre grab in `pass-timing.spec.js`, and in
+    `choreo-tutorial.spec.js` a real-mouse drag of #7, then the pass,
+    then an off-centre diamond drag (checking nothing covers it).
 - **[A-BACK-020]** [shipped] **Ball follows its carrier in playback, and
   passes are visible.** Reported from the tutorial: "Pass to #9" showed
   no ball moving. Root cause: while the ball is carried,
