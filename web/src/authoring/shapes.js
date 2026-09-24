@@ -176,7 +176,7 @@ function buildArrowHead(tipX, tipZ, tx, tz, halfW, headLen, headStyle, positions
   stroke2({ x: tipX, z: tipZ }, hr);
 }
 
-function buildArrowGeometry(points, width = ARROW_DEFAULT_WIDTH, opts = {}) {
+export function buildArrowGeometry(points, width = ARROW_DEFAULT_WIDTH, opts = {}) {
   const { shaftStyle = 'solid', headStyle = 'filled', smooth = true } = opts;
   if (!points || points.length < 2) return new THREE.BufferGeometry();
   const halfW = Math.max(1, width / 2);

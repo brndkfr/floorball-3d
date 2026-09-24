@@ -4,7 +4,8 @@
 // to it, snapshots every chip's position, and renders per-chip ghost
 // footprints at those snapshots + live arrows to each chip's current
 // position. The user edits chips as normal (drag / right-click move /
-// walk-tween); the arrows track their current position each rAF.
+// walk-tween); the arrows track their current position each rAF. If the
+// ball carrier changes, a dashed orange pass arrow previews the hand-off.
 //
 // Commit: dispose ghosts + arrows, keep the new frame.
 // Cancel: dispose ghosts + arrows, delete the draft frame (returns to N).
@@ -18,9 +19,14 @@ import { state } from '../state.js';
 import { scene } from '../scene.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from './chips.js';
 import { duplicateFrame, deleteFrame, selectFrame, getCurrentIndex } from './frames.js';
+import { getBallCarrier } from './actors.js';
+import { buildArrowGeometry } from './shapes.js';
+import { passPreview } from './choreo-pass.js';
 
 const GHOST_COLOR = 0x4fe0ff;
 const ARROW_COLOR = 0x4fe0ff;
+const PASS_COLOR = 0xffb347;   // matches the carrier ring in actors.js
+const PASS_WIDTH = 120;
 const GHOST_Y = 8;
 
 let active = false;
@@ -29,6 +35,10 @@ let draftFrameIdx = -1;
 const snapshots = new Map();       // chipId -> {x, z}
 const ghosts = new Map();          // chipId -> THREE.Mesh (ring)
 const arrows = new Map();          // chipId -> THREE.Line (2-vertex, auto-updated)
+let startCarrier = null;
+let startBall = null;              // {x, z} of the ball at choreo start
+let passArrow = null;
+let passKey = '';
 
 let banner = null;
 let bannerTitle = null;
@@ -96,7 +106,45 @@ export function tickChoreo() {
     const dx = group.position.x - snap.x, dz = group.position.z - snap.z;
     arrow.visible = (dx * dx + dz * dz) > 100 * 100;
   }
+  updatePassArrow();
   return true;
+}
+
+function chipPos(id) {
+  const g = state.chipGroups.find((c) => c.userData.chip?.id === id);
+  return g ? { x: g.position.x, z: g.position.z } : null;
+}
+
+function updatePassArrow() {
+  const carrier = getBallCarrier();
+  const ball = state.ballGroup ? { x: state.ballGroup.position.x, z: state.ballGroup.position.z } : null;
+  const preview = passPreview({
+    startCarrier,
+    carrier,
+    from: startCarrier != null ? snapshots.get(startCarrier) : startBall,
+    to: carrier != null ? chipPos(carrier) : ball,
+    trim: CHIP_RADIUS * CHIP_DISPLAY_SCALE,
+  });
+  if (!preview) {
+    if (passArrow) passArrow.visible = false;
+    return;
+  }
+  const key = `${preview.from.x},${preview.from.z},${preview.to.x},${preview.to.z}`;
+  if (!passArrow) {
+    passArrow = new THREE.Mesh(
+      new THREE.BufferGeometry(),
+      new THREE.MeshBasicMaterial({ color: PASS_COLOR, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }),
+    );
+    passArrow.name = 'choreoPassArrow';
+    passArrow.frustumCulled = false;
+    scene.add(passArrow);
+  }
+  if (key !== passKey) {
+    passArrow.geometry.dispose();
+    passArrow.geometry = buildArrowGeometry([preview.from, preview.to], PASS_WIDTH, { shaftStyle: 'dashed' });
+    passKey = key;
+  }
+  passArrow.visible = true;
 }
 
 function snapshotChips() {
@@ -106,6 +154,8 @@ function snapshotChips() {
     if (!id) continue;
     snapshots.set(id, { x: group.position.x, z: group.position.z });
   }
+  startCarrier = getBallCarrier();
+  startBall = state.ballGroup ? { x: state.ballGroup.position.x, z: state.ballGroup.position.z } : null;
 }
 
 function buildGhosts() {
@@ -145,6 +195,15 @@ function disposeGhosts() {
   ghosts.clear();
   arrows.clear();
   snapshots.clear();
+  if (passArrow) {
+    scene.remove(passArrow);
+    passArrow.geometry.dispose();
+    passArrow.material.dispose();
+    passArrow = null;
+  }
+  passKey = '';
+  startCarrier = null;
+  startBall = null;
 }
 
 function showBanner() {

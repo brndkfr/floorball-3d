@@ -459,10 +459,10 @@ Still on the backlog from that exploration:
   every chip. Right-click on empty floor with the ball selected detaches
   the carrier first, then runs the normal move-command. Follow-ups still
   open: a small ball glyph above the chip carrying it (rather than an
-  orange ring which is redundant with selection styling), a preview
-  "pass arrow" during Choreograph mode when a frame changes carrier, and
+  orange ring which is redundant with selection styling) and
   multi-ball support (data model already ready per
   [docs/reference/tactical-board-followups.md](reference/tactical-board-followups.md)).
+  The Choreograph pass-arrow preview shipped as **[A-BACK-018]**.
 - **[A-BACK-013]** [shipped] **Text-shape resize handles**. Standalone
   text shapes (drawn via the Text tool) used to be a fixed-`worldHeight`
   billboard with no user-facing size control. Now: `shape.size` (mm) is
@@ -546,6 +546,23 @@ Still on the backlog from that exploration:
   delete since fixed goals are pinned. Non-default fields are pruned
   from the doc, and an empty `fixed` object is deleted entirely so
   existing frames don't gain schema noise. Commit `dfe1c34`.
+- **[A-BACK-018]** [shipped] **Choreograph pass-arrow preview.**
+  Follow-up from A-BACK-012. While Choreograph mode is active, handing
+  the ball to a different carrier in the draft frame shows a dashed
+  orange arrow (carrier-ring colour) from the old carrier's snapshot
+  position to the new carrier. Arrows to or from a loose ball start or
+  end at the ball. Carrier ends are trimmed by the chip display radius
+  so the head meets the chip edge. There is no arrow while the carrier
+  is unchanged or the trimmed length is under 300 mm. Commit and Cancel
+  dispose it. This is a preview only, not written to the doc. The pure
+  geometry lives in
+  [choreo-pass.js](../web/src/authoring/choreo-pass.js) `passPreview()`
+  (7 node tests in `choreo-pass.test.js`). The arrow mesh reuses
+  `buildArrowGeometry` from `shapes.js` (now exported) and is only
+  rebuilt when its endpoints change. E2e:
+  [test-e2e/choreograph.spec.js](../test-e2e/choreograph.spec.js) covers
+  no arrow before the hand-off, a trimmed arrow after it, and removal on
+  commit.
 
 ---
 
