@@ -2633,8 +2633,13 @@ added.
   S-BACK-021 port order now has a Broadcast design.
 
 - **[S-BACK-021]** [open] **Port surfaces to
-  Broadcast, one per commit.** Step 0: the S-BACK-019 deferrals
-  (vendor Web Awesome, fonts, HUD recolour). CodeQL is done: advanced
+  Broadcast, one per commit.** Step 0: the S-BACK-019 deferrals.
+  **Done (branch `broadcast_ux_redesign`):** Web Awesome 3.14.0 subset
+  (23 components, 0.6 MB) and Archivo + IBM Plex Mono woff2 vendored by
+  `scripts/vendor-webawesome.mjs` / `vendor-fonts.mjs` from pinned
+  devDependencies, size budgets added, `web/src/ui/webawesome.js` points
+  the default icon library at `web/lib/icons/`. The HUD recolour moves
+  into the app-shell step. CodeQL is done: advanced
   setup (`.github/workflows/codeql.yml`) with
   `.github/codeql/codeql-config.yml` ignoring `web/lib/webawesome`.
   Then, lowest risk / most visible first:

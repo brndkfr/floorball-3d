@@ -93,10 +93,16 @@ test('theme-broadcast.css maps Web Awesome variables onto --fb-* only', () => {
   }
 });
 
-test('index.html loads app.css, tokens.css and theme-broadcast.css instead of an inline <style>', () => {
+test('index.html loads its stylesheets in cascade order instead of an inline <style>', () => {
   const html = read('index.html');
   assert.doesNotMatch(html, /<style[\s>]/i, 'inline <style> should live in src/app.css');
   const hrefs = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map((m) => m[1]);
-  assert.deepEqual(hrefs, ['./src/app.css', './src/tokens.css', './src/theme-broadcast.css']);
+  // Web Awesome's stock theme must come before theme-broadcast.css, which
+  // overrides it; fonts are self-hosted (scripts/vendor-fonts.mjs).
+  assert.deepEqual(hrefs, [
+    './lib/fonts/fonts.css', './lib/webawesome/styles/themes/default.css',
+    './src/app.css', './src/tokens.css', './src/theme-broadcast.css',
+  ]);
+  assert.match(html, /<script type="module" src="src\/ui\/webawesome\.js"><\/script>/, 'Web Awesome loader must be loaded');
   assert.match(read('src/app.css'), /--hud-accent:\s*#4fe0ff/, 'app.css should carry the moved HUD styles');
 });
