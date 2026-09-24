@@ -9,6 +9,9 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './test-e2e',
   fullyParallel: false, // shared localStorage state per browser context
+  // Every test boots the whole WebGL app: 6 local workers produced load-induced
+  // timeouts that passed serially (S-BACK-018). CI keeps Playwright's default.
+  workers: process.env.CI ? undefined : 3,
   reporter: process.env.CI ? [['list'], ['github']] : [['list']],
   use: {
     baseURL: 'http://localhost:8000',

@@ -2,7 +2,7 @@
 // selection shows a dotted outline + 4 corner handles, and the
 // Inspector "Size" slider live-updates shape.size.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 async function bootApp(page) {
   await page.goto('/', { waitUntil: 'load' });

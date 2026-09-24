@@ -1,6 +1,6 @@
 // A-BACK-022: shots at goal - Inspector buttons, right-click on a goal, aim pad, verdict, 3D flight.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 async function boot(page) {
   await page.goto('/', { waitUntil: 'load' });

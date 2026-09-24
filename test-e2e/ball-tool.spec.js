@@ -1,6 +1,6 @@
 // A-BACK-026: the palette's Ball tool places the match ball; extra balls via flyout / Shift+click.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 async function boot(page) {
   await page.goto('/', { waitUntil: 'load' });

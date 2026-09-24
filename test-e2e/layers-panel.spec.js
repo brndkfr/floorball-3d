@@ -1,7 +1,7 @@
 // Browser-level integration tests for A-BACK-001 drag-to-reorder in
 // the layers panel. See CLAUDE.md for why the reload dance is needed.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 async function bootApp(page) {
   await page.goto('/', { waitUntil: 'load' });

@@ -9,7 +9,7 @@
 // otherwise serves stale ES modules across specs during a single dev
 // session.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 async function bootApp(page) {
   await page.goto('/', { waitUntil: 'load' });

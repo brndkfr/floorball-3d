@@ -2,7 +2,7 @@
 // Steps 1 and 2 shipped previously; this suite covers the Step 3/4
 // stepper indicator + primary-CTA banners added this session.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 async function bootApp(page) {
   await page.goto('/', { waitUntil: 'load' });

@@ -1,7 +1,7 @@
 // A-BACK-019: guided Choreo tutorial. rAF can be paused in Playwright, so the
 // spec drives tickActors()/tickChoreo() directly after scene mutations.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 const TUTORIAL_NAME = 'Tutorial: first choreo';
 

@@ -2466,6 +2466,37 @@ added.
   on `623e61b`, green after), `photo-stepper.spec.js` covers the
   round trip. Verified: unit 237/237, e2e 19/19, build + size OK,
   live-browser Plan/Analyze round trip with a cached photo.
+- **[S-BACK-018]** [in-progress] **Run only the e2e tests a change
+  affects (locally); CI stays full.** The full suite (58 tests, every
+  one boots the whole WebGL app) took 8.8 min locally with 6 workers
+  and produced 18 load-induced timeouts that all passed on a serial
+  re-run. Decision (2026-09-24): option (a) - affected tests are the
+  local pre-commit gate, CI's full `pnpm test:e2e` stays the real gate.
+  - **Why not an import graph:** specs load app code via
+    `import('/src/...')` strings inside `page.evaluate` (invisible to
+    Playwright's `--only-changed`), and `authoring/index.js` loads every
+    module at boot, so reverse dependencies always reach every spec.
+  - **Coverage-based selection instead:** `pnpm test:e2e:record` runs
+    the suite with Chromium JS coverage (fixture in
+    `test-e2e/fixtures.js`) and writes `test-e2e/.impact-map.json`
+    (gitignored): per `web/src` file, every function's line range and
+    which tests executed it, stamped with the recorded commit.
+    `pnpm test:e2e:affected` diffs the working tree against that commit
+    and runs, by `file:line`, the tests that executed a changed
+    function (innermost function containing the changed line).
+  - **Full-run fallbacks:** changed module-init (top-level) code other
+    than import lines and whole added/removed function declarations;
+    `index.html`, CSS, `web/lib`, assets, Playwright config, the static
+    server, `package.json` / lockfile, `fixtures.js`; a deleted
+    `web/src` file; a missing map or a map commit that is not an
+    ancestor of HEAD. Edited spec files always run; `bootstrap.spec.js`
+    always runs; tests without recorded coverage (the two a11y tests
+    that open their own context) always run.
+  - Changed functions no test executed are reported as uncovered.
+  - Quick wins: local `workers: 3` (CI keeps the default),
+    `pnpm test:e2e:failed` = `--last-failed`.
+  Pure logic in `scripts/e2e-impact/impact.mjs`, node-tested in
+  `test/e2e-impact.test.js`.
 
 ---
 

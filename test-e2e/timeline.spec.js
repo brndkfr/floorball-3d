@@ -4,7 +4,7 @@
 // because Playwright auto-scrolls clipped elements into view and would hide
 // exactly the bug this guards against.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 async function boot(page) {
   await page.goto('/', { waitUntil: 'load' });

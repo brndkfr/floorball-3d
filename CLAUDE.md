@@ -46,13 +46,23 @@ aside.
    already exists, extend it. Do not skip this step because "unit
    tests pass and the build is clean" - see the Verification section
    below for why that is not enough.
-5. **Run `pnpm test:e2e`** (Playwright + Chromium, config in
-   [playwright.config.js](playwright.config.js)) and confirm every
-   spec passes, including the ones you did not touch. If anything
-   fails, go back to step 1 for the failing case: write a unit test
-   that isolates the underlying logic error, fix it, re-run unit
-   tests, then re-run e2e. TDD applies to bug fixes surfaced by e2e
-   too, not just to the original change.
+5. **Run `pnpm test:e2e:affected`** (S-BACK-018) and confirm every
+   selected test passes. It runs only the tests whose recorded
+   coverage executed the changed functions, plus edited specs,
+   `bootstrap.spec.js` and tests without coverage, and falls back to
+   the full suite (it prints `FULL RUN - <reason>`) for module-init
+   changes, `index.html` / CSS / assets / config, or a missing or
+   foreign impact map. Run `pnpm test:e2e:record` once after cloning
+   and again after large refactors or when it warns the map is old
+   (needs a clean `web/` + `test-e2e/`). It also lists changed code
+   no e2e test executes - add a spec when that code is UI-facing.
+   CI still runs the full `pnpm test:e2e` on every push and stays
+   the real gate; a red CI run blocks the deploy. `pnpm test:e2e:failed`
+   re-runs only the last failures. If anything fails, go back to
+   step 1 for the failing case: write a unit test that isolates the
+   underlying logic error, fix it, re-run unit tests, then re-run
+   e2e. TDD applies to bug fixes surfaced by e2e too, not just to
+   the original change.
 6. **`pnpm run build` and `pnpm run check:size`** must also pass
    before the goal is considered reached (both are CI gates).
 7. **Never assume it works because it compiled, because `pnpm test`
@@ -224,9 +234,12 @@ aside.
   clean build only prove pure-logic paths and that the code parses /
   bundles - they say nothing about whether the dock button renders, the
   dialog opens, the overflow menu wiring hits the right handler, or the
-  bootstrap ordering works when the DOM is real. Run `pnpm test:e2e`
+  bootstrap ordering works when the DOM is real. Run `pnpm test:e2e:affected`
+  locally (see workflow step 5; `pnpm test:e2e` for everything)
   (Playwright + Chromium, config in `playwright.config.js`, specs in
-  `test-e2e/*.spec.js`). Playwright's `webServer` auto-starts
+  `test-e2e/*.spec.js`; specs import `test` / `expect` from
+  `./fixtures.js`, not `@playwright/test`, so coverage recording
+  works). Playwright's `webServer` auto-starts
   `scripts/serve-static.mjs` on port 8000 so no separate dev server is
   needed. If a change touches DOM, wires new event handlers, mutates
   state at module-init time, or depends on `state.doc` being finalised

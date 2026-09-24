@@ -7,7 +7,7 @@
 // e2e spec calls `page.goto('/')` too but none of them fail the test on
 // unhandled page errors, so a broken bootstrap slipped through until the
 // user opened the app themselves.
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 test('app boots with no page errors and the rink renders', async ({ page }) => {
   const pageErrors = [];

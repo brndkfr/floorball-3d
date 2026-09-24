@@ -7,6 +7,9 @@
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
     "test:e2e": "playwright test",
+    "test:e2e:affected": "node scripts/e2e-impact/select.mjs",
+    "test:e2e:record": "node scripts/e2e-impact/record.mjs",
+    "test:e2e:failed": "playwright test --last-failed",
     "build": "node scripts/build.mjs",
     "check:size": "node scripts/check-size.mjs",
     "label:goals": "node scripts/label-goals.mjs",

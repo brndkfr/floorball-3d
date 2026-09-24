@@ -2,7 +2,7 @@
 // plus pass timing. rAF is paused in unfocused Playwright tabs, so the spec
 // drives tickActors()/tickChoreo()/tickPassOverlay() directly.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 async function bootApp(page) {
   await page.goto('/', { waitUntil: 'load' });
