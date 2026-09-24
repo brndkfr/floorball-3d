@@ -9,8 +9,6 @@ import { test, expect } from './fixtures.js';
 async function boot(page) {
   await page.goto('/', { waitUntil: 'load' });
   await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
-  const tip = page.locator('#onboardingTip button', { hasText: 'Got it' });
-  if (await tip.count()) await tip.first().click();
 }
 
 const frameCount = (page) => page.evaluate(async () => (await import('/src/state.js')).state.doc.frames.length);

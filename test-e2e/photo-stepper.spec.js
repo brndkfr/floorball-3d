@@ -10,8 +10,6 @@ async function bootApp(page) {
     const el = document.getElementById('dockProjectName');
     return el && el.textContent && el.textContent.length > 0;
   });
-  const tip = page.locator('#onboardingTip button', { hasText: 'Got it' });
-  if (await tip.count()) await tip.first().click();
   await page.locator('[data-mode="analyze"]').click();
   // Expand the photo panel (starts collapsed) so its children are visible.
   await page.locator('[data-panel="photoPanel"]').click();
