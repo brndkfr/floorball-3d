@@ -82,53 +82,125 @@ question in section 11.
 
 ### Design system
 
-Chosen stack: **Open Props** (spacing/radius/shadow/type tokens) +
-**Shoelace** web components (buttons, tabs, sliders, drawers, alerts -
-framework-agnostic, no build step) + **Radix Colors** (accessible 12-step
-colour scales) for the palette, with a small semantic token layer on top
-(`--surface-1/2/3`, `--accent`, `--team-home`/`--team-away`,
-`--vector-pass`/`--vector-shot`/`--vector-coverage`).
+**Decision (2026-09-24): Web Awesome (free, MIT) for interactive
+components + our own CSS for tokens, theme and layout.** Supersedes the
+earlier Open Props + Shoelace + Radix Colors plan:
 
-**As of 2026-09-21, none of the three are actually in the repo.** They were
-vendored locally under `web/lib/` (same pattern as `web/lib/opencv.js`)
-rather than pulled from a CDN, but since nothing in `index.html`/`web/src`
-ever referenced them - only the unshipped `web/design-sample/` demo did -
-CodeQL flagged a bad HTML-comment regex (`js/bad-tag-filter`) inside
-vendored Shoelace's own source, and since that code was 100% dead weight
-already excluded from the deploy artifact (S-BACK-010), the fix was to
-delete `web/lib/shoelace`, `web/lib/open-props`, `web/lib/radix-colors`,
-and `web/design-sample/` outright rather than patch third-party vendored
-code in place - see **S-BACK-013**. The stack choice above still stands as
-the *plan*; re-vendor all three (see
-`/memories/repo/design-system-vendoring.md` for the steps and a Shoelace
-self-hosting gotcha hit while wiring it up the first time) when this
-redesign actually starts.
+- **Shoelace** is end-of-life: last release 2.20.1 (2025-03-11), repo
+  archived 2026-05-14. Its successor is **Web Awesome**
+  (`@awesome.me/webawesome`, by the Font Awesome team; 3.14.0 on
+  2026-09-24 when checked). The free core is MIT, same zero-build
+  custom-element model (`<wa-*>` instead of `<sl-*>`); a paid Pro tier
+  exists and is not needed.
+- **Radix Colors** is dropped: the Broadcast canvas already pins every
+  colour for dark and light, so a generic 12-step scale adds nothing.
+- **Open Props** is dropped: the canvas uses a handful of spacing /
+  radius / type values, which a few `--fb-*` tokens cover.
+- None of the three old libraries are in the repo (deleted in
+  **S-BACK-013**, never referenced by `web/src`).
+
+**Layering - who owns what:**
+
+| Layer | File (planned) | Owns |
+|---|---|---|
+| Domain tokens | `web/src/tokens.css` + `tokens.js` (exists, hand-synced) | Team home/away, shot open / blocked-off / clear, pass, coverage, trajectory - consumed by both CSS and three.js. Unchanged by the redesign apart from the per-theme values below. |
+| Broadcast tokens | `web/src/tokens.css` (new `--fb-*` block) | Neutrals (`ink/ground`, `surf1-3`, `line`, `text1-3`), `--fb-brand #2E6BFF`, the 3 px accent motif, radius, spacing, type scale. Dark = default, light via `[data-theme="light"]` (+ `prefers-color-scheme`). |
+| Web Awesome theme | `web/src/theme-broadcast.css` | Maps `--wa-*` onto `--fb-*` only: `--wa-color-surface-{default,raised,lowered,border}`, `--wa-color-text-{normal,quiet}`, `--wa-color-brand-*` (from `--fb-brand`), `--wa-color-focus`, `--wa-font-family-{body,heading,code}`, `--wa-border-radius-*`, `--wa-form-control-*`. Declared in WA's `wa-theme-overrides` cascade layer, `.wa-dark` / `.wa-light` switched together with our `data-theme`. Never hard-codes a colour. |
+| App layout + chrome | `web/src/app.css` (extracted from the ~780-line inline `<style>` in `index.html`) | Grid of rail / top bar / stage / right panel / timeline, the Broadcast breakpoints, rink-adjacent chrome, anything WA has no component for. |
+| Canvas / WebGL | three.js + `frame-thumb.js` 2D canvas | Rink (fixed blue surface, black boards, white lines), chips, arrows, overlays - read colours from `tokens.js`, never from WA. |
+
+Fonts: **Archivo** (display/UI) + **IBM Plex Mono** (every measurement),
+both OFL - self-host the woff2 under `web/lib/fonts/`, no Google Fonts
+request at runtime.
+
+**Broadcast element -> implementation map** (from the canvas screens):
+
+| Broadcast element | Web Awesome | Own CSS / JS |
+|---|---|---|
+| Left rail Plan / Analyze / Library (desktop), bottom tab bar (<768 px) | - (plain `<nav>` buttons, too simple to wrap) | `app.css` rail + 3 px active bar; `shell.js` keeps `[data-mode]` logic |
+| Top bar: project name, frame "2 / 6", 2D / 3D, Export, Record | `wa-button`, `wa-button-group` (2D/3D segmented) | layout in `app.css` |
+| Tool palette (select, player, ball, cone, arrow, zone, text, shot) + flyouts (ball extras, draw variants) | `wa-dropdown` / `wa-popup` for flyouts, `wa-tooltip` for labels | palette strip + "active tool is the only filled element" rule; `tool-palette.js` logic unchanged |
+| Inspector / Layers right panel | `wa-tab-group` + `wa-tab` + `wa-tab-panel`; controls: `wa-select`, `wa-slider`, `wa-switch`, `wa-input`, `wa-button-group` (Head filled/open etc.) | panel heading cap (3 px bar), mono value readouts |
+| Right panel on tablet (768-1199) / bottom sheet on phone | `wa-drawer` (`placement="end"` / `"bottom"`) | peek height (~96 px) + drag-to-expand handle (WA drawer has no peek state - own JS) |
+| Multi-select bulk bar on the rink (re-team, delete) | `wa-button-group` | floating position over canvas |
+| Chip popover | `wa-popup` (Floating UI positioning) | content styling |
+| Timeline: frame cards with name, time range, thumbnail, "+", playhead | - | own - it is a custom scrubber over `frame-thumb.js`; `timeline.js` logic unchanged |
+| Export / share / import dialogs, help / keymap | `wa-dialog` (replaces the hand-rolled open/close + focus trap in `dialog.js` / `focus-trap.js` per dialog, one at a time) | form layout |
+| Library (card grid, search, New play / New analysis) | `wa-card`, `wa-input` (search), `wa-button`, `wa-badge` (Plan / Analyze tag) | grid + thumbnails; `library-dialog.js` data logic unchanged (moves from modal to the Library view) |
+| First run (two entry cards) | `wa-card`, `wa-button` | layout |
+| Analyze 4-step header Photo / Align / Players / Insights | `wa-stepper` + `wa-step` | wired to existing `photo-step-tracker.js` state |
+| Align: before/after divider | `wa-comparison` | photo canvas + rink overlay stay our canvases inside the two slots |
+| Align: "Advanced - FOV, lens distortion" | `wa-details` + `wa-slider` | - |
+| Align: reprojection-error badge, landmark count | `wa-badge` | mono type |
+| Insights: verdict pill (On target / Blocked-off) | `wa-badge` / `wa-tag` with domain colour | colour from domain tokens, not `--wa-color-*` |
+| Insights: mono stat grid (angle, distance, coverage %, clear passes) | - | own grid, IBM Plex Mono, `wa-format-number` optional |
+| Status / save state / warnings (coplanar landmarks, detect failures) | `wa-callout`, `wa-toast`, `wa-spinner`, `wa-progress-bar` (model / detection loading) | - |
+| Touch D-pad (phone review) | `wa-button` | position + hit sizes |
+
+Rules for the port:
+
+- **Vendor, don't CDN**: copy only the used components + their chunks
+  into `web/lib/webawesome/` (same pattern as `opencv.js`, `three`).
+  Measure it and add a `web/lib/webawesome` entry to
+  `scripts/check-size.mjs`.
+- **No `wa-icon` Font Awesome kit**: its default loads from
+  `ka-f.fontawesome.com` at runtime (external request, breaks offline).
+  Register a local icon library pointing at our own SVGs, or use inline
+  SVG.
+- **CodeQL**: this is Shoelace's code lineage, which tripped
+  `js/bad-tag-filter` before (S-BACK-013). Exclude `web/lib/webawesome/`
+  from CodeQL analysis before vendoring, instead of deleting the library
+  after an alert.
+- **Keep DOM ids**: existing ids (`#inspector`, `#timeline`, `#photoStepper`,
+  `#photoAlignSlider`, ...) stay on the element that replaces them so the
+  modules' `getElementById` guards (see CLAUDE.md) and the Playwright
+  specs keep working. Re-skin first, restructure second, one surface per
+  commit, each with its e2e spec extended first.
+
+Tracked as **S-BACK-019** (theme + vendoring), **S-BACK-020** (canvas
+gap-fill) and **S-BACK-021** (port order) in section 10.
 
 ### Visual direction exploration (design canvas)
 
 A full-fidelity mockup canvas exploring the "ne plus ultra" minimalist
 look lives as a Claude Design artifact:
 <https://claude.ai/code/artifact/2272914e-271a-4f2b-a083-59dc8ce8e377>
-(source `.dc.html` artboards are kept in the session scratchpad, not the
-repo). Three directions, 8 screens each (Foundations, Plan single-select,
+(the `.dc.html` artboards live inside the artifact itself, not the repo).
+Three directions, 8 screens each (Foundations, Plan single-select,
 Plan multi-select, first-run, Analyze step 2 / step 4, Library, phone):
 
 - **Broadcast / matchday sport** - *chosen.* Deep-ink stage, one
   electric-blue action colour (`#2E6BFF`) that never doubles as a team
-  colour, domain green/red intact, IBM Plex Mono for every measurement,
-  flat surfaces + hairline borders, a single 3px accent motif (active tab
-  underline / panel-heading cap / selection ring). No glow, blur or
-  angled corners - the deliberate break from today's tactical-HUD look.
+  colour, domain green/red intact, Archivo display + IBM Plex Mono for
+  every measurement, flat surfaces + hairline borders, a single 3px
+  accent motif (active tab underline / panel-heading cap / selection
+  ring). No glow, blur or angled corners - the deliberate break from
+  today's tactical-HUD look.
 - **Instrument** - cold technical (Linear / DAW): matte neutral greys,
   a cold mint accent used only on live elements, 1px rules, dense
-  controls, no display face.
+  controls, no display face. *Rejected, kept for reference.*
 - **Chalk & Court** - warm editorial: bone paper, burnt-orange accent,
   Space Grotesk display, borderless panels, warm-charcoal dark mode.
+  *Rejected, kept for reference.*
 
 Fixed across all three: the rink renders as a **blue surface with solid
 black boards** and white markings; only the surrounding chrome changes.
-This canvas is a design target to port toward, not shipped UI - the
-Open Props + Shoelace + Radix stack above still stands.
+Breakpoints: >=1200 px both panels docked; 768-1199 right panel becomes a
+slide-over drawer; <768 rail -> bottom tab bar, palette -> scroll strip,
+Inspector / Layers -> bottom sheet, timeline pinned. Authoring is
+desktop-first; phone is for review, playback and quick nudges.
+
+**Coverage gaps** - closed by **S-BACK-020** (canvas page "Broadcast -
+gaps", 13 screens). The original canvas predated several shipped
+features and only mocked 8 screens; the gaps were:
+Analyze steps 1 (photo / restore / auto-detect) and 3 (players, teams,
+ball, facing - the densest screen); shots at goal (aim pad, timing,
+verdict, 3D flight, A-BACK-022); tool flyouts (ball extras A-BACK-026,
+cones, draw variants, chip popover); the 3D view's chrome (camera,
+view-from-ball, coverage / trajectory toggles, goalie model); export /
+share / import / help dialogs; the choreography tutorial; empty / loading
+/ error / save states; tablet layouts and phone Analyze. Design these in
+Broadcast before porting the surface they belong to.
 
 ---
 
@@ -2497,6 +2569,80 @@ added.
     `pnpm test:e2e:failed` = `--last-failed`.
   Pure logic in `scripts/e2e-impact/impact.mjs`, node-tested in
   `test/e2e-impact.test.js`.
+
+- **[S-BACK-019]** [shipped] **Broadcast tokens + theme mapping, no
+  visible change.** Foundation for the redesign (section 2, "Design
+  system"). Decision (2026-09-24, option 1): ship only what changes
+  nothing on screen; the recolour becomes the first step of S-BACK-021.
+  **Shipped:**
+  - `web/src/tokens.css`: `--fb-*` Broadcast palette (dark default,
+    light under `:root[data-theme="light"]`) + radius / control height /
+    accent bar / font stacks. Domain colours unchanged (their Broadcast
+    values differ slightly, so changing them is a visible change and
+    belongs to S-BACK-021).
+  - `web/src/theme-broadcast.css`: `--wa-*` -> `--fb-*` references in
+    the `wa-theme-overrides` layer, no literals.
+  - `web/src/app.css`: the ~780-line inline `<style>` of `index.html`,
+    moved verbatim (loaded first, as the inline block was). Screenshots
+    before / after differ only where two runs of the same code also
+    differ (a time-based strip behind the Inspector + the save clock).
+  - `test/tokens.test.js` (5 tests): `tokens.css` domain colours ==
+    `tokens.js`, the full dark + light `--fb-*` palette, the theme file
+    only references defined `--fb-*`, `index.html` has no inline style
+    and loads the three sheets in order. `bootstrap.spec.js` gains a
+    test that the moved styles still apply, `--fb-*` resolve and flip
+    under `data-theme="light"`, and no request leaves the origin.
+  **Deferred to the first S-BACK-021 surface that uses them** (vendoring
+  code nothing imports is what S-BACK-013 had to delete):
+  - Vendor the Web Awesome subset + its size budget + a local icon
+    library. **Needs a repo-settings change first:** the repo has no
+    CodeQL workflow (GitHub default setup), which to our knowledge
+    takes no config file / `paths-ignore`, so excluding `web/lib/webawesome/` means switching
+    code scanning to advanced setup with a `paths-ignore` config.
+  - Self-host Archivo + IBM Plex Mono woff2 (`--fb-font` / `--fb-mono`
+    fall back to system faces until then).
+  - Per-theme domain colours and the HUD recolour onto `--fb-*`.
+
+- **[S-BACK-020]** [shipped] **Design canvas gap-fill (Broadcast).** Add a
+  "Broadcast - gaps" page to the design artifact covering everything in
+  section 2 "Coverage gaps", built from the real controls in
+  `index.html` / the photo-overlay step panels (not invented ones), plus
+  one sheet showing the Broadcast -> Web Awesome / own-CSS map above
+  with the theme variables filled in. Priority: Analyze step 1 + 3,
+  shots, tool flyouts, then dialogs / states / tablet. Blocks the port
+  of each affected surface in S-BACK-021, not S-BACK-019.
+  **Round 1 done (2026-09-24):** new canvas page "Broadcast - gaps"
+  with Analyze step 1 (photo, goal end, auto-align switch, the three
+  manual align routes) and step 3 (players checklist, floating bar on
+  the selected player, CTA Set ball -> Continue), Plan shot at goal
+  (aim pad, release, speed, verdict), ball tool flyout + extra-ball
+  Inspector, a flyout spec sheet (Ball / Zone / Cones), and the
+  Broadcast -> Web Awesome mapping sheet with dark + light values for
+  every `--wa-*` -> `--fb-*` pair. New in the design, not in the app
+  yet: the "Align automatically" switch and step 3's checklist.
+  **Round 2 done (2026-09-24):** 3D view (third right-panel tab
+  "View": Camera / Shot check / Show, coverage % on the stage), export
+  dialog (settings, rendering, saved), a dialogs sheet (overflow menu,
+  share toasts incl. the ~32 KB fallback, import JSON, delete confirm,
+  keyboard shortcuts), the choreography tutorial as a coach card with
+  the 7 real steps and the Commit / Cancel banner, a states sheet
+  (empty play / Library, save status, first-time 12.9 MB detector
+  download, working, blocked-until-step, landmark / goal / mirror
+  messages), tablet (Inspector as a `wa-drawer` over the stage) and
+  phone Analyze (photo, stepper, bottom sheet). Every surface in the
+  S-BACK-021 port order now has a Broadcast design.
+
+- **[S-BACK-021]** [open] **Port surfaces to
+  Broadcast, one per commit.** Step 0: the S-BACK-019 deferrals
+  (CodeQL advanced setup, vendor Web Awesome, fonts, HUD recolour).
+  Then, lowest risk / most visible first:
+  app shell (rail, top bar) -> right panel (Inspector / Layers as
+  `wa-tab-group`) -> tool palette + flyouts -> timeline -> dialogs
+  (export, share, library -> Library view) -> Analyze stepper + align
+  comparison + insights -> first run -> tablet drawer -> phone bottom
+  sheet / tab bar. Each surface: extend its e2e spec first, keep
+  existing DOM ids, keep module logic unchanged (only markup + CSS +
+  mount points), then `pnpm test:e2e:affected` + build + size.
 
 ---
 

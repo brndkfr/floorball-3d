@@ -67,3 +67,43 @@ test('shipped controls are present in the DOM', async ({ page }) => {
   await expect(page.locator('#timeline [data-tl="choreo"]')).toHaveCount(1); // A-BACK-006
   await expect(page.locator('link[href$="tokens.css"]')).toHaveCount(1);
 });
+
+// S-BACK-019: the inline <style> moved to src/app.css and the Broadcast
+// tokens + Web Awesome theme mapping were added without changing the look.
+// Pins that the moved styles still apply, the new tokens resolve (and flip
+// under data-theme="light"), and nothing is fetched from another host
+// (no Google Fonts, no Font Awesome kit).
+test('stylesheets load from the origin and keep the current look', async ({ page }) => {
+  const foreign = [];
+  page.on('request', (req) => {
+    const url = new URL(req.url());
+    if (!['localhost', '127.0.0.1'].includes(url.hostname) && url.protocol.startsWith('http')) foreign.push(req.url());
+  });
+  await page.goto('/', { waitUntil: 'load' });
+  await expect(page.locator('#toolPalette')).toBeVisible();
+
+  const styles = await page.evaluate(() => {
+    const rootVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const active = document.querySelector('#toolPalette button.active');
+    const out = {
+      hudAccent: rootVar('--hud-accent'),
+      paletteActiveBg: active && getComputedStyle(active).backgroundColor,
+      teamHome: rootVar('--team-home'),
+      fbBrand: rootVar('--fb-brand'),
+      fbSurfDark: rootVar('--fb-surf-1'),
+    };
+    document.documentElement.dataset.theme = 'light';
+    out.fbSurfLight = rootVar('--fb-surf-1');
+    delete document.documentElement.dataset.theme;
+    return out;
+  });
+  expect(styles).toEqual({
+    hudAccent: '#4fe0ff',
+    paletteActiveBg: 'rgb(255, 179, 71)',
+    teamHome: '#2fbf4e',
+    fbBrand: '#2e6bff',
+    fbSurfDark: '#15181c',
+    fbSurfLight: '#ffffff',
+  });
+  expect(foreign, `requests to other hosts:\n${foreign.join('\n')}`).toEqual([]);
+});
