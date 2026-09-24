@@ -5,8 +5,22 @@ const {
   ballPoseAt, passPlan, nearestReleaseT, passFlightPos,
   BALL_CARRY_OFFSET, PASS_FLIGHT_S, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS,
   GOAL_Z, DEFAULT_SHOT_SPEED_MPS, SHOT_REST_DEPTH, makeShot, clampAim, padToAim, aimToPad, shotTargetFrame,
+  heightAlong,
 } = await import('../web/src/authoring/ball-pose.js');
 const { BALL_RADIUS } = await import('../web/src/constants.js');
+
+test('heightAlong: linear from y0 at `from` to y1 at `to`, by progress along the line', () => {
+  const from = { x: 0, z: 0 }, to = { x: 0, z: 10000 };
+  assert.equal(heightAlong({ x: 0, z: 0 }, from, to, 36, 1000), 36);
+  assert.equal(heightAlong({ x: 0, z: 10000 }, from, to, 36, 1000), 1000);
+  assert.ok(close(heightAlong({ x: 0, z: 5000 }, from, to, 36, 1000), 518));
+  // Sideways offset (ribbon width, arrow head wings) does not change the height.
+  assert.ok(close(heightAlong({ x: 300, z: 5000 }, from, to, 36, 1000), 518));
+  // Clamped at both ends, degenerate line returns y0.
+  assert.equal(heightAlong({ x: 0, z: -500 }, from, to, 36, 1000), 36);
+  assert.equal(heightAlong({ x: 0, z: 12000 }, from, to, 36, 1000), 1000);
+  assert.equal(heightAlong({ x: 5, z: 5 }, from, from, 36, 1000), 36);
+});
 
 // --- shots (A-BACK-022) ---
 

@@ -143,6 +143,49 @@ test.describe('A-BACK-022 shots at goal', () => {
     expect(lowered).toBeLessThan(shot.aimY);
   });
 
+  test('the 3D shot arrow and trail rise along the ball\'s flight to the aim point', async ({ page }) => {
+    await boot(page);
+    const id = await setupShooter(page, { x: 0, z: 26000 });
+    await selectChip(page, id);
+    await page.locator('#inspectorShoot [data-shoot="B"]').click();
+    const r = await page.evaluate(async () => {
+      const { setShotAim } = await import('/src/authoring/actors.js');
+      const { padToAim } = await import('/src/authoring/ball-pose.js');
+      const { tickPassOverlay } = await import('/src/authoring/pass-overlay.js');
+      const { scene } = await import('/src/scene.js');
+      const aim = padToAim('B', 0.95, 0.95);   // shooter's upper right
+      setShotAim(aim);
+      tickPassOverlay();
+      const pos = scene.getObjectByName('passArrow').geometry.attributes.position;
+      let tip = null, tail = null;
+      for (let i = 0; i < pos.count; i++) {
+        const v = { x: pos.getX(i), y: pos.getY(i), z: pos.getZ(i) };
+        if (!tip || v.z > tip.z) tip = v;
+        if (!tail || v.z < tail.z) tail = v;
+      }
+      const { play, seekTo, stop } = await import('/src/authoring/playback.js');
+      const { passPlan } = await import('/src/authoring/ball-pose.js');
+      const { state } = await import('/src/state.js');
+      const f = state.doc.frames;
+      const plan = passPlan(f[0].scheme, f[1].scheme, f[0].duration);
+      play();
+      seekTo(((plan.releaseT + plan.arriveT) / 2) * f[0].duration);
+      tickPassOverlay();
+      const tpos = scene.getObjectByName('passTrail').geometry.attributes.position;
+      let trailMaxY = 0;
+      for (let i = 0; i < tpos.count; i++) trailMaxY = Math.max(trailMaxY, tpos.getY(i));
+      const ballY = state.ballGroup.position.y;
+      stop();
+      return { aim, tip, tail, trailMaxY, ballY };
+    });
+    expect(r.aim.aimX).toBeLessThan(-600);            // upper right from the shooter's view is -x at goal B
+    expect(Math.round(r.tip.z)).toBe(36500);
+    expect(Math.abs(r.tip.x - r.aim.aimX)).toBeLessThan(5);
+    expect(Math.abs(r.tip.y - r.aim.aimY)).toBeLessThan(5);
+    expect(r.tail.y).toBeLessThan(100);               // starts at ball height on the floor
+    expect(r.trailMaxY).toBeGreaterThan(200);         // trail climbs with the ball mid-flight
+  });
+
   test('verdict: goalie squared up at goal A, open shot at goal B', async ({ page }) => {
     await boot(page);
     const id = await setupShooter(page, { x: 0, z: 12000 });

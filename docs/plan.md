@@ -623,6 +623,16 @@ Still on the backlog from that exploration:
       instead of using a fixed value.
     - The `web/src` size budget was raised from 0.8 to 1.0 MB in its own
       commit; it is now at 0.79.
+  - **Follow-up (2026-09-24, user report):** the 3D shot arrow was flat
+    on the floor, so it pointed at the goal's base whatever the aim. It
+    now follows the ball's straight flight line: `heightAlong()` in
+    ball-pose.js (1 node test) tilts the floor ribbon from ball-centre
+    height at the release point to `aimY` at the goal line. From above
+    it looks the same. The in-flight trail is lifted the same way, up to
+    the ball's current height. E2e: aim at the upper right, the arrow
+    tip sits at `(aimX, aimY)` on the goal line, the tail at ball height
+    and the trail climbs mid-flight. When A-BACK-025 adds an arc, the
+    arrow must follow that curve too.
   - Known gaps (each logged as its own item below):
     - The goalie check uses the goalie's current edit position, not its
       position at shot time (**A-BACK-023**).

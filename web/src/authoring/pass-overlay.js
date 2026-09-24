@@ -9,7 +9,7 @@ import { ensureDoc } from './doc.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from './chips.js';
 import { buildArrowGeometry } from './shapes.js';
 import { passPreview, shotStatus } from './choreo-pass.js';
-import { passPlan, chipPosAt, nearestReleaseT, GOAL_Z } from './ball-pose.js';
+import { passPlan, chipPosAt, nearestReleaseT, GOAL_Z, heightAlong } from './ball-pose.js';
 import { setPassTiming } from './actors.js';
 import { playbackSegment } from './playback.js';
 import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED, SHOT_LINE_TOKENS } from '../tokens.js';
@@ -87,6 +87,18 @@ function setGeometry(mesh, geom) {
   mesh.geometry = geom;
 }
 
+// Tilt a flat floor ribbon so it follows the ball's straight 3D line (ball centre y0 -> y1).
+function liftAlong(geom, from, to, y0, y1) {
+  const pos = geom.attributes.position;
+  if (!pos) return geom;
+  for (let i = 0; i < pos.count; i++) {
+    pos.setY(i, heightAlong({ x: pos.getX(i), z: pos.getZ(i) }, from, to, y0, y1));
+  }
+  pos.needsUpdate = true;
+  geom.computeVertexNormals();
+  return geom;
+}
+
 function hide(...objs) {
   let changed = false;
   for (const o of objs) if (o.visible) { o.visible = false; changed = true; }
@@ -123,7 +135,8 @@ export function tickPassOverlay() {
     trim: CHIP_RADIUS * CHIP_DISPLAY_SCALE,
   });
   if (trimmed) {
-    setGeometry(arrow, buildArrowGeometry([trimmed.from, trimmed.to], ARROW_WIDTH, { shaftStyle: plan.late ? 'dotted' : 'dashed' }));
+    const geom = buildArrowGeometry([trimmed.from, trimmed.to], ARROW_WIDTH, { shaftStyle: plan.late ? 'dotted' : 'dashed' });
+    setGeometry(arrow, plan.kind === 'shot' ? liftAlong(geom, plan.from, plan.to, BALL_RADIUS, plan.aimY) : geom);
     arrow.material.color.setHex(color);
     arrow.visible = true;
   } else {
@@ -161,6 +174,10 @@ function updateTrail() {
   const end = after >= 0 ? plan.to : { x: state.ballGroup?.position.x ?? plan.to.x, z: state.ballGroup?.position.z ?? plan.to.z };
   if (Math.hypot(end.x - plan.from.x, end.z - plan.from.z) < 50) return hide(trail);
   setGeometry(trail, buildArrowGeometry([plan.from, end], TRAIL_WIDTH, { headStyle: 'none' }));
+  if (plan.kind === 'shot') {
+    const endY = after >= 0 ? plan.aimY : (state.ballGroup?.position.y ?? 0) + BALL_RADIUS;
+    liftAlong(trail.geometry, plan.from, end, BALL_RADIUS, endY);
+  }
   trail.material.color.setHex(plan.blockedBy.length ? VECTOR_PASS_BLOCKED.hex : VECTOR_PASS_CLEAR.hex);
   trail.material.opacity = after > 0 ? 0.8 * (1 - after / TRAIL_FADE_MS) : 0.8;
   trail.visible = true;

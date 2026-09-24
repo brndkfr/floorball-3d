@@ -49,6 +49,15 @@ export function shotTargetFrame({ choreoActive, draftCarrierChanged }) {
 
 const validShot = (s) => s && (s.goal === 'A' || s.goal === 'B');
 
+// Height for a floor point p on a line from -> to (shot arrow lift): progress along the line only.
+export function heightAlong(p, from, to, y0, y1) {
+  const dx = to.x - from.x, dz = to.z - from.z;
+  const lenSq = dx * dx + dz * dz;
+  if (lenSq < 1e-9) return y0;
+  const s = clamp(((p.x - from.x) * dx + (p.z - from.z) * dz) / lenSq, 0, 1);
+  return y0 + (y1 - y0) * s;
+}
+
 const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
 const withOffset = (p) => ({ x: p.x + BALL_CARRY_OFFSET.x, z: p.z + BALL_CARRY_OFFSET.z });
 const lerpPt = (a, b, s) => ({ x: a.x + (b.x - a.x) * s, z: a.z + (b.z - a.z) * s });
