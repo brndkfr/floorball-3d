@@ -2634,7 +2634,9 @@ added.
 
 - **[S-BACK-021]** [open] **Port surfaces to
   Broadcast, one per commit.** Step 0: the S-BACK-019 deferrals
-  (CodeQL advanced setup, vendor Web Awesome, fonts, HUD recolour).
+  (vendor Web Awesome, fonts, HUD recolour). CodeQL is done: advanced
+  setup (`.github/workflows/codeql.yml`) with
+  `.github/codeql/codeql-config.yml` ignoring `web/lib/webawesome`.
   Then, lowest risk / most visible first:
   app shell (rail, top bar) -> right panel (Inspector / Layers as
   `wa-tab-group`) -> tool palette + flyouts -> timeline -> dialogs
