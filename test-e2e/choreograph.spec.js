@@ -71,4 +71,32 @@ test.describe('A-BACK-018 choreograph pass-arrow preview', () => {
     await page.locator('#timeline [data-tl="choreo"]').click();
     expect(await passArrow(page)).toBeNull();
   });
+
+  test('Inspector "Pass to" buttons hand the ball to a teammate', async ({ page }) => {
+    await bootApp(page);
+    const ids = await page.evaluate(async () => {
+      const { ensureDoc } = await import('/src/authoring/doc.js');
+      const { spawnChip } = await import('/src/authoring/chips.js');
+      const { setBallCarrier } = await import('/src/authoring/actors.js');
+      ensureDoc().scheme.players = {};
+      const a = spawnChip({ team: 1, x: 5000, z: 15000, number: 7, pushHistory: false });
+      const b = spawnChip({ team: 1, x: 9000, z: 20000, number: 9, pushHistory: false });
+      spawnChip({ team: 2, x: 7000, z: 18000, number: 4, pushHistory: false });
+      setBallCarrier(a);
+      return { a, b };
+    });
+    await page.waitForFunction(async () => !!(await import('/src/state.js')).state.ballGroup);
+    await page.evaluate(async () => {
+      const { selectObject } = await import('/src/selection.js');
+      const { state } = await import('/src/state.js');
+      selectObject(state.ballGroup);
+    });
+    const buttons = page.locator('#inspectorPassTo [data-pass-to]');
+    await expect(buttons).toHaveCount(1);   // only #9: the carrier and the opponent are excluded
+    await expect(buttons.first()).toHaveText('#9');
+    await buttons.first().click();
+    const carrier = await page.evaluate(async () => (await import('/src/authoring/actors.js')).getBallCarrier());
+    expect(carrier).toBe(ids.b);
+    await expect(page.locator('#inspectorPassTo [data-pass-to]').first()).toHaveText('#7');
+  });
 });

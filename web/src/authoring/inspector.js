@@ -16,6 +16,7 @@ import { goalDataFor, updateGoal, fixedGoalLetterOf, fixedGoalDataFor, updateFix
 import { arrowRoleColor } from '../tokens.js';
 import { ensureDoc } from './doc.js';
 import { getBallCarrier, setBallCarrier, getBallColor, setBallColor } from './actors.js';
+import { passTargets } from './choreo-pass.js';
 import { makeFloatable } from './floatable.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
@@ -104,11 +105,12 @@ function render(sel) {
   // Ball: carrier picker + colour tint on the primary ball mesh.
   if (sel === state.ballGroup) {
     body.appendChild(carrierRow());
+    body.appendChild(passRow());
     body.appendChild(ballColorRow());
     const hint = document.createElement('div');
     hint.className = 'ins-empty';
     hint.style.marginTop = '6px';
-    hint.textContent = 'Tip: right-click a chip to hand the ball off.';
+    hint.textContent = 'Shortcut: right-click a chip to pass to it.';
     body.appendChild(hint);
     return;
   }
@@ -124,7 +126,7 @@ function carrierRow() {
   row.className = 'ins-row';
   const label = document.createElement('span');
   label.className = 'ins-label';
-  label.textContent = 'Carrier';
+  label.textContent = 'Has ball';
   row.appendChild(label);
 
   const sel = document.createElement('select');
@@ -143,6 +145,27 @@ function carrierRow() {
   sel.value = getBallCarrier() ?? '';
   sel.addEventListener('change', () => setBallCarrier(sel.value || null));
   row.appendChild(sel);
+  return row;
+}
+
+function passRow() {
+  const row = document.createElement('div');
+  row.className = 'ins-row';
+  row.id = 'inspectorPassTo';
+  row.style.flexWrap = 'wrap';
+  const label = document.createElement('span');
+  label.className = 'ins-label';
+  label.textContent = 'Pass to';
+  row.appendChild(label);
+  const targets = passTargets(Object.values(ensureDoc().scheme.players || {}), getBallCarrier());
+  for (const t of targets) {
+    const btn = document.createElement('button');
+    btn.className = 'ins-btn';
+    btn.dataset.passTo = t.id;
+    btn.textContent = t.text;
+    btn.addEventListener('click', () => setBallCarrier(t.id));
+    row.appendChild(btn);
+  }
   return row;
 }
 

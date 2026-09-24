@@ -17,3 +17,12 @@ export function passPreview({ startCarrier = null, carrier = null, from, to, tri
     to: { x: to.x - ux * trimEnd, z: to.z - uz * trimEnd },
   };
 }
+
+// Inspector "Pass to" buttons: carrier's teammates, or every player when the ball is loose.
+export function passTargets(players, carrierId) {
+  const carrier = players.find((p) => p.id === carrierId);
+  const pool = carrier ? players.filter((p) => p.team === carrier.team && p.id !== carrier.id) : players;
+  return [...pool]
+    .sort((a, b) => (a.team - b.team) || (Number(a.number) - Number(b.number)))
+    .map((p) => ({ id: p.id, text: `#${p.number}` + (p.label ? ` ${p.label}` : '') }));
+}

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-const { passPreview } = await import('../web/src/authoring/choreo-pass.js');
+const { passPreview, passTargets } = await import('../web/src/authoring/choreo-pass.js');
 
 const close = (a, b, eps = 1e-6) => Math.abs(a - b) < eps;
 const A = { x: 0, z: 0 };
@@ -43,4 +43,29 @@ test('no arrow when the trimmed length is below the minimum', () => {
 test('no arrow when an endpoint is missing or not finite', () => {
   assert.equal(passPreview({ startCarrier: 'p1', carrier: 'p2', from: null, to: B, trim: 0 }), null);
   assert.equal(passPreview({ startCarrier: 'p1', carrier: 'p2', from: A, to: { x: NaN, z: 0 }, trim: 0 }), null);
+});
+
+const P = [
+  { id: 'a', team: 1, number: '7' },
+  { id: 'b', team: 1, number: '9' },
+  { id: 'c', team: 2, number: '4' },
+  { id: 'd', team: 1, number: '10' },
+];
+
+test('passTargets: teammates of the carrier, sorted by number, carrier excluded', () => {
+  assert.deepEqual(passTargets(P, 'a').map((t) => t.id), ['b', 'd']);
+  assert.equal(passTargets(P, 'a')[0].text, '#9');
+});
+
+test('passTargets: loose ball lists every player, team 1 first', () => {
+  assert.deepEqual(passTargets(P, null).map((t) => t.id), ['a', 'b', 'd', 'c']);
+});
+
+test('passTargets: unknown carrier is treated as a loose ball', () => {
+  assert.equal(passTargets(P, 'zzz').length, 4);
+});
+
+test('passTargets: prefers the chip label when set', () => {
+  const out = passTargets([{ id: 'a', team: 1, number: '7' }, { id: 'b', team: 1, number: '9', label: 'Wing' }], 'a');
+  assert.equal(out[0].text, '#9 Wing');
 });
