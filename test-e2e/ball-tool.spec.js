@@ -3,10 +3,15 @@
 import { test, expect } from './fixtures.js';
 
 async function boot(page) {
+  // help.js shows the first-visit tip from an 800 ms setTimeout, over the
+  // middle of the rink. Dismissing it only "if it is already there" raced
+  // under load: the tip appeared after the check and swallowed the rink
+  // clicks below. Mark onboarding done before any app script runs instead,
+  // so the tip never shows. (No reloads in this spec, so seeding on every
+  // navigation is fine.)
+  await page.addInitScript(() => localStorage.setItem('floorball-3d:onboarded', '1'));
   await page.goto('/', { waitUntil: 'load' });
   await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
-  const tip = page.locator('#onboardingTip button', { hasText: 'Got it' });
-  if (await tip.count()) await tip.first().click();
   await page.waitForFunction(async () => !!(await import('/src/state.js')).state.ballGroup);
 }
 
