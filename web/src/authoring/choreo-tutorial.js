@@ -2,7 +2,7 @@
 // State is { completed: string[], note: string|null }; events come from choreoChanged,
 // ballCarrierChanged, the tickChoreo move check and playbackChanged.
 
-export const STEPS = ['choreo', 'move', 'pass', 'release', 'commit', 'play'];
+export const STEPS = ['choreo', 'move', 'pass', 'release', 'commit', 'shoot', 'play'];
 const CHOREO_STEPS = ['choreo', 'move', 'pass', 'release'];
 export const STALL_MS = 8000;
 
@@ -12,9 +12,10 @@ const HINTS = {
   pass: 'Pass: click #7 (he has the ball), then press #9 under "Pass to".',
   release: 'Choose when #7 passes: drag the orange diamond on his run (or use the Release slider). A green arrow means a clear lane, red means an opponent is in the way.',
   commit: 'Press Commit to keep the new frame.',
+  shoot: 'Now #9 shoots: select him and press "Shoot at B" in the Inspector (or right-click goal B). Drag the dot in the goal picture to aim.',
   play: 'Press Space to watch your play.',
 };
-const TARGETS = { choreo: 'choreoButton', move: 'chip:7', pass: 'carrier', release: 'releaseMarker', commit: 'commitButton', play: 'playButton' };
+const TARGETS = { choreo: 'choreoButton', move: 'chip:7', pass: 'carrier', release: 'releaseMarker', commit: 'commitButton', shoot: 'shootButton', play: 'playButton' };
 const NOTES = { incompleteCommit: 'That frame was saved without a pass and a move. Press Choreo to plan another one.' };
 // Clicking an already-selected chip deselects it, so don't ask for that click.
 const PASS_HINT_SELECTED = '#7 is already selected: press #9 under "Pass to" in the Inspector.';
@@ -49,6 +50,8 @@ export function tutorialReducer(state, event) {
       return add(s, 'commit');
     case 'playStart':
       return has(s, 'commit') ? add(s, 'play') : s;
+    case 'shot':
+      return has(s, 'commit') ? add(s, 'shoot') : s;
     default:
       return s;
   }

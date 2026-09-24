@@ -20,8 +20,11 @@ import { scene } from '../scene.js';
 import { ensureDoc } from './doc.js';
 import { saveDoc } from './storage.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from './chips.js';
-import { BALL_CARRY_OFFSET, passFlightPos, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS, MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS } from './ball-pose.js';
+import { BALL_CARRY_OFFSET, passFlightPos, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS, MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS, makeShot, clampAim, shotTargetFrame, DEFAULT_SHOT_SPEED_MPS } from './ball-pose.js';
 import { prefersReducedMotion } from '../reduced-motion.js';
+// Cycles (choreograph/frames import actors) are fine: only called at runtime, never at module init.
+import { isChoreoActive, getChoreoStartCarrier, commitChoreo } from './choreograph.js';
+import { duplicateFrame } from './frames.js';
 
 const CARRIER_RING_COLOR = 0xffb347;
 
@@ -181,6 +184,7 @@ export function tickActors() {
 // Snap ball + goalie meshes to the current frame's scheme. Called after
 // rebuildFromDoc (frame switches, undo/redo).
 export function applyActorsFromScheme() {
+  if (state.ballGroup) state.ballGroup.position.y = 0;   // a shot in playback lifts the ball
   const doc = ensureDoc();
   const scheme = doc.scheme;
   if (state.ballGroup && scheme.balls?.main) {
@@ -222,9 +226,46 @@ export function setBallCarrier(chipId) {
   }
   scheme.balls.main.carrier = chipId ?? null;
   delete scheme.balls.main.pass;   // a new hand-off starts from the default timing
+  delete scheme.balls.main.shot;
   saveDoc();
   import('./history.js').then((h) => h.pushHistory());
   window.dispatchEvent(new Event('ballCarrierChanged'));
+}
+
+// Shot by the current carrier at goal 'A' | 'B' (A-BACK-022). Goes into the Choreo draft when it
+// has no pass yet, else into a new frame after the current one. Returns false without a carrier.
+export function shootAt(goal) {
+  const shooter = ensureDoc().scheme.balls?.main?.carrier;
+  if (!shooter) return false;
+  const choreoActive = isChoreoActive();
+  const where = shotTargetFrame({ choreoActive, draftCarrierChanged: choreoActive && getChoreoStartCarrier() !== shooter });
+  if (where === 'new') {
+    if (choreoActive) commitChoreo();
+    const k = ensureDoc().currentFrame;
+    duplicateFrame(k, k + 1);
+  }
+  const { shot, rest } = makeShot(goal);
+  const main = ensureDoc().scheme.balls.main;
+  Object.assign(main, { carrier: null, x: rest.x, z: rest.z, shot });
+  delete main.pass;
+  applyActorsFromScheme();
+  saveDoc();
+  import('./history.js').then((h) => h.pushHistory());
+  window.dispatchEvent(new Event('ballCarrierChanged'));
+  window.dispatchEvent(new Event('shotChanged'));
+  return true;
+}
+
+export function setShotAim(aim, { history = true } = {}) {
+  const main = ensureDoc().scheme.balls?.main;
+  if (!main?.shot) return;
+  const { aimX, aimY } = clampAim({ ...main.shot, ...aim });
+  main.shot = { ...main.shot, aimX, aimY };
+  main.x = aimX;   // the ball rests behind the aim point
+  applyActorsFromScheme();
+  saveDoc();
+  if (history) import('./history.js').then((h) => h.pushHistory());
+  window.dispatchEvent(new CustomEvent('passChanged', { detail: { aim: true } }));
 }
 
 // Timing of the pass arriving in the current frame (A-BACK-021). Only non-default values are stored.
@@ -235,7 +276,7 @@ export function setPassTiming({ releaseT, speedMps } = {}, { history = true } = 
   if (releaseT !== undefined) pass.releaseT = Math.min(Math.max(releaseT, 0), 1);
   if (speedMps !== undefined) pass.speedMps = Math.min(Math.max(speedMps, MIN_PASS_SPEED_MPS), MAX_PASS_SPEED_MPS);
   if (pass.releaseT === DEFAULT_RELEASE_T) delete pass.releaseT;
-  if (pass.speedMps === DEFAULT_PASS_SPEED_MPS) delete pass.speedMps;
+  if (pass.speedMps === (main.shot ? DEFAULT_SHOT_SPEED_MPS : DEFAULT_PASS_SPEED_MPS)) delete pass.speedMps;
   if (Object.keys(pass).length) main.pass = pass; else delete main.pass;
   saveDoc();
   if (history) import('./history.js').then((h) => h.pushHistory());

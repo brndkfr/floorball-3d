@@ -156,6 +156,7 @@ function lerp(a, b, t) { return a + (b - a) * t; }
 // three.js graph.
 import { bezierPos, segmentControls, lerpAngle } from './bezier.js';
 import { ballPoseAt } from './ball-pose.js';
+import { applyActorsFromScheme } from './actors.js';
 
 function applyPose(elapsed) {
   const frames = getFrames();
@@ -181,6 +182,7 @@ function applyPose(elapsed) {
     const p = ballPoseAt(fa, fb, t, frames[a].duration);
     if (p) {
       state.ballGroup.position.x = p.x;
+      state.ballGroup.position.y = p.y ?? 0;
       state.ballGroup.position.z = p.z;
     }
   }
@@ -250,6 +252,8 @@ function restoreEditFrame() {
     g.position.set(p.x, 0, p.z);
     g.rotation.y = p.angle || 0;
   }
+  // Ball + goalie too: else tickActors writes their playback pose into the edit frame.
+  applyActorsFromScheme();
 }
 
 export function playbackState() { return playback; }

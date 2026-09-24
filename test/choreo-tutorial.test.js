@@ -7,8 +7,18 @@ const {
 
 const run = (events, from = initialTutorial()) => events.reduce(tutorialReducer, from);
 
-test('steps are choreo, move, pass, release, commit, play in that order', () => {
-  assert.deepEqual(STEPS, ['choreo', 'move', 'pass', 'release', 'commit', 'play']);
+test('steps are choreo, move, pass, release, commit, shoot, play in that order', () => {
+  assert.deepEqual(STEPS, ['choreo', 'move', 'pass', 'release', 'commit', 'shoot', 'play']);
+});
+
+test('shoot step: after commit, targets the Shoot button, only counts after commit', () => {
+  const committed = run([{ type: 'choreoStart' }, { type: 'chipMoved' }, { type: 'carrierChanged' }, { type: 'releaseChanged' }, { type: 'choreoCommit' }]);
+  const v = tutorialView(committed);
+  assert.equal(v.step, 'shoot');
+  assert.equal(v.target, 'shootButton');
+  assert.match(v.hint, /Shoot at B/);
+  assert.equal(tutorialView(run([{ type: 'choreoStart' }, { type: 'shot' }])).statuses.shoot, 'pending');
+  assert.equal(tutorialView(run([{ type: 'shot' }], committed)).step, 'play');
 });
 
 test('fresh tutorial starts on the Choreo step with its target', () => {
@@ -20,19 +30,20 @@ test('fresh tutorial starts on the Choreo step with its target', () => {
   assert.match(v.hint, /Choreo/);
 });
 
-test('happy path walks all 6 steps to done', () => {
+test('happy path walks all 7 steps to done', () => {
   const s = run([
     { type: 'choreoStart' },
     { type: 'chipMoved' },
     { type: 'carrierChanged' },
     { type: 'releaseChanged' },
     { type: 'choreoCommit' },
+    { type: 'shot' },
     { type: 'playStart' },
   ]);
   const v = tutorialView(s);
   assert.equal(v.done, true);
   assert.equal(v.step, null);
-  assert.deepEqual(v.statuses, { choreo: 'complete', move: 'complete', pass: 'complete', release: 'complete', commit: 'complete', play: 'complete' });
+  assert.deepEqual(v.statuses, { choreo: 'complete', move: 'complete', pass: 'complete', release: 'complete', commit: 'complete', shoot: 'complete', play: 'complete' });
 });
 
 test('release step: targets the marker and explains the lane colours', () => {
@@ -49,10 +60,10 @@ test('release before a pass does not count', () => {
   assert.equal(v.statuses.release, 'pending');
 });
 
-test('release can still be set after commit, then play finishes it', () => {
+test('release can still be set after commit, then shoot and play finish it', () => {
   const s = run([{ type: 'choreoStart' }, { type: 'chipMoved' }, { type: 'carrierChanged' }, { type: 'choreoCommit' }]);
   assert.equal(tutorialView(s).step, 'release');
-  const done = run([{ type: 'releaseChanged' }, { type: 'playStart' }], s);
+  const done = run([{ type: 'releaseChanged' }, { type: 'shot' }, { type: 'playStart' }], s);
   assert.equal(tutorialView(done).done, true);
 });
 
@@ -131,7 +142,7 @@ test('resume keeps committed progress but drops an unfinished choreo', () => {
   assert.equal(resumedMid.step, 'choreo');
   assert.equal(resumedMid.statuses.release, 'pending');
   const committed = run([{ type: 'choreoStart' }, { type: 'chipMoved' }, { type: 'carrierChanged' }, { type: 'releaseChanged' }, { type: 'choreoCommit' }]);
-  assert.equal(tutorialView(resumeTutorial(committed)).step, 'play');
+  assert.equal(tutorialView(resumeTutorial(committed)).step, 'shoot');
 });
 
 test('resume tolerates garbage input', () => {

@@ -563,6 +563,71 @@ Still on the backlog from that exploration:
   [test-e2e/choreograph.spec.js](../test-e2e/choreograph.spec.js) covers
   no arrow before the hand-off, a trimmed arrow after it, and removal on
   commit.
+- **[A-BACK-022]** [shipped] **Shots at goal.** Decisions
+  (2026-09-24, picks 1C 2C 3A 4A 5A 6B):
+  - **Trigger:** "Shoot at A" / "Shoot at B" in the Inspector (for the
+    ball and its carrier), and right-click on a fixed goal while the
+    carrier or the ball is selected.
+  - **Frame:** in Choreo, if the draft has no pass yet, the shot goes
+    into the draft. Otherwise Choreo is committed first and the shot
+    gets a new frame, so one frame transition never holds both a pass
+    and a shot. The shooter is the current carrier.
+  - **Data:** a shot is the transition into a frame whose ball is loose
+    in the goal and carries `balls.main.shot = { goal: 'A'|'B', aimX, aimY }`.
+    `aimX` is the world x in mm, `aimY` the height in mm, both clamped
+    to the 1600 x 1150 mouth minus the ball radius. The stored loose
+    x/z is where the ball comes to rest, 400 mm behind the goal line.
+  - **Aim:** a free aim point, dragged on a front-view goal pad in the
+    Inspector (seen from the shooter's side), with arrow keys for fine
+    moves. The top-down view can't show height, so the pad does that.
+  - **Timing:** reuses the pass release diamond, slider and speed. The
+    shot default is 25 m/s, which is an estimate and not a sourced
+    figure.
+  - **Check:** uses the existing Mode A shot colours
+    (`SHOT_LINE_TOKENS`): red = open, yellow = goalie off-centre or an
+    opponent in the lane, green = goalie squared up. The Inspector names
+    any blockers. The goalie check uses `insights.js` `shotVerdict()`
+    against the goalie mesh's current position.
+  - **3D:** the ball rises linearly to the aim height at the goal line,
+    then drops into the goal and stays there loose.
+  - **Tutorial:** a new step "Shoot at goal B" before Play (7 steps).
+
+  **Shipped (2026-09-24).**
+  - Pure maths in [ball-pose.js](../web/src/authoring/ball-pose.js):
+    `makeShot`, `clampAim`, `padToAim` / `aimToPad` (the pad is seen
+    from the shooter: facing goal B his left is +x), `shotTargetFrame`,
+    and `passPlan` with `kind: 'shot'`. `ballPoseAt` now returns `y`.
+    9 new tests.
+  - `shotStatus` in choreo-pass.js, with 3 tests. `shootAt` and
+    `setShotAim` in actors.js.
+  - `shotVerdictFor` in pass-overlay.js colours the arrow and a white
+    3D aim sphere in the goal mouth.
+  - Inspector: "Shoot at A/B", the "Shot at goal X" section, and the aim
+    pad (drag, arrow keys, Shift for coarse steps).
+  - Right-click on goal A/B shoots (selection.js).
+  - Tutorial: a shoot step with 2 unit tests; the e2e walks all 7 steps.
+  - E2e [shots.spec.js](../test-e2e/shots.spec.js) (5 tests): the
+    button, a 3D flight that reaches the goal line at height and ends on
+    the floor in the goal, right-click, a shot into the Choreo draft,
+    the aim pad (drag + keys), and the goalie verdict (squared up at A,
+    open at B).
+  - Also fixed along the way:
+    - `restoreEditFrame` in playback.js never restored the ball or
+      goalie, so after Stop `tickActors` wrote the playback pose into
+      the edit frame. It now calls `applyActorsFromScheme`, which also
+      resets the ball height.
+    - At 1280x720 the Layers panel covered the Inspector's aim pad.
+      `#inspector` now has z-index 27, one above `#layersPanel`.
+    - The tutorial card grew with 7 steps and covered the release
+      diamond again. `frameAboveCard()` now measures the card's top edge
+      instead of using a fixed value.
+    - The `web/src` size budget was raised from 0.8 to 1.0 MB in its own
+      commit; it is now at 0.79.
+  - Known gaps:
+    - The goalie check uses the goalie's current edit position, not its
+      position at shot time.
+    - There is only one goalie in Mode A.
+    - The ball rises in a straight line, not an arc.
 - **[A-BACK-021]** [shipped] **Pass timing: release point, pass
   speed, lane check.** Follow-up to A-BACK-020. There, a pass spanned
   the whole frame, from the passer's frame-A spot to the receiver's

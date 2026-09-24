@@ -27,6 +27,15 @@ export function passStatus(plan, players, durationMs) {
   return { lane: names.length ? `Blocked by ${names.join(', ')}` : 'Clear lane', blocked: names.length > 0, late };
 }
 
+// Inspector text + colour key for a shot (A-BACK-022). goalieKey is insights.js shotVerdict().lineColor.
+export function shotStatus(goalieKey, blockedBy, players) {
+  const names = blockedBy.map((id) => `#${players?.[id]?.number ?? '?'}`).join(', ');
+  if (goalieKey === 'blocked-centred') return { key: 'blocked-centred', text: names ? `Goalie squared up, also ${names} in the lane` : 'Goalie squared up' };
+  if (names) return { key: 'blocked-off', text: `Blocked by ${names}` };
+  if (goalieKey === 'blocked-off') return { key: 'blocked-off', text: 'Goalie in the way, not squared up' };
+  return { key: 'open', text: 'Open shot' };
+}
+
 // Inspector "Pass to" buttons: carrier's teammates, or every player when the ball is loose.
 export function passTargets(players, carrierId) {
   const carrier = players.find((p) => p.id === carrierId);

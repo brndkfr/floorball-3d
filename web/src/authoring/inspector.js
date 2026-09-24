@@ -15,11 +15,11 @@ import { ballDataFor, updateBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { goalDataFor, updateGoal, fixedGoalLetterOf, fixedGoalDataFor, updateFixedGoal, GOAL_LABEL_DEFAULT_COLOR, GOAL_LABEL_DEFAULT_SIZE, GOAL_LABEL_MIN_SIZE, GOAL_LABEL_MAX_SIZE } from './goals.js';
 import { arrowRoleColor } from '../tokens.js';
 import { ensureDoc } from './doc.js';
-import { getBallCarrier, setBallCarrier, getBallColor, setBallColor, setPassTiming } from './actors.js';
+import { getBallCarrier, setBallCarrier, getBallColor, setBallColor, setPassTiming, shootAt, setShotAim } from './actors.js';
 import { passTargets, passStatus } from './choreo-pass.js';
-import { currentPass } from './pass-overlay.js';
-import { MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS } from './ball-pose.js';
-import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED } from '../tokens.js';
+import { currentPass, shotVerdictFor } from './pass-overlay.js';
+import { MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS, padToAim, aimToPad } from './ball-pose.js';
+import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED, SHOT_LINE_TOKENS } from '../tokens.js';
 import { makeFloatable } from './floatable.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
@@ -34,12 +34,20 @@ if (!body) throw new Error('inspectorBody element missing from index.html');
 onSelectionChanged(render);
 window.addEventListener('ballCarrierChanged', () => render(state.selected));
 window.addEventListener('ballColorChanged', () => render(state.selected));
-// Rebuilding mid-drag would drop the slider under the pointer; refresh only the status lines then.
+// Rebuilding mid-drag would drop the slider / aim dot under the pointer; refresh only the status lines then.
+const LIVE_IDS = new Set(['passReleaseSlider', 'shotAimPad']);
 window.addEventListener('passChanged', () => {
-  if (document.activeElement?.id !== 'passReleaseSlider') return render(state.selected);
+  if (!LIVE_IDS.has(document.activeElement?.id)) return render(state.selected);
   const cur = currentPass();
+  if (!cur) return;
   const lane = document.getElementById('passLaneStatus');
-  if (cur && lane) lane.textContent = passStatus(cur.plan, ensureDoc().scheme.players, cur.dur).lane;
+  if (lane) lane.textContent = passStatus(cur.plan, ensureDoc().scheme.players, cur.dur).lane;
+  const shot = document.getElementById('shotStatus');
+  if (shot && cur.plan.kind === 'shot') {
+    const v = shotVerdictFor(cur.plan);
+    shot.textContent = v.text;
+    shot.style.color = SHOT_LINE_TOKENS[v.key].css;
+  }
 });
 window.addEventListener('framesChanged', () => render(state.selected));
 render(state.selected);
@@ -80,7 +88,7 @@ function render(sel) {
     heading.textContent = chip.label?.trim() || `Player #${chip.number}`;
     body.appendChild(heading);
     // The carried ball sits inside the chip disc, so passing is offered on the carrier too.
-    if (chip.id === getBallCarrier()) body.appendChild(passRow());
+    if (chip.id === getBallCarrier()) body.append(passRow(), shootRow());
     const incoming = currentPass();
     if (incoming && (chip.id === incoming.plan.passerId || chip.id === incoming.plan.receiverId)) body.appendChild(passTimingSection(incoming));
     const hint = document.createElement('div');
@@ -121,6 +129,7 @@ function render(sel) {
   if (sel === state.ballGroup) {
     body.appendChild(carrierRow());
     body.appendChild(passRow());
+    if (getBallCarrier()) body.appendChild(shootRow());
     const incoming = currentPass();
     if (incoming) body.appendChild(passTimingSection(incoming));
     body.appendChild(ballColorRow());
@@ -165,6 +174,26 @@ function carrierRow() {
   return row;
 }
 
+function shootRow() {
+  const row = document.createElement('div');
+  row.className = 'ins-row';
+  row.id = 'inspectorShoot';
+  const label = document.createElement('span');
+  label.className = 'ins-label';
+  label.textContent = 'Shoot';
+  row.appendChild(label);
+  for (const goal of ['A', 'B']) {
+    const btn = document.createElement('button');
+    btn.className = 'ins-btn';
+    btn.dataset.shoot = goal;
+    btn.textContent = `Shoot at ${goal}`;
+    btn.title = `Shot at goal ${goal}: adds a frame with the ball in the goal (in Choreo: this draft, if it has no pass yet)`;
+    btn.addEventListener('click', () => shootAt(goal));
+    row.appendChild(btn);
+  }
+  return row;
+}
+
 function passRow() {
   const row = document.createElement('div');
   row.className = 'ins-row';
@@ -193,7 +222,7 @@ function passTimingSection({ plan, dur }) {
   const title = document.createElement('div');
   title.className = 'ins-label';
   title.style.margin = '8px 0 4px';
-  title.textContent = 'Pass into this frame';
+  title.textContent = plan.kind === 'shot' ? `Shot at goal ${plan.goal}` : 'Pass into this frame';
   wrap.appendChild(title);
 
   const releaseRow = document.createElement('div');
@@ -239,11 +268,19 @@ function passTimingSection({ plan, dur }) {
 
   const status = passStatus(plan, ensureDoc().scheme.players, dur);
   const lane = document.createElement('div');
-  lane.id = 'passLaneStatus';
   lane.className = 'ins-empty';
-  lane.style.color = status.blocked ? VECTOR_PASS_BLOCKED.css : VECTOR_PASS_CLEAR.css;
-  lane.textContent = status.lane;
-  wrap.append(releaseRow, speedRow, lane);
+  if (plan.kind === 'shot') {
+    const v = shotVerdictFor(plan);
+    lane.id = 'shotStatus';
+    lane.style.color = SHOT_LINE_TOKENS[v.key].css;
+    lane.textContent = v.text;
+    wrap.append(releaseRow, speedRow, aimPad(plan), lane);
+  } else {
+    lane.id = 'passLaneStatus';
+    lane.style.color = status.blocked ? VECTOR_PASS_BLOCKED.css : VECTOR_PASS_CLEAR.css;
+    lane.textContent = status.lane;
+    wrap.append(releaseRow, speedRow, lane);
+  }
   if (status.late) {
     const late = document.createElement('div');
     late.id = 'passLateStatus';
@@ -253,6 +290,57 @@ function passTimingSection({ plan, dur }) {
     wrap.appendChild(late);
   }
   return wrap;
+}
+
+// Front view of the goal mouth, as the shooter sees it: drag the dot (or arrow keys) to aim.
+const PAD_W = 160, PAD_H = 115, AIM_STEP_MM = 25;
+function aimPad(plan) {
+  const pad = document.createElement('div');
+  pad.id = 'shotAimPad';
+  pad.tabIndex = 0;
+  pad.setAttribute('role', 'group');
+  pad.setAttribute('aria-label', `Aim in goal ${plan.goal}: drag the dot or use the arrow keys`);
+  pad.title = 'Drag to aim (arrow keys: fine, Shift: coarse)';
+  pad.style.cssText = `position:relative; width:${PAD_W}px; height:${PAD_H}px; margin:6px 0; box-sizing:content-box;
+    border:4px solid #d94b2f; border-bottom-color:rgba(255,255,255,0.35); border-radius:3px 3px 0 0;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 12px),
+               repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 12px);
+    cursor:crosshair; touch-action:none;`;
+  const dot = document.createElement('div');
+  dot.id = 'shotAimDot';
+  dot.style.cssText = 'position:absolute; width:12px; height:12px; margin:-6px 0 0 -6px; border-radius:50%; background:#fff; box-shadow:0 0 0 2px #000; pointer-events:none;';
+  pad.appendChild(dot);
+  let aim = { aimX: plan.to.x, aimY: plan.aimY };
+  const place = () => {
+    const { u, v } = aimToPad(plan.goal, aim.aimX, aim.aimY);
+    dot.style.left = `${u * PAD_W}px`;
+    dot.style.top = `${(1 - v) * PAD_H}px`;
+  };
+  const fromPointer = (e, history) => {
+    const r = pad.getBoundingClientRect();
+    const u = Math.min(Math.max((e.clientX - r.left - 4) / PAD_W, 0), 1);
+    const v = Math.min(Math.max(1 - (e.clientY - r.top - 4) / PAD_H, 0), 1);
+    aim = padToAim(plan.goal, u, v);
+    place();
+    setShotAim(aim, { history });
+  };
+  let dragging = false;
+  pad.addEventListener('pointerdown', (e) => { dragging = true; pad.focus(); pad.setPointerCapture(e.pointerId); fromPointer(e, false); });
+  pad.addEventListener('pointermove', (e) => { if (dragging) fromPointer(e, false); });
+  pad.addEventListener('pointerup', (e) => { if (!dragging) return; dragging = false; fromPointer(e, true); });
+  pad.addEventListener('keydown', (e) => {
+    const step = e.shiftKey ? AIM_STEP_MM * 4 : AIM_STEP_MM;
+    const { u, v } = aimToPad(plan.goal, aim.aimX, aim.aimY);
+    const du = { ArrowLeft: -1, ArrowRight: 1 }[e.key] ?? 0, dv = { ArrowDown: -1, ArrowUp: 1 }[e.key] ?? 0;
+    if (!du && !dv) return;
+    e.preventDefault();
+    e.stopPropagation();   // arrows otherwise pan the camera (controls.js)
+    aim = padToAim(plan.goal, u + du * step / 1600, v + dv * step / 1150);
+    place();
+    setShotAim(aim);
+  });
+  place();
+  return pad;
 }
 
 function ballColorRow() {

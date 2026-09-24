@@ -586,6 +586,18 @@ function handleRightClick(event) {
     return;
   }
 
+  // 1a) Shot gesture (A-BACK-022): ball or its carrier selected + right-click on goal A / B.
+  const carrierId = state.doc?.scheme?.balls?.main?.carrier ?? null;
+  const shooterSelected = carrierId && (state.selected === state.ballGroup || state.selected?.userData?.chip?.id === carrierId);
+  if (shooterSelected) {
+    const hit = selectablesUnderCursor(event);
+    const goal = hit === state.goalInstances[0] ? 'A' : hit === state.goalInstances[1] ? 'B' : null;
+    if (goal) {
+      import('./authoring/actors.js').then((a) => a.shootAt(goal));
+      return;
+    }
+  }
+
   // 1b) Pass gesture: ball selected + right-click on a chip = hand the
   //     ball to that chip. Empty floor falls through to a move-command
   //     (which also detaches the ball from any current carrier).

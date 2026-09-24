@@ -8,11 +8,13 @@ import { scene, renderer } from '../scene.js';
 import { ensureDoc } from './doc.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from './chips.js';
 import { buildArrowGeometry } from './shapes.js';
-import { passPreview } from './choreo-pass.js';
-import { passPlan, chipPosAt, nearestReleaseT } from './ball-pose.js';
+import { passPreview, shotStatus } from './choreo-pass.js';
+import { passPlan, chipPosAt, nearestReleaseT, GOAL_Z } from './ball-pose.js';
 import { setPassTiming } from './actors.js';
 import { playbackSegment } from './playback.js';
-import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED } from '../tokens.js';
+import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED, SHOT_LINE_TOKENS } from '../tokens.js';
+import { shotVerdict } from '../insights.js';
+import { BALL_RADIUS } from '../constants.js';
 
 const RUN_COLOR = 0xffb347;
 const ARROW_WIDTH = 120;
@@ -34,7 +36,9 @@ const markerOutline = new THREE.Mesh(new THREE.RingGeometry(340, 420, 4), mat(0x
 marker.add(markerOutline);
 const run = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: RUN_COLOR, dashSize: 200, gapSize: 120, depthTest: false }));
 run.name = 'passRun';
-for (const o of [arrow, trail, marker, run]) {
+const aimMarker = new THREE.Mesh(new THREE.SphereGeometry(70, 16, 12), mat(0xffffff, 0.95));
+aimMarker.name = 'shotAimMarker';
+for (const o of [arrow, trail, marker, run, aimMarker]) {
   o.visible = false;
   o.frustumCulled = false;
   o.renderOrder = 3;
@@ -67,6 +71,17 @@ export function currentPass() {
 }
 
 const r = (v) => Math.round(v);
+
+// { key, text } for a shot plan: goalie check against the live goalie mesh + opponents in the lane.
+export function shotVerdictFor(plan) {
+  const goalie = state.goalieGroup?.visible ? state.goalieGroup : null;
+  const { lineColor } = shotVerdict({
+    ballWorld: new THREE.Vector3(plan.from.x, BALL_RADIUS, plan.from.z),
+    goalCenterWorld: new THREE.Vector3(plan.to.x, plan.aimY, GOAL_Z[plan.goal]),
+    goalieMesh: goalie,
+  });
+  return shotStatus(lineColor, plan.blockedBy, ensureDoc().scheme.players);
+}
 function setGeometry(mesh, geom) {
   mesh.geometry.dispose();
   mesh.geometry = geom;
@@ -82,19 +97,27 @@ function hide(...objs) {
 // Returns whether anything changed this frame (S-BACK-011 render gating).
 export function tickPassOverlay() {
   if (state.playback?.playing) {
-    const hidden = hide(arrow, marker, run);
+    const hidden = hide(arrow, marker, run, aimMarker);
     return updateTrail() || hidden;
   }
   const trailChanged = hide(trail);
   const cur = currentPass();
-  if (!cur) return hide(arrow, marker, run) || trailChanged;
+  if (!cur) return hide(arrow, marker, run, aimMarker) || trailChanged;
   const { fa, fb, plan } = cur;
   const runPts = plan.passerId ? [0, 0.5, 1].map((t) => chipPosAt(fa, fb, plan.passerId, t)) : [];
-  const nextKey = JSON.stringify([ensureDoc().currentFrame, plan.from, plan.to, plan.releaseMark, plan.blockedBy, plan.late, runPts].flat(3).map((v) => (typeof v === 'number' ? r(v) : v)));
+  const goalie = state.goalieGroup ? [state.goalieGroup.position.x, state.goalieGroup.position.z, state.goalieGroup.visible] : [];
+  const nextKey = JSON.stringify([ensureDoc().currentFrame, plan.kind, plan.from, plan.to, plan.aimY ?? 0, plan.releaseMark, plan.blockedBy, plan.late, runPts, goalie].flat(3).map((v) => (typeof v === 'number' ? r(v) : v)));
   if (nextKey === key) return trailChanged;
   key = nextKey;
 
-  const color = plan.blockedBy.length ? VECTOR_PASS_BLOCKED.hex : VECTOR_PASS_CLEAR.hex;
+  const color = plan.kind === 'shot'
+    ? SHOT_LINE_TOKENS[shotVerdictFor(plan).key].hex
+    : (plan.blockedBy.length ? VECTOR_PASS_BLOCKED.hex : VECTOR_PASS_CLEAR.hex);
+  aimMarker.visible = plan.kind === 'shot';
+  if (aimMarker.visible) {
+    aimMarker.position.set(plan.to.x, plan.aimY, plan.to.z);
+    aimMarker.material.color.setHex(color);
+  }
   const trimmed = passPreview({
     startCarrier: plan.passerId, carrier: plan.receiverId, from: plan.from, to: plan.to,
     trim: CHIP_RADIUS * CHIP_DISPLAY_SCALE,

@@ -492,9 +492,10 @@
     #toolPalette { display:none; }
   }
 
-  /* --- Inspector: selection-driven props panel, floating like the palette. */
+  /* --- Inspector: selection-driven props panel, floating like the palette.
+     One above #layersPanel: when the two floating panels overlap, the one being edited wins. */
   #inspector {
-    position:fixed; z-index:26;
+    position:fixed; z-index:27;
     width:220px; padding:10px 12px;
     background:var(--hud-bg); color:#dff9ff;
     border:1px solid var(--hud-accent-dim);

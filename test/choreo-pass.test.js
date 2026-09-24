@@ -1,7 +1,22 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-const { passPreview, passTargets, passStatus } = await import('../web/src/authoring/choreo-pass.js');
+const { passPreview, passTargets, passStatus, shotStatus } = await import('../web/src/authoring/choreo-pass.js');
+
+test('shotStatus: open shot, nothing in the way', () => {
+  assert.deepEqual(shotStatus('open', [], {}), { key: 'open', text: 'Open shot' });
+});
+
+test('shotStatus: goalie verdicts keep the existing shot-line wording', () => {
+  assert.deepEqual(shotStatus('blocked-off', [], {}), { key: 'blocked-off', text: 'Goalie in the way, not squared up' });
+  assert.deepEqual(shotStatus('blocked-centred', [], {}), { key: 'blocked-centred', text: 'Goalie squared up' });
+});
+
+test('shotStatus: an opponent in the lane makes an open shot yellow and is named', () => {
+  const players = { d4: { number: '4' } };
+  assert.deepEqual(shotStatus('open', ['d4'], players), { key: 'blocked-off', text: 'Blocked by #4' });
+  assert.deepEqual(shotStatus('blocked-centred', ['d4'], players), { key: 'blocked-centred', text: 'Goalie squared up, also #4 in the lane' });
+});
 
 test('passStatus: clear lane, on time', () => {
   const s = passStatus({ blockedBy: [], late: false, releaseT: 0.5, arriveT: 0.8 }, {}, 1000);

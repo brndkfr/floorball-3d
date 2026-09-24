@@ -59,6 +59,17 @@ async function chooseRelease(page) {
   await tick(page);
 }
 
+async function shootWithNine(page) {
+  await page.evaluate(async () => {
+    const { selectObject } = await import('/src/selection.js');
+    const { state } = await import('/src/state.js');
+    const id = Object.values(state.doc.scheme.players).find((p) => p.number === '9').id;
+    selectObject(state.chipGroups.find((c) => c.userData.chip?.id === id));
+  });
+  await page.locator('#inspectorShoot [data-shoot="B"]').click();
+  await tick(page);
+}
+
 async function startFromWelcomeTip(page) {
   await boot(page);
   await tick(page);
@@ -69,7 +80,7 @@ async function startFromWelcomeTip(page) {
 }
 
 test.describe('A-BACK-019 guided Choreo tutorial', () => {
-  test('walks all 6 steps in a separate project and returns to the original untouched', async ({ page }) => {
+  test('walks all 7 steps in a separate project and returns to the original untouched', async ({ page }) => {
     const before = await startFromWelcomeTip(page);
     expect(await projectName(page)).toBe(TUTORIAL_NAME);
     await expect(step(page, 'choreo')).toHaveAttribute('data-status', 'active');
@@ -91,6 +102,11 @@ test.describe('A-BACK-019 guided Choreo tutorial', () => {
     await expect(step(page, 'commit')).toHaveAttribute('data-status', 'active');
 
     await page.locator('#choreoCommitBtn').click();
+    await expect(step(page, 'shoot')).toHaveAttribute('data-status', 'active');
+    await expect(page.locator('#tutorialCard .tut-hint')).toContainText('Shoot at B');
+
+    await shootWithNine(page);
+    await expect(step(page, 'shoot')).toHaveAttribute('data-status', 'complete');
     await expect(step(page, 'play')).toHaveAttribute('data-status', 'active');
 
     await page.locator('#tutorialCard').click({ position: { x: 5, y: 5 } });
@@ -113,11 +129,13 @@ test.describe('A-BACK-019 guided Choreo tutorial', () => {
     await passToNine(page);
     await chooseRelease(page);
     await page.locator('#choreoCommitBtn').click();
+    await shootWithNine(page);
     await expect(step(page, 'play')).toHaveAttribute('data-status', 'active');
 
     await page.reload({ waitUntil: 'load' });
     await expect(page.locator('#tutorialCard')).toBeVisible();
     await expect(step(page, 'release')).toHaveAttribute('data-status', 'complete');
+    await expect(step(page, 'shoot')).toHaveAttribute('data-status', 'complete');
     await expect(step(page, 'commit')).toHaveAttribute('data-status', 'complete');
     await expect(step(page, 'play')).toHaveAttribute('data-status', 'active');
     expect(await projectName(page)).toBe(TUTORIAL_NAME);

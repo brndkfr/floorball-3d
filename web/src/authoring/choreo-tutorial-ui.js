@@ -24,6 +24,7 @@ const STEP_LABELS = {
   pass: 'Pass the ball to #9',
   release: 'Choose when #7 passes',
   commit: 'Commit the frame',
+  shoot: 'Shoot at goal B',
   play: 'Press Space to watch',
 };
 
@@ -99,16 +100,21 @@ export function startTutorial() {
   frameAboveCard();
 }
 
-// Pan so the players sit in the upper part of the view; the card covers the lower middle (1280x720 and up).
-const FRAME_NDC_Y = 0.4;
+// Pan so the players sit in the free band between the topbar and the card's top edge
+// (measured, so a taller card - more steps, longer hint - can't end up covering them).
+const TOPBAR_PX = 40, CARD_GAP_PX = 24;
 function frameAboveCard() {
   const pl = Object.values(state.doc?.scheme?.players || {});
   if (!pl.length) return;
   const c = { x: pl.reduce((s, p) => s + p.x, 0) / pl.length, z: pl.reduce((s, p) => s + p.z, 0) / pl.length };
+  const h = window.innerHeight;
+  const cardTop = card.hidden ? h * 0.6 : card.getBoundingClientRect().top;
+  const targetPx = (TOPBAR_PX + cardTop - CARD_GAP_PX) / 2;
+  const targetNdcY = 1 - (2 * targetPx) / h;
   topDownCamera.updateMatrixWorld();
   const ndc = new THREE.Vector3(c.x, 0, c.z).project(topDownCamera);
   const now = ndc.clone().unproject(topDownCamera);
-  const want = new THREE.Vector3(0, FRAME_NDC_Y, ndc.z).unproject(topDownCamera);
+  const want = new THREE.Vector3(0, targetNdcY, ndc.z).unproject(topDownCamera);
   topDownCamera.position.x += now.x - want.x;
   topDownCamera.position.z += now.z - want.z;
   topDownCamera.updateMatrixWorld();
@@ -188,6 +194,7 @@ function targetElement(target) {
   if (target === 'playButton') return document.querySelector('#timeline [data-tl="play"]');
   if (target === 'carrier' && state.selected && state.selected === carrierGroup()) return document.getElementById('inspectorPassTo');
   if (target === 'releaseMarker') return document.getElementById('passReleaseSlider');
+  if (target === 'shootButton') return document.querySelector('#inspectorShoot [data-shoot="B"]');
   return null;
 }
 
@@ -201,7 +208,7 @@ function targetWorldPos(target) {
     const m = scene.getObjectByName('passReleaseMarker');
     return m?.visible ? m.position : null;
   }
-  if (target === 'carrier') return carrierGroup()?.position ?? null;
+  if (target === 'carrier' || target === 'shootButton') return carrierGroup()?.position ?? null;
   if (target?.startsWith('chip:')) {
     const n = target.slice(5);
     const id = Object.values(state.doc?.scheme?.players || {}).find((p) => p.number === n)?.id;
@@ -251,6 +258,7 @@ window.addEventListener('choreoChanged', (e) => {
   else if (action === 'cancel') dispatch({ type: 'choreoCancel' });
 });
 window.addEventListener('choreoChipMoved', () => dispatch({ type: 'chipMoved' }));
+window.addEventListener('shotChanged', () => dispatch({ type: 'shot' }));
 onSelectionChanged(() => { if (tut) render(); });
 window.addEventListener('passChanged', (e) => {
   if (e.detail?.releaseT) dispatch({ type: 'releaseChanged' });
