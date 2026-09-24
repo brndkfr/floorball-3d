@@ -626,6 +626,17 @@ Still on the backlog from that exploration:
   - Known gaps: the trail isn't in video export, and the ball carry
     offset is always +z ("in front" of the player), independent of the
     chip's facing.
+  - **Tutorial follow-up (2026-09-24, picks 1B 2A 3A):** the A-BACK-019
+    tutorial gained a required step 4, "Choose when #7 passes" (now 6
+    steps). It ticks on any release change, from a marker drag or the
+    slider (`passChanged` with `detail.releaseT`). It can also be done
+    after Commit, because the pass stays editable. Its hint explains
+    the orange diamond and the green / red lane colours. Speed and the
+    late warning are not taught. When stuck, it pulses the Release
+    slider if it is showing, otherwise a ring at the diamond. Cancel and
+    an unfinished-Choreo resume both drop the step. 5 new unit tests.
+    The tutorial e2e walks all 6 steps and adds a stall test for the
+    slider.
 - **[A-BACK-020]** [shipped] **Ball follows its carrier in playback, and
   passes are visible.** Reported from the tutorial: "Pass to #9" showed
   no ball moving. Root cause: while the ball is carried,

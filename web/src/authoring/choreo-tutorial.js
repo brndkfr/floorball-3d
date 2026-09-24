@@ -2,18 +2,19 @@
 // State is { completed: string[], note: string|null }; events come from choreoChanged,
 // ballCarrierChanged, the tickChoreo move check and playbackChanged.
 
-export const STEPS = ['choreo', 'move', 'pass', 'commit', 'play'];
-const CHOREO_STEPS = ['choreo', 'move', 'pass'];
+export const STEPS = ['choreo', 'move', 'pass', 'release', 'commit', 'play'];
+const CHOREO_STEPS = ['choreo', 'move', 'pass', 'release'];
 export const STALL_MS = 8000;
 
 const HINTS = {
   choreo: 'Press Choreo on the timeline to plan the next frame.',
   move: 'Drag #7 forward. The cyan ring shows where he started.',
   pass: 'Pass: click #7 (he has the ball), then press #9 under "Pass to".',
+  release: 'Choose when #7 passes: drag the orange diamond on his run (or use the Release slider). A green arrow means a clear lane, red means an opponent is in the way.',
   commit: 'Press Commit to keep the new frame.',
   play: 'Press Space to watch your play.',
 };
-const TARGETS = { choreo: 'choreoButton', move: 'chip:7', pass: 'carrier', commit: 'commitButton', play: 'playButton' };
+const TARGETS = { choreo: 'choreoButton', move: 'chip:7', pass: 'carrier', release: 'releaseMarker', commit: 'commitButton', play: 'playButton' };
 const NOTES = { incompleteCommit: 'That frame was saved without a pass and a move. Press Choreo to plan another one.' };
 const DONE_HINT = 'Nice - that is a choreographed play.';
 
@@ -35,6 +36,9 @@ export function tutorialReducer(state, event) {
       return inChoreo ? add(s, 'move') : s;
     case 'carrierChanged':
       return inChoreo ? add(s, 'pass') : s;
+    // The pass stays editable after commit, so the release point may be chosen then too.
+    case 'releaseChanged':
+      return has(s, 'pass') ? add(s, 'release') : s;
     case 'choreoCancel':
       return inChoreo ? drop(s, CHOREO_STEPS) : s;
     case 'choreoCommit':

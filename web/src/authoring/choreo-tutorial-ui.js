@@ -2,6 +2,7 @@
 // from app events. Runs in its own seeded project so the user's projects are never mutated.
 
 import { state } from '../state.js';
+import { scene } from '../scene.js';
 import { tutorialReducer, tutorialView, resumeTutorial, stallCue, STEPS } from './choreo-tutorial.js';
 import { buildTutorialDoc, TUTORIAL_NAME } from './choreo-tutorial-seed.js';
 import { adoptDocAsProject, deleteProject, getCurrentProjectId, listProjects } from './storage.js';
@@ -19,6 +20,7 @@ const STEP_LABELS = {
   choreo: 'Press Choreo',
   move: 'Drag #7 forward',
   pass: 'Pass the ball to #9',
+  release: 'Choose when #7 passes',
   commit: 'Commit the frame',
   play: 'Press Space to watch',
 };
@@ -166,6 +168,7 @@ function targetElement(target) {
   if (target === 'commitButton') return document.getElementById('choreoCommitBtn');
   if (target === 'playButton') return document.querySelector('#timeline [data-tl="play"]');
   if (target === 'carrier' && state.selected && state.selected === carrierGroup()) return document.getElementById('inspectorPassTo');
+  if (target === 'releaseMarker') return document.getElementById('passReleaseSlider');
   return null;
 }
 
@@ -175,6 +178,10 @@ function carrierGroup() {
 }
 
 function targetWorldPos(target) {
+  if (target === 'releaseMarker') {
+    const m = scene.getObjectByName('passReleaseMarker');
+    return m?.visible ? m.position : null;
+  }
   if (target === 'carrier') return carrierGroup()?.position ?? null;
   if (target?.startsWith('chip:')) {
     const n = target.slice(5);
@@ -225,6 +232,9 @@ window.addEventListener('choreoChanged', (e) => {
   else if (action === 'cancel') dispatch({ type: 'choreoCancel' });
 });
 window.addEventListener('choreoChipMoved', () => dispatch({ type: 'chipMoved' }));
+window.addEventListener('passChanged', (e) => {
+  if (e.detail?.releaseT) dispatch({ type: 'releaseChanged' });
+});
 window.addEventListener('ballCarrierChanged', () => {
   const carrier = getBallCarrier();
   if (isChoreoActive() && carrier != null && carrier !== getChoreoStartCarrier()) dispatch({ type: 'carrierChanged' });

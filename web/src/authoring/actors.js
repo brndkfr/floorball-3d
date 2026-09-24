@@ -239,7 +239,7 @@ export function setPassTiming({ releaseT, speedMps } = {}, { history = true } = 
   if (Object.keys(pass).length) main.pass = pass; else delete main.pass;
   saveDoc();
   if (history) import('./history.js').then((h) => h.pushHistory());
-  window.dispatchEvent(new Event('passChanged'));
+  window.dispatchEvent(new CustomEvent('passChanged', { detail: { releaseT: releaseT !== undefined } }));
 }
 
 export function getBallColor() {

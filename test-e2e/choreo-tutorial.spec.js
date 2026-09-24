@@ -53,6 +53,12 @@ async function passToNine(page) {
   await tick(page);
 }
 
+// #7 is still selected after the pass, so the Inspector shows his outgoing pass timing.
+async function chooseRelease(page) {
+  await page.locator('#passReleaseSlider').fill('30');
+  await tick(page);
+}
+
 async function startFromWelcomeTip(page) {
   await boot(page);
   await tick(page);
@@ -63,7 +69,7 @@ async function startFromWelcomeTip(page) {
 }
 
 test.describe('A-BACK-019 guided Choreo tutorial', () => {
-  test('walks all 5 steps in a separate project and returns to the original untouched', async ({ page }) => {
+  test('walks all 6 steps in a separate project and returns to the original untouched', async ({ page }) => {
     const before = await startFromWelcomeTip(page);
     expect(await projectName(page)).toBe(TUTORIAL_NAME);
     await expect(step(page, 'choreo')).toHaveAttribute('data-status', 'active');
@@ -77,6 +83,11 @@ test.describe('A-BACK-019 guided Choreo tutorial', () => {
 
     await passToNine(page);
     await expect(step(page, 'pass')).toHaveAttribute('data-status', 'complete');
+    await expect(step(page, 'release')).toHaveAttribute('data-status', 'active');
+    await expect(page.locator('#tutorialCard .tut-hint')).toContainText('orange diamond');
+
+    await chooseRelease(page);
+    await expect(step(page, 'release')).toHaveAttribute('data-status', 'complete');
     await expect(step(page, 'commit')).toHaveAttribute('data-status', 'active');
 
     await page.locator('#choreoCommitBtn').click();
@@ -100,11 +111,13 @@ test.describe('A-BACK-019 guided Choreo tutorial', () => {
     await page.locator('#timeline [data-tl="choreo"]').click();
     await moveSeven(page);
     await passToNine(page);
+    await chooseRelease(page);
     await page.locator('#choreoCommitBtn').click();
     await expect(step(page, 'play')).toHaveAttribute('data-status', 'active');
 
     await page.reload({ waitUntil: 'load' });
     await expect(page.locator('#tutorialCard')).toBeVisible();
+    await expect(step(page, 'release')).toHaveAttribute('data-status', 'complete');
     await expect(step(page, 'commit')).toHaveAttribute('data-status', 'complete');
     await expect(step(page, 'play')).toHaveAttribute('data-status', 'active');
     expect(await projectName(page)).toBe(TUTORIAL_NAME);
@@ -171,5 +184,19 @@ test.describe('A-BACK-019 guided Choreo tutorial', () => {
     await expect(page.locator('#timeline [data-tl="choreo"]')).toHaveClass(/tutorial-pulse/);
     await page.locator('#timeline [data-tl="choreo"]').click();
     await expect(page.locator('#timeline [data-tl="choreo"]')).not.toHaveClass(/tutorial-pulse/);
+  });
+
+  test('stalling on the release step pulses the Release slider', async ({ page }) => {
+    await startFromWelcomeTip(page);
+    await page.locator('#timeline [data-tl="choreo"]').click();
+    await moveSeven(page);
+    await passToNine(page);
+    await expect(step(page, 'release')).toHaveAttribute('data-status', 'active');
+    await page.evaluate(async () => {
+      const realNow = Date.now.bind(Date);
+      Date.now = () => realNow() + 60000;
+      (await import('/src/authoring/choreo-tutorial-ui.js')).tutorialStallCheck();
+    });
+    await expect(page.locator('#passReleaseSlider')).toHaveClass(/tutorial-pulse/);
   });
 });
