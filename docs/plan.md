@@ -594,6 +594,14 @@ Still on the backlog from that exploration:
   - **Entry points:** a "Try a guided play" button in the first-visit
     welcome tip ([help.js](../web/src/help.js) `showOnboarding()`), plus
     a permanent entry in the Help overlay (`?`). No auto-start.
+    **Added later (2026-09-24):** three always-visible entry points, so
+    the tutorial can still be started once the welcome tip is gone. They
+    are a **Tutorial** button in the topbar, a **Learn** button next to
+    Choreo on the timeline, and a **Guided play** button in the Library
+    dialog header. All three carry `data-action="tutorial"` and are
+    handled by one delegated click listener in `choreo-tutorial-ui.js`.
+    The Library button only closes the dialog before the listener starts
+    the tutorial. One e2e scenario per entry point.
   - **Passing gets a visible control.** The Inspector already has a
     **Carrier** dropdown for the ball (`inspector.js` `carrierRow()`)
     plus a right-click tip. Make it read as an action: label it

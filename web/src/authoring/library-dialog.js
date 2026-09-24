@@ -46,6 +46,12 @@ function ensureStyle() {
       text-transform:uppercase; color:#ffb347; font-weight:600;
     }
     .library-header-actions { display:flex; gap:8px; }
+    .library-header-actions button {
+      background:transparent; color:#f7e6cf;
+      border:1px solid rgba(255,179,71,0.35); border-radius:6px;
+      padding:4px 12px; font-family:inherit; font-size:11px; cursor:pointer;
+    }
+    .library-header-actions button:hover { background:rgba(255,179,71,0.18); }
     .library-body {
       max-height:60vh; overflow-y:auto; padding:4px 0;
     }
@@ -267,6 +273,7 @@ export function openLibraryDialog() {
     <div class="library-header">
       <h2>Library</h2>
       <div class="library-header-actions">
+        <button type="button" data-action="tutorial" title="Guided play in its own tutorial project">Guided play</button>
         <button type="button" class="library-new">New project&hellip;</button>
       </div>
     </div>
@@ -282,6 +289,8 @@ export function openLibraryDialog() {
     await newProjectFlow();
     render(dialog);
   });
+  // choreo-tutorial-ui.js's delegated [data-action="tutorial"] listener starts it; just get out of the way.
+  dialog.querySelector('[data-action="tutorial"]').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => {
     dialog.remove();
     openDialog = null;

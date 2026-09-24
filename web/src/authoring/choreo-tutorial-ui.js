@@ -214,6 +214,10 @@ export function tutorialStallCheck(now = Date.now()) {
 setInterval(() => tutorialStallCheck(), 1000);
 
 window.addEventListener('tutorial:start', startTutorial);
+// Permanent entry points (topbar, timeline, Library dialog) all carry data-action="tutorial".
+document.addEventListener('click', (e) => {
+  if (e.target.closest?.('[data-action="tutorial"]')) startTutorial();
+});
 window.addEventListener('choreoChanged', (e) => {
   const action = e.detail?.action;
   if (action === 'start') dispatch({ type: 'choreoStart' });

@@ -142,9 +142,32 @@ test.describe('A-BACK-019 guided Choreo tutorial', () => {
     expect(count).toBe(1);
   });
 
+  for (const [name, open] of [
+    ['topbar button', async (page) => page.locator('#appTopbar [data-action="tutorial"]').click()],
+    ['timeline button', async (page) => page.locator('#timeline [data-action="tutorial"]').click()],
+    ['Library dialog', async (page) => {
+      await page.locator('#appRail [data-action="library"]').click();
+      await page.locator('dialog.library-dialog [data-action="tutorial"]').click();
+      await expect(page.locator('dialog.library-dialog')).toHaveCount(0);
+    }],
+  ]) {
+    test(`starts from the ${name} after the welcome tip is gone`, async ({ page }) => {
+      await boot(page);
+      await page.locator('#onboardingTip button', { hasText: 'Got it' }).click();
+      await open(page);
+      await expect(step(page, 'choreo')).toHaveAttribute('data-status', 'active');
+      expect(await projectName(page)).toBe(TUTORIAL_NAME);
+    });
+  }
+
   test('stalling on a DOM step pulses its target', async ({ page }) => {
     await startFromWelcomeTip(page);
-    await page.evaluate(async () => (await import('/src/authoring/choreo-tutorial-ui.js')).tutorialStallCheck(Date.now() + 60000));
+    // Shift the page clock so the app's own 1 s interval sees the stall too (else it clears the cue).
+    await page.evaluate(async () => {
+      const realNow = Date.now.bind(Date);
+      Date.now = () => realNow() + 60000;
+      (await import('/src/authoring/choreo-tutorial-ui.js')).tutorialStallCheck();
+    });
     await expect(page.locator('#timeline [data-tl="choreo"]')).toHaveClass(/tutorial-pulse/);
     await page.locator('#timeline [data-tl="choreo"]').click();
     await expect(page.locator('#timeline [data-tl="choreo"]')).not.toHaveClass(/tutorial-pulse/);
