@@ -1,0 +1,9 @@
+# CodeQL config for .github/workflows/codeql.yml.
+#
+# web/lib/webawesome/ is third-party code copied in from the Web Awesome
+# package (docs/plan.md section 2, S-BACK-021). Its predecessor Shoelace
+# tripped js/bad-tag-filter inside its own source (S-BACK-013); alerts in
+# vendored code are not ours to fix, so it is not analysed. Only add paths
+# here for vendored third-party code, never for our own source.
+paths-ignore:
+  - web/lib/webawesome
