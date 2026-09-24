@@ -1,0 +1,784 @@
+/* App layout + chrome (S-BACK-019). Moved verbatim from the inline <style>
+   in index.html; Broadcast restyling happens here surface by surface in
+   S-BACK-021. Loaded before tokens.css, as the inline block was. */
+  :root {
+    --hud-accent: #4fe0ff;
+    --hud-accent-dim: rgba(79, 224, 255, 0.35);
+    --hud-bg: rgba(6, 14, 18, 0.72);
+    --hud-font: 'Consolas', 'Courier New', monospace;
+  }
+  html, body { margin:0; padding:0; overflow:hidden; background:#0a0d0f; height:100%; }
+
+  /* shared tactical-panel look: angled corner, thin glowing border, glass bg */
+  .hud-panel {
+    position:absolute; z-index:10; color:#dff9ff; font-family:var(--hud-font);
+    background:var(--hud-bg); border:1px solid var(--hud-accent-dim);
+    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
+    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    padding:10px 14px; backdrop-filter:blur(2px);
+  }
+  .hud-label { color:var(--hud-accent); text-transform:uppercase; letter-spacing:0.06em; font-size:11px; }
+
+  /* collapsible HUD panel header: title + open/close icon, shared by every panel */
+  .hud-header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .hud-title {
+    font-size:13px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.08em; white-space:nowrap;
+  }
+  .hud-toggle {
+    flex:none; width:20px; height:20px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; background:rgba(79,224,255,0.08); color:var(--hud-accent);
+    border:1px solid var(--hud-accent-dim); font-family:var(--hud-font); font-size:13px;
+    line-height:1; user-select:none;
+  }
+  .hud-toggle:hover { background:rgba(79,224,255,0.22); }
+  .hud-panel .hud-body { margin-top:8px; }
+  .hud-panel.collapsed .hud-body { display:none; }
+
+  #info { top:52px; left:150px; font-size:12px; line-height:1.5; max-width:340px; }
+  #info a { color:var(--hud-accent); }
+  /* Pass rink clicks through the (large, expanded) info panel body -
+     only the interactive controls capture pointer events. Otherwise
+     right-click move-commands on the floor behind the panel silently
+     hit the panel instead. Header + layer toggles + buttons are opted
+     back in below. */
+  #info { pointer-events:none; }
+  #info .hud-header, #info .hud-toggle,
+  #info #layers, #info label, #info input, #info select, #info button, #info a {
+    pointer-events:auto;
+  }
+
+  #status {
+    position:absolute; bottom:12px; left:64px; z-index:10;
+    color:#7fd6e8; font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
+  }
+
+  #saveStatus {
+    position:absolute; bottom:12px; right:12px; z-index:10;
+    color:#7fd6e8; font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
+  }
+  #saveStatus.save-error { color:#ff6b6b; font-weight:600; }
+
+  #coords { top:52px; right:12px; font-size:13px; min-width:180px; line-height:1.6; }
+  #coords .label { color:var(--hud-accent); text-transform:uppercase; font-size:10px; letter-spacing:0.05em; }
+
+  #goalieLabel {
+    position:absolute; z-index:11; transform:translate(-50%, -100%);
+    background:var(--hud-bg); color:var(--hud-accent); font-family:var(--hud-font);
+    font-size:12px; font-weight:600; letter-spacing:0.03em; padding:3px 10px;
+    border:1px solid var(--hud-accent-dim); white-space:nowrap; pointer-events:none;
+    display:none; box-shadow:0 0 8px rgba(79,224,255,0.25);
+  }
+
+  #crosshair {
+    position:absolute; top:50%; left:50%; width:18px; height:18px; z-index:9;
+    transform:translate(-50%,-50%); pointer-events:none; opacity:0.75;
+  }
+  #crosshair::before, #crosshair::after {
+    content:''; position:absolute; background:var(--hud-accent);
+  }
+  #crosshair::before { top:50%; left:0; width:100%; height:1px; transform:translateY(-50%); }
+  #crosshair::after { left:50%; top:0; height:100%; width:1px; transform:translateX(-50%); }
+
+  #layers {
+    margin-top:8px; padding-top:8px; border-top:1px solid var(--hud-accent-dim);
+  }
+  #layers .layer-row { margin:4px 0; }
+  #layers label { cursor:pointer; user-select:none; }
+  #layers input[type="checkbox"] { accent-color:var(--hud-accent); }
+  #layers button {
+    font-family:var(--hud-font); font-size:11px; text-transform:uppercase; letter-spacing:0.04em;
+    cursor:pointer; background:rgba(79,224,255,0.08); color:var(--hud-accent);
+    border:1px solid var(--hud-accent-dim); padding:3px 9px; margin-right:6px;
+  }
+  #layers button:hover { background:rgba(79,224,255,0.22); }
+  #layers select {
+    font-family:var(--hud-font); font-size:11px; cursor:pointer;
+    background:rgba(79,224,255,0.08); color:#dff9ff;
+    border:1px solid var(--hud-accent-dim); padding:2px 4px;
+  }
+  #legend { display:none; margin-top:6px; margin-left:20px; font-size:11px; }
+  #legend div { display:flex; align-items:center; gap:6px; margin:2px 0; }
+  #legend .swatch { width:11px; height:11px; flex:none; }
+
+  /* on-screen touch controls: hidden on desktop, shown only on touch-primary
+     devices (no keyboard) - see touch-controls.js. Buttons use touch-action:
+     none so the browser doesn't intercept holds/drags as scroll/zoom gestures. */
+  #touchControls { display:none; }
+  @media (pointer: coarse) {
+    #touchControls { display:block; }
+  }
+  #touchControls button {
+    touch-action:none; user-select:none; -webkit-user-select:none;
+    font-family:var(--hud-font); color:var(--hud-accent);
+    background:rgba(79,224,255,0.12); border:1px solid var(--hud-accent-dim);
+    border-radius:8px;
+  }
+  #touchControls button:active { background:rgba(79,224,255,0.32); }
+
+  #touchDpad {
+    position:absolute; left:16px; bottom:16px; z-index:12;
+    display:grid; grid-template-columns:52px 52px 52px; grid-template-rows:52px 52px 52px;
+    gap:4px;
+  }
+  #touchDpad button { font-size:20px; }
+  #tcUp { grid-area:1/2; } #tcLeft { grid-area:2/1; }
+  #tcRight { grid-area:2/3; } #tcDown { grid-area:3/2; }
+
+  #touchActions {
+    position:absolute; right:16px; bottom:16px; z-index:12;
+    display:grid; grid-template-columns:52px 52px; gap:8px;
+  }
+  #touchActions button { height:44px; font-size:13px; text-transform:uppercase; letter-spacing:0.04em; }
+
+  /* --- Dock: authoring surface at bottom-center. Distinct visual language
+     from the analytical HUD panels (rounded pills, amber accent) so
+     "author" and "analyse" read as different modes of use. */
+  #dock {
+    position:absolute; left:50%; bottom:18px; z-index:14;
+    transform:translateX(-50%);
+    display:flex; align-items:center; gap:8px;
+    padding:8px 12px;
+    background:rgba(20, 16, 10, 0.78);
+    border:1px solid rgba(255, 179, 71, 0.45);
+    border-radius:999px;
+    box-shadow:0 6px 24px rgba(0,0,0,0.35), inset 0 0 16px rgba(255,179,71,0.06);
+    font-family:'Consolas','Courier New',monospace; color:#f7e6cf;
+    backdrop-filter:blur(4px);
+  }
+  #dock .dock-btn {
+    height:36px; min-width:36px; padding:0 12px;
+    border:1px solid rgba(255,179,71,0.35);
+    background:rgba(255,179,71,0.08);
+    color:#f7e6cf; font-family:inherit; font-size:12px;
+    letter-spacing:0.06em; text-transform:uppercase; cursor:pointer;
+    border-radius:999px; display:inline-flex; align-items:center; gap:6px;
+  }
+  #dock .dock-btn:hover { background:rgba(255,179,71,0.22); }
+  #dock .dock-btn.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
+  #dock .dock-btn.stub { opacity:0.35; cursor:not-allowed; }
+  #dock .dock-sep {
+    width:1px; height:22px; background:rgba(255,179,71,0.28); margin:0 4px;
+  }
+  #dock [data-dock="team"] {
+    min-width:44px;
+    background:var(--team-color, #2f6dd9); color:#fff; border-color:transparent;
+    font-weight:700;
+  }
+  #dock [data-dock="team"]:hover { filter:brightness(1.15); }
+  #dockOverflow {
+    position:absolute; right:0; bottom:48px;
+    display:none; flex-direction:column; min-width:140px;
+    background:rgba(20,16,10,0.94);
+    border:1px solid rgba(255,179,71,0.45);
+    border-radius:10px; overflow:hidden;
+    box-shadow:0 6px 20px rgba(0,0,0,0.4);
+  }
+  #dockOverflow.open { display:flex; }
+  #dockOverflow button {
+    background:transparent; color:#f7e6cf; border:none; text-align:left;
+    padding:8px 14px; font-family:inherit; font-size:12px;
+    letter-spacing:0.05em; text-transform:uppercase; cursor:pointer;
+  }
+  #dockOverflow button:hover { background:rgba(255,179,71,0.18); }
+  #dockOverflow hr {
+    border:none; height:1px; background:rgba(255,179,71,0.25); margin:2px 0;
+  }
+  #dock .dock-swatch {
+    display:inline-block; width:16px; height:16px; border-radius:50%;
+    background:var(--draw-color, #ffb347);
+    border:1px solid rgba(255,255,255,0.5);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.3);
+  }
+  #dockPalette {
+    position:absolute; bottom:172px; left:50%; transform:translateX(-50%);
+    display:none; gap:6px; padding:6px 8px;
+    z-index:20;
+    background:rgba(20,16,10,0.94);
+    border:1px solid rgba(255,179,71,0.45);
+    border-radius:999px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.4);
+  }
+  #dockPalette.open { display:flex; }
+  #dockPalette button {
+    width:22px; height:22px; border-radius:50%; padding:0;
+    border:2px solid rgba(255,255,255,0.35);
+    cursor:pointer;
+  }
+  #dockPalette button.active { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.35); }
+
+  /* --- Timeline strip (A4): sits above the dock, holds playback transport
+     and frame cards. Same amber-authoring language as the dock. */
+  #timeline {
+    position:absolute; left:50%; bottom:70px; z-index:13;
+    transform:translateX(-50%);
+    display:flex; align-items:center; gap:8px;
+    max-width:min(96vw, 1400px);
+    padding:6px 10px;
+    background:rgba(20,16,10,0.82);
+    border:1px solid rgba(255,179,71,0.35);
+    border-radius:14px;
+    box-shadow:0 4px 18px rgba(0,0,0,0.4);
+    font-family:'Consolas','Courier New',monospace;
+    color:#f7e6cf;
+    backdrop-filter:blur(4px);
+  }
+  #timeline .tl-transport { display:flex; align-items:center; gap:4px; }
+  #timeline .tl-transport button, #timeline .tl-transport [data-tl="speed"] {
+    height:28px; min-width:32px; padding:0 8px;
+    background:rgba(255,179,71,0.08);
+    border:1px solid rgba(255,179,71,0.35);
+    color:#f7e6cf; font-family:inherit; font-size:12px;
+    border-radius:8px; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  #timeline .tl-transport button:hover, #timeline .tl-transport [data-tl="speed"]:hover { background:rgba(255,179,71,0.22); }
+  #timeline .tl-transport button.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
+  #timeline .tl-sep { width:1px; height:22px; background:rgba(255,179,71,0.28); margin:0 4px; }
+  #timeline .tl-strip {
+    display:flex; align-items:stretch; gap:6px;
+    overflow-x:auto; overflow-y:hidden;
+    max-width:70vw; min-width:120px; padding:2px 2px 4px 2px;
+    scrollbar-width:thin;
+  }
+  #timeline .tl-card {
+    position:relative;
+    display:flex; flex-direction:column; align-items:center;
+    padding:4px 3px 3px 3px; gap:2px;
+    background:rgba(255,179,71,0.05);
+    border:1px solid rgba(255,179,71,0.30);
+    border-radius:8px;
+    cursor:pointer; flex:none;
+    transition:border-color 0.1s, background 0.1s;
+  }
+  #timeline .tl-card:hover { background:rgba(255,179,71,0.14); }
+  #timeline .tl-card.editing { border-color:#ffb347; box-shadow:0 0 0 1px rgba(255,179,71,0.5) inset; }
+  #timeline .tl-card.playing { border-color:#7ee06b; }
+  #timeline .tl-card .tl-num {
+    font-size:12px; font-weight:700; color:#ffb347; line-height:1;
+  }
+  #timeline .tl-card.editing .tl-num { color:#fff2d0; }
+  #timeline .tl-card .tl-thumb {
+    display:block; border-radius:3px;
+    background:rgba(0,0,0,0.35);
+    image-rendering:auto;
+    pointer-events:none;
+  }
+  #timeline .tl-card .tl-dur {
+    width:100%; min-width:36px;
+    background:rgba(0,0,0,0.35); color:#f7e6cf;
+    border:1px solid rgba(255,179,71,0.28); border-radius:4px;
+    font-family:inherit; font-size:10px; padding:1px 2px; text-align:center;
+    -moz-appearance:textfield;
+  }
+  #timeline .tl-card .tl-dur::-webkit-outer-spin-button,
+  #timeline .tl-card .tl-dur::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+  #timeline .tl-card .tl-acts { display:flex; flex-wrap:wrap; justify-content:center; gap:1px; max-width:100%; }
+  #timeline .tl-card .tl-acts button {
+    background:transparent; border:none; color:#f7e6cf; cursor:pointer;
+    font-family:inherit; font-size:11px; padding:0 3px; line-height:1;
+    opacity:0.7;
+  }
+  #timeline .tl-card .tl-acts button:hover { opacity:1; color:#ffb347; }
+  #timeline .tl-card .tl-acts button.lit { opacity:1; color:#7ee06b; }
+  #timeline .tl-card .tl-acts button.lit:hover { color:#ff8080; }
+  #timeline .tl-card .tl-acts button:disabled { opacity:0.25; cursor:not-allowed; }
+
+  #dockStatus {
+    position:absolute; left:50%; bottom:130px; transform:translateX(-50%);
+    z-index:15; font-family:'Consolas','Courier New',monospace;
+    font-size:11px; color:#f7e6cf; letter-spacing:0.04em;
+    background:rgba(20,16,10,0.85);
+    border:1px solid rgba(255,179,71,0.35);
+    border-radius:999px; padding:4px 12px;
+    pointer-events:none; white-space:nowrap;
+    box-shadow:0 2px 8px rgba(0,0,0,0.4);
+  }
+  /* per-tool cursor feedback on the WebGL canvas (A-GAP-001). More specific
+     body classes win over `.tool-active` alone: chip stamp gets `copy` to
+     read as "drop a new item here", the draw tools stay crosshair, and
+     plain top-down select gets `grab` so pan-with-right-drag reads. */
+  body.tool-active canvas { cursor:crosshair; }
+  body.tool-chip canvas { cursor:copy; }
+  body.topdown-mode:not(.tool-active) canvas { cursor:grab; }
+
+  /* inline text input for the text shape tool - anchored at the click point */
+  .draw-text-input {
+    position:absolute; z-index:20; transform:translate(-50%, -50%);
+    font-family:'Consolas','Courier New',monospace; font-size:14px;
+    background:rgba(20,16,10,0.94); color:#f7e6cf;
+    border:1px solid rgba(255,179,71,0.55); border-radius:6px;
+    padding:4px 8px; outline:none; min-width:140px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.5);
+  }
+
+  /* Photo Overlay (authoring/photo-overlay/): the uploaded match photo sits
+     behind the WebGL canvas (see scene.js's explicit z-index:2 on the
+     renderer's canvas), full-viewport until photo-lock resizes the WebGL
+     canvas down to match its letterboxed rect. */
+  #photo-canvas { position:fixed; inset:0; z-index:1; display:none; }
+
+  #photoPanel { top:230px; right:12px; width:270px; max-height:65vh; overflow-y:auto; }
+  .photo-landmark-row {
+    display:flex; align-items:center; justify-content:space-between; padding:2px 0; font-size:11px; cursor:pointer; gap:6px;
+  }
+  .photo-landmark-row.armed { color:var(--hud-accent); }
+  .photo-landmark-row.placed { opacity:0.6; }
+  .photo-landmark-row .err { font-size:10px; color:#c8c8c8; font-variant-numeric:tabular-nums; }
+  .photo-landmark-row .err.worst { color:#ff8080; font-weight:bold; }
+  .photo-landmark-row .err.leverage { color:#ffb060; font-weight:bold; text-decoration:underline dotted; }
+  #photoReprojError {
+    margin-top:4px; font-size:10px; display:inline-block; padding:2px 8px;
+    border-radius:10px; background:rgba(255,255,255,0.08);
+  }
+  #photoReprojError.ok { color:#7ee06b; }
+  #photoReprojError.bad { color:#ff8080; }
+  .photo-hint-panel {
+    display:none; margin-top:6px; padding:8px; border-radius:6px;
+    border:1px solid var(--hud-accent-dim); background:rgba(79,224,255,0.06);
+  }
+  #photoHintText { font-size:12px; font-weight:bold; color:var(--hud-accent); }
+  #photoHintDiagram svg { width:100%; max-width:150px; display:block; margin:6px auto; }
+  #photoHintSkipBtn { margin-top:2px; }
+
+  /* --- B-BUG-002 Photo Overlay stepper: horizontal 4-pill breadcrumb
+     at the top of #photoPanel showing Photo -> Align -> Players ->
+     Insights. Pure visual - clicking a pill scrolls to (and, for Steps
+     3/4, force-opens) that step's block. */
+  #photoStepper {
+    display:flex; gap:3px; margin:0 0 8px 0; padding:0;
+    list-style:none; font-size:10px;
+  }
+  #photoStepper .ps-step {
+    flex:1; display:flex; align-items:center; gap:3px;
+    padding:4px 3px; border-radius:6px; min-width:0;
+    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+    color:rgba(255,255,255,0.55); cursor:pointer;
+    text-align:left; font-family:inherit;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  #photoStepper .ps-step.complete {
+    background:rgba(126,224,106,0.10); border-color:rgba(126,224,106,0.35);
+    color:#a7ecb7;
+  }
+  #photoStepper .ps-step.active {
+    background:rgba(79,224,255,0.14); border-color:rgba(79,224,255,0.55);
+    color:#cff3fb; font-weight:bold;
+  }
+  #photoStepper .ps-step .ps-num {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:12px; height:12px; border-radius:50%; flex:none;
+    background:rgba(255,255,255,0.10); font-size:9px; font-weight:bold;
+    color:rgba(255,255,255,0.75);
+  }
+  #photoStepper .ps-step.complete .ps-num { background:rgba(126,224,106,0.35); color:#0a1a10; }
+  #photoStepper .ps-step.active .ps-num { background:rgba(79,224,255,0.55); color:#031015; }
+  .ps-cta-banner {
+    display:flex; flex-direction:column; gap:4px;
+    margin:6px 0; padding:6px 8px; border-radius:6px;
+    background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35);
+  }
+  .ps-cta-banner .ps-cta-hint { font-size:11px; color:#cff3fb; }
+  .ps-cta-banner .dock-btn { align-self:flex-start; font-size:11px; padding:3px 10px; }
+
+  /* --- App shell: persistent left rail + top bar (docs/plan.md section 2).
+     Fixed, unpositioned ancestors of nothing - all existing HUD panels stay
+     position:absolute against the viewport, so they're unaffected by this. */
+  #appTopbar {
+    position:fixed; left:0; right:0; top:0; height:40px; z-index:29;
+    display:flex; align-items:center; gap:10px; padding:0 14px 0 60px;
+    background:rgba(10,14,17,0.92); border-bottom:1px solid var(--hud-accent-dim);
+    color:var(--hud-accent); font-family:var(--hud-font); font-size:12px;
+    letter-spacing:0.08em; text-transform:uppercase;
+  }
+  #appRail {
+    position:fixed; left:0; top:0; bottom:0; width:52px; z-index:30;
+    display:flex; flex-direction:column; align-items:stretch;
+    padding-top:40px;
+    background:rgba(10,14,17,0.94); border-right:1px solid var(--hud-accent-dim);
+  }
+  #appRail button {
+    background:transparent; border:none; border-left:2px solid transparent;
+    color:#7fd6e8; font-family:var(--hud-font); font-size:10px;
+    text-transform:uppercase; letter-spacing:0.05em; padding:14px 2px;
+    cursor:pointer;
+  }
+  #appRail button:hover { background:rgba(79,224,255,0.08); color:#dff9ff; }
+  #appRail button.active {
+    color:var(--hud-accent); border-left-color:var(--hud-accent);
+    background:rgba(79,224,255,0.14);
+  }
+  @media (pointer: coarse) {
+    #appRail, #appTopbar { display:none; }
+  }
+  #libraryView {
+    position:fixed; inset:40px 0 0 52px; z-index:25; display:none;
+    align-items:center; justify-content:center;
+    background:rgba(6,14,18,0.94); color:#dff9ff;
+    font-family:var(--hud-font); font-size:13px; letter-spacing:0.04em;
+  }
+
+  /* --- Tool palette: floating vertical strip of Mode-A tools. Position is
+     JS-managed (drag handle + localStorage), so no top/left here - see
+     tool-palette.js's applyPos(). */
+  #toolPalette {
+    position:fixed; z-index:26;
+    display:flex; flex-direction:column; gap:6px;
+    padding:6px 8px 8px;
+    background:rgba(20,16,10,0.82);
+    border:1px solid rgba(255,179,71,0.45); border-radius:12px;
+    font-family:var(--hud-font);
+    box-shadow:0 6px 24px rgba(0,0,0,0.35);
+    backdrop-filter:blur(4px);
+    user-select:none;
+  }
+  #toolPalette .floatable-grip {
+    height:14px; margin:-2px -4px 4px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:grab;
+    color:rgba(255,179,71,0.55);
+    font-size:14px; line-height:1;
+  }
+  #toolPalette .floatable-grip:active { cursor:grabbing; }
+  #toolPalette.dragging { opacity:0.9; box-shadow:0 10px 32px rgba(0,0,0,0.5); }
+  #toolPalette button {
+    width:56px; height:52px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:2px;
+    border:1px solid rgba(255,179,71,0.35);
+    background:rgba(255,179,71,0.08);
+    color:#f7e6cf; font-family:inherit; font-size:10px;
+    text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;
+    border-radius:8px;
+  }
+  #toolPalette button:hover { background:rgba(255,179,71,0.22); }
+  #toolPalette button.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
+  #toolPalette .tp-glyph { font-size:20px; line-height:1; }
+
+  /* --- Palette submenu: hover the Zone group to open a right-side flyout
+     with the shape sub-tools. Kept as pure CSS hover so no JS state to
+     manage - selection is a normal button click that runs the same
+     activateTool path. */
+  #toolPalette .tp-group { position:relative; }
+  #toolPalette .tp-group > button { position:relative; padding-right:14px; }
+  /* Extend the group's own hoverable area 8px to the right so the cursor
+     can traverse the gap between the button and the submenu without
+     losing :hover mid-flight (submenu-only hover-continuity is a
+     chicken-and-egg problem while the submenu is display:none). */
+  #toolPalette .tp-group::after {
+    content:''; position:absolute; top:0; left:100%;
+    width:8px; height:100%;
+  }
+  #toolPalette .tp-caret {
+    position:absolute; right:4px; top:50%; transform:translateY(-50%);
+    font-size:9px; opacity:0.7;
+  }
+  #toolPalette .tp-submenu {
+    position:absolute; left:100%; top:0;
+    display:none; flex-direction:column; gap:4px;
+    padding:6px; background:rgba(20,16,10,0.94);
+    border:1px solid rgba(255,179,71,0.45); border-radius:10px;
+    box-shadow:0 6px 24px rgba(0,0,0,0.4);
+    margin-left:6px;
+  }
+  #toolPalette .tp-group:hover .tp-submenu,
+  #toolPalette .tp-submenu:hover { display:flex; }
+  #toolPalette .tp-submenu button {
+    width:76px; height:44px; font-size:9px;
+  }
+  @media (pointer: coarse) {
+    #toolPalette { display:none; }
+  }
+
+  /* --- Inspector: selection-driven props panel, floating like the palette.
+     One above #layersPanel: when the two floating panels overlap, the one being edited wins. */
+  #inspector {
+    position:fixed; z-index:27;
+    width:220px; padding:10px 12px;
+    background:var(--hud-bg); color:#dff9ff;
+    border:1px solid var(--hud-accent-dim);
+    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
+    font-family:var(--hud-font); font-size:12px;
+    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    backdrop-filter:blur(2px);
+    user-select:none;
+  }
+  #inspector .floatable-grip {
+    height:12px; margin:-4px -4px 6px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:grab;
+    color:rgba(79,224,255,0.55);
+    font-size:12px; line-height:1;
+  }
+  #inspector .floatable-grip:active { cursor:grabbing; }
+  #inspector.dragging { opacity:0.9; box-shadow:0 10px 32px rgba(0,0,0,0.5); }
+  #inspector .ins-title {
+    font-size:11px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.08em; margin-bottom:8px;
+  }
+  #inspector .ins-heading { font-size:14px; margin-bottom:10px; color:#ffffff; }
+  #inspector .ins-empty { opacity:0.7; font-size:11px; line-height:1.5; }
+  #inspector .ins-row { margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  #inspector .ins-label {
+    font-size:10px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.05em; min-width:44px;
+  }
+  #inspector .ins-team-btn {
+    flex:1; height:26px; border-radius:5px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.35);
+    background:rgba(79,224,255,0.08); color:#dff9ff;
+    font-family:inherit; font-size:11px; letter-spacing:0.04em;
+  }
+  #inspector .ins-team-btn.active {
+    background:var(--team-color, #ffb347); color:#0a0d0f;
+    border-color:var(--team-color, #ffb347);
+  }
+  #inspector .ins-btn {
+    width:100%; height:28px; border-radius:5px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.35);
+    background:rgba(79,224,255,0.08); color:#dff9ff;
+    font-family:inherit; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.06em; margin-top:4px;
+  }
+  #inspector .ins-btn:hover { background:rgba(79,224,255,0.22); }
+  #inspector .ins-btn.danger {
+    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1);
+    color:#ffb0b0;
+  }
+  #inspector .ins-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
+  #inspector .ins-swatch {
+    display:inline-block; width:16px; height:16px; border-radius:50%;
+    background:var(--shape-color, #ffb347);
+    border:1px solid rgba(255,255,255,0.5);
+    margin-left:4px; vertical-align:middle;
+  }
+
+  /* --- Layers panel: outline of everything in the current frame. */
+  #layersPanel {
+    position:fixed; z-index:26;
+    width:220px; max-height:45vh; display:flex; flex-direction:column;
+    padding:10px 12px;
+    background:var(--hud-bg); color:#dff9ff;
+    border:1px solid var(--hud-accent-dim);
+    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
+    font-family:var(--hud-font); font-size:12px;
+    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    backdrop-filter:blur(2px);
+    user-select:none;
+  }
+  #layersPanel .floatable-grip {
+    height:12px; margin:-4px -4px 6px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:grab;
+    color:rgba(79,224,255,0.55);
+    font-size:12px; line-height:1;
+  }
+  #layersPanel .floatable-grip:active { cursor:grabbing; }
+  #layersPanel.dragging { opacity:0.9; box-shadow:0 10px 32px rgba(0,0,0,0.5); }
+  #layersPanel .lp-head {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:8px;
+  }
+  #layersPanel .lp-title {
+    font-size:11px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.08em;
+  }
+  #layersPanel .lp-toggle {
+    background:transparent; border:none; color:var(--hud-accent);
+    cursor:pointer; font-size:14px; line-height:1; padding:0 4px;
+  }
+  #layersPanel .lp-toggle:hover { color:#fff; }
+  #layersPanel.collapsed .lp-body { display:none; }
+  #layersPanel .lp-body { overflow-y:auto; padding-right:2px; }
+  #layersPanel .lp-empty { opacity:0.7; font-size:11px; line-height:1.5; }
+  #layersPanel .lp-section { margin-bottom:6px; }
+  #layersPanel .lp-section-head {
+    font-size:10px; color:var(--hud-accent); text-transform:uppercase;
+    letter-spacing:0.05em; cursor:pointer; user-select:none;
+    padding:3px 0; border-bottom:1px solid rgba(79,224,255,0.15);
+  }
+  #layersPanel .lp-section-head::before {
+    content:'\25BE'; display:inline-block; width:12px;
+  }
+  #layersPanel .lp-section.collapsed .lp-section-head::before { content:'\25B8'; }
+  #layersPanel .lp-section.collapsed .lp-section-body { display:none; }
+  #layersPanel .lp-row {
+    display:flex; align-items:center; gap:6px;
+    padding:3px 4px; cursor:pointer;
+    border-radius:3px;
+  }
+  #layersPanel .lp-row:hover { background:rgba(79,224,255,0.1); }
+  #layersPanel .lp-row.selected {
+    background:rgba(79,224,255,0.2);
+    box-shadow:inset 0 0 0 1px var(--hud-accent);
+  }
+  #layersPanel .lp-row.lp-dragging { opacity:0.4; }
+  #layersPanel .lp-row.lp-drop-before { box-shadow:inset 0 2px 0 0 var(--hud-accent); }
+  #layersPanel .lp-row.lp-drop-after { box-shadow:inset 0 -2px 0 0 var(--hud-accent); }
+  #layersPanel .lp-eye {
+    background:transparent; border:none; color:#dff9ff;
+    cursor:pointer; padding:0; width:16px; font-size:11px; line-height:1;
+    opacity:0.85;
+  }
+  #layersPanel .lp-eye:hover { opacity:1; color:var(--hud-accent); }
+  #layersPanel .lp-swatch {
+    display:inline-block; width:12px; height:12px; border-radius:50%;
+    border:1px solid rgba(255,255,255,0.35);
+    flex-shrink:0;
+  }
+  #layersPanel .lp-name {
+    flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    font-size:11px;
+  }
+  #layersPanel .lp-name-input {
+    flex:1; min-width:0; height:18px; padding:0 4px; font-size:11px;
+    font-family:inherit; color:#dff9ff;
+    background:rgba(79,224,255,0.12);
+    border:1px solid var(--hud-accent-dim); border-radius:3px; outline:none;
+  }
+  #layersPanel .lp-name-input:focus { border-color:var(--hud-accent); background:rgba(79,224,255,0.2); }
+  #layersPanel .lp-trash {
+    background:transparent; border:none; color:#dff9ff;
+    cursor:pointer; padding:0; width:14px; font-size:12px; line-height:1;
+    opacity:0; flex-shrink:0;
+  }
+  #layersPanel .lp-row:hover .lp-trash { opacity:0.6; }
+  #layersPanel .lp-trash:hover { opacity:1 !important; color:#ffb0b0; }
+  #layersPanel .lp-role-badge {
+    display:inline-block; width:14px; height:14px; line-height:14px;
+    text-align:center; font-size:9px; font-weight:bold;
+    color:#fff; border-radius:50%; flex-shrink:0;
+  }
+  #layersPanel .lp-role-badge[data-role="defender"] { background:#3b5bdb; }
+  #layersPanel .lp-role-badge[data-role="center"] { background:#7048e8; }
+  #layersPanel .lp-role-badge[data-role="wing"] { background:#0ca678; }
+  @media (pointer: coarse) {
+    #inspector, #layersPanel { display:none; }
+  }
+
+  /* Chip popover: position comes from chip-popover.js's screen-space
+     projection. transform translates the anchor point (bottom-centre) to
+     the chip's top. */
+  #chipPopover {
+    position:absolute; z-index:20;
+    transform:translate(-50%, calc(-100% - 10px));
+    min-width:120px; padding:6px 8px;
+    background:var(--hud-bg); color:#dff9ff;
+    border:1px solid var(--hud-accent-dim);
+    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px rgba(79,224,255,0.15);
+    font-family:var(--hud-font); font-size:12px;
+    clip-path:polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    pointer-events:auto;
+  }
+  #chipPopover.collapsed { min-width:0; padding:4px 8px; }
+  #chipPopover .pop-header {
+    display:flex; align-items:center; gap:8px;
+    cursor:pointer; user-select:none;
+  }
+  #chipPopover .pop-title {
+    font-size:12px; color:#ffffff; letter-spacing:0.04em;
+    flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    max-width:180px;
+  }
+  #chipPopover .pop-chevron {
+    background:transparent; border:none; color:var(--hud-accent);
+    font-size:10px; cursor:pointer; padding:2px 4px;
+    line-height:1;
+  }
+  #chipPopover .pop-chevron:hover { color:#ffffff; }
+  #chipPopover .pop-label-row { margin-top:6px; }
+  #chipPopover .pop-label-input {
+    width:100%; box-sizing:border-box; height:24px;
+    background:rgba(79,224,255,0.08);
+    border:1px solid rgba(79,224,255,0.35);
+    color:#dff9ff; padding:2px 6px;
+    font-family:inherit; font-size:11px;
+    border-radius:4px;
+  }
+  #chipPopover .pop-label-input:focus {
+    outline:none; border-color:var(--hud-accent);
+    background:rgba(79,224,255,0.14);
+  }
+  #chipPopover .pop-row { display:flex; gap:6px; margin-top:6px; }
+  #chipPopover .pop-team-btn {
+    flex:1; height:24px; border-radius:4px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.35);
+    background:rgba(79,224,255,0.08); color:#dff9ff;
+    font-family:inherit; font-size:11px; letter-spacing:0.04em;
+  }
+  #chipPopover .pop-team-btn.active {
+    background:var(--team-color, #ffb347); color:#0a0d0f;
+    border-color:var(--team-color, #ffb347);
+  }
+  #chipPopover .pop-role-row { gap:4px; }
+  #chipPopover .pop-role-btn {
+    flex:1; height:32px; border-radius:4px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.25);
+    background:rgba(79,224,255,0.05); color:#dff9ff;
+    font-family:inherit; font-size:10px; letter-spacing:0.04em;
+    padding:2px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #chipPopover .pop-role-btn:hover { background:rgba(79,224,255,0.15); }
+  #chipPopover .pop-role-btn canvas { display:block; }
+  #chipPopover .pop-role-btn[data-role="defender"].active {
+    background:rgba(59,91,219,0.3); border-color:#3b5bdb;
+  }
+  #chipPopover .pop-role-btn[data-role="center"].active {
+    background:rgba(112,72,232,0.3); border-color:#7048e8;
+  }
+  #chipPopover .pop-role-btn[data-role="wing"].active {
+    background:rgba(12,166,120,0.3); border-color:#0ca678;
+  }
+  #chipPopover .pop-btn {
+    width:100%; height:24px; border-radius:4px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.35);
+    background:rgba(79,224,255,0.08); color:#dff9ff;
+    font-family:inherit; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.06em; margin-top:6px;
+  }
+  #chipPopover .pop-btn.danger {
+    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1);
+    color:#ffb0b0;
+  }
+  #chipPopover .pop-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
+
+  /* Marquee (box) multi-select rubber-band + bulk action bar. */
+  #marqueeRect {
+    position:absolute; z-index:19; pointer-events:none;
+    border:1px solid var(--hud-accent, #4fe0ff);
+    background:rgba(79,224,255,0.12);
+  }
+  #chipBulkBar {
+    position:fixed; left:50%; bottom:96px; transform:translateX(-50%);
+    z-index:21; display:none; gap:8px; align-items:center;
+    padding:8px 12px; background:var(--hud-bg); color:#dff9ff;
+    border:1px solid var(--hud-accent-dim);
+    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px rgba(79,224,255,0.15);
+    font-family:var(--hud-font); font-size:12px; pointer-events:auto;
+    clip-path:polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+  #chipBulkBar .bulk-count { letter-spacing:0.04em; opacity:0.9; margin-right:2px; }
+  #chipBulkBar .bulk-btn {
+    height:24px; min-width:36px; padding:0 10px; border-radius:4px; cursor:pointer;
+    border:1px solid rgba(79,224,255,0.35); background:rgba(79,224,255,0.08);
+    color:#dff9ff; font-family:inherit; font-size:11px; letter-spacing:0.04em;
+  }
+  #chipBulkBar .bulk-btn:hover { background:rgba(79,224,255,0.16); }
+  #chipBulkBar .bulk-btn.danger {
+    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1); color:#ffb0b0;
+  }
+  #chipBulkBar .bulk-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
+
+  #layersPanel .lp-marquee-toggle {
+    display:flex; align-items:center; gap:3px; margin-left:auto; margin-right:6px;
+    font-size:10px; opacity:0.7; cursor:pointer; user-select:none; letter-spacing:0.03em;
+  }
+  #layersPanel .lp-marquee-toggle input { margin:0; cursor:pointer; }
+
+  /* Hide the dock's tool buttons - they now live in #toolPalette. Leaves
+     view/rotate/team/color/overflow. Kept in the DOM so their existing
+     click wiring keeps working (Esc, keyboard shortcuts, etc.) and any
+     other module reading them still finds them. */
+  #dock [data-dock="chip"],
+  #dock [data-dock-tool],
+  #dock .dock-sep { display:none; }

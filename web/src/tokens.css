@@ -16,3 +16,47 @@
 
   --vector-trajectory: #ffe066;
 }
+
+/* Broadcast design tokens (S-BACK-019, docs/plan.md section 2). Values come
+   from the design canvas Foundations sheet. Nothing reads them yet: surfaces
+   switch to them one at a time in S-BACK-021, so adding them changes nothing
+   on screen. Dark is the default; light is opt-in via data-theme="light".
+   test/tokens.test.js pins every value in both themes. */
+:root {
+  --fb-ink: #0d0f12;
+  --fb-surf-1: #15181c;
+  --fb-surf-2: #1c2025;
+  --fb-surf-3: #242a31;
+  --fb-line: #262b31;
+  --fb-line-strong: #333a42;
+  --fb-text-1: #f2f4f7;
+  --fb-text-2: #a4acb8;
+  --fb-text-3: #6b7480;
+  --fb-brand: #2e6bff;
+  --fb-brand-quiet: #16203a;
+  --fb-danger: #e5533d;
+
+  --fb-radius-1: 6px;
+  --fb-radius-2: 10px;
+  --fb-control-h: 32px;
+  --fb-accent-bar: 3px;
+  /* Archivo + IBM Plex Mono get self-hosted when the first surface uses
+     them; until then these resolve to the fallbacks. */
+  --fb-font: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --fb-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+:root[data-theme="light"] {
+  --fb-ink: #f4f6f8;
+  --fb-surf-1: #ffffff;
+  --fb-surf-2: #eef0f3;
+  --fb-surf-3: #e3e6ea;
+  --fb-line: #dfe3e8;
+  --fb-line-strong: #c6ccd3;
+  --fb-text-1: #12151a;
+  --fb-text-2: #59616c;
+  --fb-text-3: #88919c;
+  --fb-brand: #2e6bff;
+  --fb-brand-quiet: #e6eeff;
+  --fb-danger: #d6402b;
+}

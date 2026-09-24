@@ -2570,27 +2570,38 @@ added.
   Pure logic in `scripts/e2e-impact/impact.mjs`, node-tested in
   `test/e2e-impact.test.js`.
 
-- **[S-BACK-019]** [open] **Broadcast theme + vendored Web Awesome.**
-  Foundation for the redesign, no visible restructuring yet (section 2,
-  "Design system").
-  1. Add the `--fb-*` Broadcast token block (dark default + light) to
-     `web/src/tokens.css`; move the domain colours' per-theme values
-     there too, keeping `tokens.js` in sync. Node test: a parser test
-     that every `--fb-*` / domain token exists in both themes and that
-     `tokens.css` and `tokens.js` agree (new `test/tokens.test.js` -
-     no test covers that hand-sync today).
-  2. Exclude `web/lib/webawesome/` from CodeQL, then vendor the
-     component subset from the section 2 map (+ shared chunks) and add
-     its size budget to `scripts/check-size.mjs`.
-  3. `web/src/theme-broadcast.css` mapping `--wa-*` -> `--fb-*`; local
-     icon library (no Font Awesome kit request).
-  4. Self-host Archivo + IBM Plex Mono woff2.
-  5. Extract the inline `<style>` of `index.html` into `web/src/app.css`
-     unchanged (pure move, full e2e run), then swap its HUD colours /
-     fonts onto `--fb-*`.
-  Done when: bootstrap + full e2e green, no request leaves the origin
-  (e2e asserts no `fontawesome.com` / Google Fonts request), size budget
-  and build pass.
+- **[S-BACK-019]** [shipped] **Broadcast tokens + theme mapping, no
+  visible change.** Foundation for the redesign (section 2, "Design
+  system"). Decision (2026-09-24, option 1): ship only what changes
+  nothing on screen; the recolour becomes the first step of S-BACK-021.
+  **Shipped:**
+  - `web/src/tokens.css`: `--fb-*` Broadcast palette (dark default,
+    light under `:root[data-theme="light"]`) + radius / control height /
+    accent bar / font stacks. Domain colours unchanged (their Broadcast
+    values differ slightly, so changing them is a visible change and
+    belongs to S-BACK-021).
+  - `web/src/theme-broadcast.css`: `--wa-*` -> `--fb-*` references in
+    the `wa-theme-overrides` layer, no literals.
+  - `web/src/app.css`: the ~780-line inline `<style>` of `index.html`,
+    moved verbatim (loaded first, as the inline block was). Screenshots
+    before / after differ only where two runs of the same code also
+    differ (a time-based strip behind the Inspector + the save clock).
+  - `test/tokens.test.js` (5 tests): `tokens.css` domain colours ==
+    `tokens.js`, the full dark + light `--fb-*` palette, the theme file
+    only references defined `--fb-*`, `index.html` has no inline style
+    and loads the three sheets in order. `bootstrap.spec.js` gains a
+    test that the moved styles still apply, `--fb-*` resolve and flip
+    under `data-theme="light"`, and no request leaves the origin.
+  **Deferred to the first S-BACK-021 surface that uses them** (vendoring
+  code nothing imports is what S-BACK-013 had to delete):
+  - Vendor the Web Awesome subset + its size budget + a local icon
+    library. **Needs a repo-settings change first:** the repo has no
+    CodeQL workflow (GitHub default setup), which to our knowledge
+    takes no config file / `paths-ignore`, so excluding `web/lib/webawesome/` means switching
+    code scanning to advanced setup with a `paths-ignore` config.
+  - Self-host Archivo + IBM Plex Mono woff2 (`--fb-font` / `--fb-mono`
+    fall back to system faces until then).
+  - Per-theme domain colours and the HUD recolour onto `--fb-*`.
 
 - **[S-BACK-020]** [shipped] **Design canvas gap-fill (Broadcast).** Add a
   "Broadcast - gaps" page to the design artifact covering everything in
@@ -2621,8 +2632,10 @@ added.
   phone Analyze (photo, stepper, bottom sheet). Every surface in the
   S-BACK-021 port order now has a Broadcast design.
 
-- **[S-BACK-021]** [open] [blocked-by: S-BACK-019] **Port surfaces to
-  Broadcast, one per commit.** Order (lowest risk / most visible first):
+- **[S-BACK-021]** [open] **Port surfaces to
+  Broadcast, one per commit.** Step 0: the S-BACK-019 deferrals
+  (CodeQL advanced setup, vendor Web Awesome, fonts, HUD recolour).
+  Then, lowest risk / most visible first:
   app shell (rail, top bar) -> right panel (Inspector / Layers as
   `wa-tab-group`) -> tool palette + flyouts -> timeline -> dialogs
   (export, share, library -> Library view) -> Analyze stepper + align

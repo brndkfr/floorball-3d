@@ -142,6 +142,12 @@ aside.
   properties, but not reassigning the imported binding itself, so a shared
   object sidesteps needing a getter/setter pair for every single field.
   Add new cross-module mutable state here, not as a new file-local `let`.
+- Styles live in `web/src/app.css` (layout + current HUD look, moved out
+  of `index.html` in S-BACK-019), `web/src/tokens.css` (domain colours
+  mirrored from `tokens.js`, plus the Broadcast `--fb-*` palette) and
+  `web/src/theme-broadcast.css` (Web Awesome `--wa-*` -> `--fb-*`, no
+  literals). Don't add an inline `<style>` back; `test/tokens.test.js`
+  fails on it and pins the token files.
 - Numbers without a cited source (Swiss Way tactical zone boundaries, the
   detailed goalie's anthropometric scale, the shooting-line "centred"
   threshold, default camera/ball positions, the 5x chip display scale) are
