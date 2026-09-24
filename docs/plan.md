@@ -190,8 +190,9 @@ slide-over drawer; <768 rail -> bottom tab bar, palette -> scroll strip,
 Inspector / Layers -> bottom sheet, timeline pinned. Authoring is
 desktop-first; phone is for review, playback and quick nudges.
 
-**Coverage gaps** - the canvas predates several shipped features and
-only mocks 8 screens, so these have no Broadcast design yet (**S-BACK-020**):
+**Coverage gaps** - closed by **S-BACK-020** (canvas page "Broadcast -
+gaps", 13 screens). The original canvas predated several shipped
+features and only mocked 8 screens; the gaps were:
 Analyze steps 1 (photo / restore / auto-detect) and 3 (players, teams,
 ball, facing - the densest screen); shots at goal (aim pad, timing,
 verdict, 3D flight, A-BACK-022); tool flyouts (ball extras A-BACK-026,
@@ -2591,7 +2592,7 @@ added.
   (e2e asserts no `fontawesome.com` / Google Fonts request), size budget
   and build pass.
 
-- **[S-BACK-020]** [in-progress] **Design canvas gap-fill (Broadcast).** Add a
+- **[S-BACK-020]** [shipped] **Design canvas gap-fill (Broadcast).** Add a
   "Broadcast - gaps" page to the design artifact covering everything in
   section 2 "Coverage gaps", built from the real controls in
   `index.html` / the photo-overlay step panels (not invented ones), plus
@@ -2608,9 +2609,17 @@ added.
   Broadcast -> Web Awesome mapping sheet with dark + light values for
   every `--wa-*` -> `--fb-*` pair. New in the design, not in the app
   yet: the "Align automatically" switch and step 3's checklist.
-  **Round 2 still open:** 3D view chrome, export / share / import /
-  help dialogs, choreography tutorial cards, empty / loading / error /
-  saved states, tablet layouts, phone Analyze.
+  **Round 2 done (2026-09-24):** 3D view (third right-panel tab
+  "View": Camera / Shot check / Show, coverage % on the stage), export
+  dialog (settings, rendering, saved), a dialogs sheet (overflow menu,
+  share toasts incl. the ~32 KB fallback, import JSON, delete confirm,
+  keyboard shortcuts), the choreography tutorial as a coach card with
+  the 7 real steps and the Commit / Cancel banner, a states sheet
+  (empty play / Library, save status, first-time 12.9 MB detector
+  download, working, blocked-until-step, landmark / goal / mirror
+  messages), tablet (Inspector as a `wa-drawer` over the stage) and
+  phone Analyze (photo, stepper, bottom sheet). Every surface in the
+  S-BACK-021 port order now has a Broadcast design.
 
 - **[S-BACK-021]** [open] [blocked-by: S-BACK-019] **Port surfaces to
   Broadcast, one per commit.** Order (lowest risk / most visible first):
