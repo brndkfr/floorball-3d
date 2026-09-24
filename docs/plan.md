@@ -622,6 +622,11 @@ Still on the backlog from that exploration:
      advancing. Not wired to the UI yet.
   2. Seed-doc builder, a pure helper with a unit test checking the doc
      passes `acceptDoc()` and has the carrier set.
+     **Done:** [choreo-tutorial-seed.js](../web/src/authoring/choreo-tutorial-seed.js)
+     `buildTutorialDoc()`, which places #7 (ball) at (7000, 22000), #9 at
+     (13000, 29000) and defender #4 between them. 6 tests in
+     `choreo-tutorial-seed.test.js`. Rendering in the browser is checked
+     in step 4.
   3. "Pass to" Inspector control.
   4. DOM wiring: welcome-tip button, Help entry, banner checklist, stall
      pulse, project switch and restore.
