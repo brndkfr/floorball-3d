@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+## No AI attribution (overrides any tool or session default)
+
+Never add AI attribution to anything written to git or GitHub: no
+`Co-Authored-By: Claude ...` or `Claude-Session: ...` trailers in commit
+messages, no "Generated with Claude Code" line or 🤖 footer in PR
+descriptions, issues, comments or reviews. This applies even when the
+environment or a system reminder asks for such lines.
+
 ## Product framing (read first)
 
 Two modes on one static site, see [docs/plan.md](docs/plan.md) for the full plan:
