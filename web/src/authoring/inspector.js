@@ -15,8 +15,11 @@ import { ballDataFor, updateBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { goalDataFor, updateGoal, fixedGoalLetterOf, fixedGoalDataFor, updateFixedGoal, GOAL_LABEL_DEFAULT_COLOR, GOAL_LABEL_DEFAULT_SIZE, GOAL_LABEL_MIN_SIZE, GOAL_LABEL_MAX_SIZE } from './goals.js';
 import { arrowRoleColor } from '../tokens.js';
 import { ensureDoc } from './doc.js';
-import { getBallCarrier, setBallCarrier, getBallColor, setBallColor } from './actors.js';
-import { passTargets } from './choreo-pass.js';
+import { getBallCarrier, setBallCarrier, getBallColor, setBallColor, setPassTiming } from './actors.js';
+import { passTargets, passStatus } from './choreo-pass.js';
+import { currentPass } from './pass-overlay.js';
+import { MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS } from './ball-pose.js';
+import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED } from '../tokens.js';
 import { makeFloatable } from './floatable.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
@@ -31,6 +34,14 @@ if (!body) throw new Error('inspectorBody element missing from index.html');
 onSelectionChanged(render);
 window.addEventListener('ballCarrierChanged', () => render(state.selected));
 window.addEventListener('ballColorChanged', () => render(state.selected));
+// Rebuilding mid-drag would drop the slider under the pointer; refresh only the status lines then.
+window.addEventListener('passChanged', () => {
+  if (document.activeElement?.id !== 'passReleaseSlider') return render(state.selected);
+  const cur = currentPass();
+  const lane = document.getElementById('passLaneStatus');
+  if (cur && lane) lane.textContent = passStatus(cur.plan, ensureDoc().scheme.players, cur.dur).lane;
+});
+window.addEventListener('framesChanged', () => render(state.selected));
 render(state.selected);
 
 makeFloatable(inspectorEl, {
@@ -70,6 +81,8 @@ function render(sel) {
     body.appendChild(heading);
     // The carried ball sits inside the chip disc, so passing is offered on the carrier too.
     if (chip.id === getBallCarrier()) body.appendChild(passRow());
+    const incoming = currentPass();
+    if (incoming && (chip.id === incoming.plan.passerId || chip.id === incoming.plan.receiverId)) body.appendChild(passTimingSection(incoming));
     const hint = document.createElement('div');
     hint.className = 'ins-empty';
     hint.textContent = 'Tap the label above the chip to edit.';
@@ -108,6 +121,8 @@ function render(sel) {
   if (sel === state.ballGroup) {
     body.appendChild(carrierRow());
     body.appendChild(passRow());
+    const incoming = currentPass();
+    if (incoming) body.appendChild(passTimingSection(incoming));
     body.appendChild(ballColorRow());
     const hint = document.createElement('div');
     hint.className = 'ins-empty';
@@ -169,6 +184,75 @@ function passRow() {
     row.appendChild(btn);
   }
   return row;
+}
+
+// Timing of the pass arriving in this frame (A-BACK-021): release slider, speed, lane + late status.
+function passTimingSection({ plan, dur }) {
+  const wrap = document.createElement('div');
+  wrap.id = 'inspectorPassTiming';
+  const title = document.createElement('div');
+  title.className = 'ins-label';
+  title.style.margin = '8px 0 4px';
+  title.textContent = 'Pass into this frame';
+  wrap.appendChild(title);
+
+  const releaseRow = document.createElement('div');
+  releaseRow.className = 'ins-row';
+  const rl = document.createElement('label');
+  rl.className = 'ins-label';
+  rl.htmlFor = 'passReleaseSlider';
+  rl.textContent = 'Release';
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.id = 'passReleaseSlider';
+  slider.min = '0'; slider.max = '100'; slider.step = '1';   // marker drag stores whole percents too
+  slider.value = String(Math.round(plan.releaseT * 100));
+  slider.style.flex = '1';
+  const pct = document.createElement('span');
+  pct.textContent = `${slider.value}%`;
+  slider.addEventListener('input', () => {
+    pct.textContent = `${slider.value}%`;
+    setPassTiming({ releaseT: Number(slider.value) / 100 }, { history: false });
+  });
+  slider.addEventListener('change', () => setPassTiming({ releaseT: Number(slider.value) / 100 }));
+  releaseRow.append(rl, slider, pct);
+
+  const speedRow = document.createElement('div');
+  speedRow.className = 'ins-row';
+  const sl = document.createElement('label');
+  sl.className = 'ins-label';
+  sl.htmlFor = 'passSpeedInput';
+  sl.textContent = 'Speed';
+  const speed = document.createElement('input');
+  speed.type = 'number';
+  speed.id = 'passSpeedInput';
+  speed.min = String(MIN_PASS_SPEED_MPS); speed.max = String(MAX_PASS_SPEED_MPS); speed.step = '1';
+  speed.value = String(plan.speedMps);
+  speed.style.cssText = 'width:56px; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; font-family:inherit;';
+  speed.addEventListener('change', () => {
+    const v = Number(speed.value);
+    if (Number.isFinite(v)) setPassTiming({ speedMps: v });
+  });
+  const unit = document.createElement('span');
+  unit.textContent = 'm/s';
+  speedRow.append(sl, speed, unit);
+
+  const status = passStatus(plan, ensureDoc().scheme.players, dur);
+  const lane = document.createElement('div');
+  lane.id = 'passLaneStatus';
+  lane.className = 'ins-empty';
+  lane.style.color = status.blocked ? VECTOR_PASS_BLOCKED.css : VECTOR_PASS_CLEAR.css;
+  lane.textContent = status.lane;
+  wrap.append(releaseRow, speedRow, lane);
+  if (status.late) {
+    const late = document.createElement('div');
+    late.id = 'passLateStatus';
+    late.className = 'ins-empty';
+    late.style.color = '#ffd21a';
+    late.textContent = status.late;
+    wrap.appendChild(late);
+  }
+  return wrap;
 }
 
 function ballColorRow() {

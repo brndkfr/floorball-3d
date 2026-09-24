@@ -18,6 +18,15 @@ export function passPreview({ startCarrier = null, carrier = null, from, to, tri
   };
 }
 
+// Inspector text for a passPlan() result (A-BACK-021).
+export function passStatus(plan, players, durationMs) {
+  const names = plan.blockedBy.map((id) => `#${players?.[id]?.number ?? '?'}`);
+  const late = plan.late
+    ? `Late: needs ${(plan.needMs / 1000).toFixed(1)} s, only ${(((1 - plan.releaseT) * durationMs) / 1000).toFixed(1)} s left in the frame`
+    : null;
+  return { lane: names.length ? `Blocked by ${names.join(', ')}` : 'Clear lane', blocked: names.length > 0, late };
+}
+
 // Inspector "Pass to" buttons: carrier's teammates, or every player when the ball is loose.
 export function passTargets(players, carrierId) {
   const carrier = players.find((p) => p.id === carrierId);

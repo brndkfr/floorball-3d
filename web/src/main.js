@@ -14,7 +14,7 @@ import './goalie.js';
 import './selection.js';
 import './touch-controls.js';
 import './help.js';
-import { updateChipAnimations, tickChoreo, tickActors } from './authoring/index.js';
+import { updateChipAnimations, tickChoreo, tickActors, tickPassOverlay } from './authoring/index.js';
 import { updateDrawPreview } from './authoring/draw-tool.js';
 import { tickPlayback } from './authoring/playback.js';
 import { updateMoveMarkers } from './authoring/move-marker.js';
@@ -69,6 +69,7 @@ function animate() {
   tickPlayback(dt * 1000);
   const choreoActive = tickChoreo();
   const actorsActive = tickActors();
+  const passChanged = tickPassOverlay();
   const ballCenter = getBallWorldCenter(); // computed once, shared by both calls below
   updateTrajectory(ballCenter);
   updateCoverage(ballCenter);
@@ -89,7 +90,7 @@ function animate() {
   // consumeRenderDirty() must run every frame (it's edge-triggered) - keep
   // it first so `||` short-circuiting never skips clearing it.
   const needsRender = consumeRenderDirty() || pollChanged || chipsActive || markersActive
-    || walksActive || choreoActive || actorsActive || labelsChanged || !!state.drawState || !!state.playback?.playing;
+    || walksActive || choreoActive || actorsActive || passChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
   if (needsRender) renderer.render(scene, state.activeCamera);
 }
 animate();

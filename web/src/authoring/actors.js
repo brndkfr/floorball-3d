@@ -20,7 +20,7 @@ import { scene } from '../scene.js';
 import { ensureDoc } from './doc.js';
 import { saveDoc } from './storage.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from './chips.js';
-import { BALL_CARRY_OFFSET, passFlightPos } from './ball-pose.js';
+import { BALL_CARRY_OFFSET, passFlightPos, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS, MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS } from './ball-pose.js';
 import { prefersReducedMotion } from '../reduced-motion.js';
 
 const CARRIER_RING_COLOR = 0xffb347;
@@ -221,9 +221,25 @@ export function setBallCarrier(chipId) {
     scheme.balls.main = { x: bx, z: bz, carrier: null };
   }
   scheme.balls.main.carrier = chipId ?? null;
+  delete scheme.balls.main.pass;   // a new hand-off starts from the default timing
   saveDoc();
   import('./history.js').then((h) => h.pushHistory());
   window.dispatchEvent(new Event('ballCarrierChanged'));
+}
+
+// Timing of the pass arriving in the current frame (A-BACK-021). Only non-default values are stored.
+export function setPassTiming({ releaseT, speedMps } = {}, { history = true } = {}) {
+  const main = ensureDoc().scheme.balls?.main;
+  if (!main) return;
+  const pass = { ...(main.pass || {}) };
+  if (releaseT !== undefined) pass.releaseT = Math.min(Math.max(releaseT, 0), 1);
+  if (speedMps !== undefined) pass.speedMps = Math.min(Math.max(speedMps, MIN_PASS_SPEED_MPS), MAX_PASS_SPEED_MPS);
+  if (pass.releaseT === DEFAULT_RELEASE_T) delete pass.releaseT;
+  if (pass.speedMps === DEFAULT_PASS_SPEED_MPS) delete pass.speedMps;
+  if (Object.keys(pass).length) main.pass = pass; else delete main.pass;
+  saveDoc();
+  if (history) import('./history.js').then((h) => h.pushHistory());
+  window.dispatchEvent(new Event('passChanged'));
 }
 
 export function getBallColor() {

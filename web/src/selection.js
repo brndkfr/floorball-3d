@@ -5,6 +5,7 @@ import { scene, camera, renderer, setCameraLook } from './scene.js';
 import { handleFloorClickForTool, activateTool } from './authoring/dock.js';
 import { chipDataFor, persistChipPosition, scheduleHistoryPush } from './authoring/chips.js';
 import * as pathHandles from './authoring/path-handles.js';
+import * as passOverlay from './authoring/pass-overlay.js';
 import * as shapeHandles from './authoring/shape-handles.js';
 import { shapeDataFor, translateShapes } from './authoring/shapes.js';
 import { coneDataFor, persistConePosition } from './authoring/cones.js';
@@ -354,6 +355,7 @@ renderer.domElement.addEventListener('pointermove', (event) => {
   setPointerHint(p);
 
   if (pathHandles.isDragging()) { pathHandles.onDragMove(event); return; }
+  if (passOverlay.isDragging()) { passOverlay.onDragMove(event); return; }
   if (shapeHandles.isDragging()) { shapeHandles.onDragMove(event); return; }
   if (!lmb) return;
 
@@ -432,6 +434,11 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
     lmb = { downX: event.clientX, downY: event.clientY, lastX: event.clientX, lastY: event.clientY, mode: 'path-handle', hit: null };
     return;
   }
+  // Pass release marker (A-BACK-021).
+  if (passOverlay.tryStartDrag(event)) {
+    lmb = { downX: event.clientX, downY: event.clientY, lastX: event.clientX, lastY: event.clientY, mode: 'pass-release', hit: null };
+    return;
+  }
   // Shape edit-handle drag (zone corners / edges / vertices).
   if (shapeHandles.tryStartDrag(event)) {
     lmb = { downX: event.clientX, downY: event.clientY, lastX: event.clientX, lastY: event.clientY, mode: 'shape-handle', hit: null };
@@ -482,6 +489,10 @@ window.addEventListener('pointerup', (event) => {
 
   if (captured.mode === 'path-handle') {
     if (pathHandles.isDragging()) pathHandles.endDrag();
+    return;
+  }
+  if (captured.mode === 'pass-release') {
+    passOverlay.endDrag();
     return;
   }
   if (captured.mode === 'shape-handle') {

@@ -1,7 +1,24 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-const { passPreview, passTargets } = await import('../web/src/authoring/choreo-pass.js');
+const { passPreview, passTargets, passStatus } = await import('../web/src/authoring/choreo-pass.js');
+
+test('passStatus: clear lane, on time', () => {
+  const s = passStatus({ blockedBy: [], late: false, releaseT: 0.5, arriveT: 0.8 }, {}, 1000);
+  assert.deepEqual(s, { lane: 'Clear lane', blocked: false, late: null });
+});
+
+test('passStatus: names the blockers by number', () => {
+  const players = { d4: { number: '4' }, d5: { number: '5' } };
+  const s = passStatus({ blockedBy: ['d4', 'd5'], late: false, releaseT: 0.5, arriveT: 0.8 }, players, 1000);
+  assert.equal(s.lane, 'Blocked by #4, #5');
+  assert.equal(s.blocked, true);
+});
+
+test('passStatus: late pass says how long it needs vs the time left', () => {
+  const s = passStatus({ blockedBy: [], late: true, releaseT: 0.5, arriveT: 1, needMs: 1333 }, {}, 1000);
+  assert.equal(s.late, 'Late: needs 1.3 s, only 0.5 s left in the frame');
+});
 
 const close = (a, b, eps = 1e-6) => Math.abs(a - b) < eps;
 const A = { x: 0, z: 0 };

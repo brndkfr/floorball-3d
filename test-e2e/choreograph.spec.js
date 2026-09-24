@@ -1,6 +1,6 @@
-// A-BACK-018: Choreograph mode previews a pass arrow when the draft frame
-// changes the ball carrier. rAF is paused in unfocused Playwright tabs, so
-// the spec drives tickActors()/tickChoreo() directly.
+// A-BACK-018 / A-BACK-021: pass arrow when a frame changes the ball carrier,
+// plus pass timing. rAF is paused in unfocused Playwright tabs, so the spec
+// drives tickActors()/tickChoreo()/tickPassOverlay() directly.
 
 import { test, expect } from '@playwright/test';
 
@@ -18,15 +18,17 @@ async function tick(page) {
   await page.evaluate(async () => {
     const { tickActors } = await import('/src/authoring/actors.js');
     const { tickChoreo } = await import('/src/authoring/choreograph.js');
+    const { tickPassOverlay } = await import('/src/authoring/pass-overlay.js');
     tickActors();
     tickChoreo();
+    tickPassOverlay();
   });
 }
 
 async function passArrow(page) {
   return page.evaluate(async () => {
     const { scene } = await import('/src/scene.js');
-    const arrow = scene.getObjectByName('choreoPassArrow');
+    const arrow = scene.getObjectByName('passArrow');
     if (!arrow) return null;
     arrow.geometry.computeBoundingBox();
     const bb = arrow.geometry.boundingBox;
@@ -35,7 +37,7 @@ async function passArrow(page) {
 }
 
 test.describe('A-BACK-018 choreograph pass-arrow preview', () => {
-  test('shows an arrow from old to new carrier and removes it on commit', async ({ page }) => {
+  test('shows an arrow from old to new carrier, keeps it after commit, hides it on the first frame', async ({ page }) => {
     await bootApp(page);
 
     const ids = await page.evaluate(async () => {
@@ -69,7 +71,11 @@ test.describe('A-BACK-018 choreograph pass-arrow preview', () => {
     expect(after.maxX).toBeLessThan(5600);
 
     await page.locator('#timeline [data-tl="choreo"]').click();
-    expect(await passArrow(page)).toBeNull();
+    await tick(page);
+    expect((await passArrow(page)).visible).toBe(true);   // the pass is saved in the frame now
+    await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(0));
+    await tick(page);
+    expect((await passArrow(page)).visible).toBe(false);  // no pass arrives in frame 1
   });
 
   test('Inspector "Pass to" buttons hand the ball to a teammate', async ({ page }) => {
@@ -120,12 +126,14 @@ test.describe('A-BACK-018 choreograph pass-arrow preview', () => {
       setBallCarrier(b);
       tickActors();
       const out = {};
-      for (const ms of [0, 500, 1000]) { seekTo(ms); out[ms] = Math.round(state.ballGroup.position.z); }
+      for (const ms of [0, 500, 750, 1000]) { seekTo(ms); out[ms] = Math.round(state.ballGroup.position.z); }
       stop();
       return out;
     });
+    // A-BACK-021: released at the default 50%; 10 m at 15 m/s is late, so it lands at the frame end.
     expect(zAt[0]).toBe(10250);
-    expect(zAt[500]).toBe(15250);
+    expect(zAt[500]).toBe(10250);
+    expect(zAt[750]).toBe(15250);
     expect(zAt[1000]).toBe(20250);
   });
 

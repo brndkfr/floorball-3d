@@ -563,6 +563,69 @@ Still on the backlog from that exploration:
   [test-e2e/choreograph.spec.js](../test-e2e/choreograph.spec.js) covers
   no arrow before the hand-off, a trimmed arrow after it, and removal on
   commit.
+- **[A-BACK-021]** [shipped] **Pass timing: release point, pass
+  speed, lane check.** Follow-up to A-BACK-020. There, a pass spanned
+  the whole frame, from the passer's frame-A spot to the receiver's
+  frame-B spot, so the ball ignored *when* the pass happens and could
+  run straight through an opponent. Decisions (2026-09-24):
+  - **Model:** release point + flight. Until the release point the ball
+    stays with the passer (dribble). Then it flies at pass speed to
+    where the receiver *will be* when it arrives, so it can lead a
+    running receiver. After arrival it stays with the receiver.
+  - **Release point:** a draggable marker on the passer's run path, plus
+    a "Release at %" slider in the Inspector for precision and keyboard
+    use. Default 50%, or 0% when the ball starts loose.
+  - **Arrival:** worked out from the pass speed. The default is
+    15 m/s, which is an estimate and not a sourced figure; it can be
+    edited per pass. If the ball can't arrive before the frame ends, it
+    arrives at the frame end and the Inspector warns that the pass is
+    late.
+  - **Lane check:** the pass arrow is green when the lane is clear and
+    red when it is blocked (`VECTOR_PASS_CLEAR` / `VECTOR_PASS_BLOCKED`
+    tokens, the same colours as Mode B's pass lines). The Inspector says
+    "blocked by #4". The check samples the actual flight over time
+    against each opponent's interpolated position. It uses the same
+    400 mm corridor half-width as `insights.js` `passOptions`, but
+    `passOptions` is static and can't see moving players.
+  - **Storage:** the pass is saved on the frame the ball arrives in, as
+    `scheme.balls.main.pass = { releaseT?, speedMps? }`, and only
+    non-default values are stored. It is cleared on every carrier
+    change, so a new pass starts from the defaults. Playback, video
+    export (ball position) and share links all use it.
+  - **Playback:** a short fading trail from the release point to the
+    ball while it is in flight. Not in video export yet (export drives
+    `seekTo` without the overlay tick).
+  - **Where:** the pass overlay (passer path, release marker, lane-
+    coloured arrow) shows whenever the current frame has an incoming
+    pass and playback is stopped, not only in Choreo. It replaces the
+    Choreo-only A-BACK-018 preview.
+
+  **Shipped (2026-09-24).**
+  - Pure maths in [ball-pose.js](../web/src/authoring/ball-pose.js):
+    `passPlan()`, `ballPoseAt()` (now takes the segment duration instead
+    of live chip positions), `chipPosAt()` and `nearestReleaseT()`, with
+    12 node tests. [choreo-pass.js](../web/src/authoring/choreo-pass.js)
+    `passStatus()` builds the Inspector text, with 3 tests.
+  - Rendering and the marker drag live in
+    [pass-overlay.js](../web/src/authoring/pass-overlay.js). The drag is
+    hooked into `selection.js` the same way as `path-handles.js`.
+  - `setPassTiming()` in actors.js writes the timing, and the Inspector
+    section is "Pass into this frame", shown for the ball, the passer
+    and the receiver.
+  - E2e [pass-timing.spec.js](../test-e2e/pass-timing.spec.js) covers the
+    slider and speed plus reload, the mouse drag of the marker, the red
+    arrow with "Blocked by #4", the late warning, and holding the ball
+    until release plus the trail. `choreograph.spec.js` was updated: the
+    arrow now stays after commit, and the playback test uses the new
+    timing.
+  - Checked live with real mouse drags. In the tutorial setup, dragging
+    the release to 7% routes the pass through #4 and the arrow turns
+    red.
+  - The slider moves in 1% steps, because a marker drag stores whole
+    percents and 5% steps would show a different value.
+  - Known gaps: the trail isn't in video export, and the ball carry
+    offset is always +z ("in front" of the player), independent of the
+    chip's facing.
 - **[A-BACK-020]** [shipped] **Ball follows its carrier in playback, and
   passes are visible.** Reported from the tutorial: "Pass to #9" showed
   no ball moving. Root cause: while the ball is carried,

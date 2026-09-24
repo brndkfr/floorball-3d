@@ -176,10 +176,9 @@ function applyPose(elapsed) {
     g.rotation.y = lerpAngle(pa.angle || 0, pb.angle || 0, t);
   }
 
-  // ball: carrier-aware (dribble follows the chip, a carrier change flies A -> B); goalie: lerp.
+  // ball: carrier-aware with pass release/flight timing (ball-pose.js); goalie: lerp.
   if (state.ballGroup) {
-    const livePos = (id) => state.chipGroups.find((g) => g.userData?.chip?.id === id)?.position ?? null;
-    const p = ballPoseAt(fa, fb, t, livePos);
+    const p = ballPoseAt(fa, fb, t, frames[a].duration);
     if (p) {
       state.ballGroup.position.x = p.x;
       state.ballGroup.position.z = p.z;
@@ -254,6 +253,9 @@ function restoreEditFrame() {
 }
 
 export function playbackState() { return playback; }
+
+// { a, b, t } of the segment under the playhead (pass-overlay.js trail).
+export function playbackSegment() { return getFrames().length ? segmentAt(playback.elapsed) : null; }
 
 // Position the scene at `elapsed` ms without touching playback flags.
 // Used by the offline export driver to render each frame at max speed.

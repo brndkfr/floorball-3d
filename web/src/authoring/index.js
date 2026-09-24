@@ -35,6 +35,7 @@ import './photo-overlay/photo-overlay.js'; // side-effect: wires up the photo ov
 import './choreo-tutorial-ui.js'; // side-effect: guided Choreo tutorial card (A-BACK-019)
 import { notifyProjectChanged } from './library-dialog.js';
 export { tickChoreo } from './choreograph.js';
+export { tickPassOverlay } from './pass-overlay.js';
 export { tickActors } from './actors.js';
 
 migrateLegacyStorage();
