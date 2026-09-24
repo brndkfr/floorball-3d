@@ -15,7 +15,7 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BUDGETS_MB = {
   dist: 70,
   'dist/assets': 8,
-  'web/src': 0.8,
+  'web/src': 1.0,   // raised from 0.8 on 2026-09-24 (was at 0.78 before A-BACK-022 shots)
 };
 
 function dirSizeBytes(dir) {
