@@ -2591,7 +2591,7 @@ added.
   (e2e asserts no `fontawesome.com` / Google Fonts request), size budget
   and build pass.
 
-- **[S-BACK-020]** [open] **Design canvas gap-fill (Broadcast).** Add a
+- **[S-BACK-020]** [in-progress] **Design canvas gap-fill (Broadcast).** Add a
   "Broadcast - gaps" page to the design artifact covering everything in
   section 2 "Coverage gaps", built from the real controls in
   `index.html` / the photo-overlay step panels (not invented ones), plus
@@ -2599,6 +2599,18 @@ added.
   with the theme variables filled in. Priority: Analyze step 1 + 3,
   shots, tool flyouts, then dialogs / states / tablet. Blocks the port
   of each affected surface in S-BACK-021, not S-BACK-019.
+  **Round 1 done (2026-09-24):** new canvas page "Broadcast - gaps"
+  with Analyze step 1 (photo, goal end, auto-align switch, the three
+  manual align routes) and step 3 (players checklist, floating bar on
+  the selected player, CTA Set ball -> Continue), Plan shot at goal
+  (aim pad, release, speed, verdict), ball tool flyout + extra-ball
+  Inspector, a flyout spec sheet (Ball / Zone / Cones), and the
+  Broadcast -> Web Awesome mapping sheet with dark + light values for
+  every `--wa-*` -> `--fb-*` pair. New in the design, not in the app
+  yet: the "Align automatically" switch and step 3's checklist.
+  **Round 2 still open:** 3D view chrome, export / share / import /
+  help dialogs, choreography tutorial cards, empty / loading / error /
+  saved states, tablet layouts, phone Analyze.
 
 - **[S-BACK-021]** [open] [blocked-by: S-BACK-019] **Port surfaces to
   Broadcast, one per commit.** Order (lowest risk / most visible first):
