@@ -563,6 +563,69 @@ Still on the backlog from that exploration:
   [test-e2e/choreograph.spec.js](../test-e2e/choreograph.spec.js) covers
   no arrow before the hand-off, a trimmed arrow after it, and removal on
   commit.
+- **[A-BACK-019]** [open] **Guided Choreo tutorial (first-time UX).**
+  Goal: a first-time user builds one choreographed frame and watches it
+  play back, learning by doing rather than by reading. Decisions
+  (2026-09-24):
+  - **Style: self-ticking checklist.** No spotlight tour or "Next"
+    buttons. Each step completes when the user actually performs the
+    action. The checklist lives in the existing Choreo banner
+    (`#choreoBanner`) so it sits where the user is already looking. It
+    never shows a blocking dialog, and "Skip tutorial" is always
+    available.
+  - **Scope: Choreo only, 5 steps.**
+    1. Press **Choreo** (`choreoChanged`, active).
+    2. Drag #7 forward. Done when a chip moves > 100 mm from its choreo
+       snapshot, the same check `tickChoreo()` already uses for the cyan
+       line.
+    3. Pass: hand the ball to #9 (`ballCarrierChanged` with a new
+       carrier). The A-BACK-018 pass arrow is the visible receipt.
+    4. **Commit** (`choreoChanged`, inactive, frame kept).
+    5. Press **Space** to watch it (`playbackChanged`, playing).
+    The end card offers "Add another frame" (Choreo again, no checklist)
+    or "Back to my project".
+  - **Where it runs: a separate tutorial project.** It is seeded through
+    `adoptDocAsProject()` with 2 attackers (#7 with the ball, #9) and 1
+    defender, then switched to. The user's own projects are never
+    mutated. On exit (finish or skip) it switches back to the project
+    that was open before. The tutorial project is reset on every
+    restart; whether it stays in the Library afterwards is left to the
+    implementation.
+  - **Entry points:** a "Try a guided play" button in the first-visit
+    welcome tip ([help.js](../web/src/help.js) `showOnboarding()`), plus
+    a permanent entry in the Help overlay (`?`). No auto-start.
+  - **Passing gets a visible control.** The Inspector already has a
+    **Carrier** dropdown for the ball (`inspector.js` `carrierRow()`)
+    plus a right-click tip. Make it read as an action: label it
+    "Pass to" and/or add one-click teammate buttons. The tutorial step
+    names that control, with right-click mentioned as the shortcut.
+  - **Stall help:** after about 8 s without progress on a step, pulse
+    the step's target (chip, ball, button). With reduced motion on
+    ([reduced-motion.js](../web/src/reduced-motion.js)), use a static
+    highlight instead. Step text goes to a live region for screen
+    readers, and every step can be done by keyboard.
+  - **Progress resumes after reload.** Store
+    `{ projectId, completedSteps }` under its own localStorage key. On
+    boot, if the current project is the tutorial project, restore the
+    checklist at the first incomplete step.
+
+  **Build order (TDD per CLAUDE.md):**
+  1. Pure step machine `choreo-tutorial.js`, taking
+     `(signals, completed) -> { step, hint, target, done }`. It follows
+     the pattern of `photo-step-tracker.js`. Node tests cover step order,
+     out-of-order actions (e.g. passing before dragging), a step undone
+     by cancel, and resume from saved progress.
+  2. Seed-doc builder, a pure helper with a unit test checking the doc
+     passes `acceptDoc()` and has the carrier set.
+  3. "Pass to" Inspector control.
+  4. DOM wiring: welcome-tip button, Help entry, banner checklist, stall
+     pulse, project switch and restore.
+  5. E2e `test-e2e/choreo-tutorial.spec.js`: walk all 5 steps, check the
+     previously open project is byte-identical afterwards, reload
+     mid-tutorial and resume at the same step, skip returns to the
+     original project.
+  6. `pnpm test`, `pnpm test:e2e`, `pnpm run build`,
+     `pnpm run check:size` green, plus a live-browser walkthrough.
 
 ---
 
