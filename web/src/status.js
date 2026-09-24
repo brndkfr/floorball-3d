@@ -17,6 +17,12 @@ export function loaded(name) {
   if (pending <= 0) setTimeout(() => statusEl.style.display = 'none', 1500);
 }
 
+// Outstanding asset loads. The e2e helper waitForAssets() (test-e2e/
+// fixtures.js) waits for 0 before a spec spawns chips or reads meshes.
+export function pendingLoads() {
+  return pending;
+}
+
 export function failed(name, err) {
   console.error(`Failed to load ${name}`, err);
   statusEl.textContent = `failed to load ${name} - see console`;

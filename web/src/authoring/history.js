@@ -15,6 +15,7 @@ import { state } from '../state.js';
 import { ensureDoc } from './doc.js';
 import { rebuildFromDoc } from './chips.js';
 import { rebuildShapesFromDoc } from './shapes.js';
+import { applyActorsFromScheme } from './actors.js';
 import { saveDoc, getCurrentProjectId, saveHistoryState, loadHistoryState } from './storage.js';
 import { createHistoryStack, pushSnapshot, stepUndo, stepRedo, resetHistoryStack, serializeHistoryStack, hydrateHistoryStack } from './history-stack.js';
 
@@ -47,7 +48,10 @@ function apply(snap) {
   import('./cones.js').then((c) => c.rebuildConesFromDoc());
   import('./balls.js').then((b) => b.rebuildBallsFromDoc());
   import('./goals.js').then((g) => g.rebuildGoalsFromDoc());
-  import('./actors.js').then((a) => a.applyActorsFromScheme());
+  // Synchronous on purpose: tickActors() writes the ball mesh position back
+  // into the doc when they differ, so a tick between restoring the doc and
+  // moving the mesh would undo the undo (ball-tool.spec.js).
+  applyActorsFromScheme();
   saveDoc();
 }
 

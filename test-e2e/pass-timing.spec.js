@@ -1,10 +1,11 @@
 // A-BACK-021: pass timing - release point (marker + slider), pass speed, lane check, playback trail.
 // rAF may be paused in Playwright, so the spec drives the tick functions directly.
 
-import { test, expect } from './fixtures.js';
+import { test, expect, waitForAssets } from './fixtures.js';
 
 async function boot(page) {
   await page.goto('/', { waitUntil: 'load' });
+  await waitForAssets(page);
   await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
   await page.waitForFunction(async () => !!(await import('/src/state.js')).state.ballGroup);
 }

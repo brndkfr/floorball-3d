@@ -56,3 +56,10 @@ export const test = base.extend({
 });
 
 export { expect };
+
+// Waits until every model the app loads (chips, ball, goals, goalie, rink)
+// has arrived. Chips spawned before player_chip.obj lands are only built
+// once it does, so specs that spawn chips or read meshes call this first.
+export async function waitForAssets(page) {
+  await page.waitForFunction(async () => (await import('/src/status.js')).pendingLoads() === 0, null, { timeout: 20000 });
+}
