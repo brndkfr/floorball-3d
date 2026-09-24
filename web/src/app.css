@@ -404,7 +404,14 @@
   .shell-btn.primary { background:var(--fb-brand); border-color:var(--fb-brand); color:#fff; }
   .shell-btn:hover { border-color:var(--fb-text-3); color:var(--fb-text-1); }
   .shell-btn:focus-visible, #appRail button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
-  #appTopbar [data-action="tutorial"] { margin-left:auto; }
+  .shell-spacer { flex:1; }
+  .shell-seg { display:inline-flex; border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1); overflow:hidden; }
+  .shell-seg button {
+    display:flex; align-items:center; gap:6px; padding:8px 11px; border:none; cursor:pointer;
+    background:transparent; color:var(--fb-text-2); font:600 11px/1 var(--fb-font);
+  }
+  .shell-seg button[aria-pressed="true"] { background:var(--fb-surf-3); color:var(--fb-text-1); }
+  .shell-seg button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:-2px; }
   #appRail {
     position:fixed; left:0; top:0; bottom:0; width:var(--shell-rail); z-index:30;
     box-sizing:border-box; display:flex; flex-direction:column; align-items:stretch; gap:2px;

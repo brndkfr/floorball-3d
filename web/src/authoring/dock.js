@@ -125,6 +125,8 @@ viewBtn.addEventListener('click', () => {
   import('./path-handles.js').then((m) => m.rebuild());
 });
 refreshViewButton();
+// The top bar's 2D / 3D control switches the view too.
+window.addEventListener('viewModeChanged', refreshViewButton);
 
 rotateBtn.addEventListener('click', async () => {
   const s = await import('../scene.js');

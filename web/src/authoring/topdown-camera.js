@@ -39,6 +39,8 @@ export function enterTopDown() {
   document.body.classList.add('topdown-mode');
   applyBallTopDownScale(true);
   setActiveCamera(topDownCamera);
+  // The top bar's 2D / 3D control (web/src/ui/topbar.js) follows this.
+  window.dispatchEvent(new Event('viewModeChanged'));
 }
 
 export function exitTopDown() {
@@ -59,6 +61,7 @@ export function exitTopDown() {
   topDownCamera.position.z = savedTopDown.z;
   topDownCamera.updateProjectionMatrix();
   setActiveCamera(camera);
+  window.dispatchEvent(new Event('viewModeChanged'));
 }
 
 // state.ballGroup may be null at first enterTopDown() call (OBJ loads
