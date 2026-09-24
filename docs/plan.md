@@ -563,7 +563,7 @@ Still on the backlog from that exploration:
   [test-e2e/choreograph.spec.js](../test-e2e/choreograph.spec.js) covers
   no arrow before the hand-off, a trimmed arrow after it, and removal on
   commit.
-- **[A-BACK-019]** [open] **Guided Choreo tutorial (first-time UX).**
+- **[A-BACK-019]** [in-progress] **Guided Choreo tutorial (first-time UX).**
   Goal: a first-time user builds one choreographed frame and watches it
   play back, learning by doing rather than by reading. Decisions
   (2026-09-24):
@@ -615,6 +615,11 @@ Still on the backlog from that exploration:
      the pattern of `photo-step-tracker.js`. Node tests cover step order,
      out-of-order actions (e.g. passing before dragging), a step undone
      by cancel, and resume from saved progress.
+     **Done:** [choreo-tutorial.js](../web/src/authoring/choreo-tutorial.js)
+     (`tutorialReducer` / `tutorialView` / `resumeTutorial` / `stallCue`),
+     14 tests in `choreo-tutorial.test.js`. Committing without a move
+     and a pass resets to Choreo with a note instead of silently
+     advancing. Not wired to the UI yet.
   2. Seed-doc builder, a pure helper with a unit test checking the doc
      passes `acceptDoc()` and has the carrier set.
   3. "Pass to" Inspector control.
