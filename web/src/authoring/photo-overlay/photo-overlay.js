@@ -30,6 +30,7 @@ import * as photoCache from './photo-cache.js';
 import { recomputeInsights } from './insights-overlay.js';
 import { enterPhotoPreview3D, exitPhotoPreview3D, isPhotoPreview3D } from './preview-3d.js';
 import { firstImageFile } from './photo-drop.js';
+import { renderInsightStats } from './insight-stats.js';
 import {
   currentStep as computeCurrentStep,
   stepStatuses as computeStepStatuses,
@@ -130,6 +131,8 @@ const goalieAwaySelect = document.getElementById('photoGoalieAway');
 const autoAssignGoaliesBtn = document.getElementById('photoAutoAssignGoaliesBtn');
 const resetFacingBtn = document.getElementById('photoResetFacingBtn');
 const insightsReadout = document.getElementById('photoInsightsReadout');
+const insightsStats = document.getElementById('photoInsightsStats');
+if (!insightsStats) throw new Error('photo-overlay: #photoInsightsStats missing from index.html');
 const view3dBtn = document.getElementById('photoView3dBtn');
 
 const fovSlider = document.getElementById('photoFovSlider');
@@ -1898,6 +1901,7 @@ function updateStep4() {
   if (!enabled) {
     resetFacingBtn.disabled = true;
     insightsReadout.textContent = '-';
+    renderInsightStats(insightsStats, null);
     updateStepper();
     return;
   }
@@ -1919,12 +1923,9 @@ function updateStep4() {
   resetFacingBtn.disabled = !hasOverride;
 
   const result = recomputeInsights();
+  renderInsightStats(insightsStats, result);
   if (!result) { insightsReadout.textContent = 'place a ball and pick a target goal to see insights'; return; }
-  const { shot, coveragePct, passes } = result;
-  const clearCount = passes.filter((p) => p.clear).length;
-  insightsReadout.textContent = `angle: ${Math.round(shot.angleDeg)}° · dist: ${Math.round(shot.distance)}mm · `
-    + `coverage: ${coveragePct != null ? Math.round(coveragePct) + '%' : '-'} · `
-    + `clear passes: ${clearCount}/${passes.length}`;
+  insightsReadout.textContent = '';   // the stat grid shows the numbers; this line is for status messages
   updateStepper();
 }
 

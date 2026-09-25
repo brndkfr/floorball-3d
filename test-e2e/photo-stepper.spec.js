@@ -132,3 +132,37 @@ test('step 1 drop zone opens the file picker on click', async ({ page }) => {
   await expect(page.locator('#photo-canvas')).toBeVisible();
   await expect(page.locator('#photoDrop .ps-drop-name')).toHaveText('picked.png');
 });
+
+// S-BACK-021 design canvas "Insights": verdict pill + 2x2 stat grid. Real
+// insights need a solved camera pose from a calibrated photo, which e2e
+// can't produce, so drive the renderer with a computed-style result.
+test('step 4 shows a verdict pill and a 2x2 stat grid', async ({ page }) => {
+  await bootApp(page);
+  const stats = page.locator('#photoPanel #photoInsightsStats');
+  await expect(stats).toBeHidden();
+  await page.evaluate(async () => {
+    const { renderInsightStats } = await import('/src/authoring/photo-overlay/insight-stats.js');
+    document.getElementById('photoStep4Details').open = true;
+    renderInsightStats(document.getElementById('photoInsightsStats'), {
+      shot: { angleDeg: 18.4, distance: 6420, lineColor: 'open', onTarget: 'on' },
+      coveragePct: 63.2, passes: [{ clear: true }, { clear: false }, { clear: true }, { clear: false }],
+    });
+  });
+  await expect(stats).toBeVisible();
+  await expect(stats.locator('.ps-vpill')).toHaveText('On target');
+  await expect(stats.locator('.ps-vpill')).toHaveAttribute('data-tone', 'good');
+  const cells = stats.locator('.ps-stat');
+  await expect(cells).toHaveCount(4);
+  await expect(cells.nth(1)).toContainText('6.4');
+  await expect(cells.nth(3)).toContainText('clear passes');
+  const cols = await stats.locator('.ps-stat-grid').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
+  expect(cols).toBe(2);
+  await expect(stats).toHaveAttribute('aria-label', /On target - angle 18°/);
+
+  // No result (ball / goal missing) hides it again.
+  await page.evaluate(async () => {
+    const { renderInsightStats } = await import('/src/authoring/photo-overlay/insight-stats.js');
+    renderInsightStats(document.getElementById('photoInsightsStats'), null);
+  });
+  await expect(stats).toBeHidden();
+});
