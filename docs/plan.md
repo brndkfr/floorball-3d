@@ -2650,6 +2650,24 @@ added.
   sheet / tab bar. Each surface: extend its e2e spec first, keep
   existing DOM ids, keep module logic unchanged (only markup + CSS +
   mount points), then `pnpm test:e2e:affected` + build + size.
+  **Progress (branch `broadcast_ux_redesign`, draft PR #5, 2026-09-25):**
+  shipped, one commit each with its e2e spec: e2e hardening (onboarding
+  tip in fixtures; chips built twice on a late model load; undo lost to an
+  actors tick; `waitForAssets`), Broadcast recolour of app.css and the
+  JS-built chrome, rail + top bar (crumb, 2D/3D, Export), docked right
+  panel (Inspector / Layers / View stacked, as in the chosen "Plan"
+  artboard - not tabs; the floating Info panel is gone), icon tool
+  palette + flyouts, timeline / dock / Choreo banner, docked Analyze
+  panel with bar stepper, first-run card, < 1200 px drawers for both side
+  panels, phone layout (< 768 px) with a real viewport meta.
+  **Still open:** Web Awesome components are vendored but not used yet
+  (panels / dialogs keep their own markup; swap in `wa-dialog`,
+  `wa-drawer`, `wa-comparison` where it removes code); Analyze step 1 drop
+  zone, step 3 checklist and step 4 stat grid from the gaps canvas;
+  dialog headings in sentence case; Inspector fields in the canvas's
+  field style; the top-down fit ignores the docked panel (rink can sit
+  off-centre in the stage); phone Analyze bottom sheet; a human visual
+  pass on real devices.
 
 ---
 
