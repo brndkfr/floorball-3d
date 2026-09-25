@@ -2659,15 +2659,22 @@ added.
   artboard - not tabs; the floating Info panel is gone), icon tool
   palette + flyouts, timeline / dock / Choreo banner, docked Analyze
   panel with bar stepper, first-run card, < 1200 px drawers for both side
-  panels, phone layout (< 768 px) with a real viewport meta.
-  **Still open:** Web Awesome components are vendored but not used yet
-  (panels / dialogs keep their own markup; swap in `wa-dialog`,
-  `wa-drawer`, `wa-comparison` where it removes code); Analyze step 1 drop
-  zone, step 3 checklist and step 4 stat grid from the gaps canvas;
-  dialog headings in sentence case; Inspector fields in the canvas's
-  field style; the top-down fit ignores the docked panel (rink can sit
-  off-centre in the stage); phone Analyze bottom sheet; a human visual
-  pass on real devices.
+  panels, phone layout (< 768 px) with a real viewport meta. Second
+  round: the 2D fit targets the stage (rail, top bar, docked panel, tab
+  bar) not the window; Analyze step 1 drop zone, step 3 numbered
+  checklist with done ticks, step 4 verdict pill + 2x2 stat grid; dialog
+  titles in sentence case (`.fb-dialog-title`); Inspector fields in the
+  canvas field style (inline HUD field styles removed); phone Analyze
+  bottom sheet (peek + grab).
+  **Still open:** Web Awesome components are vendored but not used. Left
+  on purpose: the dialogs are native `<dialog>` (focus trap, Esc,
+  backdrop) and the side panels are plain CSS drawers, so `wa-dialog` /
+  `wa-drawer` would not remove code, only add Lit component loading; the
+  photo-vs-overlay `wa-comparison` slider is the one real candidate and
+  wants its own change. Also open: a human visual pass on real devices
+  (touch, notch safe areas, real photos through all four Analyze steps -
+  e2e can't solve a camera pose, so step 4 is only checked with a
+  rendered result).
 
 ---
 
