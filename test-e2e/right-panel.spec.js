@@ -71,3 +71,33 @@ test('at 1200 px and wider the panel is docked and the toggle is hidden', async 
   await page.goto('/', { waitUntil: 'load' });
   await expect(page.locator('#appTopbar [data-action="toggle-panel"]')).toBeHidden();
 });
+
+// The 2D fit used the whole window, so the docked panel covered the right
+// end of the rink. It now fits the stage between rail, top bar and panel.
+test('2D view centres the whole rink in the stage, clear of the docked panel', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/', { waitUntil: 'load' });
+  await waitForAssets(page);
+  await page.locator('#appTopbar [data-view-mode="2d"]').click();
+  const pts = await page.evaluate(async () => {
+    const THREE = await import('three');
+    const { state } = await import('/src/state.js');
+    const { RINK_L, HALF_W } = await import('/src/constants.js');
+    const cam = state.activeCamera;
+    cam.updateMatrixWorld();
+    const at = (x, z) => {
+      const v = new THREE.Vector3(x, 0, z).project(cam);
+      return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight];
+    };
+    return { centre: at(0, RINK_L / 2), ends: [at(0, 0), at(0, RINK_L)], sides: [at(-HALF_W, RINK_L / 2), at(HALF_W, RINK_L / 2)] };
+  });
+  const stage = { left: 64, right: 1440 - 320, top: 52, bottom: 900 };
+  expect(pts.centre[0]).toBeCloseTo((stage.left + stage.right) / 2, 0);
+  expect(pts.centre[1]).toBeCloseTo((stage.top + stage.bottom) / 2, 0);
+  for (const [x, y] of [...pts.ends, ...pts.sides]) {
+    expect(x).toBeGreaterThanOrEqual(stage.left);
+    expect(x).toBeLessThanOrEqual(stage.right);
+    expect(y).toBeGreaterThanOrEqual(stage.top);
+    expect(y).toBeLessThanOrEqual(stage.bottom);
+  }
+});
