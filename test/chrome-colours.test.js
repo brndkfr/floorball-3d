@@ -21,3 +21,9 @@ for (const f of CHROME_MODULES) {
     assert.deepEqual(hits.map(([n, l]) => `${n}: ${l.trim().slice(0, 90)}`), []);
   });
 }
+
+test('index.html has no inline old-HUD colours (styles belong in app.css)', () => {
+  const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
+  const hits = html.split('\n').map((l, i) => [i + 1, l]).filter(([, l]) => OLD.test(l));
+  assert.deepEqual(hits.map(([n, l]) => `${n}: ${l.trim().slice(0, 90)}`), []);
+});

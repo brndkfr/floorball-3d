@@ -124,8 +124,8 @@
     padding:8px 12px;
     background:var(--fb-surf-1);
     border:1px solid var(--fb-line-strong);
-    border-radius:999px;
-    box-shadow:0 6px 24px rgba(0,0,0,0.35), inset 0 0 16px var(--fb-brand-quiet);
+    border-radius:var(--fb-radius-2);
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
     font-family:var(--fb-mono); color:var(--fb-text-1);
   }
   #dock .dock-btn {
@@ -191,19 +191,31 @@
 
   /* --- Timeline strip (A4): sits above the dock, holds playback transport
      and frame cards. Same amber-authoring language as the dock. */
+  /* Timeline (Broadcast bottom bar, design canvas "Plan"): transport, frame
+     cards, + frame, Choreo. Centred on the stage like the dock. */
   #timeline {
     position:absolute; left:var(--stage-center); bottom:70px; z-index:13;
     transform:translateX(-50%);
-    display:flex; align-items:center; gap:8px;
+    display:flex; align-items:center; gap:10px;
     max-width:min(var(--stage-width), 1400px); box-sizing:border-box;
-    padding:6px 10px;
+    padding:8px 12px;
     background:var(--fb-surf-1);
-    border:1px solid var(--fb-line-strong);
-    border-radius:14px;
-    box-shadow:0 4px 18px rgba(0,0,0,0.4);
-    font-family:var(--fb-mono);
+    border:1px solid var(--fb-line);
+    border-radius:var(--fb-radius-2);
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+    font:500 12px/1 var(--fb-font);
     color:var(--fb-text-1);
   }
+  #timeline .tl-add, #timeline .tl-choreo, #timeline .tl-learn {
+    height:30px; padding:0 12px; border-radius:var(--fb-radius-1); cursor:pointer; white-space:nowrap;
+    font:600 12px/1 var(--fb-font); border:1px solid var(--fb-line-strong);
+    background:var(--fb-surf-2); color:var(--fb-text-1);
+  }
+  #timeline .tl-add { border-style:dashed; color:var(--fb-text-2); }
+  #timeline .tl-choreo { background:var(--fb-brand); border-color:var(--fb-brand); color:#fff; }
+  #timeline .tl-learn { background:transparent; color:var(--fb-text-2); }
+  #timeline .tl-add:hover, #timeline .tl-learn:hover { color:var(--fb-text-1); border-color:var(--fb-text-3); }
+  #timeline button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
   #timeline .tl-transport { display:flex; align-items:center; gap:4px; }
   #timeline .tl-transport button, #timeline .tl-transport [data-tl="speed"] {
     height:28px; min-width:32px; padding:0 8px;
@@ -265,8 +277,9 @@
   #timeline .tl-card .tl-acts button.lit:hover { color:var(--fb-danger); }
   #timeline .tl-card .tl-acts button:disabled { opacity:0.25; cursor:not-allowed; }
 
+  /* Bottom-left of the stage: centred it overlapped the timeline's cards. */
   #dockStatus {
-    position:absolute; left:var(--stage-center); bottom:130px; transform:translateX(-50%);
+    position:absolute; left:calc(var(--shell-rail) + 16px); bottom:40px;
     z-index:15; font-family:var(--fb-mono);
     font-size:11px; color:var(--fb-text-1); letter-spacing:0.04em;
     background:var(--fb-surf-1);
