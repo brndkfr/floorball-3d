@@ -321,3 +321,15 @@ aside.
   blown size budget blocks the deploy - which is exactly why the local
   pre-commit rule above (`pnpm test` must pass) exists: catch it before
   pushing, not after CI does.
+- **Branch previews**: label an open PR from this repo `preview` and it is
+  published at `/preview/<branch>/` next to the live site (`/`, `?` etc.
+  become `-`). Every deploy (push to `main`, a label change, a push to a
+  labelled PR, closing it) rebuilds `main` at the root plus all labelled
+  branches, so previews survive normal deploys and vanish when the PR closes
+  or loses the label. Branch code is built by the read-only `build-preview`
+  job (no credentials, no shared pnpm cache); only `deploy` can write to
+  Pages - `test/deploy-workflow.test.js` pins that. Previews share the live
+  site's origin, so they read and write the same saved projects
+  (localStorage / IndexedDB); keep that in mind before previewing a branch
+  that changes the saved-doc format. `BUILD_SHA` overrides the `?v=` stamp
+  (`scripts/build-sha.mjs`), since `GITHUB_SHA` is `main`'s in those runs.
