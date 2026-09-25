@@ -14,15 +14,15 @@ overlay.style.cssText = `
   position:fixed; inset:0; z-index:30;
   background:rgba(0,0,0,0.55); display:none;
   align-items:center; justify-content:center;
-  font-family:'Consolas','Courier New',monospace;
+  font-family:var(--fb-font);
 `;
 overlay.innerHTML = `
-  <div style="min-width:380px; max-width:92vw; background:rgba(20,16,10,0.96);
-              border:1px solid rgba(255,179,71,0.5); border-radius:12px;
-              padding:18px 22px; color:#f7e6cf;
+  <div style="min-width:380px; max-width:92vw; background:var(--fb-surf-1);
+              border:1px solid var(--fb-line-strong); border-radius:12px;
+              padding:18px 22px; color:var(--fb-text-1);
               box-shadow:0 12px 32px rgba(0,0,0,0.5);">
     <div style="font-size:14px; letter-spacing:0.06em; text-transform:uppercase;
-                margin-bottom:14px; color:#ffb347;">Export animation</div>
+                margin-bottom:14px; color:var(--fb-brand);">Export animation</div>
     <div class="ex-row"><label>Format</label><select data-x="format"></select></div>
     <div class="ex-row"><label>Resolution</label><select data-x="res">
       <option value="1280x720">720p (1280&times;720)</option>
@@ -37,16 +37,16 @@ overlay.innerHTML = `
       <option value="all" selected>Whole animation</option>
       <option value="current">Current frame only (PNG)</option>
     </select></div>
-    <div class="ex-msg" style="min-height:16px; margin-top:6px; font-size:11px; color:#f7e6cf; opacity:0.7;"></div>
+    <div class="ex-msg" style="min-height:16px; margin-top:6px; font-size:11px; color:var(--fb-text-1); opacity:0.7;"></div>
     <div class="ex-progress" style="display:none; margin-top:12px;">
-      <div style="height:6px; background:rgba(255,179,71,0.15); border-radius:3px; overflow:hidden;">
-        <div class="ex-bar" style="height:100%; width:0%; background:#ffb347; transition:width 60ms linear;"></div>
+      <div style="height:6px; background:var(--fb-brand-quiet); border-radius:3px; overflow:hidden;">
+        <div class="ex-bar" style="height:100%; width:0%; background:var(--fb-brand); transition:width 60ms linear;"></div>
       </div>
       <div class="ex-pct" style="font-size:11px; margin-top:4px; opacity:0.75;">0%</div>
     </div>
     <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
-      <button data-x="cancel" style="background:transparent; color:#f7e6cf; border:1px solid rgba(255,179,71,0.35); padding:6px 14px; border-radius:6px; font-family:inherit; cursor:pointer;">Cancel</button>
-      <button data-x="go" style="background:#ffb347; color:#1a120a; border:none; padding:6px 16px; border-radius:6px; font-family:inherit; font-weight:700; cursor:pointer;">Export</button>
+      <button data-x="cancel" style="background:transparent; color:var(--fb-text-1); border:1px solid var(--fb-line-strong); padding:6px 14px; border-radius:6px; font-family:inherit; cursor:pointer;">Cancel</button>
+      <button data-x="go" style="background:var(--fb-brand); color:#fff; border:none; padding:6px 16px; border-radius:6px; font-family:inherit; font-weight:700; cursor:pointer;">Export</button>
     </div>
   </div>
 `;
@@ -57,7 +57,7 @@ const css = document.createElement('style');
 css.textContent = `
   #exportOverlay .ex-row { display:flex; align-items:center; gap:10px; margin:6px 0; }
   #exportOverlay .ex-row label { flex:0 0 92px; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; opacity:0.75; }
-  #exportOverlay select { flex:1; background:rgba(0,0,0,0.35); color:#f7e6cf; border:1px solid rgba(255,179,71,0.35); border-radius:5px; padding:4px 6px; font-family:inherit; font-size:12px; }
+  #exportOverlay select { flex:1; background:rgba(0,0,0,0.35); color:var(--fb-text-1); border:1px solid var(--fb-line-strong); border-radius:5px; padding:4px 6px; font-family:inherit; font-size:12px; }
   #exportOverlay button:hover { filter:brightness(1.1); }
   #exportOverlay button[disabled] { opacity:0.5; cursor:not-allowed; }
 `;

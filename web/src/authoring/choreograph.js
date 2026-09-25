@@ -178,10 +178,10 @@ function buildBanner() {
     'position:fixed', 'top:52px', 'left:50%', 'transform:translateX(-50%)',
     'z-index:22', 'display:none', 'align-items:center', 'gap:12px',
     'padding:8px 14px',
-    'background:rgba(20,16,10,0.94)', 'color:#f7e6cf',
-    'border:1px solid rgba(255,179,71,0.55)', 'border-radius:10px',
+    'background:var(--fb-surf-1)', 'color:var(--fb-text-1)',
+    'border:1px solid var(--fb-line-strong)', 'border-radius:10px',
     'box-shadow:0 6px 20px rgba(0,0,0,0.45)',
-    'font-family:Consolas,monospace', 'font-size:12px', 'letter-spacing:0.04em',
+    'font-family:var(--fb-font)', 'font-size:12px', 'letter-spacing:0.04em',
   ].join(';');
   bannerTitle = document.createElement('span');
   banner.appendChild(bannerTitle);

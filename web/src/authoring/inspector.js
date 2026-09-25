@@ -6,7 +6,7 @@
 // through the same helpers the dock/keyboard shortcuts already use, so
 // history + persistence + rebuilds "just work".
 
-import { state } from '../state.js';
+import { state, DEFAULT_SHAPE_COLOR } from '../state.js';
 import { onSelectionChanged, deselectAll, labelFor, selectObject } from '../selection.js';
 import { chipDataFor } from './chips.js';
 import { shapeDataFor, removeShape, updateShape, updateShapeLabel, TEXT_MIN_SIZE, TEXT_MAX_SIZE, TEXT_DEFAULT_SIZE } from './shapes.js';
@@ -150,7 +150,7 @@ function carrierRow() {
   row.appendChild(label);
 
   const sel = document.createElement('select');
-  sel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+  sel.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
   const none = document.createElement('option');
   none.value = '';
   none.textContent = '(loose)';
@@ -251,7 +251,7 @@ function passTimingSection({ plan, dur }) {
   speed.id = 'passSpeedInput';
   speed.min = String(MIN_PASS_SPEED_MPS); speed.max = String(MAX_PASS_SPEED_MPS); speed.step = '1';
   speed.value = String(plan.speedMps);
-  speed.style.cssText = 'width:56px; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; font-family:inherit;';
+  speed.style.cssText = 'width:56px; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); font-family:inherit;';
   speed.addEventListener('change', () => {
     const v = Number(speed.value);
     if (Number.isFinite(v)) setPassTiming({ speedMps: v });
@@ -356,7 +356,7 @@ function ballColorRow() {
   const reset = document.createElement('button');
   reset.textContent = 'Reset';
   reset.title = 'Restore the ball\u2019s default (loader) colour';
-  reset.style.cssText = 'margin-left:6px; padding:2px 8px; border-radius:4px; cursor:pointer; border:1px solid rgba(79,224,255,0.35); background:rgba(79,224,255,0.08); color:#dff9ff; font-family:inherit; font-size:10px;';
+  reset.style.cssText = 'margin-left:6px; padding:2px 8px; border-radius:4px; cursor:pointer; border:1px solid var(--fb-line); background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1); font-family:inherit; font-size:10px;';
   reset.addEventListener('click', () => { setBallColor(null); input.value = '#ffffff'; });
   row.appendChild(reset);
 
@@ -382,7 +382,7 @@ function rotationRow(obj) {
   num.type = 'number';
   num.min = '-180'; num.max = '180'; num.step = '1';
   num.value = slider.value;
-  num.style.cssText = 'width:56px; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:2px 4px; font-family:inherit; font-size:11px;';
+  num.style.cssText = 'width:56px; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:2px 4px; font-family:inherit; font-size:11px;';
 
   function apply(v) {
     const rad = v * Math.PI / 180;
@@ -413,7 +413,7 @@ function renderCone(cone) {
   kl.textContent = 'Kind';
   kindRow.appendChild(kl);
   const kindSel = document.createElement('select');
-  kindSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+  kindSel.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
   for (const opt of [{ v: 'disc', t: 'Disc (flat)' }, { v: 'full', t: 'Full (cone)' }, { v: 'pole', t: 'Pole (disc + rod)' }]) {
     const o = document.createElement('option');
     o.value = opt.v; o.textContent = opt.t;
@@ -451,7 +451,7 @@ function renderCone(cone) {
   labelInput.maxLength = 32;
   labelInput.placeholder = cone.kind === 'disc' ? 'Disc' : cone.kind === 'pole' ? 'Pole' : 'Cone';
   labelInput.value = cone.label || '';
-  labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+  labelInput.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
   labelInput.addEventListener('change', () => updateCone(cone.id, { label: labelInput.value }));
   labelRow.appendChild(labelInput);
   body.appendChild(labelRow);
@@ -488,7 +488,7 @@ function renderExtraBall(ball) {
   labelInput.maxLength = 32;
   labelInput.placeholder = 'Ball';
   labelInput.value = ball.label || '';
-  labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+  labelInput.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
   labelInput.addEventListener('change', () => updateBall(ball.id, { label: labelInput.value }));
   labelRow.appendChild(labelInput);
   body.appendChild(labelRow);
@@ -559,7 +559,7 @@ function renderExtraGoal(goal, node) {
   labelInput.maxLength = 32;
   labelInput.placeholder = 'Goal';
   labelInput.value = goal.label || '';
-  labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+  labelInput.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
   labelInput.addEventListener('change', () => updateGoal(goal.id, { label: labelInput.value }));
   labelRow.appendChild(labelInput);
   body.appendChild(labelRow);
@@ -649,7 +649,7 @@ function renderFixedGoal(letter) {
   labelInput.maxLength = 32;
   labelInput.placeholder = letter === 'A' ? 'Home' : 'Away';
   labelInput.value = data.label;
-  labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+  labelInput.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
   labelInput.addEventListener('change', () => updateFixedGoal(letter, { label: labelInput.value }));
   labelRow.appendChild(labelInput);
   body.appendChild(labelRow);
@@ -729,7 +729,7 @@ function renderShape(shape) {
     row.appendChild(label);
     const input = document.createElement('input');
     input.type = 'color';
-    input.value = shape.color || '#ffb347';
+    input.value = shape.color || DEFAULT_SHAPE_COLOR;
     input.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
     input.addEventListener('input', () => {
       updateShape(shape.id, { color: input.value });
@@ -746,7 +746,7 @@ function renderShape(shape) {
     rl.textContent = 'Role';
     roleRow.appendChild(rl);
     const roleSel = document.createElement('select');
-    roleSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+    roleSel.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
     for (const opt of [{ v: '', t: 'custom' }, { v: 'pass', t: 'Pass' }, { v: 'shot', t: 'Shot' }, { v: 'run', t: 'Run' }]) {
       const o = document.createElement('option');
       o.value = opt.v; o.textContent = opt.t;
@@ -774,7 +774,7 @@ function renderShape(shape) {
     li.placeholder = 'e.g. Pass';
     li.value = shape.label || '';
     li.maxLength = 40;
-    li.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+    li.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
     li.addEventListener('input', () => {
       updateShapeLabel(shape.id, li.value);
     });
@@ -809,7 +809,7 @@ function renderShape(shape) {
     shaftL.textContent = 'Shaft';
     shaftRow.appendChild(shaftL);
     const shaftSel = document.createElement('select');
-    shaftSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+    shaftSel.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
     for (const opt of ['solid', 'dashed', 'dotted']) {
       const o = document.createElement('option');
       o.value = opt; o.textContent = opt;
@@ -829,7 +829,7 @@ function renderShape(shape) {
     headL.textContent = 'Head';
     headRow.appendChild(headL);
     const headSel = document.createElement('select');
-    headSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+    headSel.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
     for (const opt of ['filled', 'open', 'none']) {
       const o = document.createElement('option');
       o.value = opt; o.textContent = opt;
@@ -872,7 +872,7 @@ function renderShape(shape) {
     li.placeholder = 'e.g. Pocket';
     li.value = shape.label || '';
     li.maxLength = 40;
-    li.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+    li.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
     li.addEventListener('input', () => {
       updateShapeLabel(shape.id, li.value);
     });
@@ -927,7 +927,7 @@ function renderShape(shape) {
       rl.textContent = 'Rotation';
       rotRow.appendChild(rl);
       const rotSel = document.createElement('select');
-      rotSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+      rotSel.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
       for (const o of [{ v: 'auto', t: 'auto' }, { v: '0', t: '0°' }, { v: '90', t: '90°' }, { v: '-90', t: '-90°' }]) {
         const opt = document.createElement('option'); opt.value = o.v; opt.textContent = o.t;
         rotSel.appendChild(opt);
@@ -970,7 +970,7 @@ function renderShape(shape) {
     const input = document.createElement('input');
     input.type = 'text';
     input.value = shape.text || '';
-    input.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
+    input.style.cssText = 'flex:1; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line); color:var(--fb-text-1); padding:3px 6px; font-family:inherit; font-size:11px;';
     input.addEventListener('change', () => {
       updateShape(shape.id, { text: input.value });
     });

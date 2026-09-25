@@ -9,6 +9,9 @@ import { BALL_RADIUS } from './constants.js';
 // `state = {}`, is disallowed), so this avoids needing a getter/setter pair
 // for every single field while still keeping "who owns this value" obvious
 // (whoever sets it) and "who can see it" trivial (everyone, via one import).
+// Default colour for new arrows / zones / text (content, not UI chrome).
+export const DEFAULT_SHAPE_COLOR = '#ffb347';
+
 export const state = {
   // layers.js
   ballGroup: null,
@@ -53,7 +56,7 @@ export const state = {
   currentTeam: 1,        // 1 | 2 - which team the chip stamp is currently placing
   activeCamera: null,    // scene.js sets this to the perspective camera at boot; swapped to ortho in shape tools
   drawState: null,       // draw-tool.js: { tool, points, preview } while an in-progress shape is being clicked out
-  drawColor: '#ffb347',  // current color for new arrows/zones/text; set via the dock color swatch
+  drawColor: DEFAULT_SHAPE_COLOR,  // current color for new arrows/zones/text; set via the dock color swatch
 };
 
 // Ball's local origin is its floor-contact point (see generate_ball.py), so

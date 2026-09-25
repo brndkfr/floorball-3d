@@ -6,7 +6,7 @@
 // module listens and re-renders. Selection highlight rides
 // onSelectionChanged.
 
-import { state } from '../state.js';
+import { state, DEFAULT_SHAPE_COLOR } from '../state.js';
 import { ensureDoc } from './doc.js';
 import { chipDataFor, setChipHidden, TEAM_COLORS, setLabelsVisible, updateChipLabel, removeChip, reorderChips } from './chips.js';
 import { shapeDataFor, setShapeHidden, updateShapeLabel, updateShape, removeShape, reorderShapes } from './shapes.js';
@@ -270,7 +270,7 @@ if (!root) throw new Error('layersPanel element missing from index.html');
 
       const swatch = document.createElement('span');
       swatch.className = 'lp-swatch';
-      swatch.style.background = shape.color || '#ffb347';
+      swatch.style.background = shape.color || DEFAULT_SHAPE_COLOR;
       row.appendChild(swatch);
 
       const name = document.createElement('span');

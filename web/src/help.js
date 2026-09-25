@@ -15,7 +15,7 @@ function renderShortcutGrid() {
     const noteRow = note
       ? `<span style="grid-column:1/-1; font-size:11px; opacity:0.7;">${note}</span>`
       : '';
-    return `<b style="color:#ffb347; grid-column:1/-1; margin-top:10px;">${title}</b>\n      ${rows}${rows && noteRow ? '\n      ' : ''}${noteRow}`;
+    return `<b style="color:var(--fb-brand); grid-column:1/-1; margin-top:10px;">${title}</b>\n      ${rows}${rows && noteRow ? '\n      ' : ''}${noteRow}`;
   }).join('\n\n      ');
 }
 
@@ -28,19 +28,19 @@ overlay.style.cssText = `
   position:fixed; inset:0; z-index:30;
   background:rgba(0,0,0,0.55); display:none;
   align-items:center; justify-content:center;
-  font-family:'Consolas','Courier New',monospace;
+  font-family:var(--fb-font);
 `;
 overlay.innerHTML = `
   <div style="max-width:min(560px, 92vw); max-height:88vh; overflow:auto;
-              background:rgba(20,16,10,0.96);
-              border:1px solid rgba(255,179,71,0.5); border-radius:12px;
-              padding:22px 26px; color:#f7e6cf;
+              background:var(--fb-surf-1);
+              border:1px solid var(--fb-line-strong); border-radius:12px;
+              padding:22px 26px; color:var(--fb-text-1);
               box-shadow:0 12px 32px rgba(0,0,0,0.5); line-height:1.55;">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-      <div style="font-size:14px; letter-spacing:0.06em; text-transform:uppercase; color:#ffb347;">Shortcuts &amp; tips</div>
+      <div style="font-size:14px; letter-spacing:0.06em; text-transform:uppercase; color:var(--fb-brand);">Shortcuts &amp; tips</div>
       <div style="display:flex; gap:6px;">
-        <button data-x="close" style="background:transparent; color:#f7e6cf; border:1px solid rgba(255,179,71,0.35); border-radius:6px; padding:2px 10px; font-family:inherit; cursor:pointer;">Close (Esc)</button>
-        <button data-x="tutorial" style="background:#ffb347; color:#1a120a; border:none; border-radius:6px; padding:2px 10px; font-family:inherit; font-weight:700; cursor:pointer;">Try a guided play</button>
+        <button data-x="close" style="background:transparent; color:var(--fb-text-1); border:1px solid var(--fb-line-strong); border-radius:6px; padding:2px 10px; font-family:inherit; cursor:pointer;">Close (Esc)</button>
+        <button data-x="tutorial" style="background:var(--fb-brand); color:#fff; border:none; border-radius:6px; padding:2px 10px; font-family:inherit; font-weight:700; cursor:pointer;">Try a guided play</button>
       </div>
     </div>
     <div style="display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:12px;">
@@ -54,8 +54,8 @@ document.body.appendChild(overlay);
 const css = document.createElement('style');
 css.textContent = `
   #helpOverlay kbd {
-    font-family:inherit; background:rgba(255,179,71,0.14);
-    border:1px solid rgba(255,179,71,0.35); border-radius:5px;
+    font-family:inherit; background:var(--fb-brand-quiet);
+    border:1px solid var(--fb-line-strong); border-radius:5px;
     padding:1px 8px; font-size:11px; white-space:nowrap;
     min-width:60px; text-align:center; display:inline-block;
   }
@@ -63,15 +63,15 @@ css.textContent = `
     position:absolute; z-index:25;
     left:50%; bottom:190px; transform:translateX(-50%);
     max-width:420px;
-    background:rgba(20,16,10,0.94);
-    border:1px solid rgba(255,179,71,0.55); border-radius:10px;
-    padding:12px 16px; color:#f7e6cf; font-family:'Consolas','Courier New',monospace;
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong); border-radius:10px;
+    padding:12px 16px; color:var(--fb-text-1); font-family:var(--fb-font);
     box-shadow:0 8px 24px rgba(0,0,0,0.5);
   }
-  #onboardingTip .tip-title { color:#ffb347; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px; }
+  #onboardingTip .tip-title { color:var(--fb-brand); font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px; }
   #onboardingTip .tip-body { font-size:12px; line-height:1.5; margin-bottom:10px; }
-  #onboardingTip button { background:#ffb347; color:#1a120a; border:none; border-radius:6px; padding:6px 14px; font-family:inherit; font-weight:700; cursor:pointer; margin-right:6px; }
-  #onboardingTip button.secondary { background:transparent; color:#f7e6cf; border:1px solid rgba(255,179,71,0.35); font-weight:400; }
+  #onboardingTip button { background:var(--fb-brand); color:#fff; border:none; border-radius:6px; padding:6px 14px; font-family:inherit; font-weight:700; cursor:pointer; margin-right:6px; }
+  #onboardingTip button.secondary { background:transparent; color:var(--fb-text-1); border:1px solid var(--fb-line-strong); font-weight:400; }
 `;
 document.head.appendChild(css);
 

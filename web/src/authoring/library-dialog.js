@@ -32,26 +32,26 @@ function ensureStyle() {
   style.textContent = `
     dialog.library-dialog {
       max-width:min(560px, 94vw); width:560px;
-      background:rgba(20,16,10,0.97); color:#f7e6cf;
-      border:1px solid rgba(255,179,71,0.5); border-radius:10px;
-      padding:0; font-family:'Consolas','Courier New',monospace;
+      background:var(--fb-surf-1); color:var(--fb-text-1);
+      border:1px solid var(--fb-line-strong); border-radius:10px;
+      padding:0; font-family:var(--fb-font);
     }
     dialog.library-dialog::backdrop { background:rgba(0,0,0,0.55); }
     .library-header {
       display:flex; align-items:center; justify-content:space-between;
-      padding:14px 18px; border-bottom:1px solid rgba(255,179,71,0.25);
+      padding:14px 18px; border-bottom:1px solid var(--fb-brand-quiet);
     }
     .library-header h2 {
       margin:0; font-size:14px; letter-spacing:0.08em;
-      text-transform:uppercase; color:#ffb347; font-weight:600;
+      text-transform:uppercase; color:var(--fb-brand); font-weight:600;
     }
     .library-header-actions { display:flex; gap:8px; }
     .library-header-actions button {
-      background:transparent; color:#f7e6cf;
-      border:1px solid rgba(255,179,71,0.35); border-radius:6px;
+      background:transparent; color:var(--fb-text-1);
+      border:1px solid var(--fb-line-strong); border-radius:6px;
       padding:4px 12px; font-family:inherit; font-size:11px; cursor:pointer;
     }
-    .library-header-actions button:hover { background:rgba(255,179,71,0.18); }
+    .library-header-actions button:hover { background:var(--fb-brand-quiet); }
     .library-body {
       max-height:60vh; overflow-y:auto; padding:4px 0;
     }
@@ -64,37 +64,37 @@ function ensureStyle() {
       grid-template-columns:1fr auto;
       align-items:center; gap:8px;
       padding:10px 18px;
-      border-bottom:1px solid rgba(255,179,71,0.12);
+      border-bottom:1px solid var(--fb-brand-quiet);
     }
     .library-row:last-child { border-bottom:none; }
-    .library-row.current { background:rgba(255,179,71,0.08); }
+    .library-row.current { background:var(--fb-brand-quiet); }
     .library-info { min-width:0; }
     .library-name {
-      font-size:13px; color:#f7e6cf; overflow:hidden;
+      font-size:13px; color:var(--fb-text-1); overflow:hidden;
       text-overflow:ellipsis; white-space:nowrap;
     }
-    .library-row.current .library-name { color:#ffb347; font-weight:600; }
+    .library-row.current .library-name { color:var(--fb-brand); font-weight:600; }
     .library-modified {
       font-size:10.5px; opacity:0.65;
       letter-spacing:0.05em; text-transform:uppercase; margin-top:2px;
     }
     .library-actions { display:flex; gap:4px; }
     .library-actions button {
-      background:transparent; color:#f7e6cf;
-      border:1px solid rgba(255,179,71,0.35); border-radius:6px;
+      background:transparent; color:var(--fb-text-1);
+      border:1px solid var(--fb-line-strong); border-radius:6px;
       padding:4px 10px; font-family:inherit; font-size:11px;
       letter-spacing:0.05em; cursor:pointer;
     }
-    .library-actions button:hover { background:rgba(255,179,71,0.18); }
-    .library-actions button.primary { border-color:#ffb347; color:#ffb347; }
+    .library-actions button:hover { background:var(--fb-brand-quiet); }
+    .library-actions button.primary { border-color:var(--fb-brand); color:var(--fb-brand); }
     .library-actions button.danger:hover { background:rgba(255,80,80,0.2); color:#fff; border-color:#ff8080; }
     .library-footer {
-      padding:12px 18px; border-top:1px solid rgba(255,179,71,0.25);
+      padding:12px 18px; border-top:1px solid var(--fb-brand-quiet);
       display:flex; justify-content:flex-end;
     }
     .library-footer button {
-      background:transparent; color:#f7e6cf;
-      border:1px solid rgba(255,179,71,0.35); border-radius:6px;
+      background:transparent; color:var(--fb-text-1);
+      border:1px solid var(--fb-line-strong); border-radius:6px;
       padding:5px 14px; font-family:inherit; font-size:12px; cursor:pointer;
     }
   `;
