@@ -11,8 +11,7 @@ async function bootApp(page) {
     return el && el.textContent && el.textContent.length > 0;
   });
   await page.locator('[data-mode="analyze"]').click();
-  // Expand the photo panel (starts collapsed) so its children are visible.
-  await page.locator('[data-panel="photoPanel"]').click();
+  // The Broadcast Analyze panel is docked and always open (S-BACK-021).
 }
 
 test('stepper renders four steps with Photo active on fresh load', async ({ page }) => {

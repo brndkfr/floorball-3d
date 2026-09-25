@@ -219,11 +219,7 @@
   </div>
   <input type="file" id="dockImportFile" accept="application/json,.json" hidden>
 </div>
-<div id="photoPanel" class="hud-panel collapsed" data-view="analyze">
-  <div class="hud-header">
-    <span class="hud-title">Photo Overlay</span>
-    <button class="hud-toggle" data-panel="photoPanel" title="Collapse/expand" aria-label="Collapse photo overlay panel">&minus;</button>
-  </div>
+<aside id="photoPanel" class="hud-panel" data-view="analyze" aria-label="Photo analysis">
   <div class="hud-body">
     <nav id="photoStepper" aria-label="Photo overlay steps">
       <button type="button" class="ps-step" data-step="1"><span class="ps-num" aria-hidden="true">1</span> Photo</button>
@@ -373,7 +369,7 @@
       </div>
     </details>
   </div>
-</div>
+</aside>
 
 <script type="importmap">
 {

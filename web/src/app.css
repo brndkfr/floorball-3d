@@ -312,7 +312,32 @@
      canvas down to match its letterboxed rect. */
   #photo-canvas { position:fixed; inset:0; z-index:1; display:none; }
 
-  #photoPanel { top:230px; right:12px; width:270px; max-height:65vh; overflow-y:auto; }
+  /* Analyze panel (Broadcast, S-BACK-021, design canvas "Analyze"): a
+     360 px column docked under the top bar, always open. */
+  #photoPanel {
+    position:fixed; top:var(--shell-topbar); right:0; bottom:0; width:360px; z-index:26;
+    box-sizing:border-box; overflow-y:auto; scrollbar-width:thin;
+    margin:0; padding:0 16px 24px; border:none; border-left:1px solid var(--fb-line); border-radius:0;
+    background:var(--fb-surf-1); font:400 12px/1.5 var(--fb-font);
+  }
+  #photoPanel .hud-body { margin-top:0; }
+  #photoPanel button, #photoPanel .dock-btn {
+    height:32px; padding:0 12px; border-radius:var(--fb-radius-1); cursor:pointer;
+    border:1px solid var(--fb-line-strong); background:var(--fb-surf-2); color:var(--fb-text-1);
+    font:600 12px/1 var(--fb-font); text-align:center;
+  }
+  #photoPanel button:hover:not(:disabled) { border-color:var(--fb-text-3); }
+  #photoPanel button:disabled { opacity:0.45; cursor:not-allowed; }
+  #photoPanel button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
+  #photoPanel .ps-cta-banner button { background:var(--fb-brand); border-color:var(--fb-brand); color:#fff; }
+  #photoPanel details { border-top:1px solid var(--fb-line); margin:12px -16px 0; padding:12px 16px 0; }
+  #photoPanel summary { cursor:pointer; font:600 12px/1.2 var(--fb-font); color:var(--fb-text-2); opacity:1 !important; }
+  #photoPanel select, #photoPanel input[type="file"] {
+    font:400 12px/1.2 var(--fb-font); color:var(--fb-text-1);
+    background:var(--fb-surf-2); border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1); padding:5px 8px;
+  }
+  #photoPanel input[type="range"] { accent-color:var(--fb-brand); width:100%; }
+  #photoPanel input[type="checkbox"] { accent-color:var(--fb-brand); }
   .photo-landmark-row {
     display:flex; align-items:center; justify-content:space-between; padding:2px 0; font-size:11px; cursor:pointer; gap:6px;
   }
@@ -339,34 +364,26 @@
      at the top of #photoPanel showing Photo -> Align -> Players ->
      Insights. Pure visual - clicking a pill scrolls to (and, for Steps
      3/4, force-opens) that step's block. */
+  /* Four-segment stepper (design canvas): a 3 px bar over each label,
+     brand for done + current. */
   #photoStepper {
-    display:flex; gap:3px; margin:0 0 8px 0; padding:0;
-    list-style:none; font-size:10px;
+    position:sticky; top:0; z-index:1; display:flex; gap:6px;
+    margin:0 -16px 12px; padding:16px 16px 14px; list-style:none;
+    background:var(--fb-surf-1); border-bottom:1px solid var(--fb-line);
   }
-  #photoStepper .ps-step {
-    flex:1; display:flex; align-items:center; gap:3px;
-    padding:4px 3px; border-radius:6px; min-width:0;
-    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
-    color:rgba(255,255,255,0.55); cursor:pointer;
-    text-align:left; font-family:inherit;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  #photoPanel #photoStepper .ps-step {
+    flex:1; min-width:0; height:auto; padding:0; border:none; border-radius:0; background:transparent;
+    display:flex; flex-direction:column; align-items:flex-start; gap:6px;
+    color:var(--fb-text-3); font:600 10px/1 var(--fb-font); letter-spacing:0.03em; text-align:left;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;
   }
-  #photoStepper .ps-step.complete {
-    background:rgba(126,224,106,0.10); border-color:rgba(126,224,106,0.35);
-    color:#a7ecb7;
+  #photoStepper .ps-step::before {
+    content:""; display:block; align-self:stretch; height:3px; border-radius:2px; background:var(--fb-surf-3);
   }
-  #photoStepper .ps-step.active {
-    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border-color:var(--fb-line-strong);
-    color:var(--fb-text-2); font-weight:bold;
-  }
-  #photoStepper .ps-step .ps-num {
-    display:inline-flex; align-items:center; justify-content:center;
-    width:12px; height:12px; border-radius:50%; flex:none;
-    background:rgba(255,255,255,0.10); font-size:9px; font-weight:bold;
-    color:rgba(255,255,255,0.75);
-  }
-  #photoStepper .ps-step.complete .ps-num { background:rgba(126,224,106,0.35); color:#0a1a10; }
-  #photoStepper .ps-step.active .ps-num { background:var(--fb-line-strong); color:var(--fb-ink); }
+  #photoStepper .ps-step.complete::before, #photoStepper .ps-step.active::before { background:var(--fb-brand); }
+  #photoStepper .ps-step.complete { color:var(--fb-text-2); }
+  #photoStepper .ps-step.active { color:var(--fb-text-1); }
+  #photoStepper .ps-step .ps-num { display:none; }
   .ps-cta-banner {
     display:flex; flex-direction:column; gap:4px;
     margin:6px 0; padding:6px 8px; border-radius:6px;
