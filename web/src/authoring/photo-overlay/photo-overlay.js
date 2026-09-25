@@ -29,6 +29,7 @@ import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from '../chips.js';
 import * as photoCache from './photo-cache.js';
 import { recomputeInsights } from './insights-overlay.js';
 import { enterPhotoPreview3D, exitPhotoPreview3D, isPhotoPreview3D } from './preview-3d.js';
+import { firstImageFile } from './photo-drop.js';
 import {
   currentStep as computeCurrentStep,
   stepStatuses as computeStepStatuses,
@@ -614,9 +615,28 @@ function setCalibrating(on) {
   renderer.domElement.style.display = on ? 'none' : '';
 }
 
+// Step 1 drop zone: the <label> wraps the file input, so a click opens the
+// picker; a drop is handed to the same change handler below.
+const dropZone = document.getElementById('photoDrop');
+if (!dropZone) throw new Error('photo-overlay: #photoDrop missing from index.html');
+const dropName = dropZone.querySelector('.ps-drop-name');
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = firstImageFile(e.dataTransfer?.files);
+  if (!file) return;
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  fileInput.files = dt.files;
+  fileInput.dispatchEvent(new Event('change'));
+});
+
 fileInput.addEventListener('change', async () => {
   const file = fileInput.files?.[0];
   if (!file) return;
+  dropName.textContent = file.name;
   await photoCanvas.loadPhoto(file);
   photoCache.saveCachedPhoto(file);
   listEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
@@ -735,6 +755,7 @@ async function restoreCachedPhotoIfAny() {
   const cached = await photoCache.loadCachedPhoto();
   if (!cached) return;
   await photoCanvas.loadPhoto(cached.blob);
+  dropName.textContent = cached.name || '';
   setCalibrating(true);
   if (!checkRestoreAvailable()) {
     startGuidedHints(autoDetectEnd.value === 'B' ? 'goalB' : 'goalA');

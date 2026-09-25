@@ -330,6 +330,20 @@
   #photoPanel button:disabled { opacity:0.45; cursor:not-allowed; }
   #photoPanel button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
   #photoPanel .ps-cta-banner button { background:var(--fb-brand); border-color:var(--fb-brand); color:#fff; }
+  #photoPanel .ps-drop {
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    margin:0 0 12px; padding:18px 12px; text-align:center; cursor:pointer;
+    border:1px dashed var(--fb-line-strong); border-radius:var(--fb-radius-2);
+    background:var(--fb-surf-2); color:var(--fb-text-2);
+  }
+  #photoPanel .ps-drop:hover, #photoPanel .ps-drop.dragover { border-color:var(--fb-brand); background:var(--fb-brand-quiet); }
+  #photoPanel .ps-drop:focus-within { outline:2px solid var(--fb-brand); outline-offset:2px; }
+  #photoPanel .ps-drop input[type="file"] { position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; }
+  #photoPanel .ps-drop-icon { color:var(--fb-brand); }
+  #photoPanel .ps-drop-title { font:600 13px/1.3 var(--fb-font); color:var(--fb-text-1); }
+  #photoPanel .ps-drop-hint { font-size:11px; color:var(--fb-text-3); }
+  #photoPanel .ps-drop-name { font:500 11px/1.3 var(--fb-mono); color:var(--fb-text-2); word-break:break-all; }
+  #photoPanel .ps-drop-name:empty { display:none; }
   #photoPanel details { border-top:1px solid var(--fb-line); margin:12px -16px 0; padding:12px 16px 0; }
   #photoPanel summary { cursor:pointer; font:600 12px/1.2 var(--fb-font); color:var(--fb-text-2); opacity:1 !important; }
   #photoPanel select, #photoPanel input[type="file"] {

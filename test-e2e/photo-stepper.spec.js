@@ -103,3 +103,32 @@ test('loaded photo is shown again after a Plan -> Analyze round trip', async ({ 
   await expect(photo).toBeVisible();
   await expect(gl).toBeHidden();
 });
+
+// S-BACK-021 gaps canvas, Analyze step 1: a drop zone replaces the bare file
+// input. Dropping an image loads it like picking one; the zone then names it.
+test('step 1 drop zone loads a dropped image and names it', async ({ page }) => {
+  await bootApp(page);
+  const zone = page.locator('#photoPanel #photoDrop');
+  await expect(zone).toBeVisible();
+  await expect(zone).toContainText('Drop a photo');
+  await page.evaluate((b64) => {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const dt = new DataTransfer();
+    dt.items.add(new File(['x'], 'notes.txt', { type: 'text/plain' }));
+    dt.items.add(new File([bytes], 'drop.png', { type: 'image/png' }));
+    const zone = document.getElementById('photoDrop');
+    zone.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    zone.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+  }, TINY_PNG.toString('base64'));
+  await expect(page.locator('#photo-canvas')).toBeVisible();
+  await expect(zone.locator('.ps-drop-name')).toHaveText('drop.png');
+});
+
+test('step 1 drop zone opens the file picker on click', async ({ page }) => {
+  await bootApp(page);
+  const chooser = page.waitForEvent('filechooser');
+  await page.locator('#photoPanel #photoDrop').click();
+  await (await chooser).setFiles({ name: 'picked.png', mimeType: 'image/png', buffer: TINY_PNG });
+  await expect(page.locator('#photo-canvas')).toBeVisible();
+  await expect(page.locator('#photoDrop .ps-drop-name')).toHaveText('picked.png');
+});

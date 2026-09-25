@@ -228,7 +228,13 @@
       <button type="button" class="ps-step" data-step="3"><span class="ps-num" aria-hidden="true">3</span> Players</button>
       <button type="button" class="ps-step" data-step="4"><span class="ps-num" aria-hidden="true">4</span> Insights</button>
     </nav>
-    <input type="file" id="photoFileInput" accept="image/*" aria-label="Upload photo to analyze"><br><br>
+    <label id="photoDrop" class="ps-drop">
+      <input type="file" id="photoFileInput" accept="image/*" aria-label="Upload photo to analyze">
+      <svg class="ps-drop-icon" width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13V4M6.5 7.5 10 4l3.5 3.5"/><path d="M4 12v3h12v-3"/></svg>
+      <span class="ps-drop-title">Drop a photo here</span>
+      <span class="ps-drop-hint">or click to choose &middot; JPG or PNG, stays on this device</span>
+      <span class="ps-drop-name"></span>
+    </label>
     <div id="photoRestoreRow" style="display:none; margin-bottom:8px;">
       <span id="photoRestoreLabel" style="font-size:11px; opacity:0.7;"></span>
       <button id="photoRestoreLandmarksBtn" class="dock-btn" style="padding:2px 6px; font-size:10px; margin-left:6px;" title="Re-place the landmarks and camera pose saved from the last time this exact photo was calibrated - saves re-clicking everything after a reload.">Load saved overlay</button>
