@@ -35,6 +35,7 @@ import {
   currentStep as computeCurrentStep,
   stepStatuses as computeStepStatuses,
   guidedHint as computeGuidedHint,
+  playersChecklist,
   STEP_PHOTO,
   STEP_ALIGN,
   STEP_PLAYERS,
@@ -132,6 +133,8 @@ const autoAssignGoaliesBtn = document.getElementById('photoAutoAssignGoaliesBtn'
 const resetFacingBtn = document.getElementById('photoResetFacingBtn');
 const insightsReadout = document.getElementById('photoInsightsReadout');
 const insightsStats = document.getElementById('photoInsightsStats');
+const step3Checks = document.querySelectorAll('#photoStep3Details .ps-check > li[data-check]');
+if (step3Checks.length !== 4) throw new Error('photo-overlay: step 3 checklist missing from index.html');
 if (!insightsStats) throw new Error('photo-overlay: #photoInsightsStats missing from index.html');
 const view3dBtn = document.getElementById('photoView3dBtn');
 
@@ -1206,8 +1209,24 @@ function stepperSnapshot() {
   };
 }
 
+// Step 3 checklist ticks + the "n found" line (gaps canvas).
+function updateStep3Checklist() {
+  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
+  const byKey = new Map(playersChecklist({ players: photo?.players || [], hasBall: !!photo?.ball }).map((i) => [i.key, i]));
+  for (const li of step3Checks) {
+    const item = byKey.get(li.dataset.check);
+    li.dataset.done = String(!!item?.done);
+    const detail = li.querySelector('.ps-check-detail');
+    if (item && detail) detail.textContent = item.detail;
+  }
+}
+
+// Each frame carries its own photo data; re-tick on frame switches.
+window.addEventListener('framesChanged', updateStep3Checklist);
+
 let lastStepperStep = null;
 function updateStepper() {
+  updateStep3Checklist();
   if (!stepperEl) return;
   const snap = stepperSnapshot();
   const step = computeCurrentStep(snap);
@@ -1301,6 +1320,7 @@ function footprintRing(worldX, worldZ) {
 }
 
 function renderPlayersAndBall() {
+  updateStep3Checklist();
   const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
   if (!lastPose || !photo) {
     photoCanvas.setPlayerChips([]);

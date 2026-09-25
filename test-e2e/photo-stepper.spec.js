@@ -166,3 +166,48 @@ test('step 4 shows a verdict pill and a 2x2 stat grid', async ({ page }) => {
   });
   await expect(stats).toBeHidden();
 });
+
+// S-BACK-021 gaps canvas, step 3: numbered checklist. The existing buttons
+// (same ids, same handlers) sit in their item; extras go under Advanced.
+test('step 3 is a numbered checklist with the actions in their items', async ({ page }) => {
+  await bootApp(page);
+  await page.locator('#photoStepper .ps-step[data-step="3"]').click();
+  const items = page.locator('#photoStep3Details .ps-check > li');
+  await expect(items).toHaveCount(4);
+  await expect(items.locator('.ps-check-title')).toHaveText(['Find players', 'Check teams', 'Mark the ball', 'Facing']);
+  const inItem = async (key, id) => expect(page.locator(`#photoStep3Details .ps-check > li[data-check="${key}"] #${id}`)).toHaveCount(1);
+  await inItem('find', 'photoAutoDetectPlayersBtn');
+  await inItem('teams', 'photoFlipTeamsBtn');
+  await inItem('ball', 'photoSetBallBtn');
+  await inItem('facing', 'photoEstimateFacingsBtn');
+  for (const key of ['find', 'teams', 'ball', 'facing']) {
+    await expect(page.locator(`#photoStep3Details li[data-check="${key}"]`)).toHaveAttribute('data-done', 'false');
+  }
+  await expect(page.locator('#photoStep3Details li[data-check="find"] .ps-check-detail')).toHaveText('None yet.');
+  // Rarely used switches live under Advanced, closed by default.
+  const adv = page.locator('#photoStep3Details details.ps-advanced');
+  await expect(adv).toHaveJSProperty('open', false);
+  await expect(adv.locator('#photoBodyOutlineToggle')).toHaveCount(1);
+  await expect(adv.locator('#photoFeedbackToggle')).toHaveCount(1);
+});
+
+// Each frame has its own photo data; switching frames re-ticks the list.
+test('step 3 checklist ticks follow the current frame', async ({ page }) => {
+  await bootApp(page);
+  await page.evaluate(async () => {
+    const frames = await import('/src/authoring/frames.js');
+    const { state } = await import('/src/state.js');
+    frames.duplicateFrame();   // lands on frame 1
+    frames.selectFrame(0);
+    state.doc.frames[1].photo = {
+      players: [{ id: 1, team: 'home', world: [0, 0, 1000] }, { id: 2, team: 'away', world: [0, 0, 2000], facingDeg: 10 }],
+      ball: [0, 0, 1500],
+    };
+    frames.selectFrame(1);
+  });
+  const done = (key) => page.locator(`#photoStep3Details li[data-check="${key}"]`);
+  for (const key of ['find', 'teams', 'ball', 'facing']) await expect(done(key)).toHaveAttribute('data-done', 'true');
+  await expect(done('find').locator('.ps-check-detail')).toHaveText('2 found. Missed someone? Add them below.');
+  await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(0));
+  await expect(done('find')).toHaveAttribute('data-done', 'false');
+});
