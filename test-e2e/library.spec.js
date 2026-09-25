@@ -40,8 +40,6 @@ async function waitForBootstrap(page) {
 }
 
 async function dismissOnboarding(page) {
-  const tip = page.locator('#onboardingTip button', { hasText: 'Got it' });
-  if (await tip.count()) await tip.first().click();
 }
 
 async function readState(page) {

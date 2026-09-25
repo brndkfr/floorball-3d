@@ -1,12 +1,11 @@
 // A-BACK-022: shots at goal - Inspector buttons, right-click on a goal, aim pad, verdict, 3D flight.
 
-import { test, expect } from './fixtures.js';
+import { test, expect, waitForAssets } from './fixtures.js';
 
 async function boot(page) {
   await page.goto('/', { waitUntil: 'load' });
+  await waitForAssets(page);
   await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
-  const tip = page.locator('#onboardingTip button', { hasText: 'Got it' });
-  if (await tip.count()) await tip.first().click();
   await page.waitForFunction(async () => { const { state } = await import('/src/state.js'); return !!state.ballGroup && !!state.goalieGroup && state.goalInstances?.length >= 2; });
 }
 

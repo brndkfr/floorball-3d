@@ -1,16 +1,10 @@
 // A-BACK-026: the palette's Ball tool places the match ball; extra balls via flyout / Shift+click.
 
-import { test, expect } from './fixtures.js';
+import { test, expect, waitForAssets } from './fixtures.js';
 
 async function boot(page) {
-  // help.js shows the first-visit tip from an 800 ms setTimeout, over the
-  // middle of the rink. Dismissing it only "if it is already there" raced
-  // under load: the tip appeared after the check and swallowed the rink
-  // clicks below. Mark onboarding done before any app script runs instead,
-  // so the tip never shows. (No reloads in this spec, so seeding on every
-  // navigation is fine.)
-  await page.addInitScript(() => localStorage.setItem('floorball-3d:onboarded', '1'));
   await page.goto('/', { waitUntil: 'load' });
+  await waitForAssets(page);
   await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
   await page.waitForFunction(async () => !!(await import('/src/state.js')).state.ballGroup);
 }
@@ -145,6 +139,27 @@ test.describe('Ball tool (A-BACK-026)', () => {
     await expect.poll(async () => (await balls(page)).main.x).toBeCloseTo(-2000, -3);
     await page.evaluate(async () => (await import('/src/authoring/history.js')).undo());
     await expect.poll(async () => (await balls(page)).main.x).toBeCloseTo(before.x, 0);
+  });
+
+  // Undo restored the doc at once but moved the ball mesh back only later
+  // (async import). An actors tick in that gap saw the mesh "moved" and wrote
+  // the undone position back into the doc, so the undo was lost - seen as a
+  // CI flake of the test above. Tick straight after undo, no gap allowed.
+  test('an actors tick right after undo keeps the undone ball position', async ({ page }) => {
+    await boot(page);
+    await setup(page);
+    const x = await page.evaluate(async () => {
+      const h = await import('/src/authoring/history.js');
+      const a = await import('/src/authoring/actors.js');
+      const { state } = await import('/src/state.js');
+      h.pushHistory();
+      a.placeMainBall({ x: -2000, z: 20000 });
+      h.pushHistory();
+      h.undo();
+      a.tickActors();
+      return state.doc.scheme.balls.main.x;
+    });
+    expect(x).toBe(6000);
   });
 
   test('Layers panel lists the match ball with its carrier, click selects it', async ({ page }) => {
