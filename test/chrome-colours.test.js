@@ -27,3 +27,22 @@ test('index.html has no inline old-HUD colours (styles belong in app.css)', () =
   const hits = html.split('\n').map((l, i) => [i + 1, l]).filter(([, l]) => OLD.test(l));
   assert.deepEqual(hits.map(([n, l]) => `${n}: ${l.trim().slice(0, 90)}`), []);
 });
+
+// Design canvas: dialog titles are sentence case in the text colour, not the
+// old HUD's uppercase brand-blue caps. One shared class keeps them alike.
+const DIALOGS = ['authoring/library-dialog.js', 'authoring/export-dialog.js', 'help.js', 'authoring/choreo-tutorial-ui.js'];
+for (const f of DIALOGS) {
+  test(`${f} titles its dialog with .fb-dialog-title`, () => {
+    const src = readFileSync(new URL(`../web/src/${f}`, import.meta.url), 'utf8');
+    assert.match(src, /fb-dialog-title/);
+    assert.doesNotMatch(src, /h2 \{[^}]*uppercase/, 'heading rule still uppercases');
+  });
+}
+
+test('app.css defines .fb-dialog-title in sentence case', () => {
+  const css = readFileSync(new URL('../web/src/app.css', import.meta.url), 'utf8');
+  const rule = css.match(/\.fb-dialog-title\s*\{([^}]*)\}/);
+  assert.ok(rule, '.fb-dialog-title rule missing');
+  assert.doesNotMatch(rule[1], /uppercase/);
+  assert.match(rule[1], /var\(--fb-text-1\)/);
+});

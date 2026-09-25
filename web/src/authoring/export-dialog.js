@@ -21,8 +21,7 @@ overlay.innerHTML = `
               border:1px solid var(--fb-line-strong); border-radius:12px;
               padding:18px 22px; color:var(--fb-text-1);
               box-shadow:0 12px 32px rgba(0,0,0,0.5);">
-    <div style="font-size:14px; letter-spacing:0.06em; text-transform:uppercase;
-                margin-bottom:14px; color:var(--fb-brand);">Export animation</div>
+    <h2 class="fb-dialog-title" style="margin:0 0 14px;">Export animation</h2>
     <div class="ex-row"><label>Format</label><select data-x="format"></select></div>
     <div class="ex-row"><label>Resolution</label><select data-x="res">
       <option value="1280x720">720p (1280&times;720)</option>

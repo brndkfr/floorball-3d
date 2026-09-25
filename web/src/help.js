@@ -37,7 +37,7 @@ overlay.innerHTML = `
               padding:22px 26px; color:var(--fb-text-1);
               box-shadow:0 12px 32px rgba(0,0,0,0.5); line-height:1.55;">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-      <div style="font-size:14px; letter-spacing:0.06em; text-transform:uppercase; color:var(--fb-brand);">Shortcuts &amp; tips</div>
+      <h2 class="fb-dialog-title" style="margin:0;">Shortcuts &amp; tips</h2>
       <div style="display:flex; gap:6px;">
         <button data-x="close" style="background:transparent; color:var(--fb-text-1); border:1px solid var(--fb-line-strong); border-radius:6px; padding:2px 10px; font-family:inherit; cursor:pointer;">Close (Esc)</button>
         <button data-x="tutorial" style="background:var(--fb-brand); color:#fff; border:none; border-radius:6px; padding:2px 10px; font-family:inherit; font-weight:700; cursor:pointer;">Try a guided play</button>

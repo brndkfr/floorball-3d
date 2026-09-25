@@ -51,7 +51,7 @@ css.textContent = `
     font-family:var(--fb-font); font-size:12px; line-height:1.5;
   }
   #tutorialCard[hidden] { display:none; }
-  #tutorialCard h2 { margin:0 0 6px; font-size:12px; color:var(--fb-brand); text-transform:uppercase; letter-spacing:0.06em; }
+  #tutorialCard h2 { margin:0 0 6px; }
   #tutorialCard ol { margin:0 0 8px; padding-left:0; list-style:none; }
   #tutorialCard li { opacity:0.55; }
   #tutorialCard li::before { content:'\\25CB  '; }
@@ -158,6 +158,7 @@ function render() {
   const v = tutorialView(tut, { carrierSelected: !!carrier && state.selected === carrier });
   card.innerHTML = '';
   const h = document.createElement('h2');
+  h.className = 'fb-dialog-title';
   h.textContent = v.done ? 'Guided play - done' : `Guided play - step ${v.index + 1} of ${STEPS.length}`;
   const ol = document.createElement('ol');
   for (const s of STEPS) {

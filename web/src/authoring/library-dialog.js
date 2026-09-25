@@ -41,10 +41,7 @@ function ensureStyle() {
       display:flex; align-items:center; justify-content:space-between;
       padding:14px 18px; border-bottom:1px solid var(--fb-brand-quiet);
     }
-    .library-header h2 {
-      margin:0; font-size:14px; letter-spacing:0.08em;
-      text-transform:uppercase; color:var(--fb-brand); font-weight:600;
-    }
+    .library-header h2 { margin:0; }
     .library-header-actions { display:flex; gap:8px; }
     .library-header-actions button {
       background:transparent; color:var(--fb-text-1);
@@ -271,7 +268,7 @@ export function openLibraryDialog() {
   dialog.className = 'library-dialog';
   dialog.innerHTML = `
     <div class="library-header">
-      <h2>Library</h2>
+      <h2 class="fb-dialog-title">Library</h2>
       <div class="library-header-actions">
         <button type="button" data-action="tutorial" title="Guided play in its own tutorial project">Guided play</button>
         <button type="button" class="library-new">New project&hellip;</button>
