@@ -583,29 +583,47 @@
   #viewPanel .rp-indent { margin-left:22px; }
   #viewPanel #goalieModelSelect { margin-left:8px; }
   #rightPanel #coords { position:static; margin:0; border:none; border-radius:0; background:transparent; min-width:0; padding:16px; }
-  #inspector .ins-heading { font-size:14px; margin-bottom:10px; color:#ffffff; }
-  #inspector .ins-empty { opacity:0.7; font-size:11px; line-height:1.5; }
-  #inspector .ins-row { margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  /* Inspector fields in the design-canvas style: uppercase labels over
+     32 px controls on surf-2; the value readout sits on the label line. */
+  #inspector .ins-heading { font:600 15px/1.3 var(--fb-font); margin-bottom:4px; color:var(--fb-text-1); }
+  #inspector .ins-empty { color:var(--fb-text-3); font-size:11px; line-height:1.5; }
+  #inspector .ins-row { margin-top:12px; display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; }
   #inspector .ins-label {
-    font-size:10px; color:var(--hud-accent); text-transform:uppercase;
-    letter-spacing:0.05em; min-width:44px;
+    flex:1 0 100%; font:600 10px/1 var(--fb-font); color:var(--fb-text-3);
+    text-transform:uppercase; letter-spacing:0.09em;
   }
+  #inspector select, #inspector input[type="text"], #inspector input:not([type]), #inspector input[type="number"] {
+    flex:1; min-width:0; height:var(--fb-control-h); box-sizing:border-box; padding:0 10px;
+    background:var(--fb-surf-2); color:var(--fb-text-1);
+    border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1);
+    font:500 12px/1 var(--fb-font);
+  }
+  #inspector input[type="number"] { flex:0 0 72px; font-family:var(--fb-mono); }
+  #inspector select:focus-visible, #inspector input:focus-visible { outline:2px solid var(--fb-brand); outline-offset:1px; }
+  #inspector input[type="range"] { flex:1; min-width:0; accent-color:var(--fb-brand); }
+  #inspector input[type="color"] {
+    width:28px; height:28px; padding:0; cursor:pointer;
+    border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1); background:transparent;
+  }
+  #inspector .ins-mini {
+    height:28px; padding:0 10px; cursor:pointer;
+    border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1);
+    background:transparent; color:var(--fb-text-2); font:500 11px/1 var(--fb-font);
+  }
+  #inspector .ins-mini:hover { color:var(--fb-text-1); border-color:var(--fb-text-3); }
   #inspector .ins-team-btn {
-    flex:1; height:26px; border-radius:5px; cursor:pointer;
-    border:1px solid var(--fb-line);
-    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
-    font-family:inherit; font-size:11px; letter-spacing:0.04em;
+    flex:1; height:var(--fb-control-h); border-radius:var(--fb-radius-1); cursor:pointer;
+    border:1px solid var(--fb-line-strong); background:var(--fb-surf-2); color:var(--fb-text-2);
+    font:600 11px/1 var(--fb-font);
   }
   #inspector .ins-team-btn.active {
     background:var(--team-color, var(--fb-brand)); color:var(--fb-ink);
     border-color:var(--team-color, var(--fb-brand));
   }
   #inspector .ins-btn {
-    width:100%; height:28px; border-radius:5px; cursor:pointer;
-    border:1px solid var(--fb-line);
-    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
-    font-family:inherit; font-size:11px; text-transform:uppercase;
-    letter-spacing:0.06em; margin-top:4px;
+    width:100%; height:var(--fb-control-h); border-radius:var(--fb-radius-1); cursor:pointer;
+    border:1px solid var(--fb-line-strong); background:var(--fb-surf-2); color:var(--fb-text-1);
+    font:600 12px/1 var(--fb-font); margin-top:4px;
   }
   #inspector .ins-btn:hover { background:var(--fb-line); }
   #inspector .ins-btn.danger {
