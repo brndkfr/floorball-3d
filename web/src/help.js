@@ -59,19 +59,35 @@ css.textContent = `
     padding:1px 8px; font-size:11px; white-space:nowrap;
     min-width:60px; text-align:center; display:inline-block;
   }
+  /* First run (Broadcast, design canvas "first run"): two entry cards
+     centred on the stage, secondary links underneath. */
   #onboardingTip {
-    position:absolute; z-index:25;
-    left:50%; bottom:190px; transform:translateX(-50%);
-    max-width:420px;
-    background:var(--fb-surf-1);
-    border:1px solid var(--fb-line-strong); border-radius:10px;
-    padding:12px 16px; color:var(--fb-text-1); font-family:var(--fb-font);
-    box-shadow:0 8px 24px rgba(0,0,0,0.5);
+    position:absolute; z-index:25; top:50%; left:var(--stage-center); transform:translate(-50%, -50%);
+    width:min(640px, calc(var(--stage-width) - 32px)); box-sizing:border-box;
+    padding:28px; border-radius:12px; border:1px solid var(--fb-line-strong);
+    background:var(--fb-surf-1); color:var(--fb-text-1); font:400 13px/1.5 var(--fb-font);
+    box-shadow:0 24px 64px rgba(0,0,0,0.55);
   }
-  #onboardingTip .tip-title { color:var(--fb-brand); font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px; }
-  #onboardingTip .tip-body { font-size:12px; line-height:1.5; margin-bottom:10px; }
-  #onboardingTip button { background:var(--fb-brand); color:#fff; border:none; border-radius:6px; padding:6px 14px; font-family:inherit; font-weight:700; cursor:pointer; margin-right:6px; }
-  #onboardingTip button.secondary { background:transparent; color:var(--fb-text-1); border:1px solid var(--fb-line-strong); font-weight:400; }
+  #onboardingTip h2 { margin:0; font:700 24px/1.15 var(--fb-font); letter-spacing:-0.01em; }
+  #onboardingTip .fr-sub { margin:6px 0 20px; color:var(--fb-text-2); }
+  #onboardingTip .fr-cards { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  #onboardingTip .fr-card {
+    display:flex; flex-direction:column; gap:8px; padding:16px; border-radius:var(--fb-radius-2);
+    background:var(--fb-surf-2); border:1px solid var(--fb-line);
+  }
+  #onboardingTip .fr-card h3 { margin:0; font:700 15px/1.2 var(--fb-font); }
+  #onboardingTip .fr-card p { margin:0 0 8px; color:var(--fb-text-2); font-size:12px; }
+  #onboardingTip .fr-card button { margin-top:auto; align-self:flex-start; }
+  #onboardingTip button {
+    height:34px; padding:0 14px; border-radius:var(--fb-radius-1); cursor:pointer;
+    font:600 13px/1 var(--fb-font); border:1px solid var(--fb-brand); background:var(--fb-brand); color:#fff;
+  }
+  #onboardingTip button.secondary { background:transparent; border-color:var(--fb-line-strong); color:var(--fb-text-1); }
+  #onboardingTip .fr-links { display:flex; flex-wrap:wrap; gap:16px; margin-top:16px; }
+  #onboardingTip .fr-links button { height:auto; padding:0; border:none; background:none; color:var(--fb-text-2); font:600 12px/1.4 var(--fb-font); }
+  #onboardingTip .fr-links button:hover { color:var(--fb-text-1); }
+  #onboardingTip button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
+  @media (max-width: 640px) { #onboardingTip .fr-cards { grid-template-columns:1fr; } }
 `;
 document.head.appendChild(css);
 
@@ -111,22 +127,43 @@ function showOnboarding() {
   if (localStorage.getItem(ONBOARDED_KEY) === '1') return;
   const tip = document.createElement('div');
   tip.id = 'onboardingTip';
+  tip.setAttribute('role', 'dialog');
+  tip.setAttribute('aria-label', 'Welcome to Floorball Studio');
   tip.innerHTML = `
-    <div class="tip-title">Welcome</div>
-    <div class="tip-body">
-      Click <b>Chip</b> on the dock, then click the rink to drop a player.
-      Use <b>+</b> on the timeline to add a keyframe, drag chips to their next positions, then hit <b>Space</b> to play back.
-      Press <b>?</b> anytime for full shortcuts.
+    <h2>Design a play, or read a real one.</h2>
+    <p class="fr-sub">A tactics board and a photo analyser on the same rink.</p>
+    <div class="fr-cards">
+      <div class="fr-card">
+        <h3>Start a play</h3>
+        <p>Place players, draw arrows and zones, step through frames. Record it in 2D or 3D.</p>
+        <button data-x="ok">New play</button>
+      </div>
+      <div class="fr-card">
+        <h3>Analyze a photo</h3>
+        <p>Align a game photo to the rink, then get shot angle, coverage and passing lanes.</p>
+        <button data-x="analyze">Choose photo</button>
+      </div>
     </div>
-    <button data-x="ok">Got it</button>
-    <button data-x="tutorial">Try a guided play</button>
-    <button class="secondary" data-x="help">Show shortcuts</button>
+    <div class="fr-links">
+      <button data-x="tutorial">Try a guided play</button>
+      <button data-x="library">Open from Library</button>
+      <button data-x="help">Keyboard shortcuts</button>
+    </div>
   `;
   document.body.appendChild(tip);
   const dismiss = () => { tip.remove(); localStorage.setItem(ONBOARDED_KEY, '1'); };
   tip.querySelector('[data-x="ok"]').addEventListener('click', dismiss);
   tip.querySelector('[data-x="tutorial"]').addEventListener('click', () => { dismiss(); startTutorial(); });
   tip.querySelector('[data-x="help"]').addEventListener('click', () => { dismiss(); openHelp(); });
+  tip.querySelector('[data-x="analyze"]').addEventListener('click', () => {
+    dismiss();
+    document.querySelector('#appRail [data-mode="analyze"]')?.click();
+    document.getElementById('photoFileInput')?.click();
+  });
+  tip.querySelector('[data-x="library"]').addEventListener('click', () => {
+    dismiss();
+    document.querySelector('#appRail [data-action="library"]')?.click();
+  });
 }
 
 // Run after the DOM has settled a little so the tip renders on top.
