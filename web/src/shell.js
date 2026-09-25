@@ -38,6 +38,7 @@ function setMode(mode) {
   if (mode === 'library') return;
   const previous = currentMode;
   currentMode = mode;
+  document.body.dataset.mode = mode;   // CSS hook (phone Analyze sheet, app.css)
   for (const el of document.querySelectorAll('[data-view="plan"]')) {
     el.style.display = mode === 'plan' ? '' : 'none';
   }

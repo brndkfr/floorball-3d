@@ -44,3 +44,11 @@ test.describe('below 1200 px', () => {
     await expect.poll(edge).toBe(1000 - 360);
   });
 });
+
+test('the phone sheet grab is hidden on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/', { waitUntil: 'load' });
+  await page.locator('#appRail [data-mode="analyze"]').click();
+  await expect(page.locator('#photoPanel')).toBeVisible();
+  await expect(page.locator('#photoSheetGrab')).toBeHidden();
+});

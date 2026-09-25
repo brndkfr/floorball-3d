@@ -28,6 +28,7 @@ import './save-status-ui.js'; // side-effect: wires up the save-status badge + b
 import './dock.js';       // side-effect: wires up the DOM
 import './tool-palette.js'; // side-effect: wires up the left tool palette
 import '../ui/topbar.js';  // side-effect: Broadcast top bar (crumb, 2D/3D, Export)
+import '../ui/photo-sheet.js';  // side-effect: phone Analyze bottom-sheet grab
 import './inspector.js';    // side-effect: wires up the right inspector panel
 import './chip-popover.js'; // side-effect: wires up the chip-anchored popover
 import './layers-panel.js'; // side-effect: wires up the right layers panel

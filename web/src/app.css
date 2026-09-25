@@ -321,6 +321,7 @@
     background:var(--fb-surf-1); font:400 12px/1.5 var(--fb-font);
   }
   #photoPanel .hud-body { margin-top:0; }
+  #photoPanel .ps-grab { display:none; }   /* phone only, see the < 768 px block */
   #photoPanel button, #photoPanel .dock-btn {
     height:32px; padding:0 12px; border-radius:var(--fb-radius-1); cursor:pointer;
     border:1px solid var(--fb-line-strong); background:var(--fb-surf-2); color:var(--fb-text-1);
@@ -933,5 +934,26 @@
     #touchDpad, #touchActions { bottom:calc(var(--tabbar) + 200px); }
     #dockStatus { display:none; }
     #libraryView { bottom:var(--tabbar); }
+    /* Analyze: the step panel is a bottom sheet (peek: grab + stepper),
+       the grab expands it. Nothing to walk with here, and the sheet
+       replaces the drawer toggle. */
+    body[data-mode="analyze"] #photoPanel {
+      display:block; top:auto; left:0; right:0; width:auto; bottom:var(--tabbar);
+      max-height:156px; overflow:hidden; padding-top:0;
+      border:none; border-top:1px solid var(--fb-line-strong); border-radius:14px 14px 0 0;
+      box-shadow:0 -8px 24px rgba(0,0,0,0.35);
+    }
+    body[data-mode="analyze"].photo-sheet-open #photoPanel {
+      max-height:calc(100dvh - var(--shell-topbar) - var(--tabbar) - 24px); overflow-y:auto;
+    }
+    #photoPanel .ps-grab {
+      display:block; position:sticky; top:0; z-index:1; width:100%; height:22px; margin:0 0 4px;
+      padding:0; border:none; cursor:pointer; background:var(--fb-surf-1);
+    }
+    #photoPanel .ps-grab::before {
+      content:""; display:block; width:36px; height:4px; margin:0 auto; border-radius:2px; background:var(--fb-surf-3);
+    }
+    body[data-mode="analyze"] #touchControls,
+    body[data-mode="analyze"] #appTopbar [data-action="toggle-panel"] { display:none; }
   }
 
