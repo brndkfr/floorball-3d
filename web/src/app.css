@@ -553,9 +553,15 @@
       box-shadow:-18px 0 40px rgba(0,0,0,0.45);
     }
     body.right-panel-open #rightPanel { transform:none; visibility:visible; transition:transform 180ms ease; }
+    #photoPanel {
+      transform:translateX(100%); visibility:hidden;
+      transition:transform 180ms ease, visibility 0s linear 180ms;
+      box-shadow:-18px 0 40px rgba(0,0,0,0.45);
+    }
+    body.right-panel-open #photoPanel { transform:none; visibility:visible; transition:transform 180ms ease; }
     #appTopbar [data-action="toggle-panel"] { display:inline-flex; }
   }
-  @media (prefers-reduced-motion: reduce) { #rightPanel { transition:none !important; } }
+  @media (prefers-reduced-motion: reduce) { #rightPanel, #photoPanel { transition:none !important; } }
   #rightPanel .rp-head, #inspector .ins-title, #layersPanel .lp-head {
     display:flex; align-items:center; gap:8px; margin-bottom:12px;
   }

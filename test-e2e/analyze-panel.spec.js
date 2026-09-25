@@ -30,3 +30,17 @@ test('Analyze panel is docked, open, with a bar stepper', async ({ page }) => {
     btnRadius: '6px', btnFont: 'Archivo',
   });
 });
+
+test.describe('below 1200 px', () => {
+  test.use({ viewport: { width: 1000, height: 700 } });
+  test('the Analyze panel is a drawer toggled from the top bar too', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'load' });
+    await page.locator('#appRail [data-mode="analyze"]').click();
+    const toggle = page.locator('#appTopbar [data-action="toggle-panel"]');
+    const edge = () => page.evaluate(() => Math.round(document.getElementById('photoPanel').getBoundingClientRect().left));
+    await expect(toggle).toBeVisible();
+    await expect.poll(edge).toBeGreaterThanOrEqual(1000);
+    await toggle.click();
+    await expect.poll(edge).toBe(1000 - 360);
+  });
+});
