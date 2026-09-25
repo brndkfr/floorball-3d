@@ -57,12 +57,12 @@ test.describe('below 1200 px', () => {
     const edge = () => page.evaluate(() => Math.round(document.getElementById('rightPanel').getBoundingClientRect().left));
     await expect(toggle).toBeVisible();
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await expect.poll(edge).toBeGreaterThanOrEqual(1000);
+    await expect(page.locator('#rightPanel')).toBeHidden();
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     await expect.poll(edge).toBe(1000 - 320);
     await toggle.click();
-    await expect.poll(edge).toBeGreaterThanOrEqual(1000);
+    await expect(page.locator('#rightPanel')).toBeHidden();
   });
 });
 

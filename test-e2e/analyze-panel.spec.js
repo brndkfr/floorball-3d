@@ -39,7 +39,7 @@ test.describe('below 1200 px', () => {
     const toggle = page.locator('#appTopbar [data-action="toggle-panel"]');
     const edge = () => page.evaluate(() => Math.round(document.getElementById('photoPanel').getBoundingClientRect().left));
     await expect(toggle).toBeVisible();
-    await expect.poll(edge).toBeGreaterThanOrEqual(1000);
+    await expect(page.locator('#photoPanel')).toBeHidden();
     await toggle.click();
     await expect.poll(edge).toBe(1000 - 360);
   });

@@ -453,9 +453,6 @@
     content:""; position:absolute; left:0; top:8px; bottom:8px; width:var(--fb-accent-bar);
     border-radius:0 2px 2px 0; background:var(--fb-brand);
   }
-  @media (pointer: coarse) {
-    #appRail, #appTopbar { display:none; }
-  }
   #libraryView {
     position:fixed; inset:var(--shell-topbar) 0 0 var(--shell-rail); z-index:25; display:none;
     align-items:center; justify-content:center;
@@ -525,9 +522,6 @@
   }
   #toolPalette .tp-submenu button:hover { background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1); }
   #toolPalette .tp-submenu button.active { background:var(--fb-brand-quiet); color:var(--fb-text-1); }
-  @media (pointer: coarse) {
-    #toolPalette { display:none; }
-  }
 
   /* --- Right panel (Broadcast, S-BACK-021): Inspector, Layers, View and
      the Coordinates readout stacked in one column docked under the top bar,
@@ -543,25 +537,19 @@
   #rightPanel .rp-section { padding:16px; border-bottom:1px solid var(--fb-line); }
   #appTopbar [data-action="toggle-panel"] { display:none; }
   .shell-icon { padding:0 9px; }
-  /* Design canvas breakpoint: below 1200 px the panel slides over the stage
-     from the right instead of taking a column; the stage keeps its width. */
+  /* Design canvas breakpoint: below 1200 px the side panels are drawers over
+     the stage instead of columns, and the stage keeps its width. Closed means
+     display:none, not an off-screen transform: mobile browsers widen the
+     layout viewport to include off-screen fixed elements (phone.spec.js). */
   @media (max-width: 1199px) {
     :root { --right-panel: 0px; }
-    #rightPanel {
-      width:320px; transform:translateX(100%); visibility:hidden;
-      transition:transform 180ms ease, visibility 0s linear 180ms;
-      box-shadow:-18px 0 40px rgba(0,0,0,0.45);
-    }
-    body.right-panel-open #rightPanel { transform:none; visibility:visible; transition:transform 180ms ease; }
-    #photoPanel {
-      transform:translateX(100%); visibility:hidden;
-      transition:transform 180ms ease, visibility 0s linear 180ms;
-      box-shadow:-18px 0 40px rgba(0,0,0,0.45);
-    }
-    body.right-panel-open #photoPanel { transform:none; visibility:visible; transition:transform 180ms ease; }
+    #rightPanel, #photoPanel { box-shadow:-18px 0 40px rgba(0,0,0,0.45); }
+    #rightPanel { width:320px; display:none; }
+    body.right-panel-open #rightPanel { display:flex; }
+    #photoPanel { display:none; }
+    body.right-panel-open #photoPanel { display:block; }
     #appTopbar [data-action="toggle-panel"] { display:inline-flex; }
   }
-  @media (prefers-reduced-motion: reduce) { #rightPanel, #photoPanel { transition:none !important; } }
   #rightPanel .rp-head, #inspector .ins-title, #layersPanel .lp-head {
     display:flex; align-items:center; gap:8px; margin-bottom:12px;
   }
@@ -688,9 +676,6 @@
   #layersPanel .lp-role-badge[data-role="defender"] { background:#3b5bdb; }
   #layersPanel .lp-role-badge[data-role="center"] { background:#7048e8; }
   #layersPanel .lp-role-badge[data-role="wing"] { background:#0ca678; }
-  @media (pointer: coarse) {
-    #inspector, #layersPanel { display:none; }
-  }
 
   /* Chip popover: position comes from chip-popover.js's screen-space
      projection. transform translates the anchor point (bottom-centre) to
@@ -817,3 +802,51 @@
   #dock [data-dock="chip"],
   #dock [data-dock-tool],
   #dock .dock-sep { display:none; }
+
+  /* --- Phone (Broadcast, design canvas "phone", < 768 px). Replaces the old
+     coarse-pointer rules that hid the whole shell on touch devices. The rail
+     becomes a bottom tab bar, the tool palette a horizontal strip above it
+     (its drag position is ignored here), and the side panels stay drawers
+     (the < 1200 px rule). The touch D-pad keeps its own coarse-pointer rule. */
+  @media (max-width: 767px) {
+    :root { --shell-rail: 0px; --tabbar: 58px; }
+    #appRail {
+      top:auto; bottom:0; left:0; right:0; width:auto; height:var(--tabbar);
+      flex-direction:row; justify-content:space-around; align-items:stretch; gap:0;
+      padding:0 0 env(safe-area-inset-bottom, 0px); border-right:none; border-top:1px solid var(--fb-line);
+    }
+    #appRail .shell-logo { display:none; }
+    #appRail button { flex:1; justify-content:center; font-size:10px; }
+    #appRail button.active::before { left:24%; right:24%; top:0; bottom:auto; width:auto; height:var(--fb-accent-bar); border-radius:0 0 2px 2px; }
+    #appTopbar { left:0; gap:10px; padding:0 12px; overflow:hidden; }
+    #appTopbarProjectName { min-width:0; flex:1 1 auto; }
+    #dockProjectName { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #appTopbar .shell-spacer { display:none; }
+    #appTopbar [data-action="tutorial"], #appTopbar .shell-crumb { display:none; }
+    #appTopbar [data-action="export-video"] { padding:0 10px; }
+    #rightPanel, #photoPanel { bottom:var(--tabbar); width:min(360px, 100vw); }
+    #toolPalette {
+      /* !important: floatable.js writes an inline `inset` for the desktop drag position. */
+      left:8px !important; right:8px !important; top:auto !important; bottom:calc(var(--tabbar) + 8px) !important;
+      width:auto !important; max-width:calc(100vw - 16px); box-sizing:border-box;
+      flex-direction:row; overflow-x:auto; overflow-y:visible; scrollbar-width:none;
+    }
+    #toolPalette .floatable-grip { display:none; }
+    #toolPalette button { flex:none; }
+    #toolPalette .tp-submenu { left:0; top:auto; bottom:100%; margin:0 0 8px; }
+    #timeline {
+      left:8px; right:8px; transform:none; max-width:none;
+      flex-wrap:wrap; gap:6px; padding:6px 8px;
+    }
+    #timeline .tl-strip { order:3; flex:1 1 100%; min-width:0; }
+    #timeline .tl-sep, #timeline .tl-learn { display:none; }
+    /* Bottom-up: tab bar, palette strip, timeline. The dock moves to the top
+       of the stage; the walking D-pad only shows in 3D, above the timeline. */
+    #timeline { bottom:calc(var(--tabbar) + 74px); }
+    #dock { top:calc(var(--shell-topbar) + 8px); bottom:auto; left:50%; }
+    body.topdown-mode #touchControls { display:none; }
+    #touchDpad, #touchActions { bottom:calc(var(--tabbar) + 200px); }
+    #dockStatus { display:none; }
+    #libraryView { bottom:var(--tabbar); }
+  }
+
