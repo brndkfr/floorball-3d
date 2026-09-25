@@ -20,7 +20,6 @@ import { join, relative, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import * as esbuild from 'esbuild';
-import { commitSha } from './build-sha.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const SRC = join(ROOT, 'web');
@@ -30,6 +29,15 @@ const OUT = join(ROOT, 'dist');
 // written) - see S-BACK-010 in docs/plan.md. Re-check with a fresh grep if
 // this list is ever extended; don't exclude on a guess.
 const EXCLUDE_DIRS = new Set([]);
+
+function commitSha() {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA.slice(0, 12);
+  try {
+    return execSync('git rev-parse HEAD', { cwd: ROOT }).toString().trim().slice(0, 12);
+  } catch {
+    return 'dev';
+  }
+}
 
 function shouldExclude(relPath) {
   const posix = relPath.split('\\').join('/');
@@ -55,7 +63,7 @@ async function main() {
   if (existsSync(OUT)) rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });
 
-  const sha = commitSha(process.env, () => execSync('git rev-parse HEAD', { cwd: ROOT }).toString());
+  const sha = commitSha();
   const files = walk(SRC);
   let jsCount = 0, otherCount = 0;
 

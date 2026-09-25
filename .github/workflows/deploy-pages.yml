@@ -1,11 +1,10 @@
-name: Deploy GitHub Pages
+name: CI
 
-# CI for every push / PR, deploy to Pages from main. Open PRs from this repo
-# labelled `preview` are also published, under /preview/<branch>/ next to the
-# live site: every deploy builds main at the root plus each labelled branch,
-# so a normal main deploy keeps the previews instead of wiping them.
-# Branch code is built in a job with read-only permissions; only the final
-# job, which just assembles and uploads, can write to Pages.
+# Tests + build on every push to main and every PR. Publishing to GitHub
+# Pages lives in pages.yml, which runs after this finishes (workflow_run) and
+# takes the built site from the `site` artifact below - so branch code only
+# ever runs here, in an unprivileged run, never in the one that can deploy.
+
 on:
   push:
     branches: [main]
@@ -18,25 +17,18 @@ on:
       - 'docs/**'
       - 'generators/**'
       - '**.md'
-  # Runs from main's copy of this file (so the Pages environment accepts the
-  # deploy); used only to refresh previews - never checks out PR code with
-  # write permissions, see build-preview.
-  pull_request_target:
-    types: [labeled, unlabeled, synchronize, reopened, closed]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# A new push supersedes the PR's running CI; every other run stands alone
-# (deploys serialise on the deploy job's own group below).
 concurrency:
-  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  group: ci-${{ github.ref }}
+  # A new push supersedes a PR's running CI; main runs all finish.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
-    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -60,152 +52,10 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
-      - if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v7
-        with:
-          name: site-root
-          path: dist
-          retention-days: 1
-
-  # Decides whether this run deploys, and which branches get a preview.
-  plan:
-    runs-on: ubuntu-24.04
-    permissions:
-      pull-requests: read
-    outputs:
-      deploy: ${{ steps.plan.outputs.deploy }}
-      previews: ${{ steps.plan.outputs.previews }}
-      count: ${{ steps.plan.outputs.count }}
-    steps:
-      - id: plan
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EVENT: ${{ github.event_name }}
-          REF: ${{ github.ref }}
-          ACTION: ${{ github.event.action }}
-          LABEL: ${{ github.event.label.name }}
-          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-        run: |
-          deploy=false
-          case "$EVENT" in
-            push|workflow_dispatch)
-              [ "$REF" = refs/heads/main ] && deploy=true ;;
-            pull_request_target)
-              case "$ACTION" in
-                labeled|unlabeled) [ "$LABEL" = preview ] && deploy=true ;;
-                *) echo "$PR_LABELS" | jq -e 'index("preview")' >/dev/null && deploy=true ;;
-              esac ;;
-          esac
-          # Open, labelled, same-repo PRs only (a fork's branch never gets built).
-          previews=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --label preview \
-            --json headRefName,headRefOid,isCrossRepository \
-            --jq '[.[] | select(.isCrossRepository | not)
-                   | {branch: .headRefName, sha: .headRefOid,
-                      slug: (.headRefName | gsub("[^A-Za-z0-9._-]"; "-"))}]')
-          [ "$deploy" = true ] || previews='[]'
-          echo "deploy=$deploy" >> "$GITHUB_OUTPUT"
-          echo "previews=$previews" >> "$GITHUB_OUTPUT"
-          echo "count=$(echo "$previews" | jq length)" >> "$GITHUB_OUTPUT"
-          echo "deploy=$deploy previews=$previews"
-
-  # main for the site root on a preview refresh (push / dispatch on main
-  # reuse the tested dist/ from build instead).
-  build-root:
-    needs: plan
-    if: needs.plan.outputs.deploy == 'true' && github.event_name == 'pull_request_target'
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: main
-          persist-credentials: false
-      - uses: pnpm/action-setup@v6
-      # No pnpm cache: this runs in main's cache scope (pull_request_target),
-      # and branch code must not be able to seed it.
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run build
+      # Static files only; pages.yml publishes main's at the root and a
+      # labelled PR's under /preview/<branch>/.
       - uses: actions/upload-artifact@v7
         with:
-          name: site-root
+          name: site
           path: dist
-          retention-days: 1
-
-  # Branch code: read-only token, no credentials left in the checkout. The
-  # PR's own CI (pull_request) runs its tests; this only builds it.
-  build-preview:
-    needs: plan
-    if: needs.plan.outputs.deploy == 'true' && needs.plan.outputs.count != '0'
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        preview: ${{ fromJSON(needs.plan.outputs.previews) }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ matrix.preview.sha }}
-          persist-credentials: false
-      - uses: pnpm/action-setup@v6
-      # No pnpm cache: this runs in main's cache scope (pull_request_target),
-      # and branch code must not be able to seed it.
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run build
-        env:
-          BUILD_SHA: ${{ matrix.preview.sha }}
-      - uses: actions/upload-artifact@v7
-        with:
-          name: preview-${{ matrix.preview.slug }}
-          path: dist
-          retention-days: 1
-
-  deploy:
-    needs: [plan, build, build-root, build-preview]
-    if: >-
-      !cancelled() && needs.plan.outputs.deploy == 'true'
-      && (needs.build.result == 'success' || needs.build.result == 'skipped')
-      && (needs.build-root.result == 'success' || needs.build-root.result == 'skipped')
-      && needs.build-preview.result != 'cancelled'
-    permissions:
-      pages: write
-      id-token: write
-    concurrency:
-      group: pages-deploy
-      cancel-in-progress: false
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/download-artifact@v7
-        with:
-          name: site-root
-          path: site
-      # A preview that failed to build is left out; the rest still ship.
-      - if: needs.plan.outputs.count != '0'
-        continue-on-error: true   # every preview failed to build: ship main alone
-        uses: actions/download-artifact@v7
-        with:
-          pattern: preview-*
-          path: previews
-      - name: Put previews under /preview/<branch>/
-        run: |
-          mkdir -p site/preview
-          for dir in previews/preview-*; do
-            [ -d "$dir" ] || continue
-            mv "$dir" "site/preview/${dir#previews/preview-}"
-          done
-          ls site/preview
-      - uses: actions/configure-pages@v6
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: site
-      - id: deployment
-        uses: actions/deploy-pages@v5
+          retention-days: 30

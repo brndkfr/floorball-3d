@@ -307,29 +307,31 @@ aside.
 
 ## Deployment
 
-- Live at https://brndkfr.github.io/floorball-3d/, deployed via
-  `.github/workflows/deploy-pages.yml` on every push to `main`. That workflow
-  exists because GitHub Pages' plain branch/`docs`-folder source doesn't
-  support serving from an arbitrary subfolder (`web/`) - don't remove it in
-  favor of the simple settings-UI source without re-solving that.
-- The workflow's `build` job (runs on every push **and** PR) is the real
-  gate: `pnpm install --frozen-lockfile`, `pnpm test`, `pnpm run build`
-  (stages `web/` into `dist/` - per-file minify via `scripts/build.mjs`,
-  never mutates `web/` itself), `pnpm run check:size` (budget check,
-  `scripts/check-size.mjs`). `deploy` only runs after `build` passes, and
-  only on a push to `main`, uploading `dist/` (not `web/`). A red test or a
-  blown size budget blocks the deploy - which is exactly why the local
-  pre-commit rule above (`pnpm test` must pass) exists: catch it before
-  pushing, not after CI does.
+- Live at https://brndkfr.github.io/floorball-3d/. Two workflows, split on
+  purpose: `.github/workflows/deploy-pages.yml` (name `CI`) tests and builds,
+  `.github/workflows/pages.yml` publishes. They exist because GitHub Pages'
+  plain branch/`docs`-folder source doesn't support serving from an arbitrary
+  subfolder (`web/`) - don't remove them in favor of the simple settings-UI
+  source without re-solving that.
+- CI's `build` job (runs on every push to `main` **and** every PR) is the
+  real gate: `pnpm install --frozen-lockfile`, `pnpm test`, `pnpm test:e2e`,
+  `pnpm run build` (stages `web/` into `dist/` - per-file minify via
+  `scripts/build.mjs`, never mutates `web/` itself), `pnpm run check:size`
+  (budget check, `scripts/check-size.mjs`), then uploads `dist/` as the
+  `site` artifact. It has no write access. `pages.yml` runs after a green CI
+  run (`workflow_run`), builds `main` for the root and deploys `dist/` (not
+  `web/`). A red test or a blown size budget means no publish - which is
+  exactly why the local pre-commit rule above (`pnpm test` must pass)
+  exists: catch it before pushing, not after CI does.
 - **Branch previews**: label an open PR from this repo `preview` and it is
-  published at `/preview/<branch>/` next to the live site (`/`, `?` etc.
-  become `-`). Every deploy (push to `main`, a label change, a push to a
-  labelled PR, closing it) rebuilds `main` at the root plus all labelled
-  branches, so previews survive normal deploys and vanish when the PR closes
-  or loses the label. Branch code is built by the read-only `build-preview`
-  job (no credentials, no shared pnpm cache); only `deploy` can write to
-  Pages - `test/deploy-workflow.test.js` pins that. Previews share the live
-  site's origin, so they read and write the same saved projects
+  published at `/preview/<branch>/` next to the live site (`/`, spaces etc.
+  become `-`). Every publish (green CI on `main` or on a labelled PR, a label
+  change, closing the PR) puts `main` at the root plus every labelled
+  branch, so previews survive normal deploys and vanish when the PR closes
+  or loses the label. `pages.yml` never checks out or runs branch code: a
+  preview is the `site` artifact of that PR's latest green CI run, copied as
+  static files (CodeQL flags building PR code in a privileged run as cache
+  poisoning). `test/deploy-workflow.test.js` pins the split. Previews share
+  the live site's origin, so they read and write the same saved projects
   (localStorage / IndexedDB); keep that in mind before previewing a branch
-  that changes the saved-doc format. `BUILD_SHA` overrides the `?v=` stamp
-  (`scripts/build-sha.mjs`), since `GITHUB_SHA` is `main`'s in those runs.
+  that changes the saved-doc format.
