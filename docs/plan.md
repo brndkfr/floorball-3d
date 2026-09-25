@@ -2633,8 +2633,13 @@ added.
   S-BACK-021 port order now has a Broadcast design.
 
 - **[S-BACK-021]** [open] **Port surfaces to
-  Broadcast, one per commit.** Step 0: the S-BACK-019 deferrals
-  (vendor Web Awesome, fonts, HUD recolour). CodeQL is done: advanced
+  Broadcast, one per commit.** Step 0: the S-BACK-019 deferrals.
+  **Done (branch `broadcast_ux_redesign`):** Web Awesome 3.14.0 subset
+  (23 components, 0.6 MB) and Archivo + IBM Plex Mono woff2 vendored by
+  `scripts/vendor-webawesome.mjs` / `vendor-fonts.mjs` from pinned
+  devDependencies, size budgets added, `web/src/ui/webawesome.js` points
+  the default icon library at `web/lib/icons/`. The HUD recolour moves
+  into the app-shell step. CodeQL is done: advanced
   setup (`.github/workflows/codeql.yml`) with
   `.github/codeql/codeql-config.yml` ignoring `web/lib/webawesome`.
   Then, lowest risk / most visible first:
@@ -2645,6 +2650,31 @@ added.
   sheet / tab bar. Each surface: extend its e2e spec first, keep
   existing DOM ids, keep module logic unchanged (only markup + CSS +
   mount points), then `pnpm test:e2e:affected` + build + size.
+  **Progress (branch `broadcast_ux_redesign`, draft PR #5, 2026-09-25):**
+  shipped, one commit each with its e2e spec: e2e hardening (onboarding
+  tip in fixtures; chips built twice on a late model load; undo lost to an
+  actors tick; `waitForAssets`), Broadcast recolour of app.css and the
+  JS-built chrome, rail + top bar (crumb, 2D/3D, Export), docked right
+  panel (Inspector / Layers / View stacked, as in the chosen "Plan"
+  artboard - not tabs; the floating Info panel is gone), icon tool
+  palette + flyouts, timeline / dock / Choreo banner, docked Analyze
+  panel with bar stepper, first-run card, < 1200 px drawers for both side
+  panels, phone layout (< 768 px) with a real viewport meta. Second
+  round: the 2D fit targets the stage (rail, top bar, docked panel, tab
+  bar) not the window; Analyze step 1 drop zone, step 3 numbered
+  checklist with done ticks, step 4 verdict pill + 2x2 stat grid; dialog
+  titles in sentence case (`.fb-dialog-title`); Inspector fields in the
+  canvas field style (inline HUD field styles removed); phone Analyze
+  bottom sheet (peek + grab).
+  **Still open:** Web Awesome components are vendored but not used. Left
+  on purpose: the dialogs are native `<dialog>` (focus trap, Esc,
+  backdrop) and the side panels are plain CSS drawers, so `wa-dialog` /
+  `wa-drawer` would not remove code, only add Lit component loading; the
+  photo-vs-overlay `wa-comparison` slider is the one real candidate and
+  wants its own change. Also open: a human visual pass on real devices
+  (touch, notch safe areas, real photos through all four Analyze steps -
+  e2e can't solve a camera pose, so step 4 is only checked with a
+  rendered result).
 
 ---
 

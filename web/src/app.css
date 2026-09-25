@@ -1,21 +1,20 @@
-/* App layout + chrome (S-BACK-019). Moved verbatim from the inline <style>
-   in index.html; Broadcast restyling happens here surface by surface in
-   S-BACK-021. Loaded before tokens.css, as the inline block was. */
+/* App layout + chrome. Moved out of the inline <style> in index.html in
+   S-BACK-019, restyled onto the Broadcast --fb-* tokens in S-BACK-021.
+   Loaded before tokens.css, as the inline block was. */
   :root {
-    --hud-accent: #4fe0ff;
-    --hud-accent-dim: rgba(79, 224, 255, 0.35);
-    --hud-bg: rgba(6, 14, 18, 0.72);
-    --hud-font: 'Consolas', 'Courier New', monospace;
+    --hud-accent: var(--fb-text-2);
+    --hud-accent-dim: var(--fb-line);
+    --hud-bg: var(--fb-surf-1);
+    --hud-font: var(--fb-font);
   }
-  html, body { margin:0; padding:0; overflow:hidden; background:#0a0d0f; height:100%; }
+  html, body { margin:0; padding:0; overflow:hidden; background:var(--fb-ink); height:100%; }
 
   /* shared tactical-panel look: angled corner, thin glowing border, glass bg */
   .hud-panel {
-    position:absolute; z-index:10; color:#dff9ff; font-family:var(--hud-font);
+    position:absolute; z-index:10; color:var(--fb-text-1); font-family:var(--hud-font);
     background:var(--hud-bg); border:1px solid var(--hud-accent-dim);
-    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
-    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-    padding:10px 14px; backdrop-filter:blur(2px);
+    border-radius:var(--fb-radius-2);
+    padding:10px 14px;
   }
   .hud-label { color:var(--hud-accent); text-transform:uppercase; letter-spacing:0.06em; font-size:11px; }
 
@@ -27,39 +26,26 @@
   }
   .hud-toggle {
     flex:none; width:20px; height:20px; display:flex; align-items:center; justify-content:center;
-    cursor:pointer; background:rgba(79,224,255,0.08); color:var(--hud-accent);
+    cursor:pointer; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--hud-accent);
     border:1px solid var(--hud-accent-dim); font-family:var(--hud-font); font-size:13px;
     line-height:1; user-select:none;
   }
-  .hud-toggle:hover { background:rgba(79,224,255,0.22); }
+  .hud-toggle:hover { background:var(--fb-line); }
   .hud-panel .hud-body { margin-top:8px; }
   .hud-panel.collapsed .hud-body { display:none; }
 
-  #info { top:52px; left:150px; font-size:12px; line-height:1.5; max-width:340px; }
-  #info a { color:var(--hud-accent); }
-  /* Pass rink clicks through the (large, expanded) info panel body -
-     only the interactive controls capture pointer events. Otherwise
-     right-click move-commands on the floor behind the panel silently
-     hit the panel instead. Header + layer toggles + buttons are opted
-     back in below. */
-  #info { pointer-events:none; }
-  #info .hud-header, #info .hud-toggle,
-  #info #layers, #info label, #info input, #info select, #info button, #info a {
-    pointer-events:auto;
-  }
-
   #status {
-    position:absolute; bottom:12px; left:64px; z-index:10;
-    color:#7fd6e8; font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
+    position:absolute; bottom:12px; left:calc(var(--shell-rail) + 12px); z-index:10;
+    color:var(--fb-text-2); font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
   }
 
   #saveStatus {
     position:absolute; bottom:12px; right:12px; z-index:10;
-    color:#7fd6e8; font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
+    color:var(--fb-text-2); font-family:var(--hud-font); font-size:11px; letter-spacing:0.03em;
   }
-  #saveStatus.save-error { color:#ff6b6b; font-weight:600; }
+  #saveStatus.save-error { color:var(--fb-danger); font-weight:600; }
 
-  #coords { top:52px; right:12px; font-size:13px; min-width:180px; line-height:1.6; }
+  #coords { top:calc(var(--shell-topbar) + 8px); right:12px; font-size:13px; min-width:180px; line-height:1.6; }
   #coords .label { color:var(--hud-accent); text-transform:uppercase; font-size:10px; letter-spacing:0.05em; }
 
   #goalieLabel {
@@ -67,7 +53,7 @@
     background:var(--hud-bg); color:var(--hud-accent); font-family:var(--hud-font);
     font-size:12px; font-weight:600; letter-spacing:0.03em; padding:3px 10px;
     border:1px solid var(--hud-accent-dim); white-space:nowrap; pointer-events:none;
-    display:none; box-shadow:0 0 8px rgba(79,224,255,0.25);
+    display:none; box-shadow:0 0 8px var(--fb-line);
   }
 
   #crosshair {
@@ -80,21 +66,18 @@
   #crosshair::before { top:50%; left:0; width:100%; height:1px; transform:translateY(-50%); }
   #crosshair::after { left:50%; top:0; height:100%; width:1px; transform:translateX(-50%); }
 
-  #layers {
-    margin-top:8px; padding-top:8px; border-top:1px solid var(--hud-accent-dim);
-  }
   #layers .layer-row { margin:4px 0; }
   #layers label { cursor:pointer; user-select:none; }
   #layers input[type="checkbox"] { accent-color:var(--hud-accent); }
   #layers button {
     font-family:var(--hud-font); font-size:11px; text-transform:uppercase; letter-spacing:0.04em;
-    cursor:pointer; background:rgba(79,224,255,0.08); color:var(--hud-accent);
+    cursor:pointer; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--hud-accent);
     border:1px solid var(--hud-accent-dim); padding:3px 9px; margin-right:6px;
   }
-  #layers button:hover { background:rgba(79,224,255,0.22); }
+  #layers button:hover { background:var(--fb-line); }
   #layers select {
     font-family:var(--hud-font); font-size:11px; cursor:pointer;
-    background:rgba(79,224,255,0.08); color:#dff9ff;
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
     border:1px solid var(--hud-accent-dim); padding:2px 4px;
   }
   #legend { display:none; margin-top:6px; margin-left:20px; font-size:11px; }
@@ -111,10 +94,10 @@
   #touchControls button {
     touch-action:none; user-select:none; -webkit-user-select:none;
     font-family:var(--hud-font); color:var(--hud-accent);
-    background:rgba(79,224,255,0.12); border:1px solid var(--hud-accent-dim);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--hud-accent-dim);
     border-radius:8px;
   }
-  #touchControls button:active { background:rgba(79,224,255,0.32); }
+  #touchControls button:active { background:var(--fb-line); }
 
   #touchDpad {
     position:absolute; left:16px; bottom:16px; z-index:12;
@@ -135,30 +118,29 @@
      from the analytical HUD panels (rounded pills, amber accent) so
      "author" and "analyse" read as different modes of use. */
   #dock {
-    position:absolute; left:50%; bottom:18px; z-index:14;
+    position:absolute; left:var(--stage-center); bottom:18px; z-index:14;
     transform:translateX(-50%);
     display:flex; align-items:center; gap:8px;
     padding:8px 12px;
-    background:rgba(20, 16, 10, 0.78);
-    border:1px solid rgba(255, 179, 71, 0.45);
-    border-radius:999px;
-    box-shadow:0 6px 24px rgba(0,0,0,0.35), inset 0 0 16px rgba(255,179,71,0.06);
-    font-family:'Consolas','Courier New',monospace; color:#f7e6cf;
-    backdrop-filter:blur(4px);
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong);
+    border-radius:var(--fb-radius-2);
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+    font-family:var(--fb-mono); color:var(--fb-text-1);
   }
   #dock .dock-btn {
     height:36px; min-width:36px; padding:0 12px;
-    border:1px solid rgba(255,179,71,0.35);
-    background:rgba(255,179,71,0.08);
-    color:#f7e6cf; font-family:inherit; font-size:12px;
+    border:1px solid var(--fb-line-strong);
+    background:var(--fb-brand-quiet);
+    color:var(--fb-text-1); font-family:inherit; font-size:12px;
     letter-spacing:0.06em; text-transform:uppercase; cursor:pointer;
     border-radius:999px; display:inline-flex; align-items:center; gap:6px;
   }
-  #dock .dock-btn:hover { background:rgba(255,179,71,0.22); }
-  #dock .dock-btn.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
+  #dock .dock-btn:hover { background:var(--fb-brand-quiet); }
+  #dock .dock-btn.active { background:var(--fb-brand); color:#fff; border-color:var(--fb-brand); }
   #dock .dock-btn.stub { opacity:0.35; cursor:not-allowed; }
   #dock .dock-sep {
-    width:1px; height:22px; background:rgba(255,179,71,0.28); margin:0 4px;
+    width:1px; height:22px; background:var(--fb-line-strong); margin:0 4px;
   }
   #dock [data-dock="team"] {
     min-width:44px;
@@ -169,24 +151,24 @@
   #dockOverflow {
     position:absolute; right:0; bottom:48px;
     display:none; flex-direction:column; min-width:140px;
-    background:rgba(20,16,10,0.94);
-    border:1px solid rgba(255,179,71,0.45);
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong);
     border-radius:10px; overflow:hidden;
     box-shadow:0 6px 20px rgba(0,0,0,0.4);
   }
   #dockOverflow.open { display:flex; }
   #dockOverflow button {
-    background:transparent; color:#f7e6cf; border:none; text-align:left;
+    background:transparent; color:var(--fb-text-1); border:none; text-align:left;
     padding:8px 14px; font-family:inherit; font-size:12px;
     letter-spacing:0.05em; text-transform:uppercase; cursor:pointer;
   }
-  #dockOverflow button:hover { background:rgba(255,179,71,0.18); }
+  #dockOverflow button:hover { background:var(--fb-brand-quiet); }
   #dockOverflow hr {
-    border:none; height:1px; background:rgba(255,179,71,0.25); margin:2px 0;
+    border:none; height:1px; background:var(--fb-brand-quiet); margin:2px 0;
   }
   #dock .dock-swatch {
     display:inline-block; width:16px; height:16px; border-radius:50%;
-    background:var(--draw-color, #ffb347);
+    background:var(--draw-color, var(--fb-brand));
     border:1px solid rgba(255,255,255,0.5);
     box-shadow:inset 0 0 0 1px rgba(0,0,0,0.3);
   }
@@ -194,8 +176,8 @@
     position:absolute; bottom:172px; left:50%; transform:translateX(-50%);
     display:none; gap:6px; padding:6px 8px;
     z-index:20;
-    background:rgba(20,16,10,0.94);
-    border:1px solid rgba(255,179,71,0.45);
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong);
     border-radius:999px;
     box-shadow:0 6px 20px rgba(0,0,0,0.4);
   }
@@ -209,32 +191,43 @@
 
   /* --- Timeline strip (A4): sits above the dock, holds playback transport
      and frame cards. Same amber-authoring language as the dock. */
+  /* Timeline (Broadcast bottom bar, design canvas "Plan"): transport, frame
+     cards, + frame, Choreo. Centred on the stage like the dock. */
   #timeline {
-    position:absolute; left:50%; bottom:70px; z-index:13;
+    position:absolute; left:var(--stage-center); bottom:70px; z-index:13;
     transform:translateX(-50%);
-    display:flex; align-items:center; gap:8px;
-    max-width:min(96vw, 1400px);
-    padding:6px 10px;
-    background:rgba(20,16,10,0.82);
-    border:1px solid rgba(255,179,71,0.35);
-    border-radius:14px;
-    box-shadow:0 4px 18px rgba(0,0,0,0.4);
-    font-family:'Consolas','Courier New',monospace;
-    color:#f7e6cf;
-    backdrop-filter:blur(4px);
+    display:flex; align-items:center; gap:10px;
+    max-width:min(var(--stage-width), 1400px); box-sizing:border-box;
+    padding:8px 12px;
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line);
+    border-radius:var(--fb-radius-2);
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+    font:500 12px/1 var(--fb-font);
+    color:var(--fb-text-1);
   }
+  #timeline .tl-add, #timeline .tl-choreo, #timeline .tl-learn {
+    height:30px; padding:0 12px; border-radius:var(--fb-radius-1); cursor:pointer; white-space:nowrap;
+    font:600 12px/1 var(--fb-font); border:1px solid var(--fb-line-strong);
+    background:var(--fb-surf-2); color:var(--fb-text-1);
+  }
+  #timeline .tl-add { border-style:dashed; color:var(--fb-text-2); }
+  #timeline .tl-choreo { background:var(--fb-brand); border-color:var(--fb-brand); color:#fff; }
+  #timeline .tl-learn { background:transparent; color:var(--fb-text-2); }
+  #timeline .tl-add:hover, #timeline .tl-learn:hover { color:var(--fb-text-1); border-color:var(--fb-text-3); }
+  #timeline button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
   #timeline .tl-transport { display:flex; align-items:center; gap:4px; }
   #timeline .tl-transport button, #timeline .tl-transport [data-tl="speed"] {
     height:28px; min-width:32px; padding:0 8px;
-    background:rgba(255,179,71,0.08);
-    border:1px solid rgba(255,179,71,0.35);
-    color:#f7e6cf; font-family:inherit; font-size:12px;
+    background:var(--fb-brand-quiet);
+    border:1px solid var(--fb-line-strong);
+    color:var(--fb-text-1); font-family:inherit; font-size:12px;
     border-radius:8px; cursor:pointer;
     display:inline-flex; align-items:center; justify-content:center;
   }
-  #timeline .tl-transport button:hover, #timeline .tl-transport [data-tl="speed"]:hover { background:rgba(255,179,71,0.22); }
-  #timeline .tl-transport button.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
-  #timeline .tl-sep { width:1px; height:22px; background:rgba(255,179,71,0.28); margin:0 4px; }
+  #timeline .tl-transport button:hover, #timeline .tl-transport [data-tl="speed"]:hover { background:var(--fb-brand-quiet); }
+  #timeline .tl-transport button.active { background:var(--fb-brand); color:#fff; border-color:var(--fb-brand); }
+  #timeline .tl-sep { width:1px; height:22px; background:var(--fb-line-strong); margin:0 4px; }
   #timeline .tl-strip {
     display:flex; align-items:stretch; gap:6px;
     overflow-x:auto; overflow-y:hidden;
@@ -245,19 +238,19 @@
     position:relative;
     display:flex; flex-direction:column; align-items:center;
     padding:4px 3px 3px 3px; gap:2px;
-    background:rgba(255,179,71,0.05);
-    border:1px solid rgba(255,179,71,0.30);
+    background:var(--fb-brand-quiet);
+    border:1px solid var(--fb-line-strong);
     border-radius:8px;
     cursor:pointer; flex:none;
     transition:border-color 0.1s, background 0.1s;
   }
-  #timeline .tl-card:hover { background:rgba(255,179,71,0.14); }
-  #timeline .tl-card.editing { border-color:#ffb347; box-shadow:0 0 0 1px rgba(255,179,71,0.5) inset; }
+  #timeline .tl-card:hover { background:var(--fb-brand-quiet); }
+  #timeline .tl-card.editing { border-color:var(--fb-brand); box-shadow:0 0 0 1px var(--fb-line-strong) inset; }
   #timeline .tl-card.playing { border-color:#7ee06b; }
   #timeline .tl-card .tl-num {
-    font-size:12px; font-weight:700; color:#ffb347; line-height:1;
+    font-size:12px; font-weight:700; color:var(--fb-brand); line-height:1;
   }
-  #timeline .tl-card.editing .tl-num { color:#fff2d0; }
+  #timeline .tl-card.editing .tl-num { color:var(--fb-text-1); }
   #timeline .tl-card .tl-thumb {
     display:block; border-radius:3px;
     background:rgba(0,0,0,0.35);
@@ -266,8 +259,8 @@
   }
   #timeline .tl-card .tl-dur {
     width:100%; min-width:36px;
-    background:rgba(0,0,0,0.35); color:#f7e6cf;
-    border:1px solid rgba(255,179,71,0.28); border-radius:4px;
+    background:rgba(0,0,0,0.35); color:var(--fb-text-1);
+    border:1px solid var(--fb-line-strong); border-radius:4px;
     font-family:inherit; font-size:10px; padding:1px 2px; text-align:center;
     -moz-appearance:textfield;
   }
@@ -275,21 +268,22 @@
   #timeline .tl-card .tl-dur::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
   #timeline .tl-card .tl-acts { display:flex; flex-wrap:wrap; justify-content:center; gap:1px; max-width:100%; }
   #timeline .tl-card .tl-acts button {
-    background:transparent; border:none; color:#f7e6cf; cursor:pointer;
+    background:transparent; border:none; color:var(--fb-text-1); cursor:pointer;
     font-family:inherit; font-size:11px; padding:0 3px; line-height:1;
     opacity:0.7;
   }
-  #timeline .tl-card .tl-acts button:hover { opacity:1; color:#ffb347; }
+  #timeline .tl-card .tl-acts button:hover { opacity:1; color:var(--fb-brand); }
   #timeline .tl-card .tl-acts button.lit { opacity:1; color:#7ee06b; }
-  #timeline .tl-card .tl-acts button.lit:hover { color:#ff8080; }
+  #timeline .tl-card .tl-acts button.lit:hover { color:var(--fb-danger); }
   #timeline .tl-card .tl-acts button:disabled { opacity:0.25; cursor:not-allowed; }
 
+  /* Bottom-left of the stage: centred it overlapped the timeline's cards. */
   #dockStatus {
-    position:absolute; left:50%; bottom:130px; transform:translateX(-50%);
-    z-index:15; font-family:'Consolas','Courier New',monospace;
-    font-size:11px; color:#f7e6cf; letter-spacing:0.04em;
-    background:rgba(20,16,10,0.85);
-    border:1px solid rgba(255,179,71,0.35);
+    position:absolute; left:calc(var(--shell-rail) + 16px); bottom:40px;
+    z-index:15; font-family:var(--fb-mono);
+    font-size:11px; color:var(--fb-text-1); letter-spacing:0.04em;
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong);
     border-radius:999px; padding:4px 12px;
     pointer-events:none; white-space:nowrap;
     box-shadow:0 2px 8px rgba(0,0,0,0.4);
@@ -305,9 +299,9 @@
   /* inline text input for the text shape tool - anchored at the click point */
   .draw-text-input {
     position:absolute; z-index:20; transform:translate(-50%, -50%);
-    font-family:'Consolas','Courier New',monospace; font-size:14px;
-    background:rgba(20,16,10,0.94); color:#f7e6cf;
-    border:1px solid rgba(255,179,71,0.55); border-radius:6px;
+    font-family:var(--fb-mono); font-size:14px;
+    background:var(--fb-surf-1); color:var(--fb-text-1);
+    border:1px solid var(--fb-line-strong); border-radius:6px;
     padding:4px 8px; outline:none; min-width:140px;
     box-shadow:0 4px 14px rgba(0,0,0,0.5);
   }
@@ -318,24 +312,117 @@
      canvas down to match its letterboxed rect. */
   #photo-canvas { position:fixed; inset:0; z-index:1; display:none; }
 
-  #photoPanel { top:230px; right:12px; width:270px; max-height:65vh; overflow-y:auto; }
+  /* Analyze panel (Broadcast, S-BACK-021, design canvas "Analyze"): a
+     360 px column docked under the top bar, always open. */
+  #photoPanel {
+    position:fixed; top:var(--shell-topbar); right:0; bottom:0; width:360px; z-index:26;
+    box-sizing:border-box; overflow-y:auto; scrollbar-width:thin;
+    margin:0; padding:0 16px 24px; border:none; border-left:1px solid var(--fb-line); border-radius:0;
+    background:var(--fb-surf-1); font:400 12px/1.5 var(--fb-font);
+  }
+  #photoPanel .hud-body { margin-top:0; }
+  #photoPanel .ps-grab { display:none; }   /* phone only, see the < 768 px block */
+  #photoPanel button, #photoPanel .dock-btn {
+    height:32px; padding:0 12px; border-radius:var(--fb-radius-1); cursor:pointer;
+    border:1px solid var(--fb-line-strong); background:var(--fb-surf-2); color:var(--fb-text-1);
+    font:600 12px/1 var(--fb-font); text-align:center;
+  }
+  #photoPanel button:hover:not(:disabled) { border-color:var(--fb-text-3); }
+  #photoPanel button:disabled { opacity:0.45; cursor:not-allowed; }
+  #photoPanel button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
+  #photoPanel .ps-cta-banner button { background:var(--fb-brand); border-color:var(--fb-brand); color:#fff; }
+  /* Dialog titles (library, export, shortcuts, tutorial): sentence case. */
+  .fb-dialog-title { font:600 16px/1.3 var(--fb-font); color:var(--fb-text-1); letter-spacing:0; text-transform:none; }
+  #photoPanel .ps-drop {
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    margin:0 0 12px; padding:18px 12px; text-align:center; cursor:pointer;
+    border:1px dashed var(--fb-line-strong); border-radius:var(--fb-radius-2);
+    background:var(--fb-surf-2); color:var(--fb-text-2);
+  }
+  #photoPanel .ps-drop:hover, #photoPanel .ps-drop.dragover { border-color:var(--fb-brand); background:var(--fb-brand-quiet); }
+  #photoPanel .ps-drop:focus-within { outline:2px solid var(--fb-brand); outline-offset:2px; }
+  #photoPanel .ps-drop input[type="file"] { position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; }
+  #photoPanel .ps-drop-icon { color:var(--fb-brand); }
+  #photoPanel .ps-drop-title { font:600 13px/1.3 var(--fb-font); color:var(--fb-text-1); }
+  #photoPanel .ps-drop-hint { font-size:11px; color:var(--fb-text-3); }
+  #photoPanel .ps-drop-name { font:500 11px/1.3 var(--fb-mono); color:var(--fb-text-2); word-break:break-all; }
+  #photoPanel .ps-drop-name:empty { display:none; }
+  /* Step 3 checklist (gaps canvas "Players & ball"). */
+  #photoPanel .ps-lede { margin:10px 0 0; font-size:11px; line-height:1.5; color:var(--fb-text-3); }
+  #photoPanel .ps-check { list-style:none; margin:12px 0 0; padding:0; counter-reset:pscheck; display:flex; flex-direction:column; gap:8px; }
+  #photoPanel .ps-check > li {
+    counter-increment:pscheck; display:grid; grid-template-columns:22px 1fr auto; align-items:center; gap:10px;
+    padding:10px 12px; border:1px solid var(--fb-line); border-radius:var(--fb-radius-1); background:var(--fb-surf-2);
+  }
+  #photoPanel .ps-check > li::before {
+    content:counter(pscheck); width:22px; height:22px; border-radius:50%; display:grid; place-items:center;
+    font:600 11px/1 var(--fb-mono); color:var(--fb-text-2); border:1px solid var(--fb-line-strong);
+  }
+  #photoPanel .ps-check > li[data-done="true"]::before { content:"\2713"; color:#fff; background:var(--fb-brand); border-color:var(--fb-brand); }
+  #photoPanel .ps-check-text { display:flex; flex-direction:column; gap:3px; min-width:0; }
+  #photoPanel .ps-check-title { font:600 12px/1.2 var(--fb-font); color:var(--fb-text-1); }
+  #photoPanel .ps-check-detail { font-size:11px; line-height:1.35; color:var(--fb-text-3); }
+  #photoPanel .ps-check button { white-space:nowrap; }
+  #photoPanel .ps-status:empty { display:none; }
+  #photoPanel .ps-status { margin-top:8px; font-size:11px; color:var(--fb-text-2); }
+  #photoPanel .ps-group { margin-top:14px; }
+  #photoPanel .ps-group-title { font:600 10px/1 var(--fb-font); letter-spacing:0.09em; text-transform:uppercase; color:var(--fb-text-3); margin-bottom:7px; }
+  #photoPanel .ps-btn-row { display:flex; gap:6px; margin-top:6px; }
+  #photoPanel .ps-btn-row > button { flex:1; }
+  #photoPanel button.ps-danger:not(:disabled) { color:var(--fb-danger); }
+  #photoPanel .ps-toggle { display:flex; gap:6px; align-items:center; font-size:12px; margin-top:8px; }
+  #photoPanel .ps-note { font-size:10.5px; line-height:1.4; color:var(--fb-text-3); margin-top:3px; }
+  #photoPanel details.ps-advanced { margin:14px 0 0; padding:10px 0 0; }
+  #photoPanel .ps-summary-hint { font-weight:400; color:var(--fb-text-3); margin-left:6px; }
+  /* Step 4 verdict pill + 2x2 stat grid (design canvas "Insights"). */
+  #photoPanel .ps-insights { margin:12px -16px 8px; }
+  #photoPanel .ps-verdict { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; padding:0 16px; }
+  #photoPanel .ps-vpill {
+    height:28px; padding:0 12px; border-radius:999px; display:inline-flex; align-items:center; gap:7px;
+    font:700 12px/1 var(--fb-font); letter-spacing:0.04em;
+    --tone:var(--fb-text-2);
+    color:var(--tone); border:1px solid color-mix(in srgb, var(--tone) 45%, transparent);
+    background:color-mix(in srgb, var(--tone) 14%, transparent);
+  }
+  #photoPanel .ps-vpill::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--tone); }
+  #photoPanel [data-tone="good"] { --tone:var(--vector-pass-clear); }
+  #photoPanel [data-tone="warn"] { --tone:var(--vector-shot-blocked-off); }
+  #photoPanel [data-tone="bad"] { --tone:var(--vector-shot-open); }
+  #photoPanel .ps-vdetail { font-size:11px; color:var(--fb-text-3); }
+  #photoPanel .ps-stat-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:1px; margin-top:12px;
+    background:var(--fb-line); border-top:1px solid var(--fb-line); border-bottom:1px solid var(--fb-line);
+  }
+  #photoPanel .ps-stat { background:var(--fb-surf-1); padding:12px 16px; }
+  #photoPanel .ps-stat-v { font:600 22px/1 var(--fb-mono); color:var(--fb-text-1); letter-spacing:-0.01em; }
+  #photoPanel .ps-stat-v[data-tone] { color:var(--tone); }
+  #photoPanel .ps-stat-v small { font-size:12px; color:var(--fb-text-3); }
+  #photoPanel .ps-stat-t { font:600 9px/1 var(--fb-font); letter-spacing:0.09em; text-transform:uppercase; color:var(--fb-text-3); margin-top:7px; }
+  #photoPanel details { border-top:1px solid var(--fb-line); margin:12px -16px 0; padding:12px 16px 0; }
+  #photoPanel summary { cursor:pointer; font:600 12px/1.2 var(--fb-font); color:var(--fb-text-2); opacity:1 !important; }
+  #photoPanel select, #photoPanel input[type="file"] {
+    font:400 12px/1.2 var(--fb-font); color:var(--fb-text-1);
+    background:var(--fb-surf-2); border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1); padding:5px 8px;
+  }
+  #photoPanel input[type="range"] { accent-color:var(--fb-brand); width:100%; }
+  #photoPanel input[type="checkbox"] { accent-color:var(--fb-brand); }
   .photo-landmark-row {
     display:flex; align-items:center; justify-content:space-between; padding:2px 0; font-size:11px; cursor:pointer; gap:6px;
   }
   .photo-landmark-row.armed { color:var(--hud-accent); }
   .photo-landmark-row.placed { opacity:0.6; }
   .photo-landmark-row .err { font-size:10px; color:#c8c8c8; font-variant-numeric:tabular-nums; }
-  .photo-landmark-row .err.worst { color:#ff8080; font-weight:bold; }
-  .photo-landmark-row .err.leverage { color:#ffb060; font-weight:bold; text-decoration:underline dotted; }
+  .photo-landmark-row .err.worst { color:var(--fb-danger); font-weight:bold; }
+  .photo-landmark-row .err.leverage { color:var(--fb-brand); font-weight:bold; text-decoration:underline dotted; }
   #photoReprojError {
     margin-top:4px; font-size:10px; display:inline-block; padding:2px 8px;
     border-radius:10px; background:rgba(255,255,255,0.08);
   }
   #photoReprojError.ok { color:#7ee06b; }
-  #photoReprojError.bad { color:#ff8080; }
+  #photoReprojError.bad { color:var(--fb-danger); }
   .photo-hint-panel {
     display:none; margin-top:6px; padding:8px; border-radius:6px;
-    border:1px solid var(--hud-accent-dim); background:rgba(79,224,255,0.06);
+    border:1px solid var(--hud-accent-dim); background:color-mix(in srgb, var(--fb-text-1) 7%, transparent);
   }
   #photoHintText { font-size:12px; font-weight:bold; color:var(--hud-accent); }
   #photoHintDiagram svg { width:100%; max-width:150px; display:block; margin:6px auto; }
@@ -345,77 +432,99 @@
      at the top of #photoPanel showing Photo -> Align -> Players ->
      Insights. Pure visual - clicking a pill scrolls to (and, for Steps
      3/4, force-opens) that step's block. */
+  /* Four-segment stepper (design canvas): a 3 px bar over each label,
+     brand for done + current. */
   #photoStepper {
-    display:flex; gap:3px; margin:0 0 8px 0; padding:0;
-    list-style:none; font-size:10px;
+    position:sticky; top:0; z-index:1; display:flex; gap:6px;
+    margin:0 -16px 12px; padding:16px 16px 14px; list-style:none;
+    background:var(--fb-surf-1); border-bottom:1px solid var(--fb-line);
   }
-  #photoStepper .ps-step {
-    flex:1; display:flex; align-items:center; gap:3px;
-    padding:4px 3px; border-radius:6px; min-width:0;
-    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
-    color:rgba(255,255,255,0.55); cursor:pointer;
-    text-align:left; font-family:inherit;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  #photoPanel #photoStepper .ps-step {
+    flex:1; min-width:0; height:auto; padding:0; border:none; border-radius:0; background:transparent;
+    display:flex; flex-direction:column; align-items:flex-start; gap:6px;
+    color:var(--fb-text-3); font:600 10px/1 var(--fb-font); letter-spacing:0.03em; text-align:left;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;
   }
-  #photoStepper .ps-step.complete {
-    background:rgba(126,224,106,0.10); border-color:rgba(126,224,106,0.35);
-    color:#a7ecb7;
+  #photoStepper .ps-step::before {
+    content:""; display:block; align-self:stretch; height:3px; border-radius:2px; background:var(--fb-surf-3);
   }
-  #photoStepper .ps-step.active {
-    background:rgba(79,224,255,0.14); border-color:rgba(79,224,255,0.55);
-    color:#cff3fb; font-weight:bold;
-  }
-  #photoStepper .ps-step .ps-num {
-    display:inline-flex; align-items:center; justify-content:center;
-    width:12px; height:12px; border-radius:50%; flex:none;
-    background:rgba(255,255,255,0.10); font-size:9px; font-weight:bold;
-    color:rgba(255,255,255,0.75);
-  }
-  #photoStepper .ps-step.complete .ps-num { background:rgba(126,224,106,0.35); color:#0a1a10; }
-  #photoStepper .ps-step.active .ps-num { background:rgba(79,224,255,0.55); color:#031015; }
+  #photoStepper .ps-step.complete::before, #photoStepper .ps-step.active::before { background:var(--fb-brand); }
+  #photoStepper .ps-step.complete { color:var(--fb-text-2); }
+  #photoStepper .ps-step.active { color:var(--fb-text-1); }
+  #photoStepper .ps-step .ps-num { display:none; }
   .ps-cta-banner {
     display:flex; flex-direction:column; gap:4px;
     margin:6px 0; padding:6px 8px; border-radius:6px;
-    background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); border:1px solid var(--fb-line);
   }
-  .ps-cta-banner .ps-cta-hint { font-size:11px; color:#cff3fb; }
+  .ps-cta-banner .ps-cta-hint { font-size:11px; color:var(--fb-text-2); }
   .ps-cta-banner .dock-btn { align-self:flex-start; font-size:11px; padding:3px 10px; }
 
-  /* --- App shell: persistent left rail + top bar (docs/plan.md section 2).
-     Fixed, unpositioned ancestors of nothing - all existing HUD panels stay
-     position:absolute against the viewport, so they're unaffected by this. */
-  #appTopbar {
-    position:fixed; left:0; right:0; top:0; height:40px; z-index:29;
-    display:flex; align-items:center; gap:10px; padding:0 14px 0 60px;
-    background:rgba(10,14,17,0.92); border-bottom:1px solid var(--hud-accent-dim);
-    color:var(--hud-accent); font-family:var(--hud-font); font-size:12px;
-    letter-spacing:0.08em; text-transform:uppercase;
+  /* --- App shell (Broadcast, S-BACK-021): 64 px rail + 52 px top bar.
+     Sizes mirror web/src/ui/shell-metrics.js (test/shell-metrics.test.js).
+     Fixed, so the HUD panels keep positioning against the viewport. */
+  :root { --shell-rail: 64px; --shell-topbar: 52px; }
+  /* Stage = the canvas area between the rail and the docked right panel;
+     the timeline, dock and dock status centre on it (Plan-only, like the
+     panel). --right-panel is set with #rightPanel below. */
+  :root {
+    --stage-center: calc(var(--shell-rail) + (100vw - var(--shell-rail) - var(--right-panel)) / 2);
+    --stage-width: calc(100vw - var(--shell-rail) - var(--right-panel) - 32px);
   }
+  #appTopbar {
+    position:fixed; left:var(--shell-rail); right:0; top:0; height:var(--shell-topbar); z-index:29;
+    box-sizing:border-box; display:flex; align-items:center; gap:16px; padding:0 16px;
+    background:var(--fb-surf-1); border-bottom:1px solid var(--fb-line);
+    color:var(--fb-text-1); font:600 13px/1 var(--fb-font);
+  }
+  #appTopbarProjectName {
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    font:700 15px/1 var(--fb-font); letter-spacing:-0.01em; color:var(--fb-text-1);
+  }
+  #appTopbarProjectName .shell-edit { color:var(--fb-text-3); }
+  #appTopbarProjectName:hover .shell-edit { color:var(--fb-text-1); }
+  .shell-crumb { font:500 12px/1 var(--fb-mono); color:var(--fb-text-3); }
+  .shell-btn {
+    height:32px; padding:0 13px; border-radius:var(--fb-radius-1); cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px; font:600 12px/1 var(--fb-font);
+    border:1px solid var(--fb-line-strong); background:var(--fb-surf-2); color:var(--fb-text-1);
+  }
+  .shell-btn.ghost { background:transparent; color:var(--fb-text-2); }
+  .shell-btn.primary { background:var(--fb-brand); border-color:var(--fb-brand); color:#fff; }
+  .shell-btn:hover { border-color:var(--fb-text-3); color:var(--fb-text-1); }
+  .shell-btn:focus-visible, #appRail button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
+  .shell-spacer { flex:1; }
+  .shell-seg { display:inline-flex; border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1); overflow:hidden; }
+  .shell-seg button {
+    display:flex; align-items:center; gap:6px; padding:8px 11px; border:none; cursor:pointer;
+    background:transparent; color:var(--fb-text-2); font:600 11px/1 var(--fb-font);
+  }
+  .shell-seg button[aria-pressed="true"] { background:var(--fb-surf-3); color:var(--fb-text-1); }
+  .shell-seg button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:-2px; }
   #appRail {
-    position:fixed; left:0; top:0; bottom:0; width:52px; z-index:30;
-    display:flex; flex-direction:column; align-items:stretch;
-    padding-top:40px;
-    background:rgba(10,14,17,0.94); border-right:1px solid var(--hud-accent-dim);
+    position:fixed; left:0; top:0; bottom:0; width:var(--shell-rail); z-index:30;
+    box-sizing:border-box; display:flex; flex-direction:column; align-items:stretch; gap:2px;
+    padding:14px 0; background:var(--fb-surf-1); border-right:1px solid var(--fb-line);
+  }
+  #appRail .shell-logo {
+    width:34px; height:34px; margin:0 auto 14px; border-radius:9px; background:var(--fb-brand);
+    display:grid; place-items:center; color:#fff; font:700 15px/1 var(--fb-font);
   }
   #appRail button {
-    background:transparent; border:none; border-left:2px solid transparent;
-    color:#7fd6e8; font-family:var(--hud-font); font-size:10px;
-    text-transform:uppercase; letter-spacing:0.05em; padding:14px 2px;
-    cursor:pointer;
+    position:relative; display:flex; flex-direction:column; align-items:center; gap:4px;
+    padding:9px 0; background:transparent; border:none; cursor:pointer;
+    color:var(--fb-text-3); font:600 9px/1 var(--fb-font); letter-spacing:0.04em;
   }
-  #appRail button:hover { background:rgba(79,224,255,0.08); color:#dff9ff; }
-  #appRail button.active {
-    color:var(--hud-accent); border-left-color:var(--hud-accent);
-    background:rgba(79,224,255,0.14);
-  }
-  @media (pointer: coarse) {
-    #appRail, #appTopbar { display:none; }
+  #appRail button:hover { color:var(--fb-text-2); }
+  #appRail button.active { color:var(--fb-text-1); }
+  #appRail button.active::before {
+    content:""; position:absolute; left:0; top:8px; bottom:8px; width:var(--fb-accent-bar);
+    border-radius:0 2px 2px 0; background:var(--fb-brand);
   }
   #libraryView {
-    position:fixed; inset:40px 0 0 52px; z-index:25; display:none;
+    position:fixed; inset:var(--shell-topbar) 0 0 var(--shell-rail); z-index:25; display:none;
     align-items:center; justify-content:center;
-    background:rgba(6,14,18,0.94); color:#dff9ff;
-    font-family:var(--hud-font); font-size:13px; letter-spacing:0.04em;
+    background:var(--fb-ink); color:var(--fb-text-1); font:400 13px/1.5 var(--fb-font);
   }
 
   /* --- Tool palette: floating vertical strip of Mode-A tools. Position is
@@ -424,164 +533,166 @@
   #toolPalette {
     position:fixed; z-index:26;
     display:flex; flex-direction:column; gap:6px;
-    padding:6px 8px 8px;
-    background:rgba(20,16,10,0.82);
-    border:1px solid rgba(255,179,71,0.45); border-radius:12px;
-    font-family:var(--hud-font);
-    box-shadow:0 6px 24px rgba(0,0,0,0.35);
-    backdrop-filter:blur(4px);
+    padding:6px;
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line); border-radius:var(--fb-radius-2);
+    font-family:var(--fb-font);
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
     user-select:none;
   }
   #toolPalette .floatable-grip {
-    height:14px; margin:-2px -4px 4px;
+    height:10px; margin:-2px 0 0;
     display:flex; align-items:center; justify-content:center;
-    cursor:grab;
-    color:rgba(255,179,71,0.55);
-    font-size:14px; line-height:1;
+    cursor:grab; color:var(--fb-text-3); font-size:11px; line-height:1;
   }
   #toolPalette .floatable-grip:active { cursor:grabbing; }
   #toolPalette.dragging { opacity:0.9; box-shadow:0 10px 32px rgba(0,0,0,0.5); }
+  /* Broadcast palette (design canvas): 40 px icon tools, only the armed
+     tool is filled; flyout rows show icon + label. */
   #toolPalette button {
-    width:56px; height:52px; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:2px;
-    border:1px solid rgba(255,179,71,0.35);
-    background:rgba(255,179,71,0.08);
-    color:#f7e6cf; font-family:inherit; font-size:10px;
-    text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;
-    border-radius:8px;
+    width:40px; height:40px; padding:0; box-sizing:border-box;
+    display:grid; place-items:center;
+    border:1px solid var(--fb-line); border-radius:var(--fb-radius-1);
+    background:var(--fb-surf-2); color:var(--fb-text-2); cursor:pointer;
   }
-  #toolPalette button:hover { background:rgba(255,179,71,0.22); }
-  #toolPalette button.active { background:#ffb347; color:#1a120a; border-color:#ffb347; }
-  #toolPalette .tp-glyph { font-size:20px; line-height:1; }
+  #toolPalette button:hover { color:var(--fb-text-1); border-color:var(--fb-line-strong); }
+  #toolPalette button.active { background:var(--fb-brand); color:#fff; border-color:var(--fb-brand); }
+  #toolPalette button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
 
-  /* --- Palette submenu: hover the Zone group to open a right-side flyout
-     with the shape sub-tools. Kept as pure CSS hover so no JS state to
-     manage - selection is a normal button click that runs the same
-     activateTool path. */
+  /* --- Palette flyouts: hover a group (Ball / Zone / Cones) to open its
+     variants to the right. Pure CSS hover, so no JS state - a row click
+     runs the same activateTool path. The corner mark flags a group. */
   #toolPalette .tp-group { position:relative; }
-  #toolPalette .tp-group > button { position:relative; padding-right:14px; }
-  /* Extend the group's own hoverable area 8px to the right so the cursor
-     can traverse the gap between the button and the submenu without
-     losing :hover mid-flight (submenu-only hover-continuity is a
-     chicken-and-egg problem while the submenu is display:none). */
+  #toolPalette .tp-group > button::after {
+    content:""; position:absolute; right:3px; bottom:3px;
+    border-left:4px solid transparent; border-bottom:4px solid currentColor; opacity:0.7;
+  }
+  #toolPalette .tp-group > button { position:relative; }
+  /* Extend the group's hoverable area over the gap to the flyout, so the
+     cursor can cross it without losing :hover. */
   #toolPalette .tp-group::after {
     content:''; position:absolute; top:0; left:100%;
-    width:8px; height:100%;
-  }
-  #toolPalette .tp-caret {
-    position:absolute; right:4px; top:50%; transform:translateY(-50%);
-    font-size:9px; opacity:0.7;
+    width:10px; height:100%;
   }
   #toolPalette .tp-submenu {
-    position:absolute; left:100%; top:0;
-    display:none; flex-direction:column; gap:4px;
-    padding:6px; background:rgba(20,16,10,0.94);
-    border:1px solid rgba(255,179,71,0.45); border-radius:10px;
-    box-shadow:0 6px 24px rgba(0,0,0,0.4);
-    margin-left:6px;
+    position:absolute; left:100%; top:0; margin-left:10px; min-width:176px;
+    display:none; flex-direction:column; gap:2px;
+    padding:6px; background:var(--fb-surf-2);
+    border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-2);
+    box-shadow:0 12px 32px rgba(0,0,0,0.55);
   }
   #toolPalette .tp-group:hover .tp-submenu,
   #toolPalette .tp-submenu:hover { display:flex; }
   #toolPalette .tp-submenu button {
-    width:76px; height:44px; font-size:9px;
+    width:auto; height:auto; display:flex; align-items:center; gap:10px;
+    padding:8px; border:none; background:transparent; color:var(--fb-text-2);
+    font:600 12px/1.2 var(--fb-font); text-align:left;
   }
-  @media (pointer: coarse) {
-    #toolPalette { display:none; }
-  }
+  #toolPalette .tp-submenu button:hover { background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1); }
+  #toolPalette .tp-submenu button.active { background:var(--fb-brand-quiet); color:var(--fb-text-1); }
 
-  /* --- Inspector: selection-driven props panel, floating like the palette.
-     One above #layersPanel: when the two floating panels overlap, the one being edited wins. */
-  #inspector {
-    position:fixed; z-index:27;
-    width:220px; padding:10px 12px;
-    background:var(--hud-bg); color:#dff9ff;
-    border:1px solid var(--hud-accent-dim);
-    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
-    font-family:var(--hud-font); font-size:12px;
-    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-    backdrop-filter:blur(2px);
-    user-select:none;
+  /* --- Right panel (Broadcast, S-BACK-021): Inspector, Layers, View and
+     the Coordinates readout stacked in one column docked under the top bar,
+     as in the design canvas "Plan". Replaces the floating panels. */
+  :root { --right-panel: 320px; }
+  #rightPanel {
+    position:fixed; top:var(--shell-topbar); right:0; bottom:0; width:var(--right-panel); z-index:26;
+    box-sizing:border-box; display:flex; flex-direction:column; overflow-y:auto;
+    background:var(--fb-surf-1); border-left:1px solid var(--fb-line);
+    color:var(--fb-text-1); font:400 12px/1.45 var(--fb-font);
+    user-select:none; scrollbar-width:thin;
   }
-  #inspector .floatable-grip {
-    height:12px; margin:-4px -4px 6px;
-    display:flex; align-items:center; justify-content:center;
-    cursor:grab;
-    color:rgba(79,224,255,0.55);
-    font-size:12px; line-height:1;
+  #rightPanel .rp-section { padding:16px; border-bottom:1px solid var(--fb-line); }
+  #appTopbar [data-action="toggle-panel"] { display:none; }
+  .shell-icon { padding:0 9px; }
+  /* Design canvas breakpoint: below 1200 px the side panels are drawers over
+     the stage instead of columns, and the stage keeps its width. Closed means
+     display:none, not an off-screen transform: mobile browsers widen the
+     layout viewport to include off-screen fixed elements (phone.spec.js). */
+  @media (max-width: 1199px) {
+    :root { --right-panel: 0px; }
+    #rightPanel, #photoPanel { box-shadow:-18px 0 40px rgba(0,0,0,0.45); }
+    #rightPanel { width:320px; display:none; }
+    body.right-panel-open #rightPanel { display:flex; }
+    #photoPanel { display:none; }
+    body.right-panel-open #photoPanel { display:block; }
+    #appTopbar [data-action="toggle-panel"] { display:inline-flex; }
   }
-  #inspector .floatable-grip:active { cursor:grabbing; }
-  #inspector.dragging { opacity:0.9; box-shadow:0 10px 32px rgba(0,0,0,0.5); }
-  #inspector .ins-title {
-    font-size:11px; color:var(--hud-accent); text-transform:uppercase;
-    letter-spacing:0.08em; margin-bottom:8px;
+  #rightPanel .rp-head, #inspector .ins-title, #layersPanel .lp-head {
+    display:flex; align-items:center; gap:8px; margin-bottom:12px;
   }
-  #inspector .ins-heading { font-size:14px; margin-bottom:10px; color:#ffffff; }
-  #inspector .ins-empty { opacity:0.7; font-size:11px; line-height:1.5; }
-  #inspector .ins-row { margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  #rightPanel .rp-title, #inspector .ins-title, #layersPanel .lp-title {
+    font:600 10px/1 var(--fb-font); letter-spacing:0.1em; text-transform:uppercase; color:var(--fb-text-2);
+  }
+  #rightPanel .rp-title::before, #inspector .ins-title::before, #layersPanel .lp-title::before {
+    content:""; display:inline-block; width:var(--fb-accent-bar); height:12px; margin-right:8px;
+    border-radius:2px; background:var(--fb-brand); vertical-align:-2px;
+  }
+  #viewPanel #layers { position:static; margin:0; }
+  #viewPanel .layer-row { margin:0 0 8px; }
+  #viewPanel .rp-hint { color:var(--fb-text-3); font-size:11px; line-height:1.45; margin:3px 0 0 22px; }
+  #viewPanel .rp-actions { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 0 22px; }
+  #viewPanel .rp-indent { margin-left:22px; }
+  #viewPanel #goalieModelSelect { margin-left:8px; }
+  #rightPanel #coords { position:static; margin:0; border:none; border-radius:0; background:transparent; min-width:0; padding:16px; }
+  /* Inspector fields in the design-canvas style: uppercase labels over
+     32 px controls on surf-2; the value readout sits on the label line. */
+  #inspector .ins-heading { font:600 15px/1.3 var(--fb-font); margin-bottom:4px; color:var(--fb-text-1); }
+  #inspector .ins-empty { color:var(--fb-text-3); font-size:11px; line-height:1.5; }
+  #inspector .ins-row { margin-top:12px; display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; }
   #inspector .ins-label {
-    font-size:10px; color:var(--hud-accent); text-transform:uppercase;
-    letter-spacing:0.05em; min-width:44px;
+    flex:1 0 100%; font:600 10px/1 var(--fb-font); color:var(--fb-text-3);
+    text-transform:uppercase; letter-spacing:0.09em;
   }
+  #inspector select, #inspector input[type="text"], #inspector input:not([type]), #inspector input[type="number"] {
+    flex:1; min-width:0; height:var(--fb-control-h); box-sizing:border-box; padding:0 10px;
+    background:var(--fb-surf-2); color:var(--fb-text-1);
+    border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1);
+    font:500 12px/1 var(--fb-font);
+  }
+  #inspector input[type="number"] { flex:0 0 72px; font-family:var(--fb-mono); }
+  #inspector select:focus-visible, #inspector input:focus-visible { outline:2px solid var(--fb-brand); outline-offset:1px; }
+  #inspector input[type="range"] { flex:1; min-width:0; accent-color:var(--fb-brand); }
+  #inspector input[type="color"] {
+    width:28px; height:28px; padding:0; cursor:pointer;
+    border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1); background:transparent;
+  }
+  #inspector .ins-mini {
+    height:28px; padding:0 10px; cursor:pointer;
+    border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1);
+    background:transparent; color:var(--fb-text-2); font:500 11px/1 var(--fb-font);
+  }
+  #inspector .ins-mini:hover { color:var(--fb-text-1); border-color:var(--fb-text-3); }
   #inspector .ins-team-btn {
-    flex:1; height:26px; border-radius:5px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35);
-    background:rgba(79,224,255,0.08); color:#dff9ff;
-    font-family:inherit; font-size:11px; letter-spacing:0.04em;
+    flex:1; height:var(--fb-control-h); border-radius:var(--fb-radius-1); cursor:pointer;
+    border:1px solid var(--fb-line-strong); background:var(--fb-surf-2); color:var(--fb-text-2);
+    font:600 11px/1 var(--fb-font);
   }
   #inspector .ins-team-btn.active {
-    background:var(--team-color, #ffb347); color:#0a0d0f;
-    border-color:var(--team-color, #ffb347);
+    background:var(--team-color, var(--fb-brand)); color:var(--fb-ink);
+    border-color:var(--team-color, var(--fb-brand));
   }
   #inspector .ins-btn {
-    width:100%; height:28px; border-radius:5px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35);
-    background:rgba(79,224,255,0.08); color:#dff9ff;
-    font-family:inherit; font-size:11px; text-transform:uppercase;
-    letter-spacing:0.06em; margin-top:4px;
+    width:100%; height:var(--fb-control-h); border-radius:var(--fb-radius-1); cursor:pointer;
+    border:1px solid var(--fb-line-strong); background:var(--fb-surf-2); color:var(--fb-text-1);
+    font:600 12px/1 var(--fb-font); margin-top:4px;
   }
-  #inspector .ins-btn:hover { background:rgba(79,224,255,0.22); }
+  #inspector .ins-btn:hover { background:var(--fb-line); }
   #inspector .ins-btn.danger {
-    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1);
-    color:#ffb0b0;
+    border-color:color-mix(in srgb, var(--fb-danger) 50%, transparent); background:color-mix(in srgb, var(--fb-danger) 10%, transparent);
+    color:var(--fb-danger);
   }
-  #inspector .ins-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
+  #inspector .ins-btn.danger:hover { background:color-mix(in srgb, var(--fb-danger) 28%, transparent); color:#fff; }
   #inspector .ins-swatch {
     display:inline-block; width:16px; height:16px; border-radius:50%;
-    background:var(--shape-color, #ffb347);
+    background:var(--shape-color, var(--fb-brand));
     border:1px solid rgba(255,255,255,0.5);
     margin-left:4px; vertical-align:middle;
   }
 
   /* --- Layers panel: outline of everything in the current frame. */
-  #layersPanel {
-    position:fixed; z-index:26;
-    width:220px; max-height:45vh; display:flex; flex-direction:column;
-    padding:10px 12px;
-    background:var(--hud-bg); color:#dff9ff;
-    border:1px solid var(--hud-accent-dim);
-    box-shadow:0 0 10px rgba(79,224,255,0.12), inset 0 0 20px rgba(79,224,255,0.04);
-    font-family:var(--hud-font); font-size:12px;
-    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-    backdrop-filter:blur(2px);
-    user-select:none;
-  }
-  #layersPanel .floatable-grip {
-    height:12px; margin:-4px -4px 6px;
-    display:flex; align-items:center; justify-content:center;
-    cursor:grab;
-    color:rgba(79,224,255,0.55);
-    font-size:12px; line-height:1;
-  }
-  #layersPanel .floatable-grip:active { cursor:grabbing; }
-  #layersPanel.dragging { opacity:0.9; box-shadow:0 10px 32px rgba(0,0,0,0.5); }
-  #layersPanel .lp-head {
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:8px;
-  }
-  #layersPanel .lp-title {
-    font-size:11px; color:var(--hud-accent); text-transform:uppercase;
-    letter-spacing:0.08em;
-  }
+  #layersPanel { display:flex; flex-direction:column; min-height:120px; }
+  #layersPanel .lp-title { flex:1; }
   #layersPanel .lp-toggle {
     background:transparent; border:none; color:var(--hud-accent);
     cursor:pointer; font-size:14px; line-height:1; padding:0 4px;
@@ -594,7 +705,7 @@
   #layersPanel .lp-section-head {
     font-size:10px; color:var(--hud-accent); text-transform:uppercase;
     letter-spacing:0.05em; cursor:pointer; user-select:none;
-    padding:3px 0; border-bottom:1px solid rgba(79,224,255,0.15);
+    padding:3px 0; border-bottom:1px solid color-mix(in srgb, var(--fb-text-1) 7%, transparent);
   }
   #layersPanel .lp-section-head::before {
     content:'\25BE'; display:inline-block; width:12px;
@@ -606,16 +717,16 @@
     padding:3px 4px; cursor:pointer;
     border-radius:3px;
   }
-  #layersPanel .lp-row:hover { background:rgba(79,224,255,0.1); }
+  #layersPanel .lp-row:hover { background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); }
   #layersPanel .lp-row.selected {
-    background:rgba(79,224,255,0.2);
+    background:var(--fb-line);
     box-shadow:inset 0 0 0 1px var(--hud-accent);
   }
   #layersPanel .lp-row.lp-dragging { opacity:0.4; }
   #layersPanel .lp-row.lp-drop-before { box-shadow:inset 0 2px 0 0 var(--hud-accent); }
   #layersPanel .lp-row.lp-drop-after { box-shadow:inset 0 -2px 0 0 var(--hud-accent); }
   #layersPanel .lp-eye {
-    background:transparent; border:none; color:#dff9ff;
+    background:transparent; border:none; color:var(--fb-text-1);
     cursor:pointer; padding:0; width:16px; font-size:11px; line-height:1;
     opacity:0.85;
   }
@@ -631,18 +742,18 @@
   }
   #layersPanel .lp-name-input {
     flex:1; min-width:0; height:18px; padding:0 4px; font-size:11px;
-    font-family:inherit; color:#dff9ff;
-    background:rgba(79,224,255,0.12);
+    font-family:inherit; color:var(--fb-text-1);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent);
     border:1px solid var(--hud-accent-dim); border-radius:3px; outline:none;
   }
-  #layersPanel .lp-name-input:focus { border-color:var(--hud-accent); background:rgba(79,224,255,0.2); }
+  #layersPanel .lp-name-input:focus { border-color:var(--hud-accent); background:var(--fb-line); }
   #layersPanel .lp-trash {
-    background:transparent; border:none; color:#dff9ff;
+    background:transparent; border:none; color:var(--fb-text-1);
     cursor:pointer; padding:0; width:14px; font-size:12px; line-height:1;
     opacity:0; flex-shrink:0;
   }
   #layersPanel .lp-row:hover .lp-trash { opacity:0.6; }
-  #layersPanel .lp-trash:hover { opacity:1 !important; color:#ffb0b0; }
+  #layersPanel .lp-trash:hover { opacity:1 !important; color:var(--fb-danger); }
   #layersPanel .lp-role-badge {
     display:inline-block; width:14px; height:14px; line-height:14px;
     text-align:center; font-size:9px; font-weight:bold;
@@ -651,9 +762,6 @@
   #layersPanel .lp-role-badge[data-role="defender"] { background:#3b5bdb; }
   #layersPanel .lp-role-badge[data-role="center"] { background:#7048e8; }
   #layersPanel .lp-role-badge[data-role="wing"] { background:#0ca678; }
-  @media (pointer: coarse) {
-    #inspector, #layersPanel { display:none; }
-  }
 
   /* Chip popover: position comes from chip-popover.js's screen-space
      projection. transform translates the anchor point (bottom-centre) to
@@ -662,11 +770,10 @@
     position:absolute; z-index:20;
     transform:translate(-50%, calc(-100% - 10px));
     min-width:120px; padding:6px 8px;
-    background:var(--hud-bg); color:#dff9ff;
+    background:var(--hud-bg); color:var(--fb-text-1);
     border:1px solid var(--hud-accent-dim);
-    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px rgba(79,224,255,0.15);
+    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px color-mix(in srgb, var(--fb-text-1) 7%, transparent);
     font-family:var(--hud-font); font-size:12px;
-    clip-path:polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
     pointer-events:auto;
   }
   #chipPopover.collapsed { min-width:0; padding:4px 8px; }
@@ -688,37 +795,37 @@
   #chipPopover .pop-label-row { margin-top:6px; }
   #chipPopover .pop-label-input {
     width:100%; box-sizing:border-box; height:24px;
-    background:rgba(79,224,255,0.08);
-    border:1px solid rgba(79,224,255,0.35);
-    color:#dff9ff; padding:2px 6px;
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent);
+    border:1px solid var(--fb-line);
+    color:var(--fb-text-1); padding:2px 6px;
     font-family:inherit; font-size:11px;
     border-radius:4px;
   }
   #chipPopover .pop-label-input:focus {
     outline:none; border-color:var(--hud-accent);
-    background:rgba(79,224,255,0.14);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent);
   }
   #chipPopover .pop-row { display:flex; gap:6px; margin-top:6px; }
   #chipPopover .pop-team-btn {
     flex:1; height:24px; border-radius:4px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35);
-    background:rgba(79,224,255,0.08); color:#dff9ff;
+    border:1px solid var(--fb-line);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
     font-family:inherit; font-size:11px; letter-spacing:0.04em;
   }
   #chipPopover .pop-team-btn.active {
-    background:var(--team-color, #ffb347); color:#0a0d0f;
-    border-color:var(--team-color, #ffb347);
+    background:var(--team-color, var(--fb-brand)); color:var(--fb-ink);
+    border-color:var(--team-color, var(--fb-brand));
   }
   #chipPopover .pop-role-row { gap:4px; }
   #chipPopover .pop-role-btn {
     flex:1; height:32px; border-radius:4px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.25);
-    background:rgba(79,224,255,0.05); color:#dff9ff;
+    border:1px solid var(--fb-line);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
     font-family:inherit; font-size:10px; letter-spacing:0.04em;
     padding:2px;
     display:flex; align-items:center; justify-content:center;
   }
-  #chipPopover .pop-role-btn:hover { background:rgba(79,224,255,0.15); }
+  #chipPopover .pop-role-btn:hover { background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); }
   #chipPopover .pop-role-btn canvas { display:block; }
   #chipPopover .pop-role-btn[data-role="defender"].active {
     background:rgba(59,91,219,0.3); border-color:#3b5bdb;
@@ -731,43 +838,42 @@
   }
   #chipPopover .pop-btn {
     width:100%; height:24px; border-radius:4px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35);
-    background:rgba(79,224,255,0.08); color:#dff9ff;
+    border:1px solid var(--fb-line);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
     font-family:inherit; font-size:11px; text-transform:uppercase;
     letter-spacing:0.06em; margin-top:6px;
   }
   #chipPopover .pop-btn.danger {
-    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1);
-    color:#ffb0b0;
+    border-color:color-mix(in srgb, var(--fb-danger) 50%, transparent); background:color-mix(in srgb, var(--fb-danger) 10%, transparent);
+    color:var(--fb-danger);
   }
-  #chipPopover .pop-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
+  #chipPopover .pop-btn.danger:hover { background:color-mix(in srgb, var(--fb-danger) 28%, transparent); color:#fff; }
 
   /* Marquee (box) multi-select rubber-band + bulk action bar. */
   #marqueeRect {
     position:absolute; z-index:19; pointer-events:none;
-    border:1px solid var(--hud-accent, #4fe0ff);
-    background:rgba(79,224,255,0.12);
+    border:1px solid var(--hud-accent);
+    background:color-mix(in srgb, var(--fb-text-1) 7%, transparent);
   }
   #chipBulkBar {
     position:fixed; left:50%; bottom:96px; transform:translateX(-50%);
     z-index:21; display:none; gap:8px; align-items:center;
-    padding:8px 12px; background:var(--hud-bg); color:#dff9ff;
+    padding:8px 12px; background:var(--hud-bg); color:var(--fb-text-1);
     border:1px solid var(--hud-accent-dim);
-    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px rgba(79,224,255,0.15);
+    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 10px color-mix(in srgb, var(--fb-text-1) 7%, transparent);
     font-family:var(--hud-font); font-size:12px; pointer-events:auto;
-    clip-path:polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
   }
   #chipBulkBar .bulk-count { letter-spacing:0.04em; opacity:0.9; margin-right:2px; }
   #chipBulkBar .bulk-btn {
     height:24px; min-width:36px; padding:0 10px; border-radius:4px; cursor:pointer;
-    border:1px solid rgba(79,224,255,0.35); background:rgba(79,224,255,0.08);
-    color:#dff9ff; font-family:inherit; font-size:11px; letter-spacing:0.04em;
+    border:1px solid var(--fb-line); background:color-mix(in srgb, var(--fb-text-1) 7%, transparent);
+    color:var(--fb-text-1); font-family:inherit; font-size:11px; letter-spacing:0.04em;
   }
-  #chipBulkBar .bulk-btn:hover { background:rgba(79,224,255,0.16); }
+  #chipBulkBar .bulk-btn:hover { background:var(--fb-line); }
   #chipBulkBar .bulk-btn.danger {
-    border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1); color:#ffb0b0;
+    border-color:color-mix(in srgb, var(--fb-danger) 50%, transparent); background:color-mix(in srgb, var(--fb-danger) 10%, transparent); color:var(--fb-danger);
   }
-  #chipBulkBar .bulk-btn.danger:hover { background:rgba(255,120,120,0.28); color:#fff; }
+  #chipBulkBar .bulk-btn.danger:hover { background:color-mix(in srgb, var(--fb-danger) 28%, transparent); color:#fff; }
 
   #layersPanel .lp-marquee-toggle {
     display:flex; align-items:center; gap:3px; margin-left:auto; margin-right:6px;
@@ -782,3 +888,72 @@
   #dock [data-dock="chip"],
   #dock [data-dock-tool],
   #dock .dock-sep { display:none; }
+
+  /* --- Phone (Broadcast, design canvas "phone", < 768 px). Replaces the old
+     coarse-pointer rules that hid the whole shell on touch devices. The rail
+     becomes a bottom tab bar, the tool palette a horizontal strip above it
+     (its drag position is ignored here), and the side panels stay drawers
+     (the < 1200 px rule). The touch D-pad keeps its own coarse-pointer rule. */
+  @media (max-width: 767px) {
+    :root { --shell-rail: 0px; --tabbar: 58px; }
+    #appRail {
+      top:auto; bottom:0; left:0; right:0; width:auto; height:var(--tabbar);
+      flex-direction:row; justify-content:space-around; align-items:stretch; gap:0;
+      padding:0 0 env(safe-area-inset-bottom, 0px); border-right:none; border-top:1px solid var(--fb-line);
+    }
+    #appRail .shell-logo { display:none; }
+    #appRail button { flex:1; justify-content:center; font-size:10px; }
+    #appRail button.active::before { left:24%; right:24%; top:0; bottom:auto; width:auto; height:var(--fb-accent-bar); border-radius:0 0 2px 2px; }
+    #appTopbar { left:0; gap:10px; padding:0 12px; overflow:hidden; }
+    #appTopbarProjectName { min-width:0; flex:1 1 auto; }
+    #dockProjectName { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #appTopbar .shell-spacer { display:none; }
+    #appTopbar [data-action="tutorial"], #appTopbar .shell-crumb { display:none; }
+    #appTopbar [data-action="export-video"] { padding:0 10px; }
+    #rightPanel, #photoPanel { bottom:var(--tabbar); width:min(360px, 100vw); }
+    #toolPalette {
+      /* !important: floatable.js writes an inline `inset` for the desktop drag position. */
+      left:8px !important; right:8px !important; top:auto !important; bottom:calc(var(--tabbar) + 8px) !important;
+      width:auto !important; max-width:calc(100vw - 16px); box-sizing:border-box;
+      flex-direction:row; overflow-x:auto; overflow-y:visible; scrollbar-width:none;
+    }
+    #toolPalette .floatable-grip { display:none; }
+    #toolPalette button { flex:none; }
+    #toolPalette .tp-submenu { left:0; top:auto; bottom:100%; margin:0 0 8px; }
+    #timeline {
+      left:8px; right:8px; transform:none; max-width:none;
+      flex-wrap:wrap; gap:6px; padding:6px 8px;
+    }
+    #timeline .tl-strip { order:3; flex:1 1 100%; min-width:0; }
+    #timeline .tl-sep, #timeline .tl-learn { display:none; }
+    /* Bottom-up: tab bar, palette strip, timeline. The dock moves to the top
+       of the stage; the walking D-pad only shows in 3D, above the timeline. */
+    #timeline { bottom:calc(var(--tabbar) + 74px); }
+    #dock { top:calc(var(--shell-topbar) + 8px); bottom:auto; left:50%; }
+    body.topdown-mode #touchControls { display:none; }
+    #touchDpad, #touchActions { bottom:calc(var(--tabbar) + 200px); }
+    #dockStatus { display:none; }
+    #libraryView { bottom:var(--tabbar); }
+    /* Analyze: the step panel is a bottom sheet (peek: grab + stepper),
+       the grab expands it. Nothing to walk with here, and the sheet
+       replaces the drawer toggle. */
+    body[data-mode="analyze"] #photoPanel {
+      display:block; top:auto; left:0; right:0; width:auto; bottom:var(--tabbar);
+      max-height:156px; overflow:hidden; padding-top:0;
+      border:none; border-top:1px solid var(--fb-line-strong); border-radius:14px 14px 0 0;
+      box-shadow:0 -8px 24px rgba(0,0,0,0.35);
+    }
+    body[data-mode="analyze"].photo-sheet-open #photoPanel {
+      max-height:calc(100dvh - var(--shell-topbar) - var(--tabbar) - 24px); overflow-y:auto;
+    }
+    #photoPanel .ps-grab {
+      display:block; position:sticky; top:0; z-index:1; width:100%; height:22px; margin:0 0 4px;
+      padding:0; border:none; cursor:pointer; background:var(--fb-surf-1);
+    }
+    #photoPanel .ps-grab::before {
+      content:""; display:block; width:36px; height:4px; margin:0 auto; border-radius:2px; background:var(--fb-surf-3);
+    }
+    body[data-mode="analyze"] #touchControls,
+    body[data-mode="analyze"] #appTopbar [data-action="toggle-panel"] { display:none; }
+  }
+

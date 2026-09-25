@@ -2,104 +2,97 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>IFF Floorball Rink 40x20m - three.js viewer</title>
+<link rel="stylesheet" href="./lib/fonts/fonts.css">
+<link rel="stylesheet" href="./lib/webawesome/styles/themes/default.css">
 <link rel="stylesheet" href="./src/app.css">
 <link rel="stylesheet" href="./src/tokens.css">
 <link rel="stylesheet" href="./src/theme-broadcast.css">
 </head>
 <body>
 <div id="appTopbar">
-  <span>Floorball Studio</span>
-  <span style="opacity:0.6;">/</span>
-  <span id="appTopbarProjectName" data-dock="project" title="Rename project" style="cursor:pointer; color:#dff9ff; text-transform:none; letter-spacing:0.03em;">
+  <span id="appTopbarProjectName" data-dock="project" title="Rename project">
     <span id="dockProjectName">Untitled</span>
+    <svg class="shell-edit" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 14l9-9 2 2-9 9H4z"/></svg>
   </span>
-  <button data-action="tutorial" title="Guided play: build your first choreographed frame" style="margin-left:auto; background:transparent; color:#ffb347; border:1px solid rgba(255,179,71,0.45); border-radius:6px; padding:3px 10px; font-family:inherit; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer;">Tutorial</button>
+  <span class="shell-crumb" data-topbar="crumb"></span>
+  <span class="shell-spacer"></span>
+  <button data-action="tutorial" class="shell-btn ghost" title="Guided play: build your first choreographed frame">Tutorial</button>
+  <span class="shell-seg" role="group" aria-label="View" data-view="plan">
+    <button data-view-mode="2d" aria-pressed="false" title="Top-down 2D view">2D</button>
+    <button data-view-mode="3d" aria-pressed="true" title="First-person 3D view"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M10 3l7 4v6l-7 4-7-4V7z"/><path d="M10 3v14M3 7l7 4 7-4"/></svg>3D</button>
+  </span>
+  <button data-action="toggle-panel" class="shell-btn ghost shell-icon" aria-controls="rightPanel photoPanel" aria-expanded="false" title="Show the side panel" aria-label="Side panel"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2"/><path d="M12 4v12"/></svg></button>
+  <button data-action="export-video" class="shell-btn primary" data-view="plan" title="Export the play as a video or image"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M10 13V4M6 7l4-3 4 3M4 14v2h12v-2"/></svg>Export</button>
 </div>
 <div id="appRail">
-  <button data-mode="plan" title="Plan: tactical authoring">Plan</button>
-  <button data-mode="analyze" title="Analyze: photo/video overlay">Analyze</button>
-  <button data-mode="library" data-action="library" title="Library: saved projects">Library</button>
+  <div class="shell-logo" aria-hidden="true">F</div>
+  <button data-mode="plan" title="Plan: tactical authoring"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="14" height="10" rx="2"/><path d="M10 5v10"/><circle cx="10" cy="10" r="2"/></svg>Plan</button>
+  <button data-mode="analyze" title="Analyze: photo/video overlay"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7V5h2M14 5h2v2M16 13v2h-2M6 15H4v-2"/><circle cx="10" cy="10" r="2.4"/></svg>Analyze</button>
+  <button data-mode="library" data-action="library" title="Library: saved projects"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M10 3l7 4-7 4-7-4z"/><path d="M3 11l7 4 7-4"/></svg>Library</button>
 </div>
 <div id="libraryView">Library - coming soon</div>
 <div id="toolPalette" data-view="plan">
   <div class="floatable-grip" title="Drag to move" aria-hidden="true">&#8942;&#8942;</div>
-  <button data-tool="" title="Select (Esc)" class="active"><span class="tp-glyph">&#8598;</span>Select</button>
-  <button data-tool="chip" title="Chip stamp - click the rink to drop a player"><span class="tp-glyph">&#9679;</span>Chip</button>
+  <button data-tool="" title="Select (Esc)" aria-label="Select" class="active"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l6 14 2-6 6-2z"/></svg></button>
+  <button data-tool="chip" title="Chip - click the rink to drop a player" aria-label="Chip"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/></svg></button>
   <div class="tp-group">
-    <button data-tool="ball" title="Ball - click to place the match ball, click a chip to give it the ball, Shift+click for an extra ball. Hover for options"><span class="tp-glyph">&#9898;</span>Ball<span class="tp-caret">&#9656;</span></button>
-    <div class="tp-submenu" role="menu">
-      <button data-tool="ball" title="Match ball - the one ball that can be carried, passed and shot"><span class="tp-glyph">&#9898;</span>Match</button>
-      <button data-tool="ball-extra" title="Extra ball - decorative, colour from the shape swatch"><span class="tp-glyph">&#8728;</span>Extra</button>
+    <button data-tool="ball" title="Ball - click to place the match ball, click a chip to give it the ball, Shift+click for an extra ball. Hover for options" aria-label="Ball" aria-haspopup="menu"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="4.5"/><circle cx="10" cy="10" r="1" fill="currentColor"/></svg></button>
+    <div class="tp-submenu" role="menu" aria-label="Ball variants">
+      <button data-tool="ball" title="Match ball - the one ball that can be carried, passed and shot"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="4.5"/><circle cx="10" cy="10" r="1" fill="currentColor"/></svg><span>Match ball</span></button>
+      <button data-tool="ball-extra" title="Extra ball - decorative, colour from the shape swatch"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="4.5" stroke-dasharray="2 2"/></svg><span>Extra ball</span></button>
     </div>
   </div>
-  <button data-tool="goal" title="Goal - drop an extra goal on the rink (Q/E rotates the selected goal)"><span class="tp-glyph">&#9974;</span>Goal</button>
-  <button data-tool="arrow" title="Arrow - click start then end (straight)"><span class="tp-glyph">&#8594;</span>Arrow</button>
-  <button data-tool="arrow-curved" title="Curved arrow - click waypoints, Enter / double-click / right-click to finish"><span class="tp-glyph">&#10551;</span>Curved</button>
+  <button data-tool="goal" title="Goal - drop an extra goal on the rink (Q/E rotates the selected goal)" aria-label="Goal"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15V6h12v9"/><path d="M4 9h12M8 6v9M12 6v9" stroke-width="1"/></svg></button>
+  <button data-tool="arrow" title="Arrow - click start then end (straight)" aria-label="Arrow"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h10"/><path d="M11 6l5 4-5 4"/></svg></button>
+  <button data-tool="arrow-curved" title="Curved arrow - click waypoints, Enter / double-click / right-click to finish" aria-label="Curved arrow"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16c6 1 10-3 10-9"/><path d="M9 6l5-1 0 5"/></svg></button>
   <div class="tp-group">
-    <button data-tool="zone" title="Zone (freehand polygon) - hover for shapes"><span class="tp-glyph">&#9711;</span>Zone<span class="tp-caret">&#9656;</span></button>
-    <div class="tp-submenu" role="menu">
-      <button data-tool="zone" title="Freehand polygon"><span class="tp-glyph">&#11040;</span>Freehand</button>
-      <button data-tool="zone-rect" title="Rectangle (drag)"><span class="tp-glyph">&#9645;</span>Rect</button>
-      <button data-tool="zone-circle" title="Circle (drag)"><span class="tp-glyph">&#9711;</span>Circle</button>
-      <button data-tool="zone-triangle" title="Triangle (drag)"><span class="tp-glyph">&#9651;</span>Triangle</button>
+    <button data-tool="zone" title="Zone (freehand polygon) - hover for shapes" aria-label="Zone" aria-haspopup="menu"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="12" height="12" rx="2"/></svg></button>
+    <div class="tp-submenu" role="menu" aria-label="Zone variants">
+      <button data-tool="zone" title="Freehand polygon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l5-3 7 4-2 8-8-1z"/></svg><span>Freehand</span></button>
+      <button data-tool="zone-rect" title="Rectangle (drag)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="12" height="10" rx="1"/></svg><span>Rectangle</span></button>
+      <button data-tool="zone-circle" title="Circle (drag)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/></svg><span>Circle</span></button>
+      <button data-tool="zone-triangle" title="Triangle (drag)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4l7 12H3z"/></svg><span>Triangle</span></button>
     </div>
   </div>
-  <button data-tool="text" title="Text - click to place a label"><span class="tp-glyph">T</span>Text</button>
+  <button data-tool="text" title="Text - click to place a label" aria-label="Text"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6h10M10 6v9"/></svg></button>
   <div class="tp-group">
-    <button data-tool="cone-disc" title="Cone markers - hover for shapes"><span class="tp-glyph">&#9651;</span>Cone<span class="tp-caret">&#9656;</span></button>
-    <div class="tp-submenu" role="menu">
-      <button data-tool="cone-disc" title="Flat disc marker (puck-cone) - low profile, ball rolls over"><span class="tp-glyph">&#11044;</span>Disc</button>
-      <button data-tool="cone-full" title="Full traffic cone - marks slalom gates / positions"><span class="tp-glyph">&#9651;</span>Full</button>
-      <button data-tool="cone-pole" title="Disc base + 150cm vertical rod (5cm diameter) - slalom pole"><span class="tp-glyph">&#9482;</span>Pole</button>
+    <button data-tool="cone-disc" title="Cone markers - hover for shapes" aria-label="Cones" aria-haspopup="menu"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4l4 11H6z"/><path d="M4 16h12"/></svg></button>
+    <div class="tp-submenu" role="menu" aria-label="Cones variants">
+      <button data-tool="cone-disc" title="Flat disc marker (puck-cone) - low profile, ball rolls over"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="10" cy="12" rx="6" ry="2.5"/></svg><span>Disc marker</span></button>
+      <button data-tool="cone-full" title="Full traffic cone - marks slalom gates / positions"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4l4 11H6z"/><path d="M4 16h12"/></svg><span>Traffic cone</span></button>
+      <button data-tool="cone-pole" title="Disc base + 150cm vertical rod (5cm diameter) - slalom pole"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v11"/><ellipse cx="10" cy="15" rx="5" ry="2"/></svg><span>Slalom pole</span></button>
     </div>
   </div>
 </div>
-<div id="inspector" data-view="plan">
-  <div class="floatable-grip" title="Drag to move" aria-hidden="true">&#8942;&#8942;</div>
-  <div class="ins-title">Inspector</div>
-  <div id="inspectorBody"><div class="ins-empty">Nothing selected. Click a chip, shape, ball, goalie or goal - or use a tool from the palette.</div></div>
-</div>
-<div id="layersPanel" data-view="plan">
-  <div class="floatable-grip" title="Drag to move" aria-hidden="true">&#8942;&#8942;</div>
-  <div class="lp-head">
-    <span class="lp-title">Layers</span>
-    <label class="lp-marquee-toggle" title="Box-select drag also grabs shapes, not just chips">
-      <input type="checkbox" id="marqueeShapesToggle"> shapes
-    </label>
-    <label class="lp-marquee-toggle" title="Show player labels in the scene (falls back to number when off)">
-      <input type="checkbox" id="labelsVisibleToggle"> labels
-    </label>
-    <button class="lp-toggle" title="Collapse/expand" aria-label="Collapse layers panel">&minus;</button>
-  </div>
-  <div class="lp-body"></div>
-</div>
-<canvas id="photo-canvas"></canvas>
-<div id="info" class="hud-panel" data-view="plan">
-  <div class="hud-header">
-    <span class="hud-title">IFF Floorball Rink &ndash; 40 &times; 20 m</span>
-    <button class="hud-toggle" data-panel="info" title="Collapse/expand" aria-label="Collapse info panel">&minus;</button>
-  </div>
-  <div class="hud-body">
-    Board, markings and two 160&times;115&nbsp;cm goals, per IFF SPCR&nbsp;011 /
-    SP-METHOD&nbsp;1506 and the Rules of the Game 2026.<br>
-    <b>2D Plan mode (RTS controls):</b> Left-click = select &middot; Left-drag chip = move &middot;
-    Right-click floor = move-command to selected chip / ball / goalie &middot;
-    Right-drag / middle-drag = pan &middot; Wheel = zoom &middot;
-    Arrows / WASD = pan the camera &middot; F = fit rink to view<br>
-    <b>3D walking view:</b> Left-drag = look around &middot; Scroll = zoom &middot;
-    Arrows / WASD = walk<br>
-    <b>Shared:</b> Tab / Shift+Tab = cycle selection &middot; Esc = cancel tool / deselect &middot;
-    Del = delete selected chip or shape &middot; Q/E = rotate goalie when selected
-    (Shift for fine control) &middot; Ctrl+Z / Ctrl+Y = undo / redo<br>
-    Tools live in the left palette. Right-click cancels the active tool.
+<aside id="rightPanel" data-view="plan" aria-label="Inspector, layers and view">
+  <section id="inspector" class="rp-section">
+    <div class="ins-title">Inspector</div>
+    <div id="inspectorBody"><div class="ins-empty">Nothing selected. Click a chip, shape, ball, goalie or goal - or use a tool from the palette.</div></div>
+  </section>
+  <section id="layersPanel" class="rp-section">
+    <div class="lp-head">
+      <span class="lp-title">Layers</span>
+      <label class="lp-marquee-toggle" title="Box-select drag also grabs shapes, not just chips">
+        <input type="checkbox" id="marqueeShapesToggle"> shapes
+      </label>
+      <label class="lp-marquee-toggle" title="Show player labels in the scene (falls back to number when off)">
+        <input type="checkbox" id="labelsVisibleToggle"> labels
+      </label>
+      <button class="lp-toggle" title="Collapse/expand" aria-label="Collapse layers panel">&minus;</button>
+    </div>
+    <div class="lp-body"></div>
+  </section>
+  <section id="viewPanel" class="rp-section">
+    <div class="rp-head"><span class="rp-title">View</span></div>
     <div id="layers">
       <div class="layer-row"><label><input type="checkbox" id="rinkCheckbox" checked> Rink (board + markings)</label></div>
       <div class="layer-row"><label><input type="checkbox" id="goalsCheckbox" checked> Goals</label></div>
       <div class="layer-row"><label><input type="checkbox" id="ballCheckbox" checked> Ball</label></div>
       <div class="layer-row">
         <label><input type="checkbox" id="goalieCheckbox" checked> Goalie</label>
-        <select id="goalieModelSelect" style="margin-left:8px;">
+        <select id="goalieModelSelect">
           <option value="blocky">Blocky (placeholder)</option>
           <option value="detailed" selected>Detailed (textured)</option>
         </select>
@@ -107,22 +100,22 @@
       <div class="layer-row"><label><input type="checkbox" id="gridCheckbox"> Grid (reference lines)</label></div>
       <div class="layer-row">
         <label><input type="checkbox" id="gridTilesCheckbox"> Grid overlay (numbered tiles)</label>
-        <div style="opacity:0.7; margin-top:2px; margin-left:20px;">2m tiles - align with the rink edges and<br>centre line; crease/goal-line edges fall mid-tile.</div>
+        <div class="rp-hint">2m tiles - align with the rink edges and centre line; crease/goal-line edges fall mid-tile.</div>
       </div>
       <div class="layer-row">
         <label><input type="checkbox" id="trajectoryCheckbox"> Ball-to-goal trajectory lines</label>
-        <div style="opacity:0.7; margin-top:2px; margin-left:20px;">click a goal to target it, then move the<br>ball - solid lines to its 4 corners plus a<br>dotted shooting line to its centre follow it.<br>Shooting line: red = open shot &middot; yellow =<br>blocked off-centre &middot; green = goalie centred.</div>
-        <div style="margin-top:4px; margin-left:20px;">
+        <div class="rp-hint">click a goal to target it, then move the ball - solid lines to its 4 corners plus a dotted shooting line to its centre follow it. Shooting line: red = open shot &middot; yellow = blocked off-centre &middot; green = goalie centred.</div>
+        <div class="rp-actions">
           <button id="alignGoalieBtn">Align goalie to shot line</button>
         </div>
-        <div class="layer-row" style="margin-left:20px;">
+        <div class="layer-row rp-indent">
           <label><input type="checkbox" id="goalieOutlineCheckbox" checked> Goalie outline (shot-line highlight)</label>
         </div>
       </div>
       <div class="layer-row">
         <label><input type="checkbox" id="coverageCheckbox" checked> Goal coverage (red=open, green=covered)</label>
-        <div style="margin-top:2px; margin-left:20px;">coverage: <span id="coveragePct">-</span></div>
-        <div style="margin-top:4px; margin-left:20px;">
+        <div class="rp-hint">coverage: <span id="coveragePct">-</span></div>
+        <div class="rp-actions">
           <button id="viewFromBallBtn">View from ball</button>
           <button id="resetViewBtn">Reset view</button>
         </div>
@@ -135,15 +128,33 @@
           <div><span class="swatch" style="background:#4073bf"></span> Tasche (pocket)</div>
           <div><span class="swatch" style="background:#26bf59"></span> Playmaker Position</div>
           <div><span class="swatch" style="background:#f2d926"></span> Zentrallinie</div>
-          <div style="opacity:0.7; margin-top:4px;">Not an IFF spec - estimated from the<br>swissunihockey.ch coaching lexicon.</div>
+          <div class="rp-hint">Not an IFF spec - estimated from the swissunihockey.ch coaching lexicon.</div>
         </div>
       </div>
       <div class="layer-row">
         <label><input type="checkbox" id="faceoffSnapCheckbox" checked> Snap chips to face-off dots</label>
       </div>
     </div>
+  </section>
+  <div id="coords" class="hud-panel rp-section collapsed" data-view="plan">
+    <div class="hud-header">
+      <span class="hud-title">Coordinates</span>
+      <button class="hud-toggle" data-panel="coords" title="Collapse/expand" aria-label="Expand coordinates panel">+</button>
+    </div>
+    <div class="hud-body">
+      <span class="label">x:</span> <span id="coordX">-</span> mm<br>
+      <span class="label">z:</span> <span id="coordZ">-</span> mm<br>
+      <span class="label">tile:</span> <span id="coordTile">-</span><br>
+      <span class="label">last click:</span> <span id="coordClick">-</span><br>
+      <span class="label">selected:</span> <span id="selectedLabel">-</span><br>
+      <span class="label">trajectory target:</span> <span id="targetGoalLabel">-</span>
+      <div style="opacity:0.7; margin-top:4px; font-family:system-ui, sans-serif; font-size:11px;">
+        Click (or Tab to) select. Drag a chip to move it,<br>or right-click to move-command the selected<br>ball / goalie / chip. Q/E rotates the goalie.
+      </div>
+    </div>
   </div>
-</div>
+</aside>
+<canvas id="photo-canvas"></canvas>
 <div id="status">loading model&hellip;</div>
 <div id="saveStatus"></div>
 <div id="crosshair"></div>
@@ -175,9 +186,9 @@
   <span class="tl-sep"></span>
   <div class="tl-strip"></div>
   <span class="tl-sep"></span>
-  <button data-tl="add" class="tl-add" title="Add frame (copy of current)" aria-label="Add frame" style="height:28px;min-width:32px;background:rgba(255,179,71,0.08);border:1px solid rgba(255,179,71,0.35);color:#f7e6cf;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px;">+</button>
-  <button data-tl="choreo" class="tl-choreo" title="Choreograph the next frame&#10;&#10;1. Click Choreo. A draft frame is added; each chip gets a cyan ghost ring at its starting position.&#10;2. Drag chips (or right-click move-command) to where they should end up. Arrows appear from ghost to chip.&#10;3. Commit keeps the new frame · Cancel (or Esc) discards it.&#10;&#10;See ? for the full guide." style="height:28px;min-width:32px;margin-left:6px;background:rgba(79,224,255,0.08);border:1px solid rgba(79,224,255,0.35);color:#dff9ff;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;letter-spacing:0.04em;padding:0 10px;">Choreo</button>
-  <button data-action="tutorial" title="Guided play: learn Choreo step by step" style="height:28px;margin-left:4px;background:transparent;border:1px solid rgba(255,179,71,0.35);color:#ffb347;border-radius:8px;cursor:pointer;font-family:inherit;font-size:11px;padding:0 8px;">Learn</button>
+  <button data-tl="add" class="tl-add" title="Add frame (copy of current)" aria-label="Add frame">+ frame</button>
+  <button data-tl="choreo" class="tl-choreo" title="Choreograph the next frame&#10;&#10;1. Click Choreo. A draft frame is added; each chip gets a cyan ghost ring at its starting position.&#10;2. Drag chips (or right-click move-command) to where they should end up. Arrows appear from ghost to chip.&#10;3. Commit keeps the new frame · Cancel (or Esc) discards it.&#10;&#10;See ? for the full guide.">Choreo</button>
+  <button data-action="tutorial" class="tl-learn" title="Guided play: learn Choreo step by step">Learn</button>
 </div>
 <div id="dock" data-view="plan">
   <button class="dock-btn" data-dock="view" title="Toggle 2D top-down / 3D perspective view">3D</button>
@@ -209,28 +220,8 @@
   </div>
   <input type="file" id="dockImportFile" accept="application/json,.json" hidden>
 </div>
-<div id="coords" class="hud-panel" data-view="plan">
-  <div class="hud-header">
-    <span class="hud-title">Coordinates</span>
-    <button class="hud-toggle" data-panel="coords" title="Collapse/expand" aria-label="Collapse coordinates panel">&minus;</button>
-  </div>
-  <div class="hud-body">
-    <span class="label">x:</span> <span id="coordX">-</span> mm<br>
-    <span class="label">z:</span> <span id="coordZ">-</span> mm<br>
-    <span class="label">tile:</span> <span id="coordTile">-</span><br>
-    <span class="label">last click:</span> <span id="coordClick">-</span><br>
-    <span class="label">selected:</span> <span id="selectedLabel">-</span><br>
-    <span class="label">trajectory target:</span> <span id="targetGoalLabel">-</span>
-    <div style="opacity:0.7; margin-top:4px; font-family:system-ui, sans-serif; font-size:11px;">
-      Click (or Tab to) select. Drag a chip to move it,<br>or right-click to move-command the selected<br>ball / goalie / chip. Q/E rotates the goalie.
-    </div>
-  </div>
-</div>
-<div id="photoPanel" class="hud-panel collapsed" data-view="analyze">
-  <div class="hud-header">
-    <span class="hud-title">Photo Overlay</span>
-    <button class="hud-toggle" data-panel="photoPanel" title="Collapse/expand" aria-label="Collapse photo overlay panel">&minus;</button>
-  </div>
+<aside id="photoPanel" class="hud-panel" data-view="analyze" aria-label="Photo analysis">
+  <button type="button" id="photoSheetGrab" class="ps-grab" aria-controls="photoPanel" aria-expanded="false" aria-label="Expand the analysis steps"></button>
   <div class="hud-body">
     <nav id="photoStepper" aria-label="Photo overlay steps">
       <button type="button" class="ps-step" data-step="1"><span class="ps-num" aria-hidden="true">1</span> Photo</button>
@@ -238,7 +229,13 @@
       <button type="button" class="ps-step" data-step="3"><span class="ps-num" aria-hidden="true">3</span> Players</button>
       <button type="button" class="ps-step" data-step="4"><span class="ps-num" aria-hidden="true">4</span> Insights</button>
     </nav>
-    <input type="file" id="photoFileInput" accept="image/*" aria-label="Upload photo to analyze"><br><br>
+    <label id="photoDrop" class="ps-drop">
+      <input type="file" id="photoFileInput" accept="image/*" aria-label="Upload photo to analyze">
+      <svg class="ps-drop-icon" width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13V4M6.5 7.5 10 4l3.5 3.5"/><path d="M4 12v3h12v-3"/></svg>
+      <span class="ps-drop-title">Drop a photo here</span>
+      <span class="ps-drop-hint">or click to choose &middot; JPG or PNG, stays on this device</span>
+      <span class="ps-drop-name"></span>
+    </label>
     <div id="photoRestoreRow" style="display:none; margin-bottom:8px;">
       <span id="photoRestoreLabel" style="font-size:11px; opacity:0.7;"></span>
       <button id="photoRestoreLandmarksBtn" class="dock-btn" style="padding:2px 6px; font-size:10px; margin-left:6px;" title="Re-place the landmarks and camera pose saved from the last time this exact photo was calibrated - saves re-clicking everything after a reload.">Load saved overlay</button>
@@ -320,40 +317,59 @@
         <span class="ps-cta-hint" id="photoStep3Hint">Needs a solved camera pose first.</span>
         <button type="button" id="photoStep3PrimaryBtn" class="dock-btn" disabled>Auto-detect players</button>
       </div>
-      <div style="opacity:0.7; margin-top:6px; font-size:11px;">
-        detects player positions from the photo and lets you drag any chip
-        to fix it. Needs a solved camera pose first (reprojection error
-        below 20px).
+      <p class="ps-lede">Drag a dot to fix a position. Drag the white arrow to change which way a player faces.</p>
+      <ol class="ps-check">
+        <li data-check="find" data-done="false">
+          <div class="ps-check-text"><span class="ps-check-title">Find players</span><span class="ps-check-detail">None yet.</span></div>
+          <button id="photoAutoDetectPlayersBtn" class="dock-btn" disabled title="Detect player positions in the photo and place them on the rink floor.">Auto-detect players</button>
+        </li>
+        <li data-check="teams" data-done="false">
+          <div class="ps-check-text"><span class="ps-check-title">Check teams</span><span class="ps-check-detail">Colours backwards?</span></div>
+          <button id="photoFlipTeamsBtn" class="dock-btn" disabled title="Swap home/away team colours on every detected player.">Swap teams</button>
+        </li>
+        <li data-check="ball" data-done="false">
+          <div class="ps-check-text"><span class="ps-check-title">Mark the ball</span><span class="ps-check-detail">Click it on the photo.</span></div>
+          <button id="photoSetBallBtn" class="dock-btn" disabled title="Click a point on the photo to mark the ball.">Set ball</button>
+        </li>
+        <li data-check="facing" data-done="false">
+          <div class="ps-check-text"><span class="ps-check-title">Facing</span><span class="ps-check-detail">Optional. Reads shoulders and head.</span></div>
+          <button id="photoEstimateFacingsBtn" class="dock-btn" disabled title="Run YOLOv8n-Pose on the photo, then seed each player's facing arrow from their shoulder/nose keypoints. Players with a manual facing override (Phase 3.5) are left untouched.">Estimate</button>
+        </li>
+      </ol>
+      <div id="photoStep3Status" class="ps-status"></div>
+      <div class="ps-group">
+        <div class="ps-group-title">Selected player</div>
+        <div class="ps-btn-row">
+          <button id="photoSetTeamHomeBtn" class="dock-btn" disabled title="Set the selected player's team.">Home</button>
+          <button id="photoSetTeamAwayBtn" class="dock-btn" disabled title="Set the selected player's team.">Away</button>
+        </div>
+        <div class="ps-btn-row">
+          <button id="photoClearSelFacingBtn" class="dock-btn" disabled title="Clear the facing override on the selected player (from a manual arrow drag or a pose estimate) and revert to the auto default.">Clear facing</button>
+          <button id="photoDeletePlayerBtn" class="dock-btn ps-danger" disabled title="Remove the selected player from the scene (misdetected chip, someone outside the rink, etc).">Delete</button>
+        </div>
       </div>
-      <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">
-        <button id="photoAutoDetectPlayersBtn" class="dock-btn" disabled title="Detect player positions in the photo and place them on the rink floor.">Auto-detect players</button>
-        <button id="photoFlipTeamsBtn" class="dock-btn" disabled title="Swap home/away team colours on every detected player.">Flip teams</button>
-        <button id="photoSetBallBtn" class="dock-btn" disabled title="Click a point on the photo to mark the ball.">Set ball</button>
-        <label style="font-size:11px; margin-top:2px;"><input type="checkbox" id="photoBodyOutlineToggle"> show body outline for selected player</label>
-        <div style="opacity:0.6; font-size:10px;">click a player dot to select it - computes a rough body silhouette on demand (slower, so off by default and one player at a time).</div>
-        <div style="display:flex; gap:4px; margin-top:2px;">
-          <button id="photoSetTeamHomeBtn" class="dock-btn" disabled style="flex:1; padding:2px 6px; font-size:10px;" title="Set the selected player's team.">Set: Home</button>
-          <button id="photoSetTeamAwayBtn" class="dock-btn" disabled style="flex:1; padding:2px 6px; font-size:10px;" title="Set the selected player's team.">Set: Away</button>
+      <div class="ps-group">
+        <div class="ps-group-title">Add a missed player</div>
+        <div class="ps-btn-row">
+          <button id="photoAddPlayerHomeBtn" class="dock-btn" disabled title="Click a point on the photo to add a new home-team player at that floor location.">+ Home</button>
+          <button id="photoAddPlayerAwayBtn" class="dock-btn" disabled title="Click a point on the photo to add a new away-team player at that floor location.">+ Away</button>
         </div>
-        <button id="photoDeletePlayerBtn" class="dock-btn" disabled title="Remove the selected player from the scene (misdetected chip, someone outside the rink, etc).">Delete selected player</button>
-        <button id="photoClearSelFacingBtn" class="dock-btn" disabled title="Clear the facing override on the selected player (from a manual arrow drag or a pose estimate) and revert to the auto default.">Clear facing</button>
-        <div style="display:flex; gap:4px; margin-top:2px;">
-          <button id="photoAddPlayerHomeBtn" class="dock-btn" disabled style="flex:1; padding:2px 6px; font-size:10px;" title="Click a point on the photo to add a new home-team player at that floor location.">Add home player</button>
-          <button id="photoAddPlayerAwayBtn" class="dock-btn" disabled style="flex:1; padding:2px 6px; font-size:10px;" title="Click a point on the photo to add a new away-team player at that floor location.">Add away player</button>
-        </div>
-        <button id="photoEstimateFacingsBtn" class="dock-btn" disabled title="Run YOLOv8n-Pose on the photo, then seed each player's facing arrow from their shoulder/nose keypoints. Players with a manual facing override (Phase 3.5) are left untouched.">Estimate facings (pose)</button>
-        <div id="photoStep3Status" style="opacity:0.7; font-size:10px; margin-top:2px;"></div>
-        <label style="font-size:11px; display:flex; gap:4px; align-items:center; margin-top:6px;" title="Turn on to capture ground-truth corrections when you drag chips, facing arrows, or the ball. The pre-correction position is preserved as a grey ghost on the photo; the corrected value is marked in green. Use 'Copy feedback JSON' to export the deltas.">
+      </div>
+      <details class="ps-advanced">
+        <summary>Advanced <span class="ps-summary-hint">body outline, correction log</span></summary>
+        <label class="ps-toggle"><input type="checkbox" id="photoBodyOutlineToggle"> Show body outline for the selected player</label>
+        <div class="ps-note">Computes a rough silhouette on demand - slower, so off by default and one player at a time.</div>
+        <label class="ps-toggle" title="Turn on to capture ground-truth corrections when you drag chips, facing arrows, or the ball. The pre-correction position is preserved as a grey ghost on the photo; the corrected value is marked in green. Use 'Copy feedback JSON' to export the deltas.">
           <input type="checkbox" id="photoFeedbackToggle"> Feedback mode
         </label>
         <div id="photoFeedbackControls" style="display:none; flex-direction:column; gap:4px;">
-          <div style="display:flex; gap:4px;">
-            <button id="photoCopyFeedbackBtn" class="dock-btn" style="flex:1; padding:2px 6px; font-size:10px;" title="Copy the recorded corrections (player positions, facings, ball) to the clipboard as JSON.">Copy JSON</button>
-            <button id="photoClearFeedbackBtn" class="dock-btn" style="flex:1; padding:2px 6px; font-size:10px;" title="Discard all captured corrections in the current frame and revert positions/facings/ball to their pre-correction (original) values. Use this to reset before re-running pose.">Clear</button>
+          <div class="ps-btn-row">
+            <button id="photoCopyFeedbackBtn" class="dock-btn" title="Copy the recorded corrections (player positions, facings, ball) to the clipboard as JSON.">Copy JSON</button>
+            <button id="photoClearFeedbackBtn" class="dock-btn" title="Discard all captured corrections in the current frame and revert positions/facings/ball to their pre-correction (original) values. Use this to reset before re-running pose.">Clear</button>
           </div>
-          <div id="photoFeedbackStatus" style="opacity:0.7; font-size:10px;">no corrections yet</div>
+          <div id="photoFeedbackStatus" class="ps-note">no corrections yet</div>
         </div>
-      </div>
+      </details>
     </details>
     <details id="photoStep4Details" style="margin-top:8px;">
       <summary style="cursor:pointer; font-size:11px; opacity:0.85;">Step 4 - Insights</summary>
@@ -375,12 +391,13 @@
         <label style="font-size:11px;">away goalie: <select id="photoGoalieAway" disabled></select></label>
         <button id="photoAutoAssignGoaliesBtn" class="dock-btn" disabled title="Detect goalies inside each goal's crease with YOLO, appending a chip if the general Step 3 pass missed the goalie. Falls back to the nearest own-team chip if detection fails.">Auto-detect goalies</button>
         <button id="photoResetFacingBtn" class="dock-btn" disabled title="Clear the manual facing arrow override on the ball carrier and designated goalies. Reverts to the auto default (carrier: face nearest goal from the ball; goalie: face the ball, else face out from their own goal).">Reset facing</button>
+        <div id="photoInsightsStats" class="ps-insights" role="group" hidden></div>
         <div id="photoInsightsReadout" style="opacity:0.7; font-size:10px; margin-top:2px;">-</div>
         <button id="photoView3dBtn" class="dock-btn" disabled title="Preview the reconstructed positions in the top-down 2D view.">View in 2D</button>
       </div>
     </details>
   </div>
-</div>
+</aside>
 
 <script type="importmap">
 {
@@ -392,6 +409,7 @@
 }
 </script>
 
+<script type="module" src="src/ui/webawesome.js"></script>
 <script type="module" src="src/main.js"></script>
 <script type="module" src="src/shell.js"></script>
 </body>

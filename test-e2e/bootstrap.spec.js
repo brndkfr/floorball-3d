@@ -68,12 +68,12 @@ test('shipped controls are present in the DOM', async ({ page }) => {
   await expect(page.locator('link[href$="tokens.css"]')).toHaveCount(1);
 });
 
-// S-BACK-019: the inline <style> moved to src/app.css and the Broadcast
-// tokens + Web Awesome theme mapping were added without changing the look.
-// Pins that the moved styles still apply, the new tokens resolve (and flip
-// under data-theme="light"), and nothing is fetched from another host
-// (no Google Fonts, no Font Awesome kit).
-test('stylesheets load from the origin and keep the current look', async ({ page }) => {
+// Broadcast look (S-BACK-021): chrome uses the --fb-* tokens, Archivo for UI
+// text, flat panels (no clip-path / blur), the brand blue marks the active
+// tool, and the team colour stays the domain token. Also pins that every
+// stylesheet and font loads from the origin (no Google Fonts, no Font
+// Awesome kit) and that the tokens flip under data-theme="light".
+test('chrome uses the Broadcast tokens and loads nothing from other hosts', async ({ page }) => {
   const foreign = [];
   page.on('request', (req) => {
     const url = new URL(req.url());
@@ -81,15 +81,20 @@ test('stylesheets load from the origin and keep the current look', async ({ page
   });
   await page.goto('/', { waitUntil: 'load' });
   await expect(page.locator('#toolPalette')).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
 
   const styles = await page.evaluate(() => {
+    const cs = (sel) => getComputedStyle(document.querySelector(sel));
     const rootVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-    const active = document.querySelector('#toolPalette button.active');
     const out = {
-      hudAccent: rootVar('--hud-accent'),
-      paletteActiveBg: active && getComputedStyle(active).backgroundColor,
+      bodyBg: cs('body').backgroundColor,
+      paletteActiveBg: cs('#toolPalette button.active').backgroundColor,
+      paletteActiveFg: cs('#toolPalette button.active').color,
+      topbarFont: cs('#appTopbar').fontFamily.split(',')[0].replace(/["']/g, ''),
+      panelClip: cs('#rightPanel').clipPath,
+      panelBg: cs('#rightPanel').backgroundColor,
+      archivoLoaded: document.fonts.check('600 12px Archivo'),
       teamHome: rootVar('--team-home'),
-      fbBrand: rootVar('--fb-brand'),
       fbSurfDark: rootVar('--fb-surf-1'),
     };
     document.documentElement.dataset.theme = 'light';
@@ -98,10 +103,14 @@ test('stylesheets load from the origin and keep the current look', async ({ page
     return out;
   });
   expect(styles).toEqual({
-    hudAccent: '#4fe0ff',
-    paletteActiveBg: 'rgb(255, 179, 71)',
+    bodyBg: 'rgb(13, 15, 18)',          // --fb-ink
+    paletteActiveBg: 'rgb(46, 107, 255)', // --fb-brand
+    paletteActiveFg: 'rgb(255, 255, 255)',
+    topbarFont: 'Archivo',
+    panelClip: 'none',
+    panelBg: 'rgb(21, 24, 28)',         // --fb-surf-1
+    archivoLoaded: true,
     teamHome: '#2fbf4e',
-    fbBrand: '#2e6bff',
     fbSurfDark: '#15181c',
     fbSurfLight: '#ffffff',
   });
@@ -125,4 +134,42 @@ test.describe('with showOnboarding', () => {
     await page.goto('/', { waitUntil: 'load' });
     await expect(page.locator('#onboardingTip')).toBeVisible();
   });
+});
+
+// Broadcast shell (design canvas "Plan"): 64 px rail with icon + label per
+// mode and a 3 px brand bar on the active one; 52 px top bar with the
+// project name. Sizes come from web/src/ui/shell-metrics.js.
+test('Broadcast shell: rail and top bar geometry', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'load' });
+  await expect(page.locator('#appRail button[data-mode="plan"]')).toHaveClass(/active/);
+  const shell = await page.evaluate(() => {
+    const rail = document.getElementById('appRail').getBoundingClientRect();
+    const top = document.getElementById('appTopbar').getBoundingClientRect();
+    const active = document.querySelector('#appRail button.active');
+    const bar = getComputedStyle(active, '::before');
+    return {
+      railWidth: Math.round(rail.width),
+      topbarHeight: Math.round(top.height),
+      topbarLeft: Math.round(top.left),
+      barWidth: bar.width,
+      barColor: bar.backgroundColor,
+      icons: [...document.querySelectorAll('#appRail button[data-mode]')].map((b) => !!b.querySelector('svg') && b.textContent.trim()),
+    };
+  });
+  expect(shell).toEqual({
+    railWidth: 64,
+    topbarHeight: 52,
+    topbarLeft: 64,
+    barWidth: '3px',
+    barColor: 'rgb(46, 107, 255)',
+    icons: ['Plan', 'Analyze', 'Library'],
+  });
+});
+
+// Specs that spawn chips or read meshes must wait for the models (chips,
+// ball, goals, goalie) - chips requested earlier are only built once
+// player_chip.obj lands. status.js counts outstanding loads.
+test('every expected asset load finishes and the count reaches zero', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'load' });
+  await page.waitForFunction(async () => (await import('/src/status.js')).pendingLoads() === 0, null, { timeout: 15000 });
 });

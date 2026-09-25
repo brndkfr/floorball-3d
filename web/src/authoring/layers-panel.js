@@ -6,7 +6,7 @@
 // module listens and re-renders. Selection highlight rides
 // onSelectionChanged.
 
-import { state } from '../state.js';
+import { state, DEFAULT_SHAPE_COLOR } from '../state.js';
 import { ensureDoc } from './doc.js';
 import { chipDataFor, setChipHidden, TEAM_COLORS, setLabelsVisible, updateChipLabel, removeChip, reorderChips } from './chips.js';
 import { shapeDataFor, setShapeHidden, updateShapeLabel, updateShape, removeShape, reorderShapes } from './shapes.js';
@@ -14,7 +14,6 @@ import { coneDataFor, setConeHidden, updateCone, removeCone, CONE_DEFAULT_COLOR 
 import { ballDataFor, setBallHidden, updateBall, removeBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { goalDataFor, setGoalHidden, updateGoal, removeGoal } from './goals.js';
 import { onSelectionChanged, selectObject, deselectAll } from '../selection.js';
-import { makeFloatable } from './floatable.js';
 
 // Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
 const root = document.getElementById('layersPanel');
@@ -271,7 +270,7 @@ if (!root) throw new Error('layersPanel element missing from index.html');
 
       const swatch = document.createElement('span');
       swatch.className = 'lp-swatch';
-      swatch.style.background = shape.color || '#ffb347';
+      swatch.style.background = shape.color || DEFAULT_SHAPE_COLOR;
       row.appendChild(swatch);
 
       const name = document.createElement('span');
@@ -551,8 +550,3 @@ if (!root) throw new Error('layersPanel element missing from index.html');
   }
 }
 
-makeFloatable(root, {
-  storageKey: 'floorball.layersPanel.pos',
-  reserved: { top: 48, left: 60, right: 8, bottom: 8 },
-  defaultPos: { x: Math.max(60, window.innerWidth - 244), y: 480 },
-});
