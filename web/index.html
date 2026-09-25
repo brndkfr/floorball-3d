@@ -34,34 +34,34 @@
 <div id="libraryView">Library - coming soon</div>
 <div id="toolPalette" data-view="plan">
   <div class="floatable-grip" title="Drag to move" aria-hidden="true">&#8942;&#8942;</div>
-  <button data-tool="" title="Select (Esc)" class="active"><span class="tp-glyph">&#8598;</span>Select</button>
-  <button data-tool="chip" title="Chip stamp - click the rink to drop a player"><span class="tp-glyph">&#9679;</span>Chip</button>
+  <button data-tool="" title="Select (Esc)" aria-label="Select" class="active"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l6 14 2-6 6-2z"/></svg></button>
+  <button data-tool="chip" title="Chip - click the rink to drop a player" aria-label="Chip"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/></svg></button>
   <div class="tp-group">
-    <button data-tool="ball" title="Ball - click to place the match ball, click a chip to give it the ball, Shift+click for an extra ball. Hover for options"><span class="tp-glyph">&#9898;</span>Ball<span class="tp-caret">&#9656;</span></button>
-    <div class="tp-submenu" role="menu">
-      <button data-tool="ball" title="Match ball - the one ball that can be carried, passed and shot"><span class="tp-glyph">&#9898;</span>Match</button>
-      <button data-tool="ball-extra" title="Extra ball - decorative, colour from the shape swatch"><span class="tp-glyph">&#8728;</span>Extra</button>
+    <button data-tool="ball" title="Ball - click to place the match ball, click a chip to give it the ball, Shift+click for an extra ball. Hover for options" aria-label="Ball" aria-haspopup="menu"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="4.5"/><circle cx="10" cy="10" r="1" fill="currentColor"/></svg></button>
+    <div class="tp-submenu" role="menu" aria-label="Ball variants">
+      <button data-tool="ball" title="Match ball - the one ball that can be carried, passed and shot"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="4.5"/><circle cx="10" cy="10" r="1" fill="currentColor"/></svg><span>Match ball</span></button>
+      <button data-tool="ball-extra" title="Extra ball - decorative, colour from the shape swatch"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="4.5" stroke-dasharray="2 2"/></svg><span>Extra ball</span></button>
     </div>
   </div>
-  <button data-tool="goal" title="Goal - drop an extra goal on the rink (Q/E rotates the selected goal)"><span class="tp-glyph">&#9974;</span>Goal</button>
-  <button data-tool="arrow" title="Arrow - click start then end (straight)"><span class="tp-glyph">&#8594;</span>Arrow</button>
-  <button data-tool="arrow-curved" title="Curved arrow - click waypoints, Enter / double-click / right-click to finish"><span class="tp-glyph">&#10551;</span>Curved</button>
+  <button data-tool="goal" title="Goal - drop an extra goal on the rink (Q/E rotates the selected goal)" aria-label="Goal"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15V6h12v9"/><path d="M4 9h12M8 6v9M12 6v9" stroke-width="1"/></svg></button>
+  <button data-tool="arrow" title="Arrow - click start then end (straight)" aria-label="Arrow"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h10"/><path d="M11 6l5 4-5 4"/></svg></button>
+  <button data-tool="arrow-curved" title="Curved arrow - click waypoints, Enter / double-click / right-click to finish" aria-label="Curved arrow"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16c6 1 10-3 10-9"/><path d="M9 6l5-1 0 5"/></svg></button>
   <div class="tp-group">
-    <button data-tool="zone" title="Zone (freehand polygon) - hover for shapes"><span class="tp-glyph">&#9711;</span>Zone<span class="tp-caret">&#9656;</span></button>
-    <div class="tp-submenu" role="menu">
-      <button data-tool="zone" title="Freehand polygon"><span class="tp-glyph">&#11040;</span>Freehand</button>
-      <button data-tool="zone-rect" title="Rectangle (drag)"><span class="tp-glyph">&#9645;</span>Rect</button>
-      <button data-tool="zone-circle" title="Circle (drag)"><span class="tp-glyph">&#9711;</span>Circle</button>
-      <button data-tool="zone-triangle" title="Triangle (drag)"><span class="tp-glyph">&#9651;</span>Triangle</button>
+    <button data-tool="zone" title="Zone (freehand polygon) - hover for shapes" aria-label="Zone" aria-haspopup="menu"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="12" height="12" rx="2"/></svg></button>
+    <div class="tp-submenu" role="menu" aria-label="Zone variants">
+      <button data-tool="zone" title="Freehand polygon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l5-3 7 4-2 8-8-1z"/></svg><span>Freehand</span></button>
+      <button data-tool="zone-rect" title="Rectangle (drag)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="12" height="10" rx="1"/></svg><span>Rectangle</span></button>
+      <button data-tool="zone-circle" title="Circle (drag)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/></svg><span>Circle</span></button>
+      <button data-tool="zone-triangle" title="Triangle (drag)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4l7 12H3z"/></svg><span>Triangle</span></button>
     </div>
   </div>
-  <button data-tool="text" title="Text - click to place a label"><span class="tp-glyph">T</span>Text</button>
+  <button data-tool="text" title="Text - click to place a label" aria-label="Text"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6h10M10 6v9"/></svg></button>
   <div class="tp-group">
-    <button data-tool="cone-disc" title="Cone markers - hover for shapes"><span class="tp-glyph">&#9651;</span>Cone<span class="tp-caret">&#9656;</span></button>
-    <div class="tp-submenu" role="menu">
-      <button data-tool="cone-disc" title="Flat disc marker (puck-cone) - low profile, ball rolls over"><span class="tp-glyph">&#11044;</span>Disc</button>
-      <button data-tool="cone-full" title="Full traffic cone - marks slalom gates / positions"><span class="tp-glyph">&#9651;</span>Full</button>
-      <button data-tool="cone-pole" title="Disc base + 150cm vertical rod (5cm diameter) - slalom pole"><span class="tp-glyph">&#9482;</span>Pole</button>
+    <button data-tool="cone-disc" title="Cone markers - hover for shapes" aria-label="Cones" aria-haspopup="menu"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4l4 11H6z"/><path d="M4 16h12"/></svg></button>
+    <div class="tp-submenu" role="menu" aria-label="Cones variants">
+      <button data-tool="cone-disc" title="Flat disc marker (puck-cone) - low profile, ball rolls over"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="10" cy="12" rx="6" ry="2.5"/></svg><span>Disc marker</span></button>
+      <button data-tool="cone-full" title="Full traffic cone - marks slalom gates / positions"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4l4 11H6z"/><path d="M4 16h12"/></svg><span>Traffic cone</span></button>
+      <button data-tool="cone-pole" title="Disc base + 150cm vertical rod (5cm diameter) - slalom pole"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v11"/><ellipse cx="10" cy="15" rx="5" ry="2"/></svg><span>Slalom pole</span></button>
     </div>
   </div>
 </div>

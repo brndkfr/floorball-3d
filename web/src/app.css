@@ -451,66 +451,63 @@
   #toolPalette {
     position:fixed; z-index:26;
     display:flex; flex-direction:column; gap:6px;
-    padding:6px 8px 8px;
+    padding:6px;
     background:var(--fb-surf-1);
-    border:1px solid var(--fb-line-strong); border-radius:12px;
-    font-family:var(--hud-font);
-    box-shadow:0 6px 24px rgba(0,0,0,0.35);
+    border:1px solid var(--fb-line); border-radius:var(--fb-radius-2);
+    font-family:var(--fb-font);
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
     user-select:none;
   }
   #toolPalette .floatable-grip {
-    height:14px; margin:-2px -4px 4px;
+    height:10px; margin:-2px 0 0;
     display:flex; align-items:center; justify-content:center;
-    cursor:grab;
-    color:var(--fb-line-strong);
-    font-size:14px; line-height:1;
+    cursor:grab; color:var(--fb-text-3); font-size:11px; line-height:1;
   }
   #toolPalette .floatable-grip:active { cursor:grabbing; }
   #toolPalette.dragging { opacity:0.9; box-shadow:0 10px 32px rgba(0,0,0,0.5); }
+  /* Broadcast palette (design canvas): 40 px icon tools, only the armed
+     tool is filled; flyout rows show icon + label. */
   #toolPalette button {
-    width:56px; height:52px; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:2px;
-    border:1px solid var(--fb-line-strong);
-    background:var(--fb-brand-quiet);
-    color:var(--fb-text-1); font-family:inherit; font-size:10px;
-    text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;
-    border-radius:8px;
+    width:40px; height:40px; padding:0; box-sizing:border-box;
+    display:grid; place-items:center;
+    border:1px solid var(--fb-line); border-radius:var(--fb-radius-1);
+    background:var(--fb-surf-2); color:var(--fb-text-2); cursor:pointer;
   }
-  #toolPalette button:hover { background:var(--fb-brand-quiet); }
+  #toolPalette button:hover { color:var(--fb-text-1); border-color:var(--fb-line-strong); }
   #toolPalette button.active { background:var(--fb-brand); color:#fff; border-color:var(--fb-brand); }
-  #toolPalette .tp-glyph { font-size:20px; line-height:1; }
+  #toolPalette button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
 
-  /* --- Palette submenu: hover the Zone group to open a right-side flyout
-     with the shape sub-tools. Kept as pure CSS hover so no JS state to
-     manage - selection is a normal button click that runs the same
-     activateTool path. */
+  /* --- Palette flyouts: hover a group (Ball / Zone / Cones) to open its
+     variants to the right. Pure CSS hover, so no JS state - a row click
+     runs the same activateTool path. The corner mark flags a group. */
   #toolPalette .tp-group { position:relative; }
-  #toolPalette .tp-group > button { position:relative; padding-right:14px; }
-  /* Extend the group's own hoverable area 8px to the right so the cursor
-     can traverse the gap between the button and the submenu without
-     losing :hover mid-flight (submenu-only hover-continuity is a
-     chicken-and-egg problem while the submenu is display:none). */
+  #toolPalette .tp-group > button::after {
+    content:""; position:absolute; right:3px; bottom:3px;
+    border-left:4px solid transparent; border-bottom:4px solid currentColor; opacity:0.7;
+  }
+  #toolPalette .tp-group > button { position:relative; }
+  /* Extend the group's hoverable area over the gap to the flyout, so the
+     cursor can cross it without losing :hover. */
   #toolPalette .tp-group::after {
     content:''; position:absolute; top:0; left:100%;
-    width:8px; height:100%;
-  }
-  #toolPalette .tp-caret {
-    position:absolute; right:4px; top:50%; transform:translateY(-50%);
-    font-size:9px; opacity:0.7;
+    width:10px; height:100%;
   }
   #toolPalette .tp-submenu {
-    position:absolute; left:100%; top:0;
-    display:none; flex-direction:column; gap:4px;
-    padding:6px; background:var(--fb-surf-1);
-    border:1px solid var(--fb-line-strong); border-radius:10px;
-    box-shadow:0 6px 24px rgba(0,0,0,0.4);
-    margin-left:6px;
+    position:absolute; left:100%; top:0; margin-left:10px; min-width:176px;
+    display:none; flex-direction:column; gap:2px;
+    padding:6px; background:var(--fb-surf-2);
+    border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-2);
+    box-shadow:0 12px 32px rgba(0,0,0,0.55);
   }
   #toolPalette .tp-group:hover .tp-submenu,
   #toolPalette .tp-submenu:hover { display:flex; }
   #toolPalette .tp-submenu button {
-    width:76px; height:44px; font-size:9px;
+    width:auto; height:auto; display:flex; align-items:center; gap:10px;
+    padding:8px; border:none; background:transparent; color:var(--fb-text-2);
+    font:600 12px/1.2 var(--fb-font); text-align:left;
   }
+  #toolPalette .tp-submenu button:hover { background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1); }
+  #toolPalette .tp-submenu button.active { background:var(--fb-brand-quiet); color:var(--fb-text-1); }
   @media (pointer: coarse) {
     #toolPalette { display:none; }
   }
