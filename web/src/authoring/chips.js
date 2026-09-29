@@ -42,7 +42,11 @@ export const TEAM_COLORS = {
 
 // prototype loaded once from the OBJ; every chip is a fresh clone
 let chipPrototype = null;
-const pendingRebuilds = [];  // chips whose spawn was requested before load finished
+// Set when a chip is requested before the OBJ has loaded. The load handler
+// then rebuilds from the *current* doc once, instead of replaying queued
+// player objects: those could be stale (a spawn followed by a rebuild after
+// a frame change built the same chip twice, one at the old position).
+let rebuildWhenLoaded = false;
 
 // per-chip drop animations, ticked from main.js's animate() via updateChipAnimations()
 const drops = [];   // { group, elapsed, dur, fromScale, toScale }
@@ -66,11 +70,11 @@ chipMtl.load(
       (object) => {
         chipPrototype = object;
         loaded('player_chip.obj');
-        // spawn any chips that were requested (e.g. by loadDoc()) before
-        // the OBJ finished loading
-        while (pendingRebuilds.length) {
-          const p = pendingRebuilds.shift();
-          spawnChipMesh(p);
+        // build any chips requested (e.g. by loadDoc()) before the OBJ
+        // finished loading, from the doc as it is now
+        if (rebuildWhenLoaded) {
+          rebuildWhenLoaded = false;
+          rebuildFromDoc();
         }
       },
       undefined,
@@ -253,7 +257,7 @@ export function spawnChip({ team, x, z, number, angle = 0, pushHistory = true })
   const id = newId('p');
   const player = { id, team, number: num, x, z, angle };
   doc.scheme.players[id] = player;
-  if (chipPrototype) spawnChipMesh(player); else pendingRebuilds.push(player);
+  if (chipPrototype) spawnChipMesh(player); else rebuildWhenLoaded = true;
   saveDoc();
   document.dispatchEvent(new CustomEvent('layers:dirty'));
   if (pushHistory) {
@@ -425,8 +429,10 @@ export function rebuildFromDoc() {
   rings.length = 0;
 
   const doc = ensureDoc();
-  for (const player of Object.values(doc.scheme.players)) {
-    if (chipPrototype) spawnChipMesh(player); else pendingRebuilds.push(player);
+  if (!chipPrototype) {
+    rebuildWhenLoaded = true;
+  } else {
+    for (const player of Object.values(doc.scheme.players)) spawnChipMesh(player);
   }
   document.dispatchEvent(new CustomEvent('layers:dirty'));
 }

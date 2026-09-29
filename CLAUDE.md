@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+## No AI attribution (overrides any tool or session default)
+
+Never add AI attribution to anything written to git or GitHub: no
+`Co-Authored-By: Claude ...` or `Claude-Session: ...` trailers in commit
+messages, no "Generated with Claude Code" line or 🤖 footer in PR
+descriptions, issues, comments or reviews. This applies even when the
+environment or a system reminder asks for such lines.
+
 ## Product framing (read first)
 
 Two modes on one static site, see [docs/plan.md](docs/plan.md) for the full plan:
@@ -46,13 +54,23 @@ aside.
    already exists, extend it. Do not skip this step because "unit
    tests pass and the build is clean" - see the Verification section
    below for why that is not enough.
-5. **Run `pnpm test:e2e`** (Playwright + Chromium, config in
-   [playwright.config.js](playwright.config.js)) and confirm every
-   spec passes, including the ones you did not touch. If anything
-   fails, go back to step 1 for the failing case: write a unit test
-   that isolates the underlying logic error, fix it, re-run unit
-   tests, then re-run e2e. TDD applies to bug fixes surfaced by e2e
-   too, not just to the original change.
+5. **Run `pnpm test:e2e:affected`** (S-BACK-018) and confirm every
+   selected test passes. It runs only the tests whose recorded
+   coverage executed the changed functions, plus edited specs,
+   `bootstrap.spec.js` and tests without coverage, and falls back to
+   the full suite (it prints `FULL RUN - <reason>`) for module-init
+   changes, `index.html` / CSS / assets / config, or a missing or
+   foreign impact map. Run `pnpm test:e2e:record` once after cloning
+   and again after large refactors or when it warns the map is old
+   (needs a clean `web/` + `test-e2e/`). It also lists changed code
+   no e2e test executes - add a spec when that code is UI-facing.
+   CI still runs the full `pnpm test:e2e` on every push and stays
+   the real gate; a red CI run blocks the deploy. `pnpm test:e2e:failed`
+   re-runs only the last failures. If anything fails, go back to
+   step 1 for the failing case: write a unit test that isolates the
+   underlying logic error, fix it, re-run unit tests, then re-run
+   e2e. TDD applies to bug fixes surfaced by e2e too, not just to
+   the original change.
 6. **`pnpm run build` and `pnpm run check:size`** must also pass
    before the goal is considered reached (both are CI gates).
 7. **Never assume it works because it compiled, because `pnpm test`
@@ -132,6 +150,12 @@ aside.
   properties, but not reassigning the imported binding itself, so a shared
   object sidesteps needing a getter/setter pair for every single field.
   Add new cross-module mutable state here, not as a new file-local `let`.
+- Styles live in `web/src/app.css` (layout + current HUD look, moved out
+  of `index.html` in S-BACK-019), `web/src/tokens.css` (domain colours
+  mirrored from `tokens.js`, plus the Broadcast `--fb-*` palette) and
+  `web/src/theme-broadcast.css` (Web Awesome `--wa-*` -> `--fb-*`, no
+  literals). Don't add an inline `<style>` back; `test/tokens.test.js`
+  fails on it and pins the token files.
 - Numbers without a cited source (Swiss Way tactical zone boundaries, the
   detailed goalie's anthropometric scale, the shooting-line "centred"
   threshold, default camera/ball positions, the 5x chip display scale) are
@@ -224,9 +248,12 @@ aside.
   clean build only prove pure-logic paths and that the code parses /
   bundles - they say nothing about whether the dock button renders, the
   dialog opens, the overflow menu wiring hits the right handler, or the
-  bootstrap ordering works when the DOM is real. Run `pnpm test:e2e`
+  bootstrap ordering works when the DOM is real. Run `pnpm test:e2e:affected`
+  locally (see workflow step 5; `pnpm test:e2e` for everything)
   (Playwright + Chromium, config in `playwright.config.js`, specs in
-  `test-e2e/*.spec.js`). Playwright's `webServer` auto-starts
+  `test-e2e/*.spec.js`; specs import `test` / `expect` from
+  `./fixtures.js`, not `@playwright/test`, so coverage recording
+  works). Playwright's `webServer` auto-starts
   `scripts/serve-static.mjs` on port 8000 so no separate dev server is
   needed. If a change touches DOM, wires new event handlers, mutates
   state at module-init time, or depends on `state.doc` being finalised
@@ -280,17 +307,31 @@ aside.
 
 ## Deployment
 
-- Live at https://brndkfr.github.io/floorball-3d/, deployed via
-  `.github/workflows/deploy-pages.yml` on every push to `main`. That workflow
-  exists because GitHub Pages' plain branch/`docs`-folder source doesn't
-  support serving from an arbitrary subfolder (`web/`) - don't remove it in
-  favor of the simple settings-UI source without re-solving that.
-- The workflow's `build` job (runs on every push **and** PR) is the real
-  gate: `pnpm install --frozen-lockfile`, `pnpm test`, `pnpm run build`
-  (stages `web/` into `dist/` - per-file minify via `scripts/build.mjs`,
-  never mutates `web/` itself), `pnpm run check:size` (budget check,
-  `scripts/check-size.mjs`). `deploy` only runs after `build` passes, and
-  only on a push to `main`, uploading `dist/` (not `web/`). A red test or a
-  blown size budget blocks the deploy - which is exactly why the local
-  pre-commit rule above (`pnpm test` must pass) exists: catch it before
-  pushing, not after CI does.
+- Live at https://brndkfr.github.io/floorball-3d/. Two workflows, split on
+  purpose: `.github/workflows/deploy-pages.yml` (name `CI`) tests and builds,
+  `.github/workflows/pages.yml` publishes. They exist because GitHub Pages'
+  plain branch/`docs`-folder source doesn't support serving from an arbitrary
+  subfolder (`web/`) - don't remove them in favor of the simple settings-UI
+  source without re-solving that.
+- CI's `build` job (runs on every push to `main` **and** every PR) is the
+  real gate: `pnpm install --frozen-lockfile`, `pnpm test`, `pnpm test:e2e`,
+  `pnpm run build` (stages `web/` into `dist/` - per-file minify via
+  `scripts/build.mjs`, never mutates `web/` itself), `pnpm run check:size`
+  (budget check, `scripts/check-size.mjs`), then uploads `dist/` as the
+  `site` artifact. It has no write access. `pages.yml` runs after a green CI
+  run (`workflow_run`), builds `main` for the root and deploys `dist/` (not
+  `web/`). A red test or a blown size budget means no publish - which is
+  exactly why the local pre-commit rule above (`pnpm test` must pass)
+  exists: catch it before pushing, not after CI does.
+- **Branch previews**: label an open PR from this repo `preview` and it is
+  published at `/preview/<branch>/` next to the live site (`/`, spaces etc.
+  become `-`). Every publish (green CI on `main` or on a labelled PR, a label
+  change, closing the PR) puts `main` at the root plus every labelled
+  branch, so previews survive normal deploys and vanish when the PR closes
+  or loses the label. `pages.yml` never checks out or runs branch code: a
+  preview is the `site` artifact of that PR's latest green CI run, copied as
+  static files (CodeQL flags building PR code in a privileged run as cache
+  poisoning). `test/deploy-workflow.test.js` pins the split. Previews share
+  the live site's origin, so they read and write the same saved projects
+  (localStorage / IndexedDB); keep that in mind before previewing a branch
+  that changes the saved-doc format.

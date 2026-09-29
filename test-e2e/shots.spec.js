@@ -1,12 +1,11 @@
 // A-BACK-022: shots at goal - Inspector buttons, right-click on a goal, aim pad, verdict, 3D flight.
 
-import { test, expect } from '@playwright/test';
+import { test, expect, waitForAssets } from './fixtures.js';
 
 async function boot(page) {
   await page.goto('/', { waitUntil: 'load' });
+  await waitForAssets(page);
   await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
-  const tip = page.locator('#onboardingTip button', { hasText: 'Got it' });
-  if (await tip.count()) await tip.first().click();
   await page.waitForFunction(async () => { const { state } = await import('/src/state.js'); return !!state.ballGroup && !!state.goalies.A && !!state.goalies.B && state.goalInstances?.length >= 2; });
 }
 
@@ -188,7 +187,7 @@ test.describe('A-BACK-022 shots at goal', () => {
     expect(r.trailMaxY).toBeGreaterThan(200);         // trail climbs with the ball mid-flight
   });
 
-  test('shot speed goes up to 55 m/s, shown in km/h too (A-BACK-026)', async ({ page }) => {
+  test('shot speed goes up to 55 m/s, shown in km/h too (A-BACK-027)', async ({ page }) => {
     await boot(page);
     const id = await setupShooter(page, { x: 0, z: 26000 });
     await selectChip(page, id);

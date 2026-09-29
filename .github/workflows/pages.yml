@@ -1,0 +1,123 @@
+name: Publish Pages
+
+# Publishes GitHub Pages: main at the root, plus every open PR from this repo
+# labelled `preview` under /preview/<branch>/. Each run republishes all of it,
+# so a normal main deploy keeps the previews and a closed / unlabelled PR's
+# preview disappears.
+#
+# Branch code never runs here. Previews are the `site` artifact the PR's own
+# CI run (deploy-pages.yml, unprivileged `pull_request`) already built -
+# static files, copied, not executed. The only code this workflow checks out
+# and builds is main.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  # Label changes and closes publish without a new CI run; nothing from the
+  # PR is checked out.
+  pull_request_target:
+    types: [labeled, unlabeled, closed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    # After CI: only a green run on main or on a branch with a PR. After a
+    # PR event: only when the `preview` label is involved.
+    if: >-
+      (github.event_name == 'workflow_run'
+        && github.event.workflow_run.conclusion == 'success'
+        && (github.event.workflow_run.event == 'pull_request'
+          || github.event.workflow_run.head_branch == 'main'))
+      || (github.event_name == 'pull_request_target'
+        && (github.event.label.name == 'preview' || contains(github.event.pull_request.labels.*.name, 'preview')))
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read          # download other runs' artifacts
+      pull-requests: read    # find labelled PRs
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages-publish
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Which branches get a preview, and whether this run changes anything:
+      # a green CI run on some unlabelled PR branch has nothing to publish.
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          RUN_EVENT: ${{ github.event.workflow_run.event }}
+          RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          # Open, labelled, same-repo PRs only (a fork's branch is never published).
+          gh pr list --repo "$GITHUB_REPOSITORY" --state open --label preview \
+            --json headRefName,isCrossRepository \
+            --jq '.[] | select(.isCrossRepository | not) | .headRefName' > previews.txt
+          go=true
+          if [ "$EVENT" = workflow_run ] && [ "$RUN_EVENT" = pull_request ] \
+             && ! grep -qxF -- "$RUN_BRANCH" previews.txt; then
+            go=false
+          fi
+          echo "go=$go" >> "$GITHUB_OUTPUT"
+          echo "go=$go previews:"; cat previews.txt
+
+      # Root: main, built here (trusted code, no cache).
+      - if: steps.plan.outputs.go == 'true'
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+          path: main
+      - if: steps.plan.outputs.go == 'true'
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: main/package.json
+      - if: steps.plan.outputs.go == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - if: steps.plan.outputs.go == 'true'
+        working-directory: main
+        run: pnpm install --frozen-lockfile && pnpm run build
+
+      - name: Add previews from their CI artifacts
+        if: steps.plan.outputs.go == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p main/dist/preview
+          while IFS= read -r branch; do
+            [ -n "$branch" ] || continue
+            slug=$(printf '%s' "$branch" | tr -c 'A-Za-z0-9._-' '-')
+            run=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow deploy-pages.yml \
+              --branch "$branch" --event pull_request --status success --limit 1 \
+              --json databaseId --jq '.[0].databaseId // empty')
+            if [ -z "$run" ]; then
+              echo "::warning::no green CI run with a site artifact for $branch - preview skipped"
+              continue
+            fi
+            if gh run download "$run" --repo "$GITHUB_REPOSITORY" --name site --dir "main/dist/preview/$slug"; then
+              echo "preview: $branch (run $run) -> /preview/$slug/"
+            else
+              echo "::warning::could not download the site artifact of run $run for $branch - preview skipped"
+              rm -rf "main/dist/preview/$slug"
+            fi
+          done < previews.txt
+
+      - if: steps.plan.outputs.go == 'true'
+        uses: actions/configure-pages@v6
+      - if: steps.plan.outputs.go == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: main/dist
+      - if: steps.plan.outputs.go == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v5

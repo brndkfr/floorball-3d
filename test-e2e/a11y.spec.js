@@ -9,7 +9,7 @@
 // otherwise serves stale ES modules across specs during a single dev
 // session.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 async function bootApp(page) {
   await page.goto('/', { waitUntil: 'load' });
@@ -17,8 +17,6 @@ async function bootApp(page) {
     const el = document.getElementById('dockProjectName');
     return el && el.textContent && el.textContent.length > 0;
   });
-  const tip = page.locator('#onboardingTip button', { hasText: 'Got it' });
-  if (await tip.count()) await tip.first().click();
 }
 
 test('every visible top-level button has an accessible name', async ({ page }) => {

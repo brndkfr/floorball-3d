@@ -10,6 +10,7 @@ import { spawnChip, nextNumber, TEAM_COLORS } from './chips.js';
 import { updateShape } from './shapes.js';
 import { spawnCone } from './cones.js';
 import { spawnBall } from './balls.js';
+import { ballToolAction } from './ball-tool.js';
 import { spawnGoal } from './goals.js';
 import { ensureDoc } from './doc.js';
 import { saveDoc, downloadDocJson, readDocFromFile, createProject, adoptDocAsProject, setCurrentProjectId } from './storage.js';
@@ -86,7 +87,8 @@ function refreshStatus() {
   else if (tool === 'zone-rect') msg = 'rectangle - drag on the rink to draw (or click for a default size, Esc to exit)';
   else if (tool === 'zone-circle') msg = 'circle - drag on the rink to draw (or click for a default size, Esc to exit)';
   else if (tool === 'zone-triangle') msg = 'triangle - drag on the rink to draw (or click for a default size, Esc to exit)';
-  else if (tool === 'ball') msg = 'ball tool - click the rink to drop an extra ball (Esc to exit)';
+  else if (tool === 'ball') msg = 'ball tool - click to place the match ball, click a chip to give it the ball, Shift+click for an extra ball (Esc to exit)';
+  else if (tool === 'ball-extra') msg = 'extra ball - click the rink to drop a decorative ball (Esc to exit)';
   else if (tool === 'cone-full') msg = 'cone tool - click the rink to drop a full cone (Esc to exit)';
   else if (tool === 'cone-disc') msg = 'disc tool - click the rink to drop a flat disc marker (Esc to exit)';
   else if (tool === 'cone-pole') msg = 'pole tool - click the rink to drop a disc + 150cm rod (Esc to exit)';
@@ -302,7 +304,7 @@ window.addEventListener('keydown', (event) => {
 
 // Wired from selection.js's pointerup handler via this exported callback;
 // keeps the click-vs-drag threshold logic in one place.
-export function handleFloorClickForTool(worldPoint) {
+export function handleFloorClickForTool(worldPoint, opts = {}) {
   if (state.activeTool === 'chip') {
     // A7: pull the click toward the nearest face-off dot if within snap
     // range so rounded-position tactical schemes stay tidy.
@@ -311,12 +313,14 @@ export function handleFloorClickForTool(worldPoint) {
     refreshStatus();
     return true;
   }
-  if (state.activeTool === 'ball') {
-    // Ball tool spawns extra balls (multi-ball). The primary ball
-    // (state.ballGroup, boot-loaded) stays selectable via left-click.
-    // Picks up the current shape-color swatch so coaches can drop a
-    // red / blue / green ball without opening the Inspector each time.
-    spawnBall({ x: worldPoint.x, z: worldPoint.z, color: state.drawColor });
+  const ballAction = ballToolAction({ tool: state.activeTool, chipId: opts.chipId, shift: opts.shift });
+  if (ballAction) {
+    // A-BACK-026: Ball places the match ball (or hands it to the clicked chip);
+    // Extra ball / Shift+click drops a decorative extra in the shape-swatch colour.
+    if (ballAction.kind === 'extra') spawnBall({ x: worldPoint.x, z: worldPoint.z, color: state.drawColor });
+    // actors.js is loaded lazily, as in selection.js: it pulls in choreograph / frames.
+    else if (ballAction.kind === 'carry') import('./actors.js').then((a) => a.setBallCarrier(ballAction.chipId));
+    else import('./actors.js').then((a) => a.placeMainBall({ x: worldPoint.x, z: worldPoint.z }));
     refreshStatus();
     return true;
   }

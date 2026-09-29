@@ -1,7 +1,7 @@
 // Timeline strip (A4): horizontal list of frame cards + playback transport.
-// Lives at the bottom of the viewport, above the dock. Wheel over a card
-// resizes the card, giving a lightweight zoom-in / zoom-out affordance for
-// crowded schemes on small screens.
+// Lives at the bottom of the viewport, above the dock. Wheel over the strip
+// resizes the cards while they all fit and scrolls once they overflow
+// (Ctrl / Cmd + wheel always resizes), see timeline-wheel.js.
 
 import {
   getFrames, getCurrentIndex, selectFrame, duplicateFrame,
@@ -14,6 +14,7 @@ import {
 } from './playback.js';
 import { startChoreo, cancelChoreo, commitChoreo, isChoreoActive } from './choreograph.js';
 import { getFrameThumb } from './frame-thumb.js';
+import { stripWheelAction } from './timeline-wheel.js';
 
 const el = document.getElementById('timeline');
 if (!el) throw new Error('timeline element missing from index.html');
@@ -29,6 +30,7 @@ const btnAdd = el.querySelector('[data-tl="add"]');
 
 let cardWidth = 72;   // 40..120 px per plan; wheel adjusts
 const MIN_W = 40, MAX_W = 120;
+let lastRenderedCur = -1;   // scroll the editing card into view only when it changes
 
 function render() {
   const frames = getFrames();
@@ -98,16 +100,26 @@ function render() {
     strip.appendChild(card);
   });
 
+  if (cur !== lastRenderedCur) {
+    strip.children[cur]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    lastRenderedCur = cur;
+  }
+
   btnPlay.textContent = p.playing ? '\u23f8' : '\u25b6';
   btnPlay.title = p.playing ? 'Pause (Space)' : 'Play (Space)';
   btnLoop.classList.toggle('active', p.loop);
   speedEl.textContent = p.speed + 'x';
 }
 
-// wheel over the strip resizes cards
 strip.addEventListener('wheel', (e) => {
+  const action = stripWheelAction({
+    deltaX: e.deltaX, deltaY: e.deltaY, ctrlKey: e.ctrlKey, metaKey: e.metaKey,
+    scrollWidth: strip.scrollWidth, clientWidth: strip.clientWidth,
+  });
   e.preventDefault();
-  cardWidth = Math.min(Math.max(cardWidth + (e.deltaY < 0 ? 6 : -6), MIN_W), MAX_W);
+  if (!action) return;
+  if (action.kind === 'scroll') { strip.scrollLeft += action.dx; return; }
+  cardWidth = Math.min(Math.max(cardWidth + action.dir * 6, MIN_W), MAX_W);
   render();
 }, { passive: false });
 

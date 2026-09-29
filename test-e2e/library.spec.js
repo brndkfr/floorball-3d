@@ -3,7 +3,7 @@
 // leak state into each other. See CLAUDE.md for why the reloads bounce
 // through about:blank + CDP setCacheDisabled.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 // Boots the app in an empty context. Playwright's `page` fixture already
 // gives every test a fresh browser context with empty localStorage.
@@ -40,8 +40,6 @@ async function waitForBootstrap(page) {
 }
 
 async function dismissOnboarding(page) {
-  const tip = page.locator('#onboardingTip button', { hasText: 'Got it' });
-  if (await tip.count()) await tip.first().click();
 }
 
 async function readState(page) {

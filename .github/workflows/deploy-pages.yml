@@ -1,4 +1,9 @@
-name: Deploy GitHub Pages
+name: CI
+
+# Tests + build on every push to main and every PR. Publishing to GitHub
+# Pages lives in pages.yml, which runs after this finishes (workflow_run) and
+# takes the built site from the `site` artifact below - so branch code only
+# ever runs here, in an unprivileged run, never in the one that can deploy.
 
 on:
   push:
@@ -16,12 +21,10 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages-${{ github.ref }}
-  # Only supersede PR runs; never cancel an in-flight main deploy.
+  group: ci-${{ github.ref }}
+  # A new push supersedes a PR's running CI; main runs all finish.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -49,20 +52,10 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
-      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/configure-pages@v6
-      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v5
+      # Static files only; pages.yml publishes main's at the root and a
+      # labelled PR's under /preview/<branch>/.
+      - uses: actions/upload-artifact@v7
         with:
+          name: site
           path: dist
-
-  deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-24.04
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v5
+          retention-days: 30

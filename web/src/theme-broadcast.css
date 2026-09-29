@@ -1,0 +1,38 @@
+/* Web Awesome theme -> Broadcast tokens (S-BACK-019, docs/plan.md section 2).
+   Only references to --fb-* from tokens.css: no literal colours here, so
+   dark / light follow data-theme automatically. Declared in Web Awesome's
+   highest theme layer so it wins over the stock theme once the library is
+   vendored (with the first surface that uses a component, S-BACK-021).
+   Until then no element reads these variables. Pinned by
+   test/tokens.test.js. */
+@layer wa-theme-overrides {
+  :root {
+    --wa-color-surface-lowered: var(--fb-ink);
+    --wa-color-surface-default: var(--fb-surf-1);
+    --wa-color-surface-raised: var(--fb-surf-2);
+    --wa-color-surface-border: var(--fb-line);
+
+    --wa-color-text-normal: var(--fb-text-1);
+    --wa-color-text-quiet: var(--fb-text-2);
+    --wa-color-text-link: var(--fb-brand);
+
+    --wa-color-brand-fill-loud: var(--fb-brand);
+    --wa-color-brand-fill-quiet: var(--fb-brand-quiet);
+    --wa-color-brand-border-loud: var(--fb-brand);
+    --wa-color-focus: var(--fb-brand);
+    --wa-color-danger-on-quiet: var(--fb-danger);
+
+    --wa-font-family-body: var(--fb-font);
+    --wa-font-family-heading: var(--fb-font);
+    --wa-font-family-code: var(--fb-mono);
+
+    --wa-border-radius-s: var(--fb-radius-1);
+    --wa-border-radius-m: var(--fb-radius-1);
+    --wa-border-radius-l: var(--fb-radius-2);
+
+    --wa-form-control-height: var(--fb-control-h);
+    --wa-form-control-background-color: var(--fb-surf-2);
+    --wa-form-control-border-color: var(--fb-line-strong);
+    --wa-form-control-hint-color: var(--fb-text-3);
+  }
+}

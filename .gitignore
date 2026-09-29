@@ -5,6 +5,9 @@ node_modules/
 dist/
 test-results/
 playwright-report/
+# Local e2e impact map + recording scratch (S-BACK-018)
+test-e2e/.impact-map.json
+test-e2e/.impact/
 .playwright/
 package-lock.json
 

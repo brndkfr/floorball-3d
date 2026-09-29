@@ -2,7 +2,7 @@
 // Steps 1 and 2 shipped previously; this suite covers the Step 3/4
 // stepper indicator + primary-CTA banners added this session.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 async function bootApp(page) {
   await page.goto('/', { waitUntil: 'load' });
@@ -10,8 +10,6 @@ async function bootApp(page) {
     const el = document.getElementById('dockProjectName');
     return el && el.textContent && el.textContent.length > 0;
   });
-  const tip = page.locator('#onboardingTip button', { hasText: 'Got it' });
-  if (await tip.count()) await tip.first().click();
   await page.locator('[data-mode="analyze"]').click();
   // Expand the photo panel (starts collapsed) so its children are visible.
   await page.locator('[data-panel="photoPanel"]').click();

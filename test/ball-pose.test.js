@@ -154,7 +154,7 @@ test('shot speed comes from pass.speedMps when set', () => {
   assert.equal(passPlan(fa, fb, DUR).speedMps, 10);
 });
 
-test('A-BACK-026: shots may go up to ~200 km/h, passes stay at 40 m/s', () => {
+test('A-BACK-027: shots may go up to ~200 km/h, passes stay at 40 m/s', () => {
   assert.equal(MAX_PASS_SPEED_MPS, 40);
   assert.equal(MAX_SHOT_SPEED_MPS, 55);
   assert.equal(maxSpeedMps('shot'), 55);

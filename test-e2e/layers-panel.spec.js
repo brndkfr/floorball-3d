@@ -1,7 +1,7 @@
 // Browser-level integration tests for A-BACK-001 drag-to-reorder in
 // the layers panel. See CLAUDE.md for why the reload dance is needed.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 async function bootApp(page) {
   await page.goto('/', { waitUntil: 'load' });
@@ -9,8 +9,6 @@ async function bootApp(page) {
     const el = document.getElementById('dockProjectName');
     return el && el.textContent && el.textContent.length > 0;
   });
-  const tip = page.locator('#onboardingTip button', { hasText: 'Got it' });
-  if (await tip.count()) await tip.first().click();
 }
 
 test.describe('A-BACK-001 layers-panel drag reorder', () => {
@@ -27,7 +25,7 @@ test.describe('A-BACK-001 layers-panel drag reorder', () => {
       spawnChip({ team: 1, x: 2000, z: 0, number: 3, pushHistory: false });
     });
 
-    const rows = page.locator('#layersPanel .lp-section-body > .lp-row');
+    const rows = page.locator('#layersPanel .lp-section-body > .lp-row:not([data-match-ball])');   // match ball row is always there (A-BACK-026)
     await expect(rows).toHaveCount(3);
     await expect(rows.nth(0)).toContainText('#1');
     await expect(rows.nth(2)).toContainText('#3');
@@ -58,7 +56,7 @@ test.describe('A-BACK-001 layers-panel drag reorder', () => {
       addShape({ type: 'zone', kind: 'rect', label: 'Charlie', x: 4000, z: 0, w: 1000, h: 1000, color: '#0000ff' });
     });
 
-    const rows = page.locator('#layersPanel .lp-section-body > .lp-row');
+    const rows = page.locator('#layersPanel .lp-section-body > .lp-row:not([data-match-ball])');   // match ball row is always there (A-BACK-026)
     await expect(rows).toHaveCount(3);
     await expect(rows.nth(0)).toContainText('Alpha');
 
