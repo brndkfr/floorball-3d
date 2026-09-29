@@ -638,46 +638,71 @@ Still on the backlog from that exploration:
       position at shot time (**A-BACK-023**).
     - There is only one goalie in Mode A (**A-BACK-024**).
     - The ball rises in a straight line, not an arc (**A-BACK-025**).
-- **[A-BACK-023]** [open] **Shot verdict uses the goalie's position at
-  shot time.** Today `shotVerdictFor()` (pass-overlay.js) raycasts
-  against the goalie mesh where it stands in the frame being edited.
-  During playback the goalie is interpolated between frames
-  (`scheme.goalie` per frame, `playback.js`), so a goalie who moves
-  across during the shot is judged at the wrong spot. The verdict can
-  say "open" for a shot he actually covers, or the other way round.
-  Approach:
-  - Add a pure `goaliePoseAt(fa, fb, t)` in ball-pose.js that lerps x/z
-    and does a shortest-path angle lerp, like playback. Evaluate it at
-    the ball's arrival time (`plan.arriveT`).
-  - Run the raycast against the goalie placed at that pose, for example
-    by moving the mesh temporarily and restoring it in `finally`, or on
-    a cached clone. Never leave the edit pose changed.
-  - Tests: a node test for `goaliePoseAt`, and an e2e where the goalie
-    moves from off the line (frame A) onto the line (frame B), so the
-    verdict flips from open to squared up.
-  - Scope: the lane check for field players already uses interpolated
-    positions; only the goalie part is static.
-- **[A-BACK-024]** [open] **A goalie for each goal in Plan mode.** Mode A
-  has a single `state.goalieGroup` and one `scheme.goalie = { x, z,
-  angle }`, standing at goal A by default. A shot at goal B therefore
-  always reads as "open", and the coverage grid and shooting line only
-  know one goalie. Mode B already stores `goalies.home/away`.
-  Approach:
-  - Schema: `scheme.goalies = { A: {x,z,angle}, B: {x,z,angle} }`.
-    `acceptDoc()` migrates the old `scheme.goalie` to `goalies.A`.
-  - A second goalie mesh instance, loaded once and cloned.
-  - `actors.js` syncs and persists both.
-  - Selection, Inspector (rotation) and Q/E work per goalie.
-  - `trajectory.js` / `coverage.js` / `shotVerdictFor()` use the goalie
-    of the target (or shot) goal.
-  - A per-goalie visibility toggle, so plays without a keeper stay
+- **[A-BACK-023]** [shipped] **Shot verdict uses the goalie's position at
+  shot time.** `shotVerdictFor()` (pass-overlay.js) used to raycast
+  against the goalie mesh where it stood in the frame being edited,
+  ignoring where it actually is when the ball arrives.
+  - `goaliePoseAt(fa, fb, letter, t)` (ball-pose.js) lerps x/z and does
+    a shortest-path angle lerp, mirroring `playback.js`'s per-goalie
+    interpolation, reading `fa.goalies?.[letter]` / `fb.goalies?.[letter]`.
+  - `shotVerdictFor(plan, fa, fb)` now takes the bracketing frames,
+    evaluates `goaliePoseAt(fa, fb, plan.goal, plan.arriveT)`, and
+    temporarily moves the goalie mesh to that pose for the raycast,
+    restoring the edit-frame pose in a `finally` (never left changed).
+    Callers (`tickPassOverlay()`, both Inspector call sites) now thread
+    `fa`/`fb` through from `currentPass()`.
+  - Gotcha hit during implementation: `THREE.Raycaster` reads a mesh's
+    cached `matrixWorld`, not `.position` directly - it's only
+    refreshed on the next render tick. Moving the goalie for the
+    temporary raycast needs an explicit `goalie.updateMatrixWorld(true)`
+    right after reassigning position/rotation (and again after
+    restoring), or the raycast silently uses a stale transform.
+  - `tickPassOverlay()`'s render-gating cache key now tracks the
+    keyframed `fa`/`fb` goalie values + `plan.arriveT` instead of the
+    live mesh transform, since the verdict no longer depends on the
+    live position directly.
+  - Tests: `ball-pose.test.js` unit tests for `goaliePoseAt` (lerp,
+    short-path angle, null when nothing stored, holds steady when only
+    one side has a stored pose), and a `shots.spec.js` e2e where the
+    goalie is off the line in the pre-shot frame and on the line in the
+    shot frame - a fast release nets "Open shot", a late release (ball
+    arrives once the goalie has reached the line) nets "Goalie squared
+    up".
+- **[A-BACK-024]** [shipped] **A goalie for each goal in Plan mode.**
+  Mode A had a single `state.goalieGroup` and one `scheme.goalie = { x,
+  z, angle }`, standing at goal A by default, so a shot at goal B
+  always read as "open" and the coverage grid / shooting line only
+  knew one goalie. Now each goal end has its own goalie:
+  - Schema: `scheme.goalies = { A?: {x,z,angle}, B?: {x,z,angle} }`.
+    `ensureDoc()`/`acceptDoc()` migrate a legacy per-frame
+    `scheme.goalie` into `goalies.A` (covers both v1->v2 docs and
+    already-v2 frames saved before this change).
+  - `state.goalies = { A, B }` replaces `state.goalieGroup`; each
+    letter has its own model instances (`state.goalieModels.<key> =
+    { A, B }`), built by loading each model once and cloning the goal-A
+    instance into a mirrored goal-B one (position/rotation flipped,
+    fresh independently-built outline meshes so the shot-line
+    highlight can colour each goalie separately).
+  - `actors.js` persists and restores both letters every tick;
+    `playback.js` lerps each independently between keyframes.
+  - Selection (cycle, marquee raycast, labels "goalie A"/"goalie B"),
+    the Inspector's rotation slider, and Q/E rotate whichever goalie is
+    currently selected.
+  - `trajectory.js`, `coverage.js` and `pass-overlay.js`'s
+    `shotVerdictFor()` all resolve the goalie via the target/shot
+    goal letter (state.js's exported `goalieForGoal()` /
+    `goalLetterForGoal()` helpers, or `state.goalies[plan.goal]`
+    directly) instead of a single global mesh.
+  - Two independent visibility checkboxes ("Goalie A" / "Goalie B" in
+    the Layers panel), so plays without a keeper at one end stay
     possible.
-  - Open question: link goalies to teams (who defends which goal) or
-    keep them per goal only? Per goal is simpler and enough for the
-    verdict.
-  - Tests: migration unit test, per-goal verdict unit test, e2e with a
-    shot at B being judged against goalie B. Depends on nothing; do it
-    before A-BACK-023 so that item is written for two goalies.
+  - Kept per-goal only (no goalie-to-team link) per the open question
+    below - simplest, and enough for the verdict.
+  - Tests: `doc.test.js` migration unit tests (fresh-frame goalie,
+    v1-doc goalie, already-migrated goalies left untouched), and two
+    new `shots.spec.js` e2e cases - a straight-on shot is squared up
+    at *both* goals by default, and moving goalie B off the shot line
+    only changes goal B's verdict, not goal A's.
 - **[A-BACK-025]** [open] **Shot flight as an arc instead of a straight
   rise.** `ballPoseAt()` rises linearly from the floor at release to
   the aim height at the goal line, which reads as a laser, not a shot.

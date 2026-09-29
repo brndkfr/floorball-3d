@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 const {
-  ballPoseAt, passPlan, nearestReleaseT, passFlightPos,
+  ballPoseAt, passPlan, nearestReleaseT, passFlightPos, goaliePoseAt,
   BALL_CARRY_OFFSET, PASS_FLIGHT_S, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS,
   GOAL_Z, DEFAULT_SHOT_SPEED_MPS, SHOT_REST_DEPTH, makeShot, clampAim, padToAim, aimToPad, shotTargetFrame,
   heightAlong,
@@ -226,3 +226,26 @@ test('passFlightPos: starts at from, ends at to, eases, and reports done', () =>
   assert.equal(mid.done, false);
   assert.deepEqual(passFlightPos(from, to, PASS_FLIGHT_S * 2), { pos: { x: 1000, z: 0 }, done: true });
 });
+
+// --- goaliePoseAt (A-BACK-023) ---
+
+test('goaliePoseAt: null when the goal end has no stored goalie in fa', () => {
+  assert.equal(goaliePoseAt({ goalies: {} }, { goalies: {} }, 'A', 0.5), null);
+  assert.equal(goaliePoseAt({}, {}, 'B', 0.5), null);
+});
+
+test('goaliePoseAt: lerps x/z and takes the short way around for angle', () => {
+  const fa = { goalies: { A: { x: 0, z: 9000, angle: 0 } } };
+  const fb = { goalies: { A: { x: 1000, z: 9500, angle: Math.PI / 2 } } };
+  assert.deepEqual(goaliePoseAt(fa, fb, 'A', 0), { x: 0, z: 9000, angle: 0 });
+  assert.deepEqual(goaliePoseAt(fa, fb, 'A', 1), { x: 1000, z: 9500, angle: Math.PI / 2 });
+  const mid = goaliePoseAt(fa, fb, 'A', 0.5);
+  assert.ok(close(mid.x, 500) && close(mid.z, 9250) && close(mid.angle, Math.PI / 4), JSON.stringify(mid));
+});
+
+test('goaliePoseAt: missing fb for that letter holds fa\'s pose steady', () => {
+  const fa = { goalies: { B: { x: 200, z: 500, angle: 1 } } };
+  const fb = { goalies: {} };
+  assert.deepEqual(goaliePoseAt(fa, fb, 'B', 0.7), { x: 200, z: 500, angle: 1 });
+});
+

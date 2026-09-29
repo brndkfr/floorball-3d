@@ -2,7 +2,7 @@
 // (A-BACK-020 / A-BACK-021). three-free so it is Node-testable. A carried ball's
 // stored x/z is only its last loose spot, so the carrier must win when set.
 
-import { bezierPos, segmentControls } from './bezier.js';
+import { bezierPos, segmentControls, lerpAngle } from './bezier.js';
 import { BALL_RADIUS, GOAL_LINE_FROM_BOARD, RINK_L } from '../constants.js';
 
 export const BALL_CARRY_OFFSET = { x: 0, z: 250 };   // "in front of the player"
@@ -69,6 +69,18 @@ export function chipPosAt(fa, fb, id, t) {
   const pb = fb.players?.[id] || pa;
   const [c1x, c1z, c2x, c2z] = segmentControls(pa, pb);
   return { x: bezierPos(pa.x, pb.x, c1x, c2x, t), z: bezierPos(pa.z, pb.z, c1z, c2z, t) };
+}
+
+// Where a goalie stands mid-playback (A-BACK-023): same lerp playback.js
+// uses for scheme.goalies.<letter>, exposed here so shotVerdictFor() can
+// raycast against the goalie's pose at the ball's arrival time instead of
+// its static edit-frame position. Null when the goal end has no stored
+// goalie in fa (nothing to interpolate from).
+export function goaliePoseAt(fa, fb, letter, t) {
+  const ga = fa.goalies?.[letter];
+  if (!ga) return null;
+  const gb = fb.goalies?.[letter] || ga;
+  return { x: ga.x + (gb.x - ga.x) * t, z: ga.z + (gb.z - ga.z) * t, angle: lerpAngle(ga.angle || 0, gb.angle || 0, t) };
 }
 
 // The pass across fa -> fb, or null when the carrier does not change.

@@ -7,7 +7,7 @@ async function boot(page) {
   await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
   const tip = page.locator('#onboardingTip button', { hasText: 'Got it' });
   if (await tip.count()) await tip.first().click();
-  await page.waitForFunction(async () => { const { state } = await import('/src/state.js'); return !!state.ballGroup && !!state.goalieGroup && state.goalInstances?.length >= 2; });
+  await page.waitForFunction(async () => { const { state } = await import('/src/state.js'); return !!state.ballGroup && !!state.goalies.A && !!state.goalies.B && state.goalInstances?.length >= 2; });
 }
 
 async function tick(page) {
@@ -17,7 +17,7 @@ async function tick(page) {
   });
 }
 
-// #9 (team 1) carries the ball at (x, z); the default goalie stands at goal A.
+// #9 (team 1) carries the ball at (x, z); default goalies stand at goal A and goal B (A-BACK-024).
 async function setupShooter(page, { x = 0, z = 12000 } = {}) {
   const id = await page.evaluate(async ({ x, z }) => {
     const { ensureDoc } = await import('/src/authoring/doc.js');
@@ -186,7 +186,7 @@ test.describe('A-BACK-022 shots at goal', () => {
     expect(r.trailMaxY).toBeGreaterThan(200);         // trail climbs with the ball mid-flight
   });
 
-  test('verdict: goalie squared up at goal A, open shot at goal B', async ({ page }) => {
+  test('verdict: goalie squared up at goal A, and at goal B too (A-BACK-024, one goalie per goal)', async ({ page }) => {
     await boot(page);
     const id = await setupShooter(page, { x: 0, z: 12000 });
     await selectChip(page, id);
@@ -204,6 +204,63 @@ test.describe('A-BACK-022 shots at goal', () => {
       const { selectObject } = await import('/src/selection.js');
       selectObject((await import('/src/state.js')).state.ballGroup);
     });
+    // Goal B now has its own default goalie (centred, same as goal A's), so a
+    // straight-on shot is squared up there too, not left wide open.
+    await expect(page.locator('#shotStatus')).toHaveText('Goalie squared up');
+  });
+
+  test('verdict: goalie B is judged independently of goalie A (A-BACK-024)', async ({ page }) => {
+    await boot(page);
+    const id = await setupShooter(page, { x: 0, z: 12000 });
+    // Shove goalie B well off the shot line; goalie A stays put at its default.
+    await page.evaluate(() => {
+      import('/src/state.js').then(({ state }) => { state.goalies.B.position.x += 2000; });
+    });
+    await tick(page);
+
+    await selectChip(page, id);
+    await page.locator('#inspectorShoot [data-shoot="A"]').click();
+    await page.evaluate(async () => {
+      const { selectObject } = await import('/src/selection.js');
+      selectObject((await import('/src/state.js')).state.ballGroup);
+    });
+    await expect(page.locator('#shotStatus')).toHaveText('Goalie squared up');
+
+    await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(0));
+    await selectChip(page, id);
+    await page.locator('#inspectorShoot [data-shoot="B"]').click();
+    await page.evaluate(async () => {
+      const { selectObject } = await import('/src/selection.js');
+      selectObject((await import('/src/state.js')).state.ballGroup);
+    });
     await expect(page.locator('#shotStatus')).toHaveText('Open shot');
+  });
+
+  test('verdict: goalie pose is interpolated at ball-arrival time, not the static edit-frame spot (A-BACK-023)', async ({ page }) => {
+    await boot(page);
+    // 2.5m out at the default 25 m/s shot speed -> a 100ms flight inside the 1000ms frame.
+    const id = await setupShooter(page, { x: 0, z: 6000 });
+    // Goalie A starts well off the shot line - this becomes the "from" keyframe (frame 0).
+    await page.evaluate(() => import('/src/state.js').then(({ state }) => { state.goalies.A.position.x = -3000; }));
+    await tick(page);
+
+    await selectChip(page, id);
+    await page.locator('#inspectorShoot [data-shoot="A"]').click();
+    // In the new shot frame (frame 1), move the goalie squarely onto the line - the "to" keyframe.
+    await page.evaluate(() => import('/src/state.js').then(({ state }) => { state.goalies.A.position.x = 0; }));
+    await tick(page);
+    await page.evaluate(async () => {
+      const { selectObject } = await import('/src/selection.js');
+      selectObject((await import('/src/state.js')).state.ballGroup);
+    });
+
+    // Release immediately: the ball arrives (arriveT ~ 0.1) long before the goalie reaches the
+    // line, so the static "current mesh position" (on the line) would wrongly say squared up.
+    await page.evaluate(async () => (await import('/src/authoring/actors.js')).setPassTiming({ releaseT: 0 }));
+    await expect(page.locator('#shotStatus')).toHaveText('Open shot');
+
+    // Release late: arrival lands at (or past) the frame end, once the goalie is fully on the line.
+    await page.evaluate(async () => (await import('/src/authoring/actors.js')).setPassTiming({ releaseT: 0.9 }));
+    await expect(page.locator('#shotStatus')).toHaveText('Goalie squared up');
   });
 });

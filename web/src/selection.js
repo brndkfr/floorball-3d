@@ -121,7 +121,8 @@ function buildShapeHighlight(obj) {
 
 export function labelFor(obj) {
   if (obj === state.ballGroup) return 'ball';
-  if (obj === state.goalieGroup) return 'goalie';
+  if (obj === state.goalies.A) return 'goalie A';
+  if (obj === state.goalies.B) return 'goalie B';
   const i = state.goalInstances.indexOf(obj);
   if (i === 0) return 'goal A (z=0 end)';
   if (i === 1) return 'goal B (z=40000 end)';
@@ -320,7 +321,8 @@ function selectablesUnderCursor(event) {
   raycaster.setFromCamera(mouseNDC, state.activeCamera);
   const selectables = [...state.goalInstances, ...state.chipGroups, ...state.shapeObjects, ...state.coneObjects, ...state.extraBalls, ...state.extraGoals];
   if (state.ballGroup) selectables.push(state.ballGroup);
-  if (state.goalieGroup) selectables.push(state.goalieGroup);
+  if (state.goalies.A) selectables.push(state.goalies.A);
+  if (state.goalies.B) selectables.push(state.goalies.B);
   const hits = raycaster.intersectObjects(selectables, true);
   if (!hits.length) return null;
   let obj = hits[0].object;
@@ -713,7 +715,7 @@ function handleRightClick(event) {
     startWalk(sel, fromX, fromZ, p.x, p.z);
     selectObject(sel);
     spawnMoveMarker(p.x, p.z);
-  } else if (sel === state.ballGroup || sel === state.goalieGroup) {
+  } else if (sel === state.ballGroup || sel === state.goalies.A || sel === state.goalies.B) {
     const fromX = sel.position.x, fromZ = sel.position.z;
     sel.position.x = p.x;
     sel.position.z = p.z;

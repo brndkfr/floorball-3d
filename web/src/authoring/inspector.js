@@ -44,7 +44,7 @@ window.addEventListener('passChanged', () => {
   if (lane) lane.textContent = passStatus(cur.plan, ensureDoc().scheme.players, cur.dur).lane;
   const shot = document.getElementById('shotStatus');
   if (shot && cur.plan.kind === 'shot') {
-    const v = shotVerdictFor(cur.plan);
+    const v = shotVerdictFor(cur.plan, cur.fa, cur.fb);
     shot.textContent = v.text;
     shot.style.color = SHOT_LINE_TOKENS[v.key].css;
   }
@@ -120,7 +120,7 @@ function render(sel) {
   body.appendChild(heading);
 
   // Goalie: rotation slider (Q/E works too but a slider is discoverable).
-  if (sel === state.goalieGroup) {
+  if (sel === state.goalies.A || sel === state.goalies.B) {
     body.appendChild(rotationRow(sel));
     return;
   }
@@ -216,7 +216,7 @@ function passRow() {
 }
 
 // Timing of the pass arriving in this frame (A-BACK-021): release slider, speed, lane + late status.
-function passTimingSection({ plan, dur }) {
+function passTimingSection({ plan, dur, fa, fb }) {
   const wrap = document.createElement('div');
   wrap.id = 'inspectorPassTiming';
   const title = document.createElement('div');
@@ -270,7 +270,7 @@ function passTimingSection({ plan, dur }) {
   const lane = document.createElement('div');
   lane.className = 'ins-empty';
   if (plan.kind === 'shot') {
-    const v = shotVerdictFor(plan);
+    const v = shotVerdictFor(plan, fa, fb);
     lane.id = 'shotStatus';
     lane.style.color = SHOT_LINE_TOKENS[v.key].css;
     lane.textContent = v.text;

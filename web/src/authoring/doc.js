@@ -34,12 +34,26 @@ export function isValidId(id) {
   return typeof id === 'string' && ID_RE.test(id);
 }
 
+// A-BACK-024: older docs (and older frames within a still-current-version
+// doc) store a single `scheme.goalie = { x, z, angle }`. Mode A now has a
+// goalie per goal end, so that value becomes goal A's; goal B just falls
+// back to its own default stance until the user moves it. Mutates in place.
+function migrateGoalieScheme(scheme) {
+  if (!scheme) return;
+  if (!scheme.goalies) scheme.goalies = {};
+  if (scheme.goalie) {
+    if (!scheme.goalies.A) scheme.goalies.A = scheme.goalie;
+    delete scheme.goalie;
+  }
+}
+
 // Strips scheme/photo entries with malformed ids from a doc that just came
 // from an untrusted source (file import, share link). Mutates in place.
 function sanitizeDoc(doc) {
   if (!doc || !Array.isArray(doc.frames)) return doc;
   for (const frame of doc.frames) {
     const scheme = frame?.scheme;
+    migrateGoalieScheme(scheme);
     if (scheme?.players && typeof scheme.players === 'object') {
       for (const id of Object.keys(scheme.players)) {
         if (!isValidId(id)) delete scheme.players[id];
@@ -127,6 +141,7 @@ function migrate(doc) {
       shapes: doc.scheme.shapes || [],
       cones: doc.scheme.cones || [],
     };
+    if (doc.scheme.goalie) scheme.goalie = doc.scheme.goalie; // migrateGoalieScheme() folds this into goalies.A downstream
     return {
       version: DOC_VERSION,
       meta: emptyMeta(),
@@ -164,6 +179,7 @@ export function ensureDoc() {
     if (!f.scheme.balls) f.scheme.balls = {};
     if (!f.scheme.shapes) f.scheme.shapes = [];
     if (!f.scheme.cones) f.scheme.cones = [];
+    migrateGoalieScheme(f.scheme);
     if (typeof f.duration !== 'number' || f.duration <= 0) f.duration = DEFAULT_FRAME_MS;
     if (!f.id) f.id = newId('f');
   }
