@@ -784,12 +784,23 @@ Still on the backlog from that exploration:
     same in every frame. `ensureDoc()` / `acceptDoc()` default it.
   - Images live in IndexedDB (like `photo-cache.js`), keyed by a
     content hash so the same logo used many times is stored once; the
-    doc only holds `imageId`. Downscale to <= 1024 px on import.
-    Keeps localStorage (~5 MB quota) and share links (32 KB
-    `HASH_LIMIT`) small.
+    doc only holds `imageId`. Keeps localStorage (~5 MB quota) and
+    share links (32 KB `HASH_LIMIT`) small.
+  - Image formats:
+    - Accept PNG, JPEG, WebP and SVG. SVG is rasterized on import via
+      `<img>` -> canvas, never inserted into the DOM (no script
+      injection). JPEG has no alpha, so a JPEG logo keeps its box.
+    - Store as WebP with alpha: `canvas.toBlob('image/webp', 0.9)`.
+      Browsers that can't encode WebP return PNG from `toBlob`, so
+      store `blob.type` as-is, no special case.
+    - Size on import, fit without stretching: floor logo longest side
+      <= 1024 px; board ad 1024 x 256 (the 4:1 board slot), centred.
   - Render: textured plane ~2 mm above the floor, `polygonOffset`,
     `frustumCulled = false`, anisotropy set (CLAUDE.md rendering
-    gotchas). Move + corner resize reuse the shape handles; rotation
+    gotchas), `texture.colorSpace = THREE.SRGBColorSpace` (otherwise
+    logos look washed out). A 1024^2 texture is ~5 MB of GPU memory
+    decoded, so one texture per distinct image, shared by all its
+    uses. Move + corner resize reuse the shape handles; rotation
     and opacity in the Inspector.
   - Known gap: a share link carries only `imageId`s, so the receiver
     sees no image. Bundling images into the file export is a possible
@@ -803,7 +814,9 @@ Still on the backlog from that exploration:
   front of the inner board face.
   - UI: an "Arena" section: upload logos, click one or more board
     slots to assign the chosen logo, quick fills ("all boards",
-    "alternate A/B"), clear.
+    "alternate A/B"), clear. Board ads use the 1024 x 256 import size
+    from A-BACK-028, with an optional background colour for the bars
+    beside a logo that isn't 4:1 (real board ads fill the panel).
   - Open: inner face only (enough for a playing-view camera) or the
     outer face too.
   - Tests: node test for assignment / quick-fill helpers; e2e: assign a
