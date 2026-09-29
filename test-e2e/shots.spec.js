@@ -164,10 +164,11 @@ test.describe('A-BACK-022 shots at goal', () => {
         if (!tail || v.z < tail.z) tail = v;
       }
       const { play, seekTo, stop } = await import('/src/authoring/playback.js');
-      const { passPlan } = await import('/src/authoring/ball-pose.js');
+      const { passPlan, shotHeightAlong } = await import('/src/authoring/ball-pose.js');
       const { state } = await import('/src/state.js');
       const f = state.doc.frames;
       const plan = passPlan(f[0].scheme, f[1].scheme, f[0].duration);
+      const tailExpectedY = shotHeightAlong(tail, plan);
       play();
       seekTo(((plan.releaseT + plan.arriveT) / 2) * f[0].duration);
       tickPassOverlay();
@@ -176,14 +177,50 @@ test.describe('A-BACK-022 shots at goal', () => {
       for (let i = 0; i < tpos.count; i++) trailMaxY = Math.max(trailMaxY, tpos.getY(i));
       const ballY = state.ballGroup.position.y;
       stop();
-      return { aim, tip, tail, trailMaxY, ballY };
+      return { aim, tip, tail, tailExpectedY, trailMaxY, ballY };
     });
     expect(r.aim.aimX).toBeLessThan(-600);            // upper right from the shooter's view is -x at goal B
     expect(Math.round(r.tip.z)).toBe(36500);
     expect(Math.abs(r.tip.x - r.aim.aimX)).toBeLessThan(5);
     expect(Math.abs(r.tip.y - r.aim.aimY)).toBeLessThan(5);
-    expect(r.tail.y).toBeLessThan(100);               // starts at ball height on the floor
+    expect(r.tail.y).toBeLessThan(200);               // near the floor at the chip edge (arrow is trimmed there)
+    expect(Math.abs(r.tail.y - r.tailExpectedY)).toBeLessThan(1);
     expect(r.trailMaxY).toBeGreaterThan(200);         // trail climbs with the ball mid-flight
+  });
+
+  test('the shot flies in an arc: ball and arrow sit above the straight line mid-flight (A-BACK-025)', async ({ page }) => {
+    await boot(page);
+    const id = await setupShooter(page, { x: 0, z: 26000 });
+    await selectChip(page, id);
+    await page.locator('#inspectorShoot [data-shoot="B"]').click();
+    const r = await page.evaluate(async () => {
+      const { setShotAim } = await import('/src/authoring/actors.js');
+      const { padToAim, passPlan, shotHeightAt } = await import('/src/authoring/ball-pose.js');
+      const { tickPassOverlay } = await import('/src/authoring/pass-overlay.js');
+      const { play, seekTo, stop } = await import('/src/authoring/playback.js');
+      const { scene } = await import('/src/scene.js');
+      const { state } = await import('/src/state.js');
+      const { BALL_RADIUS } = await import('/src/constants.js');
+      setShotAim(padToAim('B', 0.5, 0.9));
+      tickPassOverlay();
+      const f = state.doc.frames;
+      const plan = passPlan(f[0].scheme, f[1].scheme, f[0].duration);
+      const midZ = (plan.from.z + plan.to.z) / 2;
+      const pos = scene.getObjectByName('passArrow').geometry.attributes.position;
+      let arrowMid = null;
+      for (let i = 0; i < pos.count; i++) {
+        if (!arrowMid || Math.abs(pos.getZ(i) - midZ) < Math.abs(arrowMid.z - midZ)) arrowMid = { y: pos.getY(i), z: pos.getZ(i) };
+      }
+      play();
+      seekTo(((plan.releaseT + plan.arriveT) / 2) * f[0].duration);
+      const ballCentreY = state.ballGroup.position.y + BALL_RADIUS;
+      stop();
+      const straightAt = (z) => BALL_RADIUS + (plan.aimY - BALL_RADIUS) * (z - plan.from.z) / (plan.to.z - plan.from.z);
+      return { ballCentreY, expected: shotHeightAt(plan, 0.5), straightMid: straightAt(midZ), arrowMid, arrowStraight: arrowMid && straightAt(arrowMid.z) };
+    });
+    expect(Math.abs(r.ballCentreY - r.expected)).toBeLessThan(1);
+    expect(r.ballCentreY - r.straightMid).toBeGreaterThan(150);   // 10 m at 25 m/s: ~200 mm of gravity lift
+    expect(r.arrowMid.y - r.arrowStraight).toBeGreaterThan(150);
   });
 
   test('verdict: goalie squared up at goal A, and at goal B too (A-BACK-024, one goalie per goal)', async ({ page }) => {

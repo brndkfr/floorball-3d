@@ -631,8 +631,8 @@ Still on the backlog from that exploration:
     it looks the same. The in-flight trail is lifted the same way, up to
     the ball's current height. E2e: aim at the upper right, the arrow
     tip sits at `(aimX, aimY)` on the goal line, the tail at ball height
-    and the trail climbs mid-flight. When A-BACK-025 adds an arc, the
-    arrow must follow that curve too.
+    and the trail climbs mid-flight. A-BACK-025 has since replaced
+    `heightAlong()` with the arc's `shotHeightAlong()`.
   - Known gaps (each logged as its own item below):
     - The goalie check uses the goalie's current edit position, not its
       position at shot time (**A-BACK-023**).
@@ -703,20 +703,44 @@ Still on the backlog from that exploration:
     new `shots.spec.js` e2e cases - a straight-on shot is squared up
     at *both* goals by default, and moving goalie B off the shot line
     only changes goal B's verdict, not goal A's.
-- **[A-BACK-025]** [open] **Shot flight as an arc instead of a straight
-  rise.** `ballPoseAt()` rises linearly from the floor at release to
-  the aim height at the goal line, which reads as a laser, not a shot.
-  Approach:
-  - A pure height profile `shotHeightAt(s, { aimY, distance, speed })`,
-    for example a quadratic that ends exactly at `aimY` on the goal line
-    with a small apex for longer and slower shots. Low aims (a ground
-    shot) stay near the floor.
-  - Keep the verdict consistent: the goalie raycast should then sample
-    the same curve as a short polyline, not the straight line, or the
-    colour can disagree with what the 3D view shows.
-  - Cosmetic, 3D only; top-down is unchanged. Tests: node tests for
-    the profile (endpoints exact, monotonic for low aims, apex bound)
-    and an e2e sampling playback height mid-flight.
+- **[A-BACK-025]** [shipped] **Shot flight as an arc instead of a straight
+  rise.** `ballPoseAt()` used to rise linearly from the floor at release
+  to the aim height at the goal line, which read as a laser, not a shot.
+  - `shotHeightAt(plan, s)` (ball-pose.js): ball-centre height at
+    progress `s`. The straight rise plus a gravity parabola for the
+    flight time `T = plan.needMs`: lift `(g T^2 / 2) s (1 - s)`, so
+    `g T^2 / 8` at the midpoint. Endpoints are exact (`BALL_RADIUS` at
+    release, `aimY` on the goal line). Hard shots come out almost
+    straight (10 m at ~200 km/h: ~4 cm), slow or long ones arc clearly.
+  - The lift is capped at the rise (`aimY - BALL_RADIUS`) instead of the
+    600 mm first discussed: the ball then never peaks before the goal
+    line and never goes above `aimY`, so a low aim stays low and a
+    ground shot stays on the floor. That keeps the lift at most ~270 mm
+    at the midpoint, so a separate mm cap would never apply. No lobs,
+    which fits floorball.
+  - `shotHeightAlong(p, plan)` replaces `heightAlong()`: the 3D shot
+    arrow and the in-flight trail are lifted onto the same arc.
+  - Verdict: `shotVerdict()` (insights.js) takes an optional `path` and
+    raycasts it segment by segment; `shotVerdictFor()` passes
+    `shotPathPoints(plan, 8)`, so the colour matches the 3D flight.
+    Without `path` the behaviour is unchanged (trajectory.js, Mode B).
+    The render-gating key now includes `plan.needMs`, since speed
+    changes the arc.
+  - No air drag (a 23 g ball with holes slows down noticeably; would
+    need an unsourced drag value). Top-down is unchanged.
+  - Tests: node tests for the profile (endpoints, `g T^2 / 8` at the
+    midpoint, near-flat hard shot, monotonic and never above `aimY`,
+    ground shot on the floor), `shotHeightAlong`, `shotPathPoints`, the
+    mid-flight ball pose, and two `shotVerdict` path cases (arc over a
+    low goalie is open, arc through the goalie is blocked). E2e: ball
+    and arrow sit ~200 mm above the straight line mid-flight; the
+    existing arrow test now checks the tail against the arc.
+- **[A-BACK-026]** [open] **Shot speed up to the record (~200 km/h).**
+  `MAX_PASS_SPEED_MPS` is 40 m/s (144 km/h); measured floorball shots
+  reach ~200 km/h (55 m/s, Wikipedia "Floorball", ball section). Passes
+  and shots share the limit, so raising it for shots means a separate
+  `MAX_SHOT_SPEED_MPS` used by `passPlan()` when the plan is a shot, and
+  the Inspector speed slider range switching with it.
 - **[A-BACK-021]** [shipped] **Pass timing: release point, pass
   speed, lane check.** Follow-up to A-BACK-020. There, a pass spanned
   the whole frame, from the passer's frame-A spot to the receiver's

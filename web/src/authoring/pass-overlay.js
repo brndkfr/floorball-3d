@@ -9,7 +9,7 @@ import { ensureDoc } from './doc.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from './chips.js';
 import { buildArrowGeometry } from './shapes.js';
 import { passPreview, shotStatus } from './choreo-pass.js';
-import { passPlan, chipPosAt, nearestReleaseT, goaliePoseAt, GOAL_Z, heightAlong } from './ball-pose.js';
+import { passPlan, chipPosAt, nearestReleaseT, goaliePoseAt, GOAL_Z, shotHeightAlong, shotPathPoints } from './ball-pose.js';
 import { setPassTiming } from './actors.js';
 import { playbackSegment } from './playback.js';
 import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED, SHOT_LINE_TOKENS } from '../tokens.js';
@@ -22,6 +22,7 @@ const TRAIL_WIDTH = 70;
 const TRAIL_FADE_MS = 400;
 const RUN_SAMPLES = 32;
 const GRAB_PX = 18;   // screen-space grab radius: the diamond is only ~10 px at a full-rink zoom
+const SHOT_PATH_SEGMENTS = 8;
 
 const mat = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, depthTest: false, side: THREE.DoubleSide });
 
@@ -91,6 +92,7 @@ export function shotVerdictFor(plan, fa, fb) {
       ballWorld: new THREE.Vector3(plan.from.x, BALL_RADIUS, plan.from.z),
       goalCenterWorld: new THREE.Vector3(plan.to.x, plan.aimY, GOAL_Z[plan.goal]),
       goalieMesh,
+      path: shotPathPoints(plan, SHOT_PATH_SEGMENTS),
     });
     return shotStatus(lineColor, plan.blockedBy, ensureDoc().scheme.players);
   } finally {
@@ -108,12 +110,12 @@ function setGeometry(mesh, geom) {
   mesh.geometry = geom;
 }
 
-// Tilt a flat floor ribbon so it follows the ball's straight 3D line (ball centre y0 -> y1).
-function liftAlong(geom, from, to, y0, y1) {
+// Lift a flat floor ribbon onto the shot's 3D arc.
+function liftAlong(geom, plan) {
   const pos = geom.attributes.position;
   if (!pos) return geom;
   for (let i = 0; i < pos.count; i++) {
-    pos.setY(i, heightAlong({ x: pos.getX(i), z: pos.getZ(i) }, from, to, y0, y1));
+    pos.setY(i, shotHeightAlong({ x: pos.getX(i), z: pos.getZ(i) }, plan));
   }
   pos.needsUpdate = true;
   geom.computeVertexNormals();
@@ -143,7 +145,7 @@ export function tickPassOverlay() {
   const goalieSel = plan.kind === 'shot' ? state.goalies[plan.goal] : null;
   const gfa = fa.goalies?.[plan.goal], gfb = fb.goalies?.[plan.goal];
   const goalie = goalieSel ? [goalieSel.visible, gfa?.x, gfa?.z, gfa?.angle, gfb?.x, gfb?.z, gfb?.angle, plan.arriveT] : [];
-  const nextKey = JSON.stringify([ensureDoc().currentFrame, plan.kind, plan.from, plan.to, plan.aimY ?? 0, plan.releaseMark, plan.blockedBy, plan.late, runPts, goalie].flat(3).map((v) => (typeof v === 'number' ? r(v) : v)));
+  const nextKey = JSON.stringify([ensureDoc().currentFrame, plan.kind, plan.from, plan.to, plan.aimY ?? 0, plan.needMs, plan.releaseMark, plan.blockedBy, plan.late, runPts, goalie].flat(3).map((v) => (typeof v === 'number' ? r(v) : v)));
   if (nextKey === key) return trailChanged;
   key = nextKey;
 
@@ -161,7 +163,7 @@ export function tickPassOverlay() {
   });
   if (trimmed) {
     const geom = buildArrowGeometry([trimmed.from, trimmed.to], ARROW_WIDTH, { shaftStyle: plan.late ? 'dotted' : 'dashed' });
-    setGeometry(arrow, plan.kind === 'shot' ? liftAlong(geom, plan.from, plan.to, BALL_RADIUS, plan.aimY) : geom);
+    setGeometry(arrow, plan.kind === 'shot' ? liftAlong(geom, plan) : geom);
     arrow.material.color.setHex(color);
     arrow.visible = true;
   } else {
@@ -199,10 +201,7 @@ function updateTrail() {
   const end = after >= 0 ? plan.to : { x: state.ballGroup?.position.x ?? plan.to.x, z: state.ballGroup?.position.z ?? plan.to.z };
   if (Math.hypot(end.x - plan.from.x, end.z - plan.from.z) < 50) return hide(trail);
   setGeometry(trail, buildArrowGeometry([plan.from, end], TRAIL_WIDTH, { headStyle: 'none' }));
-  if (plan.kind === 'shot') {
-    const endY = after >= 0 ? plan.aimY : (state.ballGroup?.position.y ?? 0) + BALL_RADIUS;
-    liftAlong(trail.geometry, plan.from, end, BALL_RADIUS, endY);
-  }
+  if (plan.kind === 'shot') liftAlong(trail.geometry, plan);
   trail.material.color.setHex(plan.blockedBy.length ? VECTOR_PASS_BLOCKED.hex : VECTOR_PASS_CLEAR.hex);
   trail.material.opacity = after > 0 ? 0.8 * (1 - after / TRAIL_FADE_MS) : 0.8;
   trail.visible = true;

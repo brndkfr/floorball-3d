@@ -49,13 +49,30 @@ export function shotTargetFrame({ choreoActive, draftCarrierChanged }) {
 
 const validShot = (s) => s && (s.goal === 'A' || s.goal === 'B');
 
-// Height for a floor point p on a line from -> to (shot arrow lift): progress along the line only.
-export function heightAlong(p, from, to, y0, y1) {
+// --- shot arc (A-BACK-025) ---
+const GRAVITY = 9.81e-3;   // mm/ms^2
+
+// Ball-centre height at progress s (0 = release, 1 = goal line). The lift over the straight line is
+// the gravity parabola for the flight time, capped at the rise so the ball never peaks before the
+// goal line: low aims stay low, a ground shot stays on the floor.
+export function shotHeightAt(plan, s) {
+  const u = clamp(s, 0, 1);
+  const rise = Math.max(0, plan.aimY - BALL_RADIUS);
+  const bulge = Math.min(GRAVITY * plan.needMs * plan.needMs / 2, rise);
+  return BALL_RADIUS + rise * u + bulge * u * (1 - u);
+}
+
+// Height for a floor point p on the release -> aim line (arrow / trail lift): progress along the line only.
+export function shotHeightAlong(p, plan) {
+  const { from, to } = plan;
   const dx = to.x - from.x, dz = to.z - from.z;
   const lenSq = dx * dx + dz * dz;
-  if (lenSq < 1e-9) return y0;
-  const s = clamp(((p.x - from.x) * dx + (p.z - from.z) * dz) / lenSq, 0, 1);
-  return y0 + (y1 - y0) * s;
+  if (lenSq < 1e-9) return BALL_RADIUS;
+  return shotHeightAt(plan, ((p.x - from.x) * dx + (p.z - from.z) * dz) / lenSq);
+}
+
+export function shotPathPoints(plan, n) {
+  return Array.from({ length: n + 1 }, (_, i) => ({ ...lerpPt(plan.from, plan.to, i / n), y: shotHeightAt(plan, i / n) }));
 }
 
 const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
@@ -156,7 +173,7 @@ export function ballPoseAt(fa, fb, t, durationMs) {
     const top = Math.max(0, plan.aimY - BALL_RADIUS);
     if (t < plan.arriveT) {
       const s = (t - plan.releaseT) / (plan.arriveT - plan.releaseT);
-      return { ...lerpPt(plan.from, plan.to, s), y: top * s };
+      return { ...lerpPt(plan.from, plan.to, s), y: shotHeightAt(plan, s) - BALL_RADIUS };
     }
     if (t < plan.restT) {
       const s = (t - plan.arriveT) / (plan.restT - plan.arriveT);
