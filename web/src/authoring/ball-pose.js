@@ -12,6 +12,9 @@ export const DEFAULT_PASS_SPEED_MPS = 15;            // estimate, not a sourced 
 export const PASS_LANE_HALF_WIDTH_MM = 400;          // same as passOptions() default in insights.js
 export const MIN_PASS_SPEED_MPS = 3;
 export const MAX_PASS_SPEED_MPS = 40;
+export const MAX_SHOT_SPEED_MPS = 55;                // ~200 km/h, measured record (Wikipedia "Floorball", Ball)
+export const maxSpeedMps = (kind) => (kind === 'shot' ? MAX_SHOT_SPEED_MPS : MAX_PASS_SPEED_MPS);
+export const mpsToKmh = (mps) => Math.round(mps * 3.6);
 const LANE_SAMPLES = 16;
 
 // --- shots (A-BACK-022) ---
@@ -112,7 +115,7 @@ export function passPlan(fa, fb, durationMs) {
 
   const stored = bb.pass || {};
   const releaseT = clamp(Number.isFinite(stored.releaseT) ? stored.releaseT : (passerId ? DEFAULT_RELEASE_T : 0), 0, 1);
-  const speedMps = clamp(Number.isFinite(stored.speedMps) ? stored.speedMps : (shot ? DEFAULT_SHOT_SPEED_MPS : DEFAULT_PASS_SPEED_MPS), MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS);
+  const speedMps = clamp(Number.isFinite(stored.speedMps) ? stored.speedMps : (shot ? DEFAULT_SHOT_SPEED_MPS : DEFAULT_PASS_SPEED_MPS), MIN_PASS_SPEED_MPS, maxSpeedMps(shot ? 'shot' : 'pass'));
   const releaseMark = passerId ? chipPosAt(fa, fb, passerId, releaseT) : { x: ba.x, z: ba.z };
   const from = passerId ? withOffset(releaseMark) : releaseMark;
   const targetAt = (t) => {

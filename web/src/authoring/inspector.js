@@ -18,7 +18,7 @@ import { ensureDoc } from './doc.js';
 import { getBallCarrier, setBallCarrier, getBallColor, setBallColor, setPassTiming, shootAt, setShotAim } from './actors.js';
 import { passTargets, passStatus } from './choreo-pass.js';
 import { currentPass, shotVerdictFor } from './pass-overlay.js';
-import { MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS, padToAim, aimToPad } from './ball-pose.js';
+import { MIN_PASS_SPEED_MPS, maxSpeedMps, mpsToKmh, padToAim, aimToPad } from './ball-pose.js';
 import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED, SHOT_LINE_TOKENS } from '../tokens.js';
 import { makeFloatable } from './floatable.js';
 
@@ -255,7 +255,7 @@ function passTimingSection({ plan, dur, fa, fb }) {
   const speed = document.createElement('input');
   speed.type = 'number';
   speed.id = 'passSpeedInput';
-  speed.min = String(MIN_PASS_SPEED_MPS); speed.max = String(MAX_PASS_SPEED_MPS); speed.step = '1';
+  speed.min = String(MIN_PASS_SPEED_MPS); speed.max = String(maxSpeedMps(plan.kind)); speed.step = '1';
   speed.value = String(plan.speedMps);
   speed.style.cssText = 'width:56px; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; font-family:inherit;';
   speed.addEventListener('change', () => {
@@ -263,7 +263,10 @@ function passTimingSection({ plan, dur, fa, fb }) {
     if (Number.isFinite(v)) setPassTiming({ speedMps: v });
   });
   const unit = document.createElement('span');
-  unit.textContent = 'm/s';
+  unit.id = 'passSpeedUnit';
+  const showUnit = () => { const v = Number(speed.value); unit.textContent = Number.isFinite(v) ? `m/s (${mpsToKmh(v)} km/h)` : 'm/s'; };
+  showUnit();
+  speed.addEventListener('input', showUnit);
   speedRow.append(sl, speed, unit);
 
   const status = passStatus(plan, ensureDoc().scheme.players, dur);

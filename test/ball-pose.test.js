@@ -6,6 +6,7 @@ const {
   BALL_CARRY_OFFSET, PASS_FLIGHT_S, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS,
   GOAL_Z, DEFAULT_SHOT_SPEED_MPS, SHOT_REST_DEPTH, makeShot, clampAim, padToAim, aimToPad, shotTargetFrame,
   shotHeightAt, shotHeightAlong, shotPathPoints,
+  MAX_PASS_SPEED_MPS, MAX_SHOT_SPEED_MPS, maxSpeedMps, mpsToKmh,
 } = await import('../web/src/authoring/ball-pose.js');
 const { BALL_RADIUS } = await import('../web/src/constants.js');
 
@@ -151,6 +152,22 @@ test('every non-shot pose is on the floor (y = 0)', () => {
 test('shot speed comes from pass.speedMps when set', () => {
   const [fa, fb] = shotFrames(undefined, { speedMps: 10 });
   assert.equal(passPlan(fa, fb, DUR).speedMps, 10);
+});
+
+test('A-BACK-026: shots may go up to ~200 km/h, passes stay at 40 m/s', () => {
+  assert.equal(MAX_PASS_SPEED_MPS, 40);
+  assert.equal(MAX_SHOT_SPEED_MPS, 55);
+  assert.equal(maxSpeedMps('shot'), 55);
+  assert.equal(maxSpeedMps('pass'), 40);
+  assert.equal(passPlan(...shotFrames(undefined, { speedMps: 50 }), DUR).speedMps, 50);
+  assert.equal(passPlan(...shotFrames(undefined, { speedMps: 99 }), DUR).speedMps, 55);
+  assert.equal(passPlan(...staticPass({ speedMps: 50 }), DUR).speedMps, 40);
+});
+
+test('mpsToKmh rounds to whole km/h', () => {
+  assert.equal(mpsToKmh(25), 90);
+  assert.equal(mpsToKmh(55), 198);
+  assert.equal(mpsToKmh(15), 54);
 });
 
 test('shotTargetFrame: shoot in the Choreo draft only when it has no pass yet', () => {

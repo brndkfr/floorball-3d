@@ -735,12 +735,22 @@ Still on the backlog from that exploration:
     low goalie is open, arc through the goalie is blocked). E2e: ball
     and arrow sit ~200 mm above the straight line mid-flight; the
     existing arrow test now checks the tail against the arc.
-- **[A-BACK-026]** [open] **Shot speed up to the record (~200 km/h).**
-  `MAX_PASS_SPEED_MPS` is 40 m/s (144 km/h); measured floorball shots
-  reach ~200 km/h (55 m/s, Wikipedia "Floorball", ball section). Passes
-  and shots share the limit, so raising it for shots means a separate
-  `MAX_SHOT_SPEED_MPS` used by `passPlan()` when the plan is a shot, and
-  the Inspector speed slider range switching with it.
+- **[A-BACK-026]** [shipped] **Shot speed up to the record (~200 km/h).**
+  `MAX_PASS_SPEED_MPS` was 40 m/s (144 km/h) for passes and shots
+  alike; measured floorball shots reach ~200 km/h (55 m/s, Wikipedia
+  "Floorball", ball section).
+  - New `MAX_SHOT_SPEED_MPS = 55` and `maxSpeedMps(kind)` in
+    ball-pose.js. `passPlan()`, `setPassTiming()` (actors.js, by
+    whether the frame's ball has a `shot`) and the Inspector's
+    `#passSpeedInput` `max` all pick the limit by kind. Passes stay at
+    40, the default shot speed stays 25 m/s. A shot saved above 40 that
+    becomes a pass is just clamped to 40 when used, no migration.
+  - The Inspector shows km/h next to m/s (`#passSpeedUnit`, e.g.
+    "m/s (90 km/h)", live while typing) via `mpsToKmh()`.
+  - Tests: node tests for the per-kind clamp (shot 50 kept, shot 99 ->
+    55, pass 50 -> 40) and `mpsToKmh`; e2e in `shots.spec.js` (max 55,
+    km/h label, 50 stored, 99 stored as 55) and `pass-timing.spec.js`
+    (max 40, 50 stored as 40).
 - **[A-BACK-021]** [shipped] **Pass timing: release point, pass
   speed, lane check.** Follow-up to A-BACK-020. There, a pass spanned
   the whole frame, from the passer's frame-A spot to the receiver's

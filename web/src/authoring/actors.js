@@ -21,7 +21,7 @@ import { scene } from '../scene.js';
 import { ensureDoc } from './doc.js';
 import { saveDoc } from './storage.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from './chips.js';
-import { BALL_CARRY_OFFSET, passFlightPos, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS, MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS, makeShot, clampAim, shotTargetFrame, DEFAULT_SHOT_SPEED_MPS } from './ball-pose.js';
+import { BALL_CARRY_OFFSET, passFlightPos, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS, MIN_PASS_SPEED_MPS, maxSpeedMps, makeShot, clampAim, shotTargetFrame, DEFAULT_SHOT_SPEED_MPS } from './ball-pose.js';
 import { prefersReducedMotion } from '../reduced-motion.js';
 // Cycles (choreograph/frames import actors) are fine: only called at runtime, never at module init.
 import { isChoreoActive, getChoreoStartCarrier, commitChoreo } from './choreograph.js';
@@ -294,7 +294,7 @@ export function setPassTiming({ releaseT, speedMps } = {}, { history = true } = 
   if (!main) return;
   const pass = { ...(main.pass || {}) };
   if (releaseT !== undefined) pass.releaseT = Math.min(Math.max(releaseT, 0), 1);
-  if (speedMps !== undefined) pass.speedMps = Math.min(Math.max(speedMps, MIN_PASS_SPEED_MPS), MAX_PASS_SPEED_MPS);
+  if (speedMps !== undefined) pass.speedMps = Math.min(Math.max(speedMps, MIN_PASS_SPEED_MPS), maxSpeedMps(main.shot ? 'shot' : 'pass'));
   if (pass.releaseT === DEFAULT_RELEASE_T) delete pass.releaseT;
   if (pass.speedMps === (main.shot ? DEFAULT_SHOT_SPEED_MPS : DEFAULT_PASS_SPEED_MPS)) delete pass.speedMps;
   if (Object.keys(pass).length) main.pass = pass; else delete main.pass;

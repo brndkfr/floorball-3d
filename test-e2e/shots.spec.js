@@ -188,6 +188,25 @@ test.describe('A-BACK-022 shots at goal', () => {
     expect(r.trailMaxY).toBeGreaterThan(200);         // trail climbs with the ball mid-flight
   });
 
+  test('shot speed goes up to 55 m/s, shown in km/h too (A-BACK-026)', async ({ page }) => {
+    await boot(page);
+    const id = await setupShooter(page, { x: 0, z: 26000 });
+    await selectChip(page, id);
+    await page.locator('#inspectorShoot [data-shoot="B"]').click();
+    await selectChip(page, id);
+    const input = page.locator('#passSpeedInput');
+    await expect(input).toHaveAttribute('max', '55');
+    await expect(page.locator('#passSpeedUnit')).toHaveText('m/s (90 km/h)');
+    await input.fill('50');
+    await expect(page.locator('#passSpeedUnit')).toHaveText('m/s (180 km/h)');
+    await input.blur();
+    expect((await docState(page)).ball.pass).toEqual({ speedMps: 50 });
+    await selectChip(page, id);
+    await page.locator('#passSpeedInput').fill('99');
+    await page.locator('#passSpeedInput').blur();
+    expect((await docState(page)).ball.pass).toEqual({ speedMps: 55 });
+  });
+
   test('the shot flies in an arc: ball and arrow sit above the straight line mid-flight (A-BACK-025)', async ({ page }) => {
     await boot(page);
     const id = await setupShooter(page, { x: 0, z: 26000 });
