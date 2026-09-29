@@ -751,6 +751,63 @@ Still on the backlog from that exploration:
     55, pass 50 -> 40) and `mpsToKmh`; e2e in `shots.spec.js` (max 55,
     km/h label, 50 stored, 99 stored as 55) and `pass-timing.spec.js`
     (max 40, 50 stored as 40).
+- **Arena branding (A-BACK-027 to A-BACK-029).** Team crest / sponsor
+  logos on the floor and ads on the boards, project-wide (not per
+  frame). Order: 027 (no dependencies), then 028, then 029 (needs both).
+- **[A-BACK-027]** [open] **Board slots with toggleable labels.** The
+  straight board runs split into 2 m slots (board height 500 mm):
+  long sides 40 m - 2 x 2 m corner radius = 36 m = 18 slots each, ends
+  20 m - 4 m = 16 m = 8 slots each, 52 in total. The four 2 m-radius
+  corners stay unlabelled.
+  - Pure `boardSlots()` (three-free, next to the rink constants): per
+    slot `{ id, side, index, start, end, normal }` in world mm, derived
+    from `RINK_L` / `RINK_W` / corner radius, so nothing in
+    `generators/` or `web/assets/` changes.
+  - Naming (default, confirm before building): per side, `L1-L18` and
+    `R1-R18` counted from goal A towards goal B (left / right as seen
+    from goal A looking at B), `A1-A8` and `B1-B8` along the ends.
+    Alternative: one run 1-52 clockwise.
+  - Label: canvas-textured plane on the inner board face near the top
+    edge (readable in 3D, leaves room for an ad). Top-down sees the
+    boards edge-on, so there the label lies flat on the floor just
+    inside the board. Same floor-label technique as shapes.js.
+  - Toggle: "Board labels" checkbox in the Layers panel next to
+    "Goalie A" / "Goalie B", off by default, display-only (not stored
+    in the doc).
+  - Tests: node tests for `boardSlots()` (count 52, first / last slot
+    ends, slot width 2000, normals point into the rink, no overlap with
+    the corner arcs); e2e: toggle shows / hides all 52 labels.
+- **[A-BACK-028]** [open] **Floor logo + shared image store.** One or
+  more images lying on the floor (centre-court crest, sponsor logo).
+  - Doc: project-level `doc.arena = { floor: [{ id, imageId, x, z, w,
+    rotation, opacity }], boards: {} }`, outside `frames`, so it is the
+    same in every frame. `ensureDoc()` / `acceptDoc()` default it.
+  - Images live in IndexedDB (like `photo-cache.js`), keyed by a
+    content hash so the same logo used many times is stored once; the
+    doc only holds `imageId`. Downscale to <= 1024 px on import.
+    Keeps localStorage (~5 MB quota) and share links (32 KB
+    `HASH_LIMIT`) small.
+  - Render: textured plane ~2 mm above the floor, `polygonOffset`,
+    `frustumCulled = false`, anisotropy set (CLAUDE.md rendering
+    gotchas). Move + corner resize reuse the shape handles; rotation
+    and opacity in the Inspector.
+  - Known gap: a share link carries only `imageId`s, so the receiver
+    sees no image. Bundling images into the file export is a possible
+    follow-up.
+  - Tests: node tests for the arena doc defaults / migration and the
+    image-id hashing; e2e: import an image, place and resize it, reload
+    and it is still there.
+- **[A-BACK-029]** [open] **Board ads.** Depends on A-BACK-027 (slots)
+  and A-BACK-028 (image store). `doc.arena.boards = { L7: imageId, ...
+  }`; each assigned slot gets a 2000 x 500 mm textured plane just in
+  front of the inner board face.
+  - UI: an "Arena" section: upload logos, click one or more board
+    slots to assign the chosen logo, quick fills ("all boards",
+    "alternate A/B"), clear.
+  - Open: inner face only (enough for a playing-view camera) or the
+    outer face too.
+  - Tests: node test for assignment / quick-fill helpers; e2e: assign a
+    logo to a slot, it renders there and survives a reload.
 - **[A-BACK-021]** [shipped] **Pass timing: release point, pass
   speed, lane check.** Follow-up to A-BACK-020. There, a pass spanned
   the whole frame, from the passer's frame-A spot to the receiver's
