@@ -9,7 +9,7 @@ import { ensureDoc } from './doc.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from './chips.js';
 import { buildArrowGeometry } from './shapes.js';
 import { passPreview, shotStatus } from './choreo-pass.js';
-import { passPlan, chipPosAt, nearestReleaseT, GOAL_Z } from './ball-pose.js';
+import { passPlan, chipPosAt, nearestReleaseT, goaliePoseAt, GOAL_Z, shotHeightAlong, shotPathPoints } from './ball-pose.js';
 import { setPassTiming } from './actors.js';
 import { playbackSegment } from './playback.js';
 import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED, SHOT_LINE_TOKENS } from '../tokens.js';
@@ -22,6 +22,7 @@ const TRAIL_WIDTH = 70;
 const TRAIL_FADE_MS = 400;
 const RUN_SAMPLES = 32;
 const GRAB_PX = 18;   // screen-space grab radius: the diamond is only ~10 px at a full-rink zoom
+const SHOT_PATH_SEGMENTS = 8;
 
 const mat = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, depthTest: false, side: THREE.DoubleSide });
 
@@ -72,19 +73,53 @@ export function currentPass() {
 
 const r = (v) => Math.round(v);
 
-// { key, text } for a shot plan: goalie check against the live goalie mesh + opponents in the lane.
-export function shotVerdictFor(plan) {
-  const goalie = state.goalieGroup?.visible ? state.goalieGroup : null;
-  const { lineColor } = shotVerdict({
-    ballWorld: new THREE.Vector3(plan.from.x, BALL_RADIUS, plan.from.z),
-    goalCenterWorld: new THREE.Vector3(plan.to.x, plan.aimY, GOAL_Z[plan.goal]),
-    goalieMesh: goalie,
-  });
-  return shotStatus(lineColor, plan.blockedBy, ensureDoc().scheme.players);
+// { key, text } for a shot plan: goalie check against the goalie mesh for the target goal, raycast
+// at its interpolated position at the ball's arrival time (A-BACK-023) rather than its static
+// edit-frame spot - fa/fb are the frames the pass/shot plan was built from (currentPass()).
+export function shotVerdictFor(plan, fa, fb) {
+  const goalie = state.goalies[plan.goal];
+  const goalieMesh = goalie?.visible ? goalie : null;
+  const pose = goalieMesh && fa && fb ? goaliePoseAt(fa, fb, plan.goal, plan.arriveT) : null;
+  const saved = pose ? { x: goalie.position.x, z: goalie.position.z, angle: goalie.rotation.y } : null;
+  if (pose) {
+    goalie.position.x = pose.x;
+    goalie.position.z = pose.z;
+    goalie.rotation.y = pose.angle;
+    goalie.updateMatrixWorld(true); // raycasting reads the cached matrixWorld, not .position - it's only refreshed on the next render tick otherwise
+  }
+  try {
+    const { lineColor } = shotVerdict({
+      ballWorld: new THREE.Vector3(plan.from.x, BALL_RADIUS, plan.from.z),
+      goalCenterWorld: new THREE.Vector3(plan.to.x, plan.aimY, GOAL_Z[plan.goal]),
+      goalieMesh,
+      path: shotPathPoints(plan, SHOT_PATH_SEGMENTS),
+    });
+    return shotStatus(lineColor, plan.blockedBy, ensureDoc().scheme.players);
+  } finally {
+    // Never leave the edit-frame pose changed - restore it even if shotVerdict throws.
+    if (saved) {
+      goalie.position.x = saved.x;
+      goalie.position.z = saved.z;
+      goalie.rotation.y = saved.angle;
+      goalie.updateMatrixWorld(true);
+    }
+  }
 }
 function setGeometry(mesh, geom) {
   mesh.geometry.dispose();
   mesh.geometry = geom;
+}
+
+// Lift a flat floor ribbon onto the shot's 3D arc.
+function liftAlong(geom, plan) {
+  const pos = geom.attributes.position;
+  if (!pos) return geom;
+  for (let i = 0; i < pos.count; i++) {
+    pos.setY(i, shotHeightAlong({ x: pos.getX(i), z: pos.getZ(i) }, plan));
+  }
+  pos.needsUpdate = true;
+  geom.computeVertexNormals();
+  return geom;
 }
 
 function hide(...objs) {
@@ -105,13 +140,17 @@ export function tickPassOverlay() {
   if (!cur) return hide(arrow, marker, run, aimMarker) || trailChanged;
   const { fa, fb, plan } = cur;
   const runPts = plan.passerId ? [0, 0.5, 1].map((t) => chipPosAt(fa, fb, plan.passerId, t)) : [];
-  const goalie = state.goalieGroup ? [state.goalieGroup.position.x, state.goalieGroup.position.z, state.goalieGroup.visible] : [];
-  const nextKey = JSON.stringify([ensureDoc().currentFrame, plan.kind, plan.from, plan.to, plan.aimY ?? 0, plan.releaseMark, plan.blockedBy, plan.late, runPts, goalie].flat(3).map((v) => (typeof v === 'number' ? r(v) : v)));
+  // Verdict depends on the goalie's keyframed pose at arrival time (A-BACK-023), not its live
+  // mesh transform - key off the stored keyframes + arriveT instead of goalie.position/rotation.
+  const goalieSel = plan.kind === 'shot' ? state.goalies[plan.goal] : null;
+  const gfa = fa.goalies?.[plan.goal], gfb = fb.goalies?.[plan.goal];
+  const goalie = goalieSel ? [goalieSel.visible, gfa?.x, gfa?.z, gfa?.angle, gfb?.x, gfb?.z, gfb?.angle, plan.arriveT] : [];
+  const nextKey = JSON.stringify([ensureDoc().currentFrame, plan.kind, plan.from, plan.to, plan.aimY ?? 0, plan.needMs, plan.releaseMark, plan.blockedBy, plan.late, runPts, goalie].flat(3).map((v) => (typeof v === 'number' ? r(v) : v)));
   if (nextKey === key) return trailChanged;
   key = nextKey;
 
   const color = plan.kind === 'shot'
-    ? SHOT_LINE_TOKENS[shotVerdictFor(plan).key].hex
+    ? SHOT_LINE_TOKENS[shotVerdictFor(plan, fa, fb).key].hex
     : (plan.blockedBy.length ? VECTOR_PASS_BLOCKED.hex : VECTOR_PASS_CLEAR.hex);
   aimMarker.visible = plan.kind === 'shot';
   if (aimMarker.visible) {
@@ -123,7 +162,8 @@ export function tickPassOverlay() {
     trim: CHIP_RADIUS * CHIP_DISPLAY_SCALE,
   });
   if (trimmed) {
-    setGeometry(arrow, buildArrowGeometry([trimmed.from, trimmed.to], ARROW_WIDTH, { shaftStyle: plan.late ? 'dotted' : 'dashed' }));
+    const geom = buildArrowGeometry([trimmed.from, trimmed.to], ARROW_WIDTH, { shaftStyle: plan.late ? 'dotted' : 'dashed' });
+    setGeometry(arrow, plan.kind === 'shot' ? liftAlong(geom, plan) : geom);
     arrow.material.color.setHex(color);
     arrow.visible = true;
   } else {
@@ -161,6 +201,7 @@ function updateTrail() {
   const end = after >= 0 ? plan.to : { x: state.ballGroup?.position.x ?? plan.to.x, z: state.ballGroup?.position.z ?? plan.to.z };
   if (Math.hypot(end.x - plan.from.x, end.z - plan.from.z) < 50) return hide(trail);
   setGeometry(trail, buildArrowGeometry([plan.from, end], TRAIL_WIDTH, { headStyle: 'none' }));
+  if (plan.kind === 'shot') liftAlong(trail.geometry, plan);
   trail.material.color.setHex(plan.blockedBy.length ? VECTOR_PASS_BLOCKED.hex : VECTOR_PASS_CLEAR.hex);
   trail.material.opacity = after > 0 ? 0.8 * (1 - after / TRAIL_FADE_MS) : 0.8;
   trail.visible = true;

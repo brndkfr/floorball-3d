@@ -177,7 +177,7 @@ function applyPose(elapsed) {
     g.rotation.y = lerpAngle(pa.angle || 0, pb.angle || 0, t);
   }
 
-  // ball: carrier-aware with pass release/flight timing (ball-pose.js); goalie: lerp.
+  // ball: carrier-aware with pass release/flight timing (ball-pose.js); goalies: lerp per goal end.
   if (state.ballGroup) {
     const p = ballPoseAt(fa, fb, t, frames[a].duration);
     if (p) {
@@ -186,12 +186,14 @@ function applyPose(elapsed) {
       state.ballGroup.position.z = p.z;
     }
   }
-  if (state.goalieGroup) {
-    const ga = fa.goalie, gb = fb.goalie || ga;
+  for (const letter of ['A', 'B']) {
+    const g = state.goalies[letter];
+    if (!g) continue;
+    const ga = fa.goalies?.[letter], gb = fb.goalies?.[letter] || ga;
     if (ga) {
-      state.goalieGroup.position.x = lerp(ga.x, gb.x, t);
-      state.goalieGroup.position.z = lerp(ga.z, gb.z, t);
-      state.goalieGroup.rotation.y = lerpAngle(ga.angle || 0, gb.angle || 0, t);
+      g.position.x = lerp(ga.x, gb.x, t);
+      g.position.z = lerp(ga.z, gb.z, t);
+      g.rotation.y = lerpAngle(ga.angle || 0, gb.angle || 0, t);
     }
   }
 

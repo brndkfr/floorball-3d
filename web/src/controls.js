@@ -33,7 +33,7 @@ const MOVE_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 
 let shiftHeld = false;
 
 function cycleSelection(direction) {
-  const cycle = [state.ballGroup, state.goalieGroup, ...state.goalInstances, ...state.chipGroups].filter(Boolean);
+  const cycle = [state.ballGroup, state.goalies.A, state.goalies.B, ...state.goalInstances, ...state.chipGroups].filter(Boolean);
   if (cycle.length === 0) return;
   const idx = state.selected ? cycle.indexOf(state.selected) : -1;
   const obj = cycle[(idx + direction + cycle.length) % cycle.length];
@@ -45,11 +45,13 @@ function cycleSelection(direction) {
 }
 
 function handleKeyboardMovement(dt) {
-  // Q/E rotate goalie when goalie is selected. This is the only "act on
-  // the selected item" keyboard verb that survives; positional movement is
-  // mouse-only.
-  const goalie = state.goalieGroup;
-  if (goalie && state.selected === goalie) {
+  // Q/E rotate the selected goalie (whichever goal end it belongs to). This
+  // is the only "act on the selected item" keyboard verb that survives;
+  // positional movement is mouse-only.
+  const goalie = state.selected === state.goalies.A ? state.goalies.A
+    : state.selected === state.goalies.B ? state.goalies.B
+    : null;
+  if (goalie) {
     let rot = 0;
     if (keysPressed.has('q') || keysPressed.has('Q')) rot -= 1;
     if (keysPressed.has('e') || keysPressed.has('E')) rot += 1;

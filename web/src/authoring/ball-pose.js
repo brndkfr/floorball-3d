@@ -2,7 +2,7 @@
 // (A-BACK-020 / A-BACK-021). three-free so it is Node-testable. A carried ball's
 // stored x/z is only its last loose spot, so the carrier must win when set.
 
-import { bezierPos, segmentControls } from './bezier.js';
+import { bezierPos, segmentControls, lerpAngle } from './bezier.js';
 import { BALL_RADIUS, GOAL_LINE_FROM_BOARD, RINK_L } from '../constants.js';
 
 export const BALL_CARRY_OFFSET = { x: 0, z: 250 };   // "in front of the player"
@@ -12,6 +12,9 @@ export const DEFAULT_PASS_SPEED_MPS = 15;            // estimate, not a sourced 
 export const PASS_LANE_HALF_WIDTH_MM = 400;          // same as passOptions() default in insights.js
 export const MIN_PASS_SPEED_MPS = 3;
 export const MAX_PASS_SPEED_MPS = 40;
+export const MAX_SHOT_SPEED_MPS = 55;                // ~200 km/h, measured record (Wikipedia "Floorball", Ball)
+export const maxSpeedMps = (kind) => (kind === 'shot' ? MAX_SHOT_SPEED_MPS : MAX_PASS_SPEED_MPS);
+export const mpsToKmh = (mps) => Math.round(mps * 3.6);
 const LANE_SAMPLES = 16;
 
 // --- shots (A-BACK-022) ---
@@ -49,6 +52,32 @@ export function shotTargetFrame({ choreoActive, draftCarrierChanged }) {
 
 const validShot = (s) => s && (s.goal === 'A' || s.goal === 'B');
 
+// --- shot arc (A-BACK-025) ---
+const GRAVITY = 9.81e-3;   // mm/ms^2
+
+// Ball-centre height at progress s (0 = release, 1 = goal line). The lift over the straight line is
+// the gravity parabola for the flight time, capped at the rise so the ball never peaks before the
+// goal line: low aims stay low, a ground shot stays on the floor.
+export function shotHeightAt(plan, s) {
+  const u = clamp(s, 0, 1);
+  const rise = Math.max(0, plan.aimY - BALL_RADIUS);
+  const bulge = Math.min(GRAVITY * plan.needMs * plan.needMs / 2, rise);
+  return BALL_RADIUS + rise * u + bulge * u * (1 - u);
+}
+
+// Height for a floor point p on the release -> aim line (arrow / trail lift): progress along the line only.
+export function shotHeightAlong(p, plan) {
+  const { from, to } = plan;
+  const dx = to.x - from.x, dz = to.z - from.z;
+  const lenSq = dx * dx + dz * dz;
+  if (lenSq < 1e-9) return BALL_RADIUS;
+  return shotHeightAt(plan, ((p.x - from.x) * dx + (p.z - from.z) * dz) / lenSq);
+}
+
+export function shotPathPoints(plan, n) {
+  return Array.from({ length: n + 1 }, (_, i) => ({ ...lerpPt(plan.from, plan.to, i / n), y: shotHeightAt(plan, i / n) }));
+}
+
 const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
 const withOffset = (p) => ({ x: p.x + BALL_CARRY_OFFSET.x, z: p.z + BALL_CARRY_OFFSET.z });
 const lerpPt = (a, b, s) => ({ x: a.x + (b.x - a.x) * s, z: a.z + (b.z - a.z) * s });
@@ -60,6 +89,18 @@ export function chipPosAt(fa, fb, id, t) {
   const pb = fb.players?.[id] || pa;
   const [c1x, c1z, c2x, c2z] = segmentControls(pa, pb);
   return { x: bezierPos(pa.x, pb.x, c1x, c2x, t), z: bezierPos(pa.z, pb.z, c1z, c2z, t) };
+}
+
+// Where a goalie stands mid-playback (A-BACK-023): same lerp playback.js
+// uses for scheme.goalies.<letter>, exposed here so shotVerdictFor() can
+// raycast against the goalie's pose at the ball's arrival time instead of
+// its static edit-frame position. Null when the goal end has no stored
+// goalie in fa (nothing to interpolate from).
+export function goaliePoseAt(fa, fb, letter, t) {
+  const ga = fa.goalies?.[letter];
+  if (!ga) return null;
+  const gb = fb.goalies?.[letter] || ga;
+  return { x: ga.x + (gb.x - ga.x) * t, z: ga.z + (gb.z - ga.z) * t, angle: lerpAngle(ga.angle || 0, gb.angle || 0, t) };
 }
 
 // The pass across fa -> fb, or null when the carrier does not change.
@@ -74,7 +115,7 @@ export function passPlan(fa, fb, durationMs) {
 
   const stored = bb.pass || {};
   const releaseT = clamp(Number.isFinite(stored.releaseT) ? stored.releaseT : (passerId ? DEFAULT_RELEASE_T : 0), 0, 1);
-  const speedMps = clamp(Number.isFinite(stored.speedMps) ? stored.speedMps : (shot ? DEFAULT_SHOT_SPEED_MPS : DEFAULT_PASS_SPEED_MPS), MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS);
+  const speedMps = clamp(Number.isFinite(stored.speedMps) ? stored.speedMps : (shot ? DEFAULT_SHOT_SPEED_MPS : DEFAULT_PASS_SPEED_MPS), MIN_PASS_SPEED_MPS, maxSpeedMps(shot ? 'shot' : 'pass'));
   const releaseMark = passerId ? chipPosAt(fa, fb, passerId, releaseT) : { x: ba.x, z: ba.z };
   const from = passerId ? withOffset(releaseMark) : releaseMark;
   const targetAt = (t) => {
@@ -135,7 +176,7 @@ export function ballPoseAt(fa, fb, t, durationMs) {
     const top = Math.max(0, plan.aimY - BALL_RADIUS);
     if (t < plan.arriveT) {
       const s = (t - plan.releaseT) / (plan.arriveT - plan.releaseT);
-      return { ...lerpPt(plan.from, plan.to, s), y: top * s };
+      return { ...lerpPt(plan.from, plan.to, s), y: shotHeightAt(plan, s) - BALL_RADIUS };
     }
     if (t < plan.restT) {
       const s = (t - plan.arriveT) / (plan.restT - plan.arriveT);

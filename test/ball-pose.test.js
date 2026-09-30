@@ -2,11 +2,72 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 const {
-  ballPoseAt, passPlan, nearestReleaseT, passFlightPos,
+  ballPoseAt, passPlan, nearestReleaseT, passFlightPos, goaliePoseAt,
   BALL_CARRY_OFFSET, PASS_FLIGHT_S, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS,
   GOAL_Z, DEFAULT_SHOT_SPEED_MPS, SHOT_REST_DEPTH, makeShot, clampAim, padToAim, aimToPad, shotTargetFrame,
+  shotHeightAt, shotHeightAlong, shotPathPoints,
+  MAX_PASS_SPEED_MPS, MAX_SHOT_SPEED_MPS, maxSpeedMps, mpsToKmh,
 } = await import('../web/src/authoring/ball-pose.js');
 const { BALL_RADIUS } = await import('../web/src/constants.js');
+
+// --- shot arc (A-BACK-025) ---
+
+const G = 9.81e-3;   // mm/ms^2
+// 10 m shot along +z; needMs = distance / speed (m/s = mm/ms).
+const arcPlan = (aimY, speedMps, dist = 10000) => ({ from: { x: 0, z: 0 }, to: { x: 0, z: dist }, aimY, needMs: dist / speedMps });
+const samples = (plan, n = 50) => Array.from({ length: n + 1 }, (_, i) => shotHeightAt(plan, i / n));
+
+test('shotHeightAt: ball centre at BALL_RADIUS on release and exactly aimY on the goal line', () => {
+  for (const plan of [arcPlan(800, 25), arcPlan(1000, 40), arcPlan(300, 5, 20000)]) {
+    assert.equal(shotHeightAt(plan, 0), BALL_RADIUS);
+    assert.ok(close(shotHeightAt(plan, 1), plan.aimY));
+    assert.equal(shotHeightAt(plan, -1), BALL_RADIUS);
+    assert.ok(close(shotHeightAt(plan, 2), plan.aimY));
+  }
+});
+
+test('shotHeightAt: gravity parabola above the straight line, g T^2 / 8 at the midpoint', () => {
+  const plan = arcPlan(1000, 40);   // T = 250 ms, lift 76.6 mm, well under the 964 mm rise
+  const straight = BALL_RADIUS + (1000 - BALL_RADIUS) / 2;
+  assert.ok(close(shotHeightAt(plan, 0.5), straight + G * 250 * 250 / 8, 1e-9));
+});
+
+test('shotHeightAt: a hard close shot flies almost straight', () => {
+  const plan = arcPlan(800, 55);    // ~200 km/h from 10 m
+  const lift = shotHeightAt(plan, 0.5) - (BALL_RADIUS + (800 - BALL_RADIUS) / 2);
+  assert.ok(lift > 0 && lift < 45, `lift ${lift}`);
+});
+
+test('shotHeightAt: never peaks before the goal line - rises monotonically, never above aimY', () => {
+  for (const plan of [arcPlan(800, 5, 20000), arcPlan(150, 5, 20000), arcPlan(1100, 3, 30000), arcPlan(600, 25)]) {
+    const ys = samples(plan);
+    for (let i = 1; i < ys.length; i++) assert.ok(ys[i] >= ys[i - 1] - 1e-9, `aimY ${plan.aimY}: dips at ${i}`);
+    assert.ok(Math.max(...ys) <= plan.aimY + 1e-9);
+  }
+});
+
+test('shotHeightAt: a ground shot stays on the floor', () => {
+  for (const y of samples(arcPlan(BALL_RADIUS, 5, 20000))) assert.equal(y, BALL_RADIUS);
+});
+
+test('shotHeightAlong: height for a floor point by its progress along the release -> aim line', () => {
+  const plan = arcPlan(800, 25);
+  assert.equal(shotHeightAlong({ x: 0, z: 5000 }, plan), shotHeightAt(plan, 0.5));
+  // Sideways offset (ribbon width, arrow head wings) does not change the height.
+  assert.equal(shotHeightAlong({ x: 300, z: 5000 }, plan), shotHeightAt(plan, 0.5));
+  assert.equal(shotHeightAlong({ x: 0, z: -500 }, plan), BALL_RADIUS);
+  assert.ok(close(shotHeightAlong({ x: 0, z: 12000 }, plan), 800));
+  assert.equal(shotHeightAlong({ x: 5, z: 5 }, { ...plan, to: plan.from }), BALL_RADIUS);
+});
+
+test('shotPathPoints: n+1 ball-centre points along the arc, release to aim point', () => {
+  const plan = { ...arcPlan(800, 25), to: { x: 400, z: 10000 } };
+  const pts = shotPathPoints(plan, 8);
+  assert.equal(pts.length, 9);
+  assert.deepEqual(pts[0], { x: 0, y: BALL_RADIUS, z: 0 });
+  assert.ok(close(pts[8].x, 400) && close(pts[8].y, 800) && close(pts[8].z, 10000));
+  assert.ok(close(pts[4].y, shotHeightAt(plan, 0.5)) && close(pts[4].x, 200) && close(pts[4].z, 5000));
+});
 
 // --- shots (A-BACK-022) ---
 
@@ -75,6 +136,14 @@ test('shot pose: rises to the aim height at the goal line, then rests on the flo
   assert.equal(rest.y, 0);
 });
 
+test('shot pose: arcs above the straight rise mid-flight (A-BACK-025)', () => {
+  const [fa, fb] = shotFrames({ aimX: 0, aimY: 800 });
+  const plan = passPlan(fa, fb, DUR);
+  const mid = ballPoseAt(fa, fb, (plan.releaseT + plan.arriveT) / 2, DUR);
+  assert.ok(close(mid.y, shotHeightAt(plan, 0.5) - BALL_RADIUS, 1e-6));
+  assert.ok(mid.y > (800 - BALL_RADIUS) / 2 + 10, `mid y ${mid.y}`);
+});
+
 test('every non-shot pose is on the floor (y = 0)', () => {
   const [fa, fb] = staticPass();
   for (const t of [0, 0.5, 0.7, 1]) assert.equal(ballPoseAt(fa, fb, t, DUR).y, 0);
@@ -83,6 +152,22 @@ test('every non-shot pose is on the floor (y = 0)', () => {
 test('shot speed comes from pass.speedMps when set', () => {
   const [fa, fb] = shotFrames(undefined, { speedMps: 10 });
   assert.equal(passPlan(fa, fb, DUR).speedMps, 10);
+});
+
+test('A-BACK-027: shots may go up to ~200 km/h, passes stay at 40 m/s', () => {
+  assert.equal(MAX_PASS_SPEED_MPS, 40);
+  assert.equal(MAX_SHOT_SPEED_MPS, 55);
+  assert.equal(maxSpeedMps('shot'), 55);
+  assert.equal(maxSpeedMps('pass'), 40);
+  assert.equal(passPlan(...shotFrames(undefined, { speedMps: 50 }), DUR).speedMps, 50);
+  assert.equal(passPlan(...shotFrames(undefined, { speedMps: 99 }), DUR).speedMps, 55);
+  assert.equal(passPlan(...staticPass({ speedMps: 50 }), DUR).speedMps, 40);
+});
+
+test('mpsToKmh rounds to whole km/h', () => {
+  assert.equal(mpsToKmh(25), 90);
+  assert.equal(mpsToKmh(55), 198);
+  assert.equal(mpsToKmh(15), 54);
 });
 
 test('shotTargetFrame: shoot in the Choreo draft only when it has no pass yet', () => {
@@ -212,3 +297,26 @@ test('passFlightPos: starts at from, ends at to, eases, and reports done', () =>
   assert.equal(mid.done, false);
   assert.deepEqual(passFlightPos(from, to, PASS_FLIGHT_S * 2), { pos: { x: 1000, z: 0 }, done: true });
 });
+
+// --- goaliePoseAt (A-BACK-023) ---
+
+test('goaliePoseAt: null when the goal end has no stored goalie in fa', () => {
+  assert.equal(goaliePoseAt({ goalies: {} }, { goalies: {} }, 'A', 0.5), null);
+  assert.equal(goaliePoseAt({}, {}, 'B', 0.5), null);
+});
+
+test('goaliePoseAt: lerps x/z and takes the short way around for angle', () => {
+  const fa = { goalies: { A: { x: 0, z: 9000, angle: 0 } } };
+  const fb = { goalies: { A: { x: 1000, z: 9500, angle: Math.PI / 2 } } };
+  assert.deepEqual(goaliePoseAt(fa, fb, 'A', 0), { x: 0, z: 9000, angle: 0 });
+  assert.deepEqual(goaliePoseAt(fa, fb, 'A', 1), { x: 1000, z: 9500, angle: Math.PI / 2 });
+  const mid = goaliePoseAt(fa, fb, 'A', 0.5);
+  assert.ok(close(mid.x, 500) && close(mid.z, 9250) && close(mid.angle, Math.PI / 4), JSON.stringify(mid));
+});
+
+test('goaliePoseAt: missing fb for that letter holds fa\'s pose steady', () => {
+  const fa = { goalies: { B: { x: 200, z: 500, angle: 1 } } };
+  const fb = { goalies: {} };
+  assert.deepEqual(goaliePoseAt(fa, fb, 'B', 0.7), { x: 200, z: 500, angle: 1 });
+});
+

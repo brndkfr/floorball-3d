@@ -38,6 +38,7 @@ async function screenOf(page, x, z) {
     const THREE = await import('three');
     const { renderer } = await import('/src/scene.js');
     const { state } = await import('/src/state.js');
+    state.activeCamera.updateMatrixWorld();   // cached matrices only refresh on render; a render between here and the click would move the hit
     const v = new THREE.Vector3(x, 0, z).project(state.activeCamera);
     const r = renderer.domElement.getBoundingClientRect();
     return { x: (v.x + 1) / 2 * r.width + r.left, y: (1 - v.y) / 2 * r.height + r.top };

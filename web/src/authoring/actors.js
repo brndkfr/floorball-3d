@@ -3,8 +3,8 @@
 // tickActors() in main.js.
 //
 // Schema written to `frame.scheme`:
-//   scheme.balls.main = { x, z, carrier: chipId | null }
-//   scheme.goalie     = { x, z, angle }
+//   scheme.balls.main  = { x, z, carrier: chipId | null }
+//   scheme.goalies     = { A?: { x, z, angle }, B?: { x, z, angle } }
 //
 // Ball carrier: when non-null, the ball snaps to the carrier chip's
 // position each tick (plus a small forward offset so it reads as "in
@@ -12,7 +12,8 @@
 // dropdown when the ball is selected, or by right-clicking a chip while
 // the ball is the current selection (see selection.js).
 //
-// Goalie has no carrier concept; rotation.y persists as `angle`.
+// Goalies have no carrier concept; rotation.y persists as `angle`, one
+// entry per goal end (A-BACK-024).
 
 import * as THREE from 'three';
 import { state } from '../state.js';
@@ -20,7 +21,7 @@ import { scene } from '../scene.js';
 import { ensureDoc } from './doc.js';
 import { saveDoc } from './storage.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from './chips.js';
-import { BALL_CARRY_OFFSET, passFlightPos, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS, MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS, makeShot, clampAim, shotTargetFrame, DEFAULT_SHOT_SPEED_MPS } from './ball-pose.js';
+import { BALL_CARRY_OFFSET, passFlightPos, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS, MIN_PASS_SPEED_MPS, maxSpeedMps, makeShot, clampAim, shotTargetFrame, DEFAULT_SHOT_SPEED_MPS } from './ball-pose.js';
 import { prefersReducedMotion } from '../reduced-motion.js';
 // Cycles (choreograph/frames import actors) are fine: only called at runtime, never at module init.
 import { isChoreoActive, getChoreoStartCarrier, commitChoreo } from './choreograph.js';
@@ -33,7 +34,10 @@ const CARRIER_RING_COLOR = 0xffb347;
 let flight = null;   // { from, startMs } while an edit-mode pass is animating
 
 let lastBall = { x: NaN, z: NaN, carrier: undefined, color: undefined };
-let lastGoalie = { x: NaN, z: NaN, angle: NaN };
+let lastGoalie = {
+  A: { x: NaN, z: NaN, angle: NaN },
+  B: { x: NaN, z: NaN, angle: NaN },
+};
 // Ball + goalie OBJs load async - the first time we see them we must
 // APPLY the persisted scheme values instead of the mesh's default OBJ
 // position, or those defaults would overwrite the user's saved layout.
@@ -159,24 +163,33 @@ export function tickActors() {
     }
   }
 
-  if (state.goalieGroup) {
+  if (state.goalies.A || state.goalies.B) {
     if (!goalieApplied) {
-      const stored = scheme.goalie;
-      if (stored) {
-        state.goalieGroup.position.x = stored.x;
-        state.goalieGroup.position.z = stored.z;
-        state.goalieGroup.rotation.y = stored.angle || 0;
+      for (const letter of ['A', 'B']) {
+        const g = state.goalies[letter];
+        const stored = scheme.goalies?.[letter];
+        if (g && stored) {
+          g.position.x = stored.x;
+          g.position.z = stored.z;
+          g.rotation.y = stored.angle || 0;
+        }
       }
       goalieApplied = true;
     }
-    const gx = state.goalieGroup.position.x;
-    const gz = state.goalieGroup.position.z;
-    const ga = state.goalieGroup.rotation.y;
-    if (gx !== lastGoalie.x || gz !== lastGoalie.z || ga !== lastGoalie.angle) {
-      scheme.goalie = { x: gx, z: gz, angle: ga };
-      lastGoalie = { x: gx, z: gz, angle: ga };
-      dirty = true;
+    let goaliesDirty = false;
+    for (const letter of ['A', 'B']) {
+      const g = state.goalies[letter];
+      if (!g) continue;
+      const gx = g.position.x, gz = g.position.z, ga = g.rotation.y;
+      const last = lastGoalie[letter];
+      if (gx !== last.x || gz !== last.z || ga !== last.angle) {
+        if (!scheme.goalies) scheme.goalies = {};
+        scheme.goalies[letter] = { x: gx, z: gz, angle: ga };
+        lastGoalie[letter] = { x: gx, z: gz, angle: ga };
+        goaliesDirty = true;
+      }
     }
+    if (goaliesDirty) dirty = true;
   }
 
   if (dirty) saveDoc();
@@ -199,15 +212,22 @@ export function applyActorsFromScheme() {
     applyBallColor(b.color || null);
     // If carrier is set, the next tickActors() call snaps the ball to it.
   }
-  if (state.goalieGroup && scheme.goalie) {
-    state.goalieGroup.position.x = scheme.goalie.x;
-    state.goalieGroup.position.z = scheme.goalie.z;
-    state.goalieGroup.rotation.y = scheme.goalie.angle || 0;
+  for (const letter of ['A', 'B']) {
+    const g = state.goalies[letter];
+    const stored = scheme.goalies?.[letter];
+    if (g && stored) {
+      g.position.x = stored.x;
+      g.position.z = stored.z;
+      g.rotation.y = stored.angle || 0;
+    }
   }
   // Invalidate the last-synced cache so tickActors doesn't skip a
   // legitimate write of the values it just applied.
   lastBall = { x: NaN, z: NaN, carrier: undefined, color: undefined };
-  lastGoalie = { x: NaN, z: NaN, angle: NaN };
+  lastGoalie = {
+    A: { x: NaN, z: NaN, angle: NaN },
+    B: { x: NaN, z: NaN, angle: NaN },
+  };
   ballApplied = true;
   goalieApplied = true;
 }
@@ -276,7 +296,7 @@ export function setPassTiming({ releaseT, speedMps } = {}, { history = true } = 
   if (!main) return;
   const pass = { ...(main.pass || {}) };
   if (releaseT !== undefined) pass.releaseT = Math.min(Math.max(releaseT, 0), 1);
-  if (speedMps !== undefined) pass.speedMps = Math.min(Math.max(speedMps, MIN_PASS_SPEED_MPS), MAX_PASS_SPEED_MPS);
+  if (speedMps !== undefined) pass.speedMps = Math.min(Math.max(speedMps, MIN_PASS_SPEED_MPS), maxSpeedMps(main.shot ? 'shot' : 'pass'));
   if (pass.releaseT === DEFAULT_RELEASE_T) delete pass.releaseT;
   if (pass.speedMps === (main.shot ? DEFAULT_SHOT_SPEED_MPS : DEFAULT_PASS_SPEED_MPS)) delete pass.speedMps;
   if (Object.keys(pass).length) main.pass = pass; else delete main.pass;

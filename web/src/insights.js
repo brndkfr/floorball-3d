@@ -29,8 +29,10 @@ export function shotLineXAtZ(ballCenter, goalCenter, z) {
 // angleDeg is measured against the rink's Z (depth) axis, since goals are
 // always aligned along world X regardless of which end they sit at: 0 means
 // the ball is square-on with the goal centre, 90 means the ball is level
-// with the goal line (an effectively impossible shot).
-export function shotVerdict({ ballWorld, goalCenterWorld, goalieMesh }) {
+// with the goal line (an effectively impossible shot). An optional `path`
+// (points from ball to goal centre, e.g. a shot arc) is raycast segment by
+// segment instead of the straight line.
+export function shotVerdict({ ballWorld, goalCenterWorld, goalieMesh, path }) {
   const dx = goalCenterWorld.x - ballWorld.x;
   const dz = goalCenterWorld.z - ballWorld.z;
   const angleDeg = Math.atan2(Math.abs(dx), Math.abs(dz)) * (180 / Math.PI);
@@ -38,16 +40,20 @@ export function shotVerdict({ ballWorld, goalCenterWorld, goalieMesh }) {
 
   let lineColor = 'open';
   if (goalieMesh && goalieMesh.visible !== false) {
-    const toGoal = shotDirScratch.copy(goalCenterWorld).sub(ballWorld);
-    const dist = toGoal.length();
-    if (dist >= 1) {
-      shootingLineRaycaster.set(ballWorld, toGoal.clone().normalize());
-      shootingLineRaycaster.far = dist - 1;
-      if (shootingLineRaycaster.intersectObject(goalieMesh, true).length > 0) {
-        const lineX = shotLineXAtZ(ballWorld, goalCenterWorld, goalieMesh.position.z);
-        const lateralOffset = Math.abs(goalieMesh.position.x - lineX);
-        lineColor = lateralOffset <= GOALIE_CENTERED_THRESHOLD ? 'blocked-centred' : 'blocked-off';
-      }
+    const pts = path || [ballWorld, goalCenterWorld];
+    let hit = false;
+    for (let i = 1; i < pts.length && !hit; i++) {
+      const seg = shotDirScratch.set(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y, pts[i].z - pts[i - 1].z);
+      const len = seg.length();
+      if (len < 1) continue;
+      shootingLineRaycaster.set(new THREE.Vector3(pts[i - 1].x, pts[i - 1].y, pts[i - 1].z), seg.clone().normalize());
+      shootingLineRaycaster.far = i === pts.length - 1 ? len - 1 : len;
+      hit = shootingLineRaycaster.intersectObject(goalieMesh, true).length > 0;
+    }
+    if (hit) {
+      const lineX = shotLineXAtZ(ballWorld, goalCenterWorld, goalieMesh.position.z);
+      const lateralOffset = Math.abs(goalieMesh.position.x - lineX);
+      lineColor = lateralOffset <= GOALIE_CENTERED_THRESHOLD ? 'blocked-centred' : 'blocked-off';
     }
   }
 

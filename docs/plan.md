@@ -695,65 +695,118 @@ Still on the backlog from that exploration:
       instead of using a fixed value.
     - The `web/src` size budget was raised from 0.8 to 1.0 MB in its own
       commit; it is now at 0.79.
+  - **Follow-up (2026-09-24, user report):** the 3D shot arrow was flat
+    on the floor, so it pointed at the goal's base whatever the aim. It
+    now follows the ball's straight flight line: `heightAlong()` in
+    ball-pose.js (1 node test) tilts the floor ribbon from ball-centre
+    height at the release point to `aimY` at the goal line. From above
+    it looks the same. The in-flight trail is lifted the same way, up to
+    the ball's current height. E2e: aim at the upper right, the arrow
+    tip sits at `(aimX, aimY)` on the goal line, the tail at ball height
+    and the trail climbs mid-flight. A-BACK-025 has since replaced
+    `heightAlong()` with the arc's `shotHeightAlong()`.
   - Known gaps (each logged as its own item below):
     - The goalie check uses the goalie's current edit position, not its
       position at shot time (**A-BACK-023**).
     - There is only one goalie in Mode A (**A-BACK-024**).
     - The ball rises in a straight line, not an arc (**A-BACK-025**).
-- **[A-BACK-023]** [open] **Shot verdict uses the goalie's position at
-  shot time.** Today `shotVerdictFor()` (pass-overlay.js) raycasts
-  against the goalie mesh where it stands in the frame being edited.
-  During playback the goalie is interpolated between frames
-  (`scheme.goalie` per frame, `playback.js`), so a goalie who moves
-  across during the shot is judged at the wrong spot. The verdict can
-  say "open" for a shot he actually covers, or the other way round.
-  Approach:
-  - Add a pure `goaliePoseAt(fa, fb, t)` in ball-pose.js that lerps x/z
-    and does a shortest-path angle lerp, like playback. Evaluate it at
-    the ball's arrival time (`plan.arriveT`).
-  - Run the raycast against the goalie placed at that pose, for example
-    by moving the mesh temporarily and restoring it in `finally`, or on
-    a cached clone. Never leave the edit pose changed.
-  - Tests: a node test for `goaliePoseAt`, and an e2e where the goalie
-    moves from off the line (frame A) onto the line (frame B), so the
-    verdict flips from open to squared up.
-  - Scope: the lane check for field players already uses interpolated
-    positions; only the goalie part is static.
-- **[A-BACK-024]** [open] **A goalie for each goal in Plan mode.** Mode A
-  has a single `state.goalieGroup` and one `scheme.goalie = { x, z,
-  angle }`, standing at goal A by default. A shot at goal B therefore
-  always reads as "open", and the coverage grid and shooting line only
-  know one goalie. Mode B already stores `goalies.home/away`.
-  Approach:
-  - Schema: `scheme.goalies = { A: {x,z,angle}, B: {x,z,angle} }`.
-    `acceptDoc()` migrates the old `scheme.goalie` to `goalies.A`.
-  - A second goalie mesh instance, loaded once and cloned.
-  - `actors.js` syncs and persists both.
-  - Selection, Inspector (rotation) and Q/E work per goalie.
-  - `trajectory.js` / `coverage.js` / `shotVerdictFor()` use the goalie
-    of the target (or shot) goal.
-  - A per-goalie visibility toggle, so plays without a keeper stay
+- **[A-BACK-023]** [shipped] **Shot verdict uses the goalie's position at
+  shot time.** `shotVerdictFor()` (pass-overlay.js) used to raycast
+  against the goalie mesh where it stood in the frame being edited,
+  ignoring where it actually is when the ball arrives.
+  - `goaliePoseAt(fa, fb, letter, t)` (ball-pose.js) lerps x/z and does
+    a shortest-path angle lerp, mirroring `playback.js`'s per-goalie
+    interpolation, reading `fa.goalies?.[letter]` / `fb.goalies?.[letter]`.
+  - `shotVerdictFor(plan, fa, fb)` now takes the bracketing frames,
+    evaluates `goaliePoseAt(fa, fb, plan.goal, plan.arriveT)`, and
+    temporarily moves the goalie mesh to that pose for the raycast,
+    restoring the edit-frame pose in a `finally` (never left changed).
+    Callers (`tickPassOverlay()`, both Inspector call sites) now thread
+    `fa`/`fb` through from `currentPass()`.
+  - Gotcha hit during implementation: `THREE.Raycaster` reads a mesh's
+    cached `matrixWorld`, not `.position` directly - it's only
+    refreshed on the next render tick. Moving the goalie for the
+    temporary raycast needs an explicit `goalie.updateMatrixWorld(true)`
+    right after reassigning position/rotation (and again after
+    restoring), or the raycast silently uses a stale transform.
+  - `tickPassOverlay()`'s render-gating cache key now tracks the
+    keyframed `fa`/`fb` goalie values + `plan.arriveT` instead of the
+    live mesh transform, since the verdict no longer depends on the
+    live position directly.
+  - Tests: `ball-pose.test.js` unit tests for `goaliePoseAt` (lerp,
+    short-path angle, null when nothing stored, holds steady when only
+    one side has a stored pose), and a `shots.spec.js` e2e where the
+    goalie is off the line in the pre-shot frame and on the line in the
+    shot frame - a fast release nets "Open shot", a late release (ball
+    arrives once the goalie has reached the line) nets "Goalie squared
+    up".
+- **[A-BACK-024]** [shipped] **A goalie for each goal in Plan mode.**
+  Mode A had a single `state.goalieGroup` and one `scheme.goalie = { x,
+  z, angle }`, standing at goal A by default, so a shot at goal B
+  always read as "open" and the coverage grid / shooting line only
+  knew one goalie. Now each goal end has its own goalie:
+  - Schema: `scheme.goalies = { A?: {x,z,angle}, B?: {x,z,angle} }`.
+    `ensureDoc()`/`acceptDoc()` migrate a legacy per-frame
+    `scheme.goalie` into `goalies.A` (covers both v1->v2 docs and
+    already-v2 frames saved before this change).
+  - `state.goalies = { A, B }` replaces `state.goalieGroup`; each
+    letter has its own model instances (`state.goalieModels.<key> =
+    { A, B }`), built by loading each model once and cloning the goal-A
+    instance into a mirrored goal-B one (position/rotation flipped,
+    fresh independently-built outline meshes so the shot-line
+    highlight can colour each goalie separately).
+  - `actors.js` persists and restores both letters every tick;
+    `playback.js` lerps each independently between keyframes.
+  - Selection (cycle, marquee raycast, labels "goalie A"/"goalie B"),
+    the Inspector's rotation slider, and Q/E rotate whichever goalie is
+    currently selected.
+  - `trajectory.js`, `coverage.js` and `pass-overlay.js`'s
+    `shotVerdictFor()` all resolve the goalie via the target/shot
+    goal letter (state.js's exported `goalieForGoal()` /
+    `goalLetterForGoal()` helpers, or `state.goalies[plan.goal]`
+    directly) instead of a single global mesh.
+  - Two independent visibility checkboxes ("Goalie A" / "Goalie B" in
+    the Layers panel), so plays without a keeper at one end stay
     possible.
-  - Open question: link goalies to teams (who defends which goal) or
-    keep them per goal only? Per goal is simpler and enough for the
-    verdict.
-  - Tests: migration unit test, per-goal verdict unit test, e2e with a
-    shot at B being judged against goalie B. Depends on nothing; do it
-    before A-BACK-023 so that item is written for two goalies.
-- **[A-BACK-025]** [open] **Shot flight as an arc instead of a straight
-  rise.** `ballPoseAt()` rises linearly from the floor at release to
-  the aim height at the goal line, which reads as a laser, not a shot.
-  Approach:
-  - A pure height profile `shotHeightAt(s, { aimY, distance, speed })`,
-    for example a quadratic that ends exactly at `aimY` on the goal line
-    with a small apex for longer and slower shots. Low aims (a ground
-    shot) stay near the floor.
-  - Keep the verdict consistent: the goalie raycast should then sample
-    the same curve as a short polyline, not the straight line, or the
-    colour can disagree with what the 3D view shows.
-  - Cosmetic, 3D only; top-down is unchanged. Tests: node tests for
-    the profile (endpoints exact, monotonic for low aims, apex bound)
-    and an e2e sampling playback height mid-flight.
+  - Kept per-goal only (no goalie-to-team link) per the open question
+    below - simplest, and enough for the verdict.
+  - Tests: `doc.test.js` migration unit tests (fresh-frame goalie,
+    v1-doc goalie, already-migrated goalies left untouched), and two
+    new `shots.spec.js` e2e cases - a straight-on shot is squared up
+    at *both* goals by default, and moving goalie B off the shot line
+    only changes goal B's verdict, not goal A's.
+- **[A-BACK-025]** [shipped] **Shot flight as an arc instead of a straight
+  rise.** `ballPoseAt()` used to rise linearly from the floor at release
+  to the aim height at the goal line, which read as a laser, not a shot.
+  - `shotHeightAt(plan, s)` (ball-pose.js): ball-centre height at
+    progress `s`. The straight rise plus a gravity parabola for the
+    flight time `T = plan.needMs`: lift `(g T^2 / 2) s (1 - s)`, so
+    `g T^2 / 8` at the midpoint. Endpoints are exact (`BALL_RADIUS` at
+    release, `aimY` on the goal line). Hard shots come out almost
+    straight (10 m at ~200 km/h: ~4 cm), slow or long ones arc clearly.
+  - The lift is capped at the rise (`aimY - BALL_RADIUS`) instead of the
+    600 mm first discussed: the ball then never peaks before the goal
+    line and never goes above `aimY`, so a low aim stays low and a
+    ground shot stays on the floor. That keeps the lift at most ~270 mm
+    at the midpoint, so a separate mm cap would never apply. No lobs,
+    which fits floorball.
+  - `shotHeightAlong(p, plan)` replaces `heightAlong()`: the 3D shot
+    arrow and the in-flight trail are lifted onto the same arc.
+  - Verdict: `shotVerdict()` (insights.js) takes an optional `path` and
+    raycasts it segment by segment; `shotVerdictFor()` passes
+    `shotPathPoints(plan, 8)`, so the colour matches the 3D flight.
+    Without `path` the behaviour is unchanged (trajectory.js, Mode B).
+    The render-gating key now includes `plan.needMs`, since speed
+    changes the arc.
+  - No air drag (a 23 g ball with holes slows down noticeably; would
+    need an unsourced drag value). Top-down is unchanged.
+  - Tests: node tests for the profile (endpoints, `g T^2 / 8` at the
+    midpoint, near-flat hard shot, monotonic and never above `aimY`,
+    ground shot on the floor), `shotHeightAlong`, `shotPathPoints`, the
+    mid-flight ball pose, and two `shotVerdict` path cases (arc over a
+    low goalie is open, arc through the goalie is blocked). E2e: ball
+    and arrow sit ~200 mm above the straight line mid-flight; the
+    existing arrow test now checks the tail against the arc.
 - **[A-BACK-026]** [shipped] **Ball tool places the match ball.**
   The palette's Ball tool only dropped decorative extra balls, so the
   one ball that can be carried, passed and shot (`scheme.balls.main`,
@@ -776,6 +829,94 @@ Still on the backlog from that exploration:
     position and colour with the match ball.
   Pure decision + scheme logic in `ball-tool.js` (node-tested), e2e in
   `test-e2e/ball-tool.spec.js`.
+- **[A-BACK-027]** [shipped] **Shot speed up to the record (~200 km/h).**
+  (Committed as "A-BACK-026" in `0f1ac09`, before the merge showed
+  that ID was already taken by the Ball tool; renumbered here.)
+  `MAX_PASS_SPEED_MPS` was 40 m/s (144 km/h) for passes and shots
+  alike; measured floorball shots reach ~200 km/h (55 m/s, Wikipedia
+  "Floorball", ball section).
+  - New `MAX_SHOT_SPEED_MPS = 55` and `maxSpeedMps(kind)` in
+    ball-pose.js. `passPlan()`, `setPassTiming()` (actors.js, by
+    whether the frame's ball has a `shot`) and the Inspector's
+    `#passSpeedInput` `max` all pick the limit by kind. Passes stay at
+    40, the default shot speed stays 25 m/s. A shot saved above 40 that
+    becomes a pass is just clamped to 40 when used, no migration.
+  - The Inspector shows km/h next to m/s (`#passSpeedUnit`, e.g.
+    "m/s (90 km/h)", live while typing) via `mpsToKmh()`.
+  - Tests: node tests for the per-kind clamp (shot 50 kept, shot 99 ->
+    55, pass 50 -> 40) and `mpsToKmh`; e2e in `shots.spec.js` (max 55,
+    km/h label, 50 stored, 99 stored as 55) and `pass-timing.spec.js`
+    (max 40, 50 stored as 40).
+- **Arena branding (A-BACK-028 to A-BACK-030).** Team crest / sponsor
+  logos on the floor and ads on the boards, project-wide (not per
+  frame). Order: 028 (no dependencies), then 029, then 030 (needs both).
+- **[A-BACK-028]** [open] **Board slots with toggleable labels.** The
+  straight board runs split into 2 m slots (board height 500 mm):
+  long sides 40 m - 2 x 2 m corner radius = 36 m = 18 slots each, ends
+  20 m - 4 m = 16 m = 8 slots each, 52 in total. The four 2 m-radius
+  corners stay unlabelled.
+  - Pure `boardSlots()` (three-free, next to the rink constants): per
+    slot `{ id, side, index, start, end, normal }` in world mm, derived
+    from `RINK_L` / `RINK_W` / corner radius, so nothing in
+    `generators/` or `web/assets/` changes.
+  - Naming (default, confirm before building): per side, `L1-L18` and
+    `R1-R18` counted from goal A towards goal B (left / right as seen
+    from goal A looking at B), `A1-A8` and `B1-B8` along the ends.
+    Alternative: one run 1-52 clockwise.
+  - Label: canvas-textured plane on the inner board face near the top
+    edge (readable in 3D, leaves room for an ad). Top-down sees the
+    boards edge-on, so there the label lies flat on the floor just
+    inside the board. Same floor-label technique as shapes.js.
+  - Toggle: "Board labels" checkbox in the Layers panel next to
+    "Goalie A" / "Goalie B", off by default, display-only (not stored
+    in the doc).
+  - Tests: node tests for `boardSlots()` (count 52, first / last slot
+    ends, slot width 2000, normals point into the rink, no overlap with
+    the corner arcs); e2e: toggle shows / hides all 52 labels.
+- **[A-BACK-029]** [open] **Floor logo + shared image store.** One or
+  more images lying on the floor (centre-court crest, sponsor logo).
+  - Doc: project-level `doc.arena = { floor: [{ id, imageId, x, z, w,
+    rotation, opacity }], boards: {} }`, outside `frames`, so it is the
+    same in every frame. `ensureDoc()` / `acceptDoc()` default it.
+  - Images live in IndexedDB (like `photo-cache.js`), keyed by a
+    content hash so the same logo used many times is stored once; the
+    doc only holds `imageId`. Keeps localStorage (~5 MB quota) and
+    share links (32 KB `HASH_LIMIT`) small.
+  - Image formats:
+    - Accept PNG, JPEG, WebP and SVG. SVG is rasterized on import via
+      `<img>` -> canvas, never inserted into the DOM (no script
+      injection). JPEG has no alpha, so a JPEG logo keeps its box.
+    - Store as WebP with alpha: `canvas.toBlob('image/webp', 0.9)`.
+      Browsers that can't encode WebP return PNG from `toBlob`, so
+      store `blob.type` as-is, no special case.
+    - Size on import, fit without stretching: floor logo longest side
+      <= 1024 px; board ad 1024 x 256 (the 4:1 board slot), centred.
+  - Render: textured plane ~2 mm above the floor, `polygonOffset`,
+    `frustumCulled = false`, anisotropy set (CLAUDE.md rendering
+    gotchas), `texture.colorSpace = THREE.SRGBColorSpace` (otherwise
+    logos look washed out). A 1024^2 texture is ~5 MB of GPU memory
+    decoded, so one texture per distinct image, shared by all its
+    uses. Move + corner resize reuse the shape handles; rotation
+    and opacity in the Inspector.
+  - Known gap: a share link carries only `imageId`s, so the receiver
+    sees no image. Bundling images into the file export is a possible
+    follow-up.
+  - Tests: node tests for the arena doc defaults / migration and the
+    image-id hashing; e2e: import an image, place and resize it, reload
+    and it is still there.
+- **[A-BACK-030]** [open] **Board ads.** Depends on A-BACK-028 (slots)
+  and A-BACK-029 (image store). `doc.arena.boards = { L7: imageId, ...
+  }`; each assigned slot gets a 2000 x 500 mm textured plane just in
+  front of the inner board face.
+  - UI: an "Arena" section: upload logos, click one or more board
+    slots to assign the chosen logo, quick fills ("all boards",
+    "alternate A/B"), clear. Board ads use the 1024 x 256 import size
+    from A-BACK-029, with an optional background colour for the bars
+    beside a logo that isn't 4:1 (real board ads fill the panel).
+  - Open: inner face only (enough for a playing-view camera) or the
+    outer face too.
+  - Tests: node test for assignment / quick-fill helpers; e2e: assign a
+    logo to a slot, it renders there and survives a reload.
 - **[A-BACK-021]** [shipped] **Pass timing: release point, pass
   speed, lane check.** Follow-up to A-BACK-020. There, a pass spanned
   the whole frame, from the passer's frame-A spot to the receiver's

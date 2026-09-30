@@ -47,6 +47,47 @@ test('acceptDoc migrates a v1 doc to v2', () => {
   assert.deepEqual(doc.scheme.players, { p_a1: { team: 'home' } });
 });
 
+// --- acceptDoc: goalie schema migration (A-BACK-024) ----------------------
+
+test('acceptDoc migrates a per-frame scheme.goalie into scheme.goalies.A', () => {
+  const raw = {
+    version: DOC_VERSION,
+    currentFrame: 0,
+    frames: [{
+      id: 'f_1',
+      duration: 1000,
+      scheme: { players: {}, balls: {}, shapes: [], goalie: { x: 100, z: 200, angle: 0.5 } },
+    }],
+  };
+  const doc = acceptDoc(raw);
+  assert.deepEqual(doc.scheme.goalies, { A: { x: 100, z: 200, angle: 0.5 } });
+  assert.equal(doc.scheme.goalie, undefined);
+});
+
+test('acceptDoc migrates a v1 doc\'s scheme.goalie into scheme.goalies.A too', () => {
+  const v1 = {
+    version: 1,
+    hideMarkup: false,
+    scheme: { players: {}, balls: {}, shapes: [], goalie: { x: 10, z: 20, angle: 1 } },
+  };
+  const doc = acceptDoc(v1);
+  assert.deepEqual(doc.scheme.goalies, { A: { x: 10, z: 20, angle: 1 } });
+});
+
+test('acceptDoc leaves an already-migrated scheme.goalies untouched', () => {
+  const raw = {
+    version: DOC_VERSION,
+    currentFrame: 0,
+    frames: [{
+      id: 'f_1',
+      duration: 1000,
+      scheme: { players: {}, balls: {}, shapes: [], goalies: { A: { x: 1, z: 2, angle: 0 }, B: { x: 3, z: 4, angle: 1 } } },
+    }],
+  };
+  const doc = acceptDoc(raw);
+  assert.deepEqual(doc.scheme.goalies, { A: { x: 1, z: 2, angle: 0 }, B: { x: 3, z: 4, angle: 1 } });
+});
+
 // --- acceptDoc: id sanitization (S-BACK-002) ------------------------------
 
 test('acceptDoc drops scheme.players entries with a malformed id key', () => {

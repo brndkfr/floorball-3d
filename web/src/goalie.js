@@ -1,22 +1,30 @@
 import * as THREE from 'three';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
-import { CACHE_BUST, GOAL_LINE_FROM_BOARD } from './constants.js';
+import { CACHE_BUST, GOAL_LINE_FROM_BOARD, RINK_L } from './constants.js';
 import { state } from './state.js';
 import { scene, renderer } from './scene.js';
 import { expectLoad, loaded, failed } from './status.js';
 import { selectObject } from './selection.js';
 import { markRenderDirty } from './render-dirty.js';
 
-// --- layer: goalie - switchable between two models. `state.goalieGroup`
-// always points at whichever one is currently active, so every other piece
-// of code (selection, WASD/Q-E movement, coverage raycasting, the floating
-// label, trajectory targeting) keeps working unchanged regardless of which
-// model is on screen. ---
-const goalieCheckbox = document.getElementById('goalieCheckbox');
+// --- layer: goalie - one instance per goal end (A-BACK-024), each
+// switchable between two models. `state.goalies.A` / `state.goalies.B`
+// always point at whichever model is currently active for that end, so
+// every other piece of code (selection, WASD/Q-E movement, coverage
+// raycasting, the floating label, trajectory targeting) keeps working
+// unchanged regardless of which model is on screen. Both ends share the
+// same model choice (one dropdown), but position/rotation/visibility are
+// independent per goal. ---
+const goalieCheckboxA = document.getElementById('goalieCheckboxA');
+const goalieCheckboxB = document.getElementById('goalieCheckboxB');
 const goalieModelSelect = document.getElementById('goalieModelSelect');
-goalieCheckbox.addEventListener('change', () => {
-  if (state.goalieGroup) state.goalieGroup.visible = goalieCheckbox.checked;
+goalieCheckboxA.addEventListener('change', () => {
+  if (state.goalies.A) state.goalies.A.visible = goalieCheckboxA.checked;
+  markRenderDirty(); // S-BACK-011
+});
+goalieCheckboxB.addEventListener('change', () => {
+  if (state.goalies.B) state.goalies.B.visible = goalieCheckboxB.checked;
   markRenderDirty(); // S-BACK-011
 });
 
@@ -57,8 +65,10 @@ function loadGoalieModel(mtlUrl, objUrl, onReady) {
 // the camera - a standard cheap "toon outline" technique that needs no
 // post-processing pipeline. Parenting under the original mesh means it
 // automatically follows that mesh's position/rotation/scale with no
-// per-frame sync needed. Built once per model (right after it loads), then
-// toggled/recoloured per frame by trajectory.js.
+// per-frame sync needed. Built once per instance (right after it's created),
+// then toggled/recoloured per frame by trajectory.js. Each goal end gets its
+// own outline meshes (own materials) so the two goalies can be highlighted
+// independently - built fresh per instance rather than shared/cloned.
 const GOALIE_OUTLINE_SCALE = 1.02; // how much larger than the wrapped mesh - keep small or the effect reads as a halo, not an outline
 
 function buildOutlineMeshes(rootObject) {
@@ -88,19 +98,32 @@ function buildOutlineMeshes(rootObject) {
   return outlineMeshes;
 }
 
+// Builds goal B's instance from goal A's pristine (outline-free, un-positioned
+// by this point) instance via a deep clone - shares geometry/materials for the
+// body (no per-instance body tinting needed), but outlines are built fresh
+// per instance (see buildOutlineMeshes) so their materials stay independent.
+function mirrorForGoalB(instanceA) {
+  const instanceB = instanceA.clone(true);
+  instanceB.position.set(0, 0, RINK_L - GOAL_LINE_FROM_BOARD - 500);
+  instanceB.rotation.y = Math.PI; // goal B's mouth faces -Z; goalie faces back toward +Z's shooter, i.e. flipped from A
+  return instanceB;
+}
+
 export function activateGoalieModel(key) {
-  const next = state.goalieModels[key];
-  if (!next || next === state.goalieGroup) return;
-  const prev = state.goalieGroup;
-  if (prev) {
-    next.position.copy(prev.position);
-    next.rotation.copy(prev.rotation);
-    prev.visible = false;
-  }
-  state.goalieGroup = next;
-  state.goalieGroup.visible = goalieCheckbox.checked;
+  const nextModels = state.goalieModels[key];
+  if (!nextModels?.A || nextModels.A === state.goalies.A) return;
+  const prevA = state.goalies.A, prevB = state.goalies.B;
+  const wasSelectedA = state.selected === prevA;
+  const wasSelectedB = state.selected === prevB;
+  if (prevA) { nextModels.A.position.copy(prevA.position); nextModels.A.rotation.copy(prevA.rotation); prevA.visible = false; }
+  if (prevB) { nextModels.B.position.copy(prevB.position); nextModels.B.rotation.copy(prevB.rotation); prevB.visible = false; }
+  state.goalies.A = nextModels.A;
+  state.goalies.B = nextModels.B;
+  state.goalies.A.visible = goalieCheckboxA.checked;
+  state.goalies.B.visible = goalieCheckboxB.checked;
   state.activeGoalieKey = key;
-  if (state.selected === prev && prev) selectObject(state.goalieGroup); // keep the ring/controls following
+  if (wasSelectedA) selectObject(state.goalies.A); // keep the ring/controls following
+  else if (wasSelectedB) selectObject(state.goalies.B);
 }
 
 // model 1: the first-pass blocky figure (see generate_goalie.py)
@@ -109,14 +132,16 @@ loadGoalieModel('assets/goalie.mtl', 'assets/goalie.obj', (object) => {
   // - matches goal A's mouth orientation, so it needs no extra rotation
   object.position.set(0, 0, GOAL_LINE_FROM_BOARD + 500);
   object.visible = false;
-  state.goalieModels.blocky = object;
-  state.goalieOutlinesByModel.blocky = buildOutlineMeshes(object);
-  scene.add(object);
+  const instanceB = mirrorForGoalB(object);
+  instanceB.visible = false;
+  state.goalieModels.blocky = { A: object, B: instanceB };
+  state.goalieOutlinesByModel.blocky = { A: buildOutlineMeshes(object), B: buildOutlineMeshes(instanceB) };
+  scene.add(object, instanceB);
   // "Detailed" is the intended default - this only fills in as a placeholder
   // if blocky's (much smaller) files happen to finish loading first, so
   // something is on screen immediately. Detailed unconditionally activates
   // itself below once it's ready, overriding this regardless of order.
-  if (!state.goalieGroup) activateGoalieModel('blocky');
+  if (!state.goalies.A) activateGoalieModel('blocky');
 });
 
 // model 2: user-supplied detailed/textured model (goalie_02.*). Its raw
@@ -141,9 +166,11 @@ loadGoalieModel('assets/goalie_02.mtl', 'assets/goalie_02.obj', (object) => {
   wrapper.add(object);
   wrapper.position.set(0, 0, GOAL_LINE_FROM_BOARD + 500);
   wrapper.visible = false;
-  state.goalieModels.detailed = wrapper;
-  state.goalieOutlinesByModel.detailed = buildOutlineMeshes(object);
-  scene.add(wrapper);
+  const wrapperB = mirrorForGoalB(wrapper);
+  wrapperB.visible = false;
+  state.goalieModels.detailed = { A: wrapper, B: wrapperB };
+  state.goalieOutlinesByModel.detailed = { A: buildOutlineMeshes(wrapper), B: buildOutlineMeshes(wrapperB) };
+  scene.add(wrapper, wrapperB);
   activateGoalieModel('detailed'); // always wins as the default, overriding blocky's placeholder activation above if needed
 });
 

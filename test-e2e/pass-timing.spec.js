@@ -96,6 +96,18 @@ test.describe('A-BACK-021 pass timing', () => {
     expect(await storedPass(page)).toEqual({ releaseT: 0.2, speedMps: 25 });
   });
 
+  test('pass speed stays capped at 40 m/s (shots may go faster, A-BACK-027)', async ({ page }) => {
+    await boot(page);
+    const ids = await setupPass(page);
+    await selectChip(page, ids.b);
+    const input = page.locator('#passSpeedInput');
+    await expect(input).toHaveAttribute('max', '40');
+    await expect(page.locator('#passSpeedUnit')).toHaveText('m/s (54 km/h)');
+    await input.fill('50');
+    await input.blur();
+    expect(await storedPass(page)).toEqual({ speedMps: 40 });
+  });
+
   test('dragging the release marker along the run sets the release point', async ({ page }) => {
     await boot(page);
     await setupPass(page);

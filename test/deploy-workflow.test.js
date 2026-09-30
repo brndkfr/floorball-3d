@@ -9,8 +9,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+// CRLF on Windows checkouts (core.autocrlf) would break the \n-anchored regexes.
 const read = (f) => readFileSync(new URL(`../.github/workflows/${f}`, import.meta.url), 'utf8')
-  .split('\n').filter((l) => !l.trim().startsWith('#')).join('\n');
+  .split(/\r?\n/).filter((l) => !l.trim().startsWith('#')).join('\n');
 const ci = read('deploy-pages.yml');
 const pages = read('pages.yml');
 

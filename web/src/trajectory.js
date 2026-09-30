@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GOAL_MOUTH_CORNERS_LOCAL, GOAL_CENTER_LOCAL } from './constants.js';
-import { state, getBallWorldCenter } from './state.js';
+import { state, getBallWorldCenter, goalieForGoal, goalLetterForGoal } from './state.js';
 import { scene } from './scene.js';
 import { selectObject } from './selection.js';
 import { shotVerdict, shotLineXAtZ } from './insights.js';
@@ -67,7 +67,8 @@ const SHOT_LINE_COLOR_BY_KEY = {
 };
 
 function computeShotLineColor(ballCenter, goalCenter) {
-  const goalieMesh = state.goalieGroup && state.goalieGroup.visible ? state.goalieGroup : null;
+  const goalie = goalieForGoal(state.targetGoal);
+  const goalieMesh = goalie && goalie.visible ? goalie : null;
   const { lineColor } = shotVerdict({ ballWorld: ballCenter, goalCenterWorld: goalCenter, goalieMesh });
   return SHOT_LINE_COLOR_BY_KEY[lineColor];
 }
@@ -76,8 +77,8 @@ const trajectoryScratchCorner = new THREE.Vector3();
 const shootingLineScratchCenter = new THREE.Vector3();
 const goalieOutlineCheckbox = document.getElementById('goalieOutlineCheckbox');
 
-function setGoalieOutlineVisible(visible, color) {
-  const outlines = state.goalieOutlinesByModel[state.activeGoalieKey];
+function setGoalieOutlineVisible(visible, color, letter) {
+  const outlines = state.goalieOutlinesByModel[state.activeGoalieKey]?.[letter];
   if (!outlines) return;
   for (const outline of outlines) {
     outline.visible = visible;
@@ -89,7 +90,8 @@ export function updateTrajectory(ballCenter) {
   if (!trajectoryCheckbox.checked || !ballCenter || !state.targetGoal) {
     trajectoryLines.visible = false;
     shootingLine.visible = false;
-    setGoalieOutlineVisible(false);
+    setGoalieOutlineVisible(false, null, 'A');
+    setGoalieOutlineVisible(false, null, 'B');
     return;
   }
   const positions = trajectoryGeometry.attributes.position.array;
@@ -112,8 +114,11 @@ export function updateTrajectory(ballCenter) {
   shootingLine.material.color.copy(shotColor);
   shootingLine.visible = true;
 
-  const showOutline = goalieOutlineCheckbox.checked && state.goalieGroup && state.goalieGroup.visible && shotColor !== SHOT_OPEN_COLOR;
-  setGoalieOutlineVisible(showOutline, shotColor);
+  const showOutline = goalieOutlineCheckbox.checked && shotColor !== SHOT_OPEN_COLOR;
+  const targetLetter = goalLetterForGoal(state.targetGoal);
+  const targetGoalie = goalieForGoal(state.targetGoal);
+  setGoalieOutlineVisible(showOutline && !!(targetGoalie && targetGoalie.visible), shotColor, targetLetter);
+  setGoalieOutlineVisible(false, null, targetLetter === 'A' ? 'B' : 'A');
 }
 
 // Snaps the goalie's lateral (X) position onto the shot line at whatever
@@ -123,11 +128,12 @@ export function updateTrajectory(ballCenter) {
 const coveragePctEl = document.getElementById('coveragePct');
 document.getElementById('alignGoalieBtn').addEventListener('click', () => {
   const ballCenter = getBallWorldCenter();
-  if (!ballCenter || !state.targetGoal || !state.goalieGroup || !state.goalieGroup.visible) {
+  const goalie = goalieForGoal(state.targetGoal);
+  if (!ballCenter || !state.targetGoal || !goalie || !goalie.visible) {
     coveragePctEl.textContent = 'need a ball, a targeted goal, and a visible goalie first';
     return;
   }
   const goalCenter = state.targetGoal.localToWorld(GOAL_CENTER_LOCAL.clone());
-  state.goalieGroup.position.x = shotLineXAtZ(ballCenter, goalCenter, state.goalieGroup.position.z);
-  if (state.selected === state.goalieGroup) selectObject(state.goalieGroup); // keep the ring following if it's selected
+  goalie.position.x = shotLineXAtZ(ballCenter, goalCenter, goalie.position.z);
+  if (state.selected === goalie) selectObject(goalie); // keep the ring following if it's selected
 });

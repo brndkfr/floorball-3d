@@ -18,7 +18,7 @@ import { ensureDoc } from './doc.js';
 import { getBallCarrier, setBallCarrier, promoteExtraBall, getBallColor, setBallColor, setPassTiming, shootAt, setShotAim } from './actors.js';
 import { passTargets, passStatus } from './choreo-pass.js';
 import { currentPass, shotVerdictFor } from './pass-overlay.js';
-import { MIN_PASS_SPEED_MPS, MAX_PASS_SPEED_MPS, padToAim, aimToPad } from './ball-pose.js';
+import { MIN_PASS_SPEED_MPS, maxSpeedMps, mpsToKmh, padToAim, aimToPad } from './ball-pose.js';
 import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED, SHOT_LINE_TOKENS } from '../tokens.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
@@ -43,7 +43,7 @@ window.addEventListener('passChanged', () => {
   if (lane) lane.textContent = passStatus(cur.plan, ensureDoc().scheme.players, cur.dur).lane;
   const shot = document.getElementById('shotStatus');
   if (shot && cur.plan.kind === 'shot') {
-    const v = shotVerdictFor(cur.plan);
+    const v = shotVerdictFor(cur.plan, cur.fa, cur.fb);
     shot.textContent = v.text;
     shot.style.color = SHOT_LINE_TOKENS[v.key].css;
   }
@@ -114,7 +114,7 @@ function render(sel) {
   body.appendChild(heading);
 
   // Goalie: rotation slider (Q/E works too but a slider is discoverable).
-  if (sel === state.goalieGroup) {
+  if (sel === state.goalies.A || sel === state.goalies.B) {
     body.appendChild(rotationRow(sel));
     return;
   }
@@ -209,7 +209,7 @@ function passRow() {
 }
 
 // Timing of the pass arriving in this frame (A-BACK-021): release slider, speed, lane + late status.
-function passTimingSection({ plan, dur }) {
+function passTimingSection({ plan, dur, fa, fb }) {
   const wrap = document.createElement('div');
   wrap.id = 'inspectorPassTiming';
   const title = document.createElement('div');
@@ -248,21 +248,24 @@ function passTimingSection({ plan, dur }) {
   const speed = document.createElement('input');
   speed.type = 'number';
   speed.id = 'passSpeedInput';
-  speed.min = String(MIN_PASS_SPEED_MPS); speed.max = String(MAX_PASS_SPEED_MPS); speed.step = '1';
+  speed.min = String(MIN_PASS_SPEED_MPS); speed.max = String(maxSpeedMps(plan.kind)); speed.step = '1';
   speed.value = String(plan.speedMps);
   speed.addEventListener('change', () => {
     const v = Number(speed.value);
     if (Number.isFinite(v)) setPassTiming({ speedMps: v });
   });
   const unit = document.createElement('span');
-  unit.textContent = 'm/s';
+  unit.id = 'passSpeedUnit';
+  const showUnit = () => { const v = Number(speed.value); unit.textContent = Number.isFinite(v) ? `m/s (${mpsToKmh(v)} km/h)` : 'm/s'; };
+  showUnit();
+  speed.addEventListener('input', showUnit);
   speedRow.append(sl, speed, unit);
 
   const status = passStatus(plan, ensureDoc().scheme.players, dur);
   const lane = document.createElement('div');
   lane.className = 'ins-empty';
   if (plan.kind === 'shot') {
-    const v = shotVerdictFor(plan);
+    const v = shotVerdictFor(plan, fa, fb);
     lane.id = 'shotStatus';
     lane.style.color = SHOT_LINE_TOKENS[v.key].css;
     lane.textContent = v.text;

@@ -633,6 +633,7 @@
   #viewPanel .rp-hint { color:var(--fb-text-3); font-size:11px; line-height:1.45; margin:3px 0 0 22px; }
   #viewPanel .rp-actions { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 0 22px; }
   #viewPanel .rp-indent { margin-left:22px; }
+  #viewPanel .layer-row > label + label { margin-left:12px; }
   #viewPanel #goalieModelSelect { margin-left:8px; }
   #rightPanel #coords { position:static; margin:0; border:none; border-radius:0; background:transparent; min-width:0; padding:16px; }
   /* Inspector fields in the design-canvas style: uppercase labels over

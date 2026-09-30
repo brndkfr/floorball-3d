@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { state } from './state.js';
+import { state, goalieForGoal } from './state.js';
 import { camera } from './scene.js';
 import { coverageGrid } from './insights.js';
 import { VECTOR_COVERAGE_BLOCKED, VECTOR_COVERAGE_OPEN } from './tokens.js';
@@ -68,7 +68,7 @@ const lastCoverageState = {
 };
 
 function coverageInputsChanged(ballCenter) {
-  const goalieGroup = state.goalieGroup;
+  const goalieGroup = goalieForGoal(state.targetGoal);
   const next = {
     ballX: ballCenter ? ballCenter.x : NaN,
     ballY: ballCenter ? ballCenter.y : NaN,
@@ -98,7 +98,8 @@ export function updateCoverage(ballCenter) {
 
   if (!coverageInputsChanged(ballCenter)) return; // nothing moved - reuse the colors/percentage from last pass
 
-  const goalieMesh = state.goalieGroup && state.goalieGroup.visible ? state.goalieGroup : null;
+  const goalie = goalieForGoal(state.targetGoal);
+  const goalieMesh = goalie && goalie.visible ? goalie : null;
   const { blockedAt, pctBlocked } = coverageGrid({ ballWorld: ballCenter, targetGoalGroup: state.targetGoal, goalieMesh });
   const blockedColor = new THREE.Color(VECTOR_COVERAGE_BLOCKED.hex);
   const openColor = new THREE.Color(VECTOR_COVERAGE_OPEN.hex);
@@ -118,11 +119,12 @@ const goalieLabelEl = document.getElementById('goalieLabel');
 const labelProjection = new THREE.Vector3();
 
 export function updateGoalieLabel() {
-  if (!state.goalieGroup || !state.goalieGroup.visible || state.currentCoveragePct === null) {
+  const goalie = goalieForGoal(state.targetGoal);
+  if (!goalie || !goalie.visible || state.currentCoveragePct === null) {
     goalieLabelEl.style.display = 'none';
     return;
   }
-  labelProjection.set(state.goalieGroup.position.x, 850, state.goalieGroup.position.z).project(camera);
+  labelProjection.set(goalie.position.x, 850, goalie.position.z).project(camera);
   if (labelProjection.z > 1) { // behind the camera
     goalieLabelEl.style.display = 'none';
     return;

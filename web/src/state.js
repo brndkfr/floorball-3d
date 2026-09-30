@@ -17,11 +17,12 @@ export const state = {
   ballGroup: null,
   goalInstances: [], // individual goal Object3Ds, for click-to-select
 
-  // goalie.js
-  goalieGroup: null, // always points at whichever model is currently active
-  goalieModels: {}, // key -> loaded wrapper Group
-  goalieOutlinesByModel: {}, // key -> array of outline meshes for that model
-  activeGoalieKey: null,
+  // goalie.js - one goalie per goal end (A-BACK-024). state.goalies[letter]
+  // always points at whichever model instance is currently active for that end.
+  goalies: { A: null, B: null },
+  goalieModels: { A: {}, B: {} }, // letter -> key -> loaded wrapper Group
+  goalieOutlinesByModel: { A: {}, B: {} }, // letter -> key -> array of outline meshes for that model
+  activeGoalieKey: null, // model key (blocky|detailed) shared by both goalies
 
   // selection.js
   selected: null,      // the "primary" selected Object3D (last added to the set), or null
@@ -69,4 +70,17 @@ const ballWorldCenter = new THREE.Vector3();
 export function getBallWorldCenter() {
   if (!state.ballGroup) return null;
   return ballWorldCenter.set(state.ballGroup.position.x, state.ballGroup.position.y + BALL_RADIUS, state.ballGroup.position.z);
+}
+
+// The goal letter ('A' | 'B') for a given goal Object3D (state.goalInstances[0]
+// is goal A, [1] is goal B). Falls back to 'A' for anything else (incl. null).
+export function goalLetterForGoal(goalGroup) {
+  return goalGroup === state.goalInstances[1] ? 'B' : 'A';
+}
+
+// The goalie belonging to a given goal Object3D - A-BACK-024. Falls back to
+// goal A for anything else (including null), matching the pre-two-goalie
+// behaviour of "the" goalie.
+export function goalieForGoal(goalGroup) {
+  return state.goalies[goalLetterForGoal(goalGroup)];
 }

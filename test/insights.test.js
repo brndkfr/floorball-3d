@@ -79,6 +79,23 @@ test('shotVerdict: an invisible goalie mesh is ignored', () => {
   assert.equal(v.lineColor, 'open');
 });
 
+test('shotVerdict: an arc path over a low goalie is open, the straight line would be blocked', () => {
+  const ball = new THREE.Vector3(0, 36, 0);
+  const goal = new THREE.Vector3(0, 300, 10000);
+  const goalie = goalieBox({ x: 0, z: 5000, halfH: 150 });   // 300 mm tall, straight line is at ~168 there
+  assert.equal(shotVerdict({ ballWorld: ball, goalCenterWorld: goal, goalieMesh: goalie }).lineColor, 'blocked-centred');
+  const path = [ball, new THREE.Vector3(0, 800, 5000), goal];
+  assert.equal(shotVerdict({ ballWorld: ball, goalCenterWorld: goal, goalieMesh: goalie, path }).lineColor, 'open');
+});
+
+test('shotVerdict: an arc path through the goalie is blocked on the segment that hits', () => {
+  const ball = new THREE.Vector3(0, 36, 0);
+  const goal = new THREE.Vector3(0, 900, 10000);
+  const goalie = goalieBox({ x: 0, z: 9000 });
+  const path = [ball, new THREE.Vector3(0, 700, 5000), goal];
+  assert.equal(shotVerdict({ ballWorld: ball, goalCenterWorld: goal, goalieMesh: goalie, path }).lineColor, 'blocked-centred');
+});
+
 test('shotVerdict: a sharp-angle shot reads as near-miss, then off', () => {
   const goal = new THREE.Vector3(0, 900, 10000);
   const nearMiss = shotVerdict({ ballWorld: new THREE.Vector3(9000, 900, 4800), goalCenterWorld: goal, goalieMesh: null });
