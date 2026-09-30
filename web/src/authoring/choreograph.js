@@ -175,24 +175,24 @@ function buildBanner() {
   banner = document.createElement('div');
   banner.id = 'choreoBanner';
   banner.style.cssText = [
-    'position:fixed', 'top:52px', 'left:50%', 'transform:translateX(-50%)',
+    'position:fixed', 'top:calc(var(--shell-topbar) + 12px)', 'left:var(--stage-center)', 'transform:translateX(-50%)',
     'z-index:22', 'display:none', 'align-items:center', 'gap:12px',
     'padding:8px 14px',
-    'background:rgba(20,16,10,0.94)', 'color:#f7e6cf',
-    'border:1px solid rgba(255,179,71,0.55)', 'border-radius:10px',
+    'background:var(--fb-surf-1)', 'color:var(--fb-text-1)',
+    'border:1px solid var(--fb-line-strong)', 'border-radius:10px',
     'box-shadow:0 6px 20px rgba(0,0,0,0.45)',
-    'font-family:Consolas,monospace', 'font-size:12px', 'letter-spacing:0.04em',
+    'font-family:var(--fb-font)', 'font-size:12px', 'letter-spacing:0.04em',
   ].join(';');
   bannerTitle = document.createElement('span');
   banner.appendChild(bannerTitle);
   const commit = document.createElement('button');
   commit.id = 'choreoCommitBtn';
   commit.textContent = 'Commit';
-  commit.style.cssText = 'padding:4px 12px; border-radius:5px; cursor:pointer; border:1px solid rgba(126,224,107,0.6); background:rgba(126,224,107,0.15); color:#dff9c8; font-family:inherit; font-size:11px; text-transform:uppercase;';
+  commit.style.cssText = 'height:28px; padding:0 12px; border-radius:var(--fb-radius-1); cursor:pointer; border:1px solid var(--vector-pass-clear); background:var(--vector-pass-clear); color:#08240f; font:600 12px/1 var(--fb-font);';
   commit.addEventListener('click', commitChoreo);
   const cancel = document.createElement('button');
   cancel.textContent = 'Cancel';
-  cancel.style.cssText = 'padding:4px 12px; border-radius:5px; cursor:pointer; border:1px solid rgba(255,120,120,0.55); background:rgba(255,120,120,0.12); color:#ffcccc; font-family:inherit; font-size:11px; text-transform:uppercase;';
+  cancel.style.cssText = 'height:28px; padding:0 12px; border-radius:var(--fb-radius-1); cursor:pointer; border:1px solid color-mix(in srgb, var(--fb-danger) 45%, transparent); background:transparent; color:var(--fb-danger); font:600 12px/1 var(--fb-font);';
   cancel.addEventListener('click', cancelChoreo);
   banner.appendChild(commit);
   banner.appendChild(cancel);

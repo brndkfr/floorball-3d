@@ -5,6 +5,7 @@
 import { state } from '../state.js';
 import { activateTool, onToolChanged } from './dock.js';
 import { makeFloatable } from './floatable.js';
+import { SHELL_RESERVED } from '../ui/shell-metrics.js';
 
 // Throw (rather than silently no-op) if the container is missing - the
 // bootstrap e2e spec's zero-pageerror assertion is the tripwire that
@@ -34,7 +35,6 @@ refresh(state.activeTool);
 
 makeFloatable(palette, {
   storageKey: 'floorball.toolPalette.pos',
-  // Rail (52px) + topbar (40px) come from index.html's #appRail / #appTopbar.
-  reserved: { top: 48, left: 60, right: 8, bottom: 8 },
-  defaultPos: { x: 60, y: Math.max(48, Math.round(window.innerHeight / 2 - 200)) },
+  reserved: SHELL_RESERVED,
+  defaultPos: { x: SHELL_RESERVED.left, y: Math.max(SHELL_RESERVED.top, Math.round(window.innerHeight / 2 - 200)) },
 });

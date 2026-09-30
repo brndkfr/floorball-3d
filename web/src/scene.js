@@ -3,6 +3,7 @@ import { RINK_L, RINK_W, HALF_W } from './constants.js';
 import { state } from './state.js';
 import { markRenderDirty } from './render-dirty.js';
 import { pickRendererQuality } from './renderer-quality.js';
+import { stageFrustum } from './ui/stage-frustum.js';
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1b1b1f);
@@ -48,20 +49,25 @@ topDownCamera.lookAt(0, 0, RINK_L / 2);
 // fits, and rotate the camera's up-vector so the view rotates on screen.
 let topDownRotationSteps = 1;
 
+// Shell insets (rail, top bar, docked right panel, phone tab bar) as set in
+// app.css; the 2D view fits the rink into what they leave free.
+function shellInsets() {
+  const css = getComputedStyle(document.documentElement);
+  const px = (name) => parseFloat(css.getPropertyValue(name)) || 0;
+  return { left: px('--shell-rail'), top: px('--shell-topbar'), right: px('--right-panel'), bottom: px('--tabbar') };
+}
+
 export function fitTopDownFrustum() {
-  const aspect = window.innerWidth / window.innerHeight;
   // Rink is 40x20 m long-side along Z. Odd rotations put the long side on
   // screen X, so swap the "long" and "short" halves.
   const swap = (topDownRotationSteps % 2) === 1;
   const marginLong = 21500, marginShort = 11000;
-  const marginZ = swap ? marginShort : marginLong;
-  const marginX = swap ? marginLong : marginShort;
-  const halfH = Math.max(marginZ, marginX / aspect);
-  const halfW = halfH * aspect;
-  topDownCamera.left = -halfW;
-  topDownCamera.right = halfW;
-  topDownCamera.top = halfH;
-  topDownCamera.bottom = -halfH;
+  const half = swap ? { x: marginLong, y: marginShort } : { x: marginShort, y: marginLong };
+  const f = stageFrustum({ vw: window.innerWidth, vh: window.innerHeight, insets: shellInsets(), half });
+  topDownCamera.left = f.left;
+  topDownCamera.right = f.right;
+  topDownCamera.top = f.top;
+  topDownCamera.bottom = f.bottom;
   topDownCamera.updateProjectionMatrix();
 }
 

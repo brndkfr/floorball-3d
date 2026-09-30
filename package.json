@@ -13,9 +13,14 @@
     "build": "node scripts/build.mjs",
     "check:size": "node scripts/check-size.mjs",
     "label:goals": "node scripts/label-goals.mjs",
-    "eval:goals": "node scripts/eval-goal-detect.mjs"
+    "eval:goals": "node scripts/eval-goal-detect.mjs",
+    "vendor:webawesome": "node scripts/vendor-webawesome.mjs",
+    "vendor:fonts": "node scripts/vendor-fonts.mjs"
   },
   "devDependencies": {
+    "@awesome.me/webawesome": "3.14.0",
+    "@fontsource/archivo": "5.3.0",
+    "@fontsource/ibm-plex-mono": "5.3.0",
     "@playwright/test": "^1.63.0",
     "esbuild": "^0.28.2",
     "three": "0.160.0"

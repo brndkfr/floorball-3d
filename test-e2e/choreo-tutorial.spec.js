@@ -164,7 +164,7 @@ test.describe('A-BACK-019 guided Choreo tutorial', () => {
 
   test('Help overlay starts the tutorial too, and restarting reuses one tutorial project', async ({ page }) => {
     await boot(page);
-    await page.locator('#onboardingTip button', { hasText: 'Got it' }).click();
+    await page.locator('#onboardingTip [data-x="ok"]').click();   // "New play" on the first-run card
     for (let i = 0; i < 2; i++) {
       await page.keyboard.press('?');
       await page.locator('#helpOverlay [data-x="tutorial"]').click();
@@ -187,7 +187,7 @@ test.describe('A-BACK-019 guided Choreo tutorial', () => {
   ]) {
     test(`starts from the ${name} after the welcome tip is gone`, async ({ page }) => {
       await boot(page);
-      await page.locator('#onboardingTip button', { hasText: 'Got it' }).click();
+      await page.locator('#onboardingTip [data-x="ok"]').click();   // "New play" on the first-run card
       await open(page);
       await expect(step(page, 'choreo')).toHaveAttribute('data-status', 'active');
       expect(await projectName(page)).toBe(TUTORIAL_NAME);

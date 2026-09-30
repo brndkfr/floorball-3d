@@ -6,7 +6,7 @@
 // through the same helpers the dock/keyboard shortcuts already use, so
 // history + persistence + rebuilds "just work".
 
-import { state } from '../state.js';
+import { state, DEFAULT_SHAPE_COLOR } from '../state.js';
 import { onSelectionChanged, deselectAll, labelFor, selectObject } from '../selection.js';
 import { chipDataFor } from './chips.js';
 import { shapeDataFor, removeShape, updateShape, updateShapeLabel, TEXT_MIN_SIZE, TEXT_MAX_SIZE, TEXT_DEFAULT_SIZE } from './shapes.js';
@@ -20,7 +20,6 @@ import { passTargets, passStatus } from './choreo-pass.js';
 import { currentPass, shotVerdictFor } from './pass-overlay.js';
 import { MIN_PASS_SPEED_MPS, maxSpeedMps, mpsToKmh, padToAim, aimToPad } from './ball-pose.js';
 import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED, SHOT_LINE_TOKENS } from '../tokens.js';
-import { makeFloatable } from './floatable.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
 // not here; the Inspector still handles shapes / text / read-only labels.
@@ -52,11 +51,6 @@ window.addEventListener('passChanged', () => {
 window.addEventListener('framesChanged', () => render(state.selected));
 render(state.selected);
 
-makeFloatable(inspectorEl, {
-  storageKey: 'floorball.inspector.pos',
-  reserved: { top: 48, left: 60, right: 8, bottom: 8 },
-  defaultPos: { x: Math.max(60, window.innerWidth - 244), y: 220 },
-});
 
 function render(sel) {
   body.innerHTML = '';
@@ -156,7 +150,6 @@ function carrierRow() {
   row.appendChild(label);
 
   const sel = document.createElement('select');
-  sel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
   const none = document.createElement('option');
   none.value = '';
   none.textContent = '(loose)';
@@ -257,7 +250,6 @@ function passTimingSection({ plan, dur, fa, fb }) {
   speed.id = 'passSpeedInput';
   speed.min = String(MIN_PASS_SPEED_MPS); speed.max = String(maxSpeedMps(plan.kind)); speed.step = '1';
   speed.value = String(plan.speedMps);
-  speed.style.cssText = 'width:56px; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; font-family:inherit;';
   speed.addEventListener('change', () => {
     const v = Number(speed.value);
     if (Number.isFinite(v)) setPassTiming({ speedMps: v });
@@ -358,14 +350,13 @@ function ballColorRow() {
   const input = document.createElement('input');
   input.type = 'color';
   input.value = stored || '#ffffff';
-  input.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
   input.addEventListener('input', () => setBallColor(input.value));
   row.appendChild(input);
 
   const reset = document.createElement('button');
   reset.textContent = 'Reset';
   reset.title = 'Restore the ball\u2019s default (loader) colour';
-  reset.style.cssText = 'margin-left:6px; padding:2px 8px; border-radius:4px; cursor:pointer; border:1px solid rgba(79,224,255,0.35); background:rgba(79,224,255,0.08); color:#dff9ff; font-family:inherit; font-size:10px;';
+  reset.className = 'ins-mini';
   reset.addEventListener('click', () => { setBallColor(null); input.value = '#ffffff'; });
   row.appendChild(reset);
 
@@ -385,13 +376,11 @@ function rotationRow(obj) {
   slider.type = 'range';
   slider.min = '-180'; slider.max = '180'; slider.step = '1';
   slider.value = String(((deg() + 540) % 360) - 180);
-  slider.style.cssText = 'flex:1;';
 
   const num = document.createElement('input');
   num.type = 'number';
   num.min = '-180'; num.max = '180'; num.step = '1';
   num.value = slider.value;
-  num.style.cssText = 'width:56px; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:2px 4px; font-family:inherit; font-size:11px;';
 
   function apply(v) {
     const rad = v * Math.PI / 180;
@@ -422,7 +411,6 @@ function renderCone(cone) {
   kl.textContent = 'Kind';
   kindRow.appendChild(kl);
   const kindSel = document.createElement('select');
-  kindSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
   for (const opt of [{ v: 'disc', t: 'Disc (flat)' }, { v: 'full', t: 'Full (cone)' }, { v: 'pole', t: 'Pole (disc + rod)' }]) {
     const o = document.createElement('option');
     o.value = opt.v; o.textContent = opt.t;
@@ -443,7 +431,6 @@ function renderCone(cone) {
   const input = document.createElement('input');
   input.type = 'color';
   input.value = cone.color || CONE_DEFAULT_COLOR;
-  input.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
   input.addEventListener('input', () => updateCone(cone.id, { color: input.value }));
   colorRow.appendChild(input);
   body.appendChild(colorRow);
@@ -460,7 +447,6 @@ function renderCone(cone) {
   labelInput.maxLength = 32;
   labelInput.placeholder = cone.kind === 'disc' ? 'Disc' : cone.kind === 'pole' ? 'Pole' : 'Cone';
   labelInput.value = cone.label || '';
-  labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
   labelInput.addEventListener('change', () => updateCone(cone.id, { label: labelInput.value }));
   labelRow.appendChild(labelInput);
   body.appendChild(labelRow);
@@ -481,7 +467,6 @@ function renderExtraBall(ball) {
   const input = document.createElement('input');
   input.type = 'color';
   input.value = ball.color || BALL_DEFAULT_COLOR;
-  input.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
   input.addEventListener('input', () => updateBall(ball.id, { color: input.value }));
   colorRow.appendChild(input);
   body.appendChild(colorRow);
@@ -497,7 +482,6 @@ function renderExtraBall(ball) {
   labelInput.maxLength = 32;
   labelInput.placeholder = 'Ball';
   labelInput.value = ball.label || '';
-  labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
   labelInput.addEventListener('change', () => updateBall(ball.id, { label: labelInput.value }));
   labelRow.appendChild(labelInput);
   body.appendChild(labelRow);
@@ -568,7 +552,6 @@ function renderExtraGoal(goal, node) {
   labelInput.maxLength = 32;
   labelInput.placeholder = 'Goal';
   labelInput.value = goal.label || '';
-  labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
   labelInput.addEventListener('change', () => updateGoal(goal.id, { label: labelInput.value }));
   labelRow.appendChild(labelInput);
   body.appendChild(labelRow);
@@ -601,7 +584,6 @@ function renderExtraGoal(goal, node) {
   const colorInput = document.createElement('input');
   colorInput.type = 'color';
   colorInput.value = goal.labelColor || GOAL_LABEL_DEFAULT_COLOR;
-  colorInput.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
   colorInput.addEventListener('input', () => updateGoal(goal.id, { labelColor: colorInput.value }));
   colorRow.appendChild(colorInput);
   body.appendChild(colorRow);
@@ -658,7 +640,6 @@ function renderFixedGoal(letter) {
   labelInput.maxLength = 32;
   labelInput.placeholder = letter === 'A' ? 'Home' : 'Away';
   labelInput.value = data.label;
-  labelInput.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
   labelInput.addEventListener('change', () => updateFixedGoal(letter, { label: labelInput.value }));
   labelRow.appendChild(labelInput);
   body.appendChild(labelRow);
@@ -690,7 +671,6 @@ function renderFixedGoal(letter) {
   const colorInput = document.createElement('input');
   colorInput.type = 'color';
   colorInput.value = data.labelColor;
-  colorInput.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
   colorInput.addEventListener('input', () => updateFixedGoal(letter, { labelColor: colorInput.value }));
   colorRow.appendChild(colorInput);
   body.appendChild(colorRow);
@@ -738,8 +718,7 @@ function renderShape(shape) {
     row.appendChild(label);
     const input = document.createElement('input');
     input.type = 'color';
-    input.value = shape.color || '#ffb347';
-    input.style.cssText = 'width:36px; height:26px; border:none; background:transparent; cursor:pointer; padding:0;';
+    input.value = shape.color || DEFAULT_SHAPE_COLOR;
     input.addEventListener('input', () => {
       updateShape(shape.id, { color: input.value });
     });
@@ -755,7 +734,6 @@ function renderShape(shape) {
     rl.textContent = 'Role';
     roleRow.appendChild(rl);
     const roleSel = document.createElement('select');
-    roleSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
     for (const opt of [{ v: '', t: 'custom' }, { v: 'pass', t: 'Pass' }, { v: 'shot', t: 'Shot' }, { v: 'run', t: 'Run' }]) {
       const o = document.createElement('option');
       o.value = opt.v; o.textContent = opt.t;
@@ -783,7 +761,6 @@ function renderShape(shape) {
     li.placeholder = 'e.g. Pass';
     li.value = shape.label || '';
     li.maxLength = 40;
-    li.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
     li.addEventListener('input', () => {
       updateShapeLabel(shape.id, li.value);
     });
@@ -804,7 +781,6 @@ function renderShape(shape) {
     input.type = 'range';
     input.min = '20'; input.max = '240'; input.step = '10';
     input.value = String(shape.width ?? 80);
-    input.style.cssText = 'flex:1;';
     input.addEventListener('input', () => {
       updateShape(shape.id, { width: parseInt(input.value, 10) });
     });
@@ -818,7 +794,6 @@ function renderShape(shape) {
     shaftL.textContent = 'Shaft';
     shaftRow.appendChild(shaftL);
     const shaftSel = document.createElement('select');
-    shaftSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
     for (const opt of ['solid', 'dashed', 'dotted']) {
       const o = document.createElement('option');
       o.value = opt; o.textContent = opt;
@@ -838,7 +813,6 @@ function renderShape(shape) {
     headL.textContent = 'Head';
     headRow.appendChild(headL);
     const headSel = document.createElement('select');
-    headSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
     for (const opt of ['filled', 'open', 'none']) {
       const o = document.createElement('option');
       o.value = opt; o.textContent = opt;
@@ -881,7 +855,6 @@ function renderShape(shape) {
     li.placeholder = 'e.g. Pocket';
     li.value = shape.label || '';
     li.maxLength = 40;
-    li.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
     li.addEventListener('input', () => {
       updateShapeLabel(shape.id, li.value);
     });
@@ -902,7 +875,6 @@ function renderShape(shape) {
     input.type = 'range';
     input.min = '0.05'; input.max = '0.8'; input.step = '0.05';
     input.value = String(shape.opacity ?? 0.3);
-    input.style.cssText = 'flex:1;';
     input.addEventListener('input', () => {
       updateShape(shape.id, { opacity: parseFloat(input.value) });
     });
@@ -921,7 +893,6 @@ function renderShape(shape) {
       sInp.min = '0'; sInp.max = '8000'; sInp.step = '100';
       sInp.value = String(shape.labelSize ?? 0);
       sInp.title = '0 = auto-fit; drag to override';
-      sInp.style.cssText = 'flex:1;';
       sInp.addEventListener('input', () => {
         const v = parseInt(sInp.value, 10);
         updateShape(shape.id, { labelSize: v > 0 ? v : undefined });
@@ -936,7 +907,6 @@ function renderShape(shape) {
       rl.textContent = 'Rotation';
       rotRow.appendChild(rl);
       const rotSel = document.createElement('select');
-      rotSel.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
       for (const o of [{ v: 'auto', t: 'auto' }, { v: '0', t: '0°' }, { v: '90', t: '90°' }, { v: '-90', t: '-90°' }]) {
         const opt = document.createElement('option'); opt.value = o.v; opt.textContent = o.t;
         rotSel.appendChild(opt);
@@ -979,7 +949,6 @@ function renderShape(shape) {
     const input = document.createElement('input');
     input.type = 'text';
     input.value = shape.text || '';
-    input.style.cssText = 'flex:1; background:rgba(79,224,255,0.08); border:1px solid rgba(79,224,255,0.35); color:#dff9ff; padding:3px 6px; font-family:inherit; font-size:11px;';
     input.addEventListener('change', () => {
       updateShape(shape.id, { text: input.value });
     });
