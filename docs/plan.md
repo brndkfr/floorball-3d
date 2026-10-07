@@ -2969,6 +2969,20 @@ added.
   with 3 workers, not wrong waits. The choreo-tutorial specs (heaviest,
   11-13 s idle) get a 60 s timeout. If local runs stay noisy, next step
   is fewer local workers or a GPU-backed launch flag, measured.
+- **[S-BACK-022]** [open] **Local e2e runs are slow and noisy.** Same code,
+  same suite (80 tests), on 2026-10-07: 2.2 min / 80 passed, then 4.6,
+  9.7 and 17.5 min with 3-10 load timeouts each, also with other apps
+  closed (~20% real CPU, 18 GB RAM free) and after a server restart (the
+  static server answers in ms, it is not the bottleneck). Failures
+  include "timeout while setting up page" and contexts that cannot
+  close, i.e. headless Chromium itself stalls before any app code runs.
+  `main` showed the same 2-9 min spread before S-BUG-001. CI is not
+  affected. Try one change at a time and time three full runs each:
+  `trace: 'on-first-retry'` locally instead of 'retain-on-failure'
+  (every test records a trace today), `workers: 2`, a Windows Defender
+  exclusion for `test-results/` and `node_modules/.pnpm/`, then a
+  GPU-backed Chromium launch (`--use-angle=d3d11`) instead of software
+  WebGL. Keep whatever measurably helps.
   `page.waitForFunction(async () => ...)` does not await the predicate:
   the returned Promise is truthy, so the wait resolves after one poll
   whatever the answer (checked 2026-10-07 with Playwright 1.63:
