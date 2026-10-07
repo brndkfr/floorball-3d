@@ -255,6 +255,8 @@ and is flagged as such in code comments where it matters most:
 - The 3D player figures (Layers panel > figures) use Quaternius'
   "Universal Base Characters" (free Standard version, CC0,
   https://quaternius.itch.io/universal-base-characters), converted by
-  `generators/prepare_player_figure.mjs`. The shirt / shorts regions and
-  the standing pose are our own estimates on top of the bare body, not
-  part of the asset.
+  `generators/prepare_player_figure.mjs`, animated with Quaternius'
+  "Universal Animation Library" (free Standard version, CC0,
+  https://quaternius.com/packs/universalanimationlibrary.html). The
+  shirt / shorts regions and the walk / jog / sprint speed bands are our
+  own estimates on top of the assets, not part of them.

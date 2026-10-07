@@ -9,6 +9,13 @@
 // the camera mode and the chip's team each frame - cheap for <= ~30 chips,
 // and it means spawn / rebuild / team change / undo need no extra hooks.
 //
+// Animation (A-BACK-032): each figure has an AnimationMixer with the four
+// gait clips. poseFigures() sets every action's time and weight from the
+// doc and playback.elapsed only (figure-gait.js), so seekTo() and the MP4
+// export get the same pose for the same time; playback.js calls it after
+// every applyPose(). Outside playback figures hold the idle clip's first
+// frame, so a still scene does not need continuous rendering.
+//
 // Shared resources: SkeletonUtils.clone() shares geometry, and the body
 // material is one clone per team. Nothing here is disposed per chip, and
 // chips.js's disposeGroup() / updateChipTeam() skip the figure subtree
@@ -22,6 +29,9 @@ import { markRenderDirty } from '../render-dirty.js';
 import { isTopDown } from './topdown-camera.js';
 import { CHIP_DISPLAY_SCALE, TEAM_COLORS, chipDataFor } from './chips.js';
 import { figureModelScale, figureShouldShow, figureSpriteLift } from './figure-math.js';
+import { GAIT_CLIPS, gaitWeights, clipPhase, chipMotionAt, facingYaw } from './figure-gait.js';
+import { getFrames } from './frames.js';
+import { addPoseListener } from './playback.js';
 
 const ASSET = 'player_figure.glb';
 const BODY_MATERIAL = /^MI_Superhero_/;
@@ -29,20 +39,12 @@ const BODY_MATERIAL = /^MI_Superhero_/;
 // but stay distinct. Factor is a look-based estimate.
 const SHORTS_DARKEN = 0.35;
 
-// Arms from the bind T-pose down to the sides: a rotation about each
-// upper-arm bone's local Z, opposite sign per side (radians). Found by eye
-// against the Superhero_Male skin; re-check if the body changes.
-const ARM_DOWN = 1.2;
-const ARM_POSE = {
-  upperarm_l: new THREE.Euler(0, 0, -ARM_DOWN),
-  upperarm_r: new THREE.Euler(0, 0, ARM_DOWN),
-};
-
 state.figuresEnabled = false;
 
 let prototype = null;
 let loading = null;
 let SkeletonUtils = null;
+let clips = null; // gait -> THREE.AnimationClip
 const teamMaterials = new Map(); // team -> body material with kit tint
 
 export function figuresLoaded() {
@@ -68,6 +70,11 @@ function loadFigure() {
     loader.setMeshoptDecoder(MeshoptDecoder);
     return loader.loadAsync('assets/' + ASSET + CACHE_BUST);
   }).then((gltf) => {
+    clips = {};
+    for (const [gait, c] of Object.entries(GAIT_CLIPS)) {
+      clips[gait] = THREE.AnimationClip.findByName(gltf.animations, c.name);
+      if (!clips[gait]) throw new Error(`${ASSET} has no clip ${c.name}`);
+    }
     prototype = prepareProto(gltf.scene);
     loaded(ASSET);
     markRenderDirty();
@@ -80,8 +87,6 @@ function loadFigure() {
 
 function prepareProto(root) {
   root.traverse((node) => {
-    const pose = ARM_POSE[node.name];
-    if (node.isBone && pose) node.quaternion.multiply(new THREE.Quaternion().setFromEuler(pose));
     if (node.isMesh) {
       // Expose the generator's _KIT attribute under a GLSL-safe name.
       const kit = node.geometry.getAttribute('_kit');
@@ -124,6 +129,13 @@ function makeFigure(team) {
   fig.traverse((node) => {
     if (node.isMesh && node.userData.isBody) node.material = kitMaterial(node.material, team);
   });
+  const mixer = new THREE.AnimationMixer(fig);
+  const actions = {};
+  for (const [gait, clip] of Object.entries(clips)) {
+    actions[gait] = mixer.clipAction(clip);
+    actions[gait].play();
+  }
+  fig.userData.anim = { mixer, actions, key: null };
   return fig;
 }
 
@@ -133,6 +145,8 @@ function removeFigure(group) {
   group.remove(fig);
   // Geometry and materials are shared; only the cloned skeletons own GPU data.
   fig.traverse((node) => { if (node.isSkinnedMesh) node.skeleton.dispose(); });
+  fig.userData.anim.mixer.stopAllAction();
+  fig.userData.anim.mixer.uncacheRoot(fig);
   group.userData.figure = null;
 }
 
@@ -149,6 +163,7 @@ export function tickFigures() {
       removeFigure(group);
       group.userData.figure = makeFigure(team);
       group.add(group.userData.figure);
+      poseFigure(group);
       changed = true;
     } else if (!show && fig) {
       removeFigure(group);
@@ -163,5 +178,47 @@ export function tickFigures() {
       }
     }
   }
+  return poseFigures() || changed;
+}
+
+// --- pose ----------------------------------------------------------------
+
+// Figures move only during playback (or when paused / scrubbed mid-way);
+// in the edit view they stand in the idle pose.
+function playbackActive() {
+  const pb = state.playback;
+  return !!pb && (pb.playing || pb.elapsed > 0);
+}
+
+// Returns true when the pose changed.
+function poseFigure(group) {
+  const fig = group.userData.figure;
+  const anim = fig?.userData.anim;
+  if (!anim) return false;
+  const active = playbackActive();
+  const elapsed = active ? state.playback.elapsed : 0;
+  const key = `${elapsed}|${group.rotation.y}`;
+  if (anim.key === key) return false;
+  anim.key = key;
+
+  const id = group.userData.chip?.id;
+  const motion = active ? chipMotionAt(getFrames(), id, elapsed) : chipMotionAt(null);
+  const weights = gaitWeights(motion.speedMps);
+  for (const [gait, action] of Object.entries(anim.actions)) {
+    const c = GAIT_CLIPS[gait];
+    action.time = c.strideM ? clipPhase(motion.distanceM, c) : (elapsed / 1000) % c.durationS;
+    action.setEffectiveWeight(weights[gait]);
+  }
+  anim.mixer.update(0);
+  // Figure is a child of the chip group, so its yaw is relative to the chip.
+  fig.rotation.y = facingYaw(group.rotation.y, motion.heading, motion.speedMps) - group.rotation.y;
+  return true;
+}
+
+export function poseFigures() {
+  let changed = false;
+  for (const group of state.chipGroups) changed = poseFigure(group) || changed;
   return changed;
 }
+
+addPoseListener(() => { poseFigures(); });
