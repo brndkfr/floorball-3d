@@ -252,3 +252,9 @@ and is flagged as such in code comments where it matters most:
   colour / outline, the default camera / ball starting positions, and
   the 5x runtime chip display scale, are eyeballed for a reasonable
   default - not derived from any reference.
+- The 3D player figures (Layers panel > figures) use Quaternius'
+  "Universal Base Characters" (free Standard version, CC0,
+  https://quaternius.itch.io/universal-base-characters), converted by
+  `generators/prepare_player_figure.mjs`. The shirt / shorts regions and
+  the standing pose are our own estimates on top of the bare body, not
+  part of the asset.
