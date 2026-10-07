@@ -1,12 +1,12 @@
 // A-BACK-026: the palette's Ball tool places the match ball; extra balls via flyout / Shift+click.
 
-import { test, expect, waitForAssets } from './fixtures.js';
+import { test, expect, waitForAssets, waitUntil } from './fixtures.js';
 
 async function boot(page) {
   await page.goto('/', { waitUntil: 'load' });
   await waitForAssets(page);
   await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
-  await page.waitForFunction(async () => !!(await import('/src/state.js')).state.ballGroup);
+  await waitUntil(page, async () => !!(await import('/src/state.js')).state.ballGroup);
 }
 
 // One Team-1 chip (#7) at (x, z), no carrier, top-down view.
@@ -29,7 +29,7 @@ async function setup(page, { x = 3000, z = 24000 } = {}) {
     resetTopDownView();
     return id;
   }, { x, z });
-  await page.waitForFunction(async () => (await import('/src/state.js')).state.chipGroups.length === 1);
+  await waitUntil(page, async () => (await import('/src/state.js')).state.chipGroups.length === 1);
   return id;
 }
 

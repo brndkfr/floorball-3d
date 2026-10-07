@@ -2,21 +2,13 @@
 // Quaternius body on every chip in the perspective view; top-down keeps
 // plain chips. The GLB loads lazily on first enable.
 
-import { test, expect } from './fixtures.js';
+import { test, expect, waitUntil, waitForAssets } from './fixtures.js';
 
-// page.waitForFunction() does not await an async predicate: the returned
-// Promise is truthy, so it resolves after one poll whatever the answer
-// (checked 2026-10-07, Playwright 1.63). The shared waitForAssets() has
-// that problem, so this spec polls page.evaluate(), which does await.
-async function waitUntil(page, fn, arg, timeout = 20000) {
-  await expect.poll(() => page.evaluate(fn, arg), { timeout }).toBe(true);
-}
-const assetsLoaded = async () => (await import('/src/status.js')).pendingLoads() === 0;
 const figuresReady = async () => (await import('/src/authoring/figures.js')).figuresLoaded();
 
 async function boot(page) {
   await page.goto('/', { waitUntil: 'load' });
-  await waitUntil(page, assetsLoaded);
+  await waitForAssets(page);
   await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
 }
 
@@ -180,7 +172,7 @@ test('toggle off removes figures; the choice survives a reload', async ({ page }
   await setup(page);
   await enableFigures(page);
   await page.reload({ waitUntil: 'load' });
-  await waitUntil(page, assetsLoaded);
+  await waitForAssets(page);
   await expect(page.locator('#figuresVisibleToggle')).toBeChecked();
   await setup(page);
   await waitUntil(page, figuresReady);

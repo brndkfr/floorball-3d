@@ -4,17 +4,12 @@
 // playback time, so seekTo() (and the MP4 export, which renders right after
 // it) is repeatable.
 
-import { test, expect } from './fixtures.js';
-
-// page.waitForFunction() does not await async predicates (S-BUG-001).
-async function waitUntil(page, fn, timeout = 20000) {
-  await expect.poll(() => page.evaluate(fn), { timeout }).toBe(true);
-}
+import { test, expect, waitUntil, waitForAssets } from './fixtures.js';
 
 // One Team-1 chip that runs 10 m along +x in 2 s (5 m/s: jog), figures on, 3D view.
 async function setup(page) {
   await page.goto('/', { waitUntil: 'load' });
-  await waitUntil(page, async () => (await import('/src/status.js')).pendingLoads() === 0);
+  await waitForAssets(page);
   await page.evaluate(async () => {
     const { ensureDoc } = await import('/src/authoring/doc.js');
     const chips = await import('/src/authoring/chips.js');
