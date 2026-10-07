@@ -286,6 +286,14 @@ aside.
   ```
   Otherwise you'll see errors like `The requested module does not provide
   an export named 'X'` even though the file on disk clearly exports X.
+- **`page.waitForFunction()` does not await an async predicate.** The
+  returned Promise is truthy, so `waitForFunction(async () => ...)`
+  resolves after one poll whatever the answer - a wait that never waits
+  (S-BUG-001). Anything that needs `await import(...)` in the page goes
+  through `waitUntil(page, fn)` from `test-e2e/fixtures.js` (expect.poll
+  around `page.evaluate`, which does await); `waitForAssets()` uses it.
+  `test/e2e-waits.test.js` fails on any async `waitForFunction` in
+  `test-e2e/`. Synchronous predicates (`() => document...`) are fine.
 - **`requestAnimationFrame` is paused in unfocused / hidden Playwright
   tabs**, so anything driven by rAF (playback interpolation via
   `tickPlayback`, drop-flash animations) never advances. Validate playback

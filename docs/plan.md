@@ -2955,7 +2955,20 @@ added.
   sheet / tab bar. Each surface: extend its e2e spec first, keep
   existing DOM ids, keep module logic unchanged (only markup + CSS +
   mount points), then `pnpm test:e2e:affected` + build + size.
-- **[S-BUG-001]** [open] **e2e waits on async predicates never wait.**
+- **[S-BUG-001]** [shipped] **e2e waits on async predicates never wait.**
+  Fixed (2026-10-07): `waitUntil(page, fn, arg, { timeout })` in
+  `fixtures.js` (expect.poll around page.evaluate), `waitForAssets()`
+  rebuilt on it, every async `waitForFunction` in the specs replaced.
+  Guards: `test/e2e-waits.test.js` (no async `waitForFunction` in
+  `test-e2e/`) and `test-e2e/wait-helpers.spec.js` (the helpers time out
+  on a false predicate and block while a load is pending).
+  Local full runs: 80/80 once on a quiet machine (2.2 min); on a busy
+  one 3 load timeouts remain per run (2.2 vs 14.9 min for similar runs),
+  including a 1 s test whose browser stopped responding and could not
+  close its context, i.e. headless Chromium's software WebGL starving
+  with 3 workers, not wrong waits. The choreo-tutorial specs (heaviest,
+  11-13 s idle) get a 60 s timeout. If local runs stay noisy, next step
+  is fewer local workers or a GPU-backed launch flag, measured.
   `page.waitForFunction(async () => ...)` does not await the predicate:
   the returned Promise is truthy, so the wait resolves after one poll
   whatever the answer (checked 2026-10-07 with Playwright 1.63:
