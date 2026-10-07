@@ -13,6 +13,12 @@
 //   - add a _KIT vec2 attribute (shirt, shorts) from player-figure-kit.mjs
 //     to the body, which figures.js tints with the team colour
 //   - shrink textures to JPEG (body 512 px, eyes / eyebrows 128 px)
+//   - retarget the gait clips (A-BACK-032) from gait_clips.glb (made by
+//     extract_gait_clips.mjs) onto the body: same 65-bone skeleton, so
+//     joint rotations copy across by name; pelvis translation is scaled
+//     to the body's hip height; every other translation / scale channel
+//     is constant (= the mannequin's bone lengths) and is dropped so the
+//     body keeps its own proportions
 //   - meshopt-compress (decoded in the browser by meshopt_decoder.module.js)
 
 import fs from 'node:fs';
@@ -20,7 +26,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NodeIO, Accessor } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { prune, dedup, meshopt } from '@gltf-transform/functions';
+import { prune, dedup, meshopt, resample } from '@gltf-transform/functions';
 import { MeshoptEncoder } from 'meshoptimizer';
 import sharp from 'sharp';
 import { kitWeights } from './player-figure-kit.mjs';
@@ -28,6 +34,7 @@ import { kitWeights } from './player-figure-kit.mjs';
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const DEFAULT_SRC = path.join(ROOT, 'generators/vendor/quaternius/universal-base-characters/Superhero_Male_FullBody.gltf');
 const OUT = path.join(ROOT, 'web/assets/player_figure.glb');
+const CLIPS = path.join(ROOT, 'generators/vendor/quaternius/universal-animation-library/gait_clips.glb');
 
 const BODY_MATERIAL = /^MI_Superhero_/;
 const TEXTURE_SIZE = { body: 512, other: 128 };
@@ -89,6 +96,34 @@ if (kitVerts[0] === 0 || kitVerts[1] === 0) {
   throw new Error(`kit mask is empty (shirt ${kitVerts[0]}, shorts ${kitVerts[1]}) - body material not found or landmarks off`);
 }
 
+// --- gait clips -------------------------------------------------------
+const clipRoot = (await io.read(CLIPS)).getRoot();
+const bodyNodes = new Map(root.listNodes().map((n) => [n.getName(), n]));
+const restLen = (n) => Math.hypot(...n.getTranslation());
+const srcPelvis = clipRoot.listNodes().find((n) => n.getName() === 'pelvis');
+const pelvisScale = restLen(bodyNodes.get('pelvis')) / restLen(srcPelvis);
+const copyAccessor = (a, scale = 1) => {
+  const arr = a.getArray().slice();
+  if (scale !== 1) for (let i = 0; i < arr.length; i++) arr[i] *= scale;
+  return doc.createAccessor().setType(a.getType()).setArray(arr).setBuffer(buffer);
+};
+for (const src of clipRoot.listAnimations()) {
+  const anim = doc.createAnimation(src.getName());
+  for (const ch of src.listChannels()) {
+    const name = ch.getTargetNode()?.getName();
+    const target = bodyNodes.get(name);
+    const p = ch.getTargetPath();
+    const keep = p === 'rotation' || (p === 'translation' && name === 'pelvis');
+    if (!target || !keep) continue;
+    const s = ch.getSampler();
+    const sampler = doc.createAnimationSampler()
+      .setInput(copyAccessor(s.getInput()))
+      .setOutput(copyAccessor(s.getOutput(), p === 'translation' ? pelvisScale : 1))
+      .setInterpolation(s.getInterpolation());
+    anim.addSampler(sampler).addChannel(doc.createAnimationChannel().setTargetNode(target).setTargetPath(p).setSampler(sampler));
+  }
+}
+
 for (const mat of root.listMaterials()) {
   const tex = mat.getBaseColorTexture();
   if (!tex) continue;
@@ -101,6 +136,7 @@ for (const mat of root.listMaterials()) {
 }
 
 await doc.transform(
+  resample(),
   prune(),
   dedup(),
   meshopt({ encoder: MeshoptEncoder, level: 'medium' }),
@@ -108,4 +144,4 @@ await doc.transform(
 
 await io.write(OUT, doc);
 const kb = (fs.statSync(OUT).size / 1024).toFixed(1);
-console.log(`player_figure.glb: ${kb} KB (shirt verts ${kitVerts[0]}, shorts verts ${kitVerts[1]})`);
+console.log(`player_figure.glb: ${kb} KB (shirt verts ${kitVerts[0]}, shorts verts ${kitVerts[1]}, pelvis scale ${pelvisScale.toFixed(3)}, clips ${root.listAnimations().map((a) => a.getName()).join(', ')})`);

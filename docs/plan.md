@@ -1007,8 +1007,27 @@ Still on the backlog from that exploration:
     figure per chip in the 3D view, world-space figure height ~1.6-1.8 m,
     top-down still shows chips, drag a chip and its figure follows,
     toggle off removes them, zero pageerrors.
-- **[A-BACK-032]** [open] [blocked-by: A-BACK-031] **Animated figures
-  during playback.** Idle when standing, jog / sprint by the chip's
+- **[A-BACK-032]** [in-progress] [blocked-by: A-BACK-031] **Animated figures
+  during playback.**
+  - As built (2026-10-07, branch `feat/player-figures-anim-a-back-032`,
+    stacked on 031): free Standard tier has Idle / Walk / Jog_Fwd /
+    Sprint loops on the same 65-bone skeleton, so rotations copy across
+    by name (bind rotations differ by <= 17 deg, at the neck); pelvis
+    translation scaled 1.035 to the body's hip height; other
+    translation / scale channels are constant and dropped.
+    `generators/extract_gait_clips.mjs` cuts the four clips into a
+    593 KB vendored file; the GLB grows to 300 KB. Cycle position comes
+    from distance covered along the Bezier path (`strideM` per loop read
+    from the root-motion export: walk 1.3 m, jog 5.0 m, sprint 5.5 m),
+    so feet don't slide. Speed bands: walk from 0.15-0.5, jog from
+    1.6-2.4, sprint from 6-7 m/s (estimates). Faces the run above
+    ~0.8 m/s, the chip angle when standing. `playback.js` gained
+    `addPoseListener()` so seekTo() / export pose figures without a
+    tick. Outside playback figures hold idle frame 0 (no continuous
+    render). Not covered: backwards / sideways running (no such clips
+    in the free tier, a backpedalling defender turns round), and the
+    edit view does not animate idle.
+    Tests: `test/figure-gait.test.js`, `test-e2e/player-figures-anim.spec.js`. Idle when standing, jog / sprint by the chip's
   speed along its Bezier path (`gaitFor(speedMps)`, thresholds are
   estimates and commented as such). Facing follows the movement
   direction while moving, `player.angle` when standing.
