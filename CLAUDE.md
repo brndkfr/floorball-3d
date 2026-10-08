@@ -130,6 +130,14 @@ aside.
   `scripts/vendor-webawesome.mjs`) and `pnpm run vendor:fonts`. To use a new
   Web Awesome component, add it to `COMPONENTS`, re-run, and import it in
   `web/src/ui/webawesome.js` (`test/vendored-assets.test.js` checks both).
+- **Exception: third-party models** (Quaternius player figures,
+  A-BACK-031). The raw download and its license text live under
+  `generators/vendor/<source>/` (never deployed); a script in
+  `generators/` turns them into the shipped file under `web/assets/`
+  (e.g. `player_figure.glb`). Same rule as above: the shipped file is
+  script-made and never hand-edited - change the script and re-run it.
+  Only CC0 or similarly permissive sources; credit each one in README's
+  "Sources & disclaimers" even when the license does not require it.
 - Several dimensional constants (`RINK_L`, `RINK_W`, `GOAL_LINE_FROM_BOARD`,
   etc.) are duplicated across multiple `generate_*.py` scripts with a
   "must stay in sync" comment, rather than imported from one shared module.
@@ -283,6 +291,14 @@ aside.
   ```
   Otherwise you'll see errors like `The requested module does not provide
   an export named 'X'` even though the file on disk clearly exports X.
+- **`page.waitForFunction()` does not await an async predicate.** The
+  returned Promise is truthy, so `waitForFunction(async () => ...)`
+  resolves after one poll whatever the answer - a wait that never waits
+  (S-BUG-001). Anything that needs `await import(...)` in the page goes
+  through `waitUntil(page, fn)` from `test-e2e/fixtures.js` (expect.poll
+  around `page.evaluate`, which does await); `waitForAssets()` uses it.
+  `test/e2e-waits.test.js` fails on any async `waitForFunction` in
+  `test-e2e/`. Synchronous predicates (`() => document...`) are fine.
 - **`requestAnimationFrame` is paused in unfocused / hidden Playwright
   tabs**, so anything driven by rAF (playback interpolation via
   `tickPlayback`, drop-flash animations) never advances. Validate playback

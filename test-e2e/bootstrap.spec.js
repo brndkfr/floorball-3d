@@ -7,7 +7,7 @@
 // e2e spec calls `page.goto('/')` too but none of them fail the test on
 // unhandled page errors, so a broken bootstrap slipped through until the
 // user opened the app themselves.
-import { test, expect } from './fixtures.js';
+import { test, expect, waitUntil } from './fixtures.js';
 
 test('app boots with no page errors and the rink renders', async ({ page }) => {
   const pageErrors = [];
@@ -171,5 +171,5 @@ test('Broadcast shell: rail and top bar geometry', async ({ page }) => {
 // player_chip.obj lands. status.js counts outstanding loads.
 test('every expected asset load finishes and the count reaches zero', async ({ page }) => {
   await page.goto('/', { waitUntil: 'load' });
-  await page.waitForFunction(async () => (await import('/src/status.js')).pendingLoads() === 0, null, { timeout: 15000 });
+  await waitUntil(page, async () => (await import('/src/status.js')).pendingLoads() === 0, undefined, { timeout: 15000 });
 });
