@@ -29,10 +29,13 @@ import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from '../chips.js';
 import * as photoCache from './photo-cache.js';
 import { recomputeInsights } from './insights-overlay.js';
 import { enterPhotoPreview3D, exitPhotoPreview3D, isPhotoPreview3D } from './preview-3d.js';
+import { firstImageFile } from './photo-drop.js';
+import { renderInsightStats } from './insight-stats.js';
 import {
   currentStep as computeCurrentStep,
   stepStatuses as computeStepStatuses,
   guidedHint as computeGuidedHint,
+  playersChecklist,
   STEP_PHOTO,
   STEP_ALIGN,
   STEP_PLAYERS,
@@ -129,6 +132,10 @@ const goalieAwaySelect = document.getElementById('photoGoalieAway');
 const autoAssignGoaliesBtn = document.getElementById('photoAutoAssignGoaliesBtn');
 const resetFacingBtn = document.getElementById('photoResetFacingBtn');
 const insightsReadout = document.getElementById('photoInsightsReadout');
+const insightsStats = document.getElementById('photoInsightsStats');
+const step3Checks = document.querySelectorAll('#photoStep3Details .ps-check > li[data-check]');
+if (step3Checks.length !== 4) throw new Error('photo-overlay: step 3 checklist missing from index.html');
+if (!insightsStats) throw new Error('photo-overlay: #photoInsightsStats missing from index.html');
 const view3dBtn = document.getElementById('photoView3dBtn');
 
 const fovSlider = document.getElementById('photoFovSlider');
@@ -614,9 +621,28 @@ function setCalibrating(on) {
   renderer.domElement.style.display = on ? 'none' : '';
 }
 
+// Step 1 drop zone: the <label> wraps the file input, so a click opens the
+// picker; a drop is handed to the same change handler below.
+const dropZone = document.getElementById('photoDrop');
+if (!dropZone) throw new Error('photo-overlay: #photoDrop missing from index.html');
+const dropName = dropZone.querySelector('.ps-drop-name');
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = firstImageFile(e.dataTransfer?.files);
+  if (!file) return;
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  fileInput.files = dt.files;
+  fileInput.dispatchEvent(new Event('change'));
+});
+
 fileInput.addEventListener('change', async () => {
   const file = fileInput.files?.[0];
   if (!file) return;
+  dropName.textContent = file.name;
   await photoCanvas.loadPhoto(file);
   photoCache.saveCachedPhoto(file);
   listEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
@@ -735,6 +761,7 @@ async function restoreCachedPhotoIfAny() {
   const cached = await photoCache.loadCachedPhoto();
   if (!cached) return;
   await photoCanvas.loadPhoto(cached.blob);
+  dropName.textContent = cached.name || '';
   setCalibrating(true);
   if (!checkRestoreAvailable()) {
     startGuidedHints(autoDetectEnd.value === 'B' ? 'goalB' : 'goalA');
@@ -1182,8 +1209,24 @@ function stepperSnapshot() {
   };
 }
 
+// Step 3 checklist ticks + the "n found" line (gaps canvas).
+function updateStep3Checklist() {
+  const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
+  const byKey = new Map(playersChecklist({ players: photo?.players || [], hasBall: !!photo?.ball }).map((i) => [i.key, i]));
+  for (const li of step3Checks) {
+    const item = byKey.get(li.dataset.check);
+    li.dataset.done = String(!!item?.done);
+    const detail = li.querySelector('.ps-check-detail');
+    if (item && detail) detail.textContent = item.detail;
+  }
+}
+
+// Each frame carries its own photo data; re-tick on frame switches.
+window.addEventListener('framesChanged', updateStep3Checklist);
+
 let lastStepperStep = null;
 function updateStepper() {
+  updateStep3Checklist();
   if (!stepperEl) return;
   const snap = stepperSnapshot();
   const step = computeCurrentStep(snap);
@@ -1277,6 +1320,7 @@ function footprintRing(worldX, worldZ) {
 }
 
 function renderPlayersAndBall() {
+  updateStep3Checklist();
   const photo = state.doc?.frames?.[state.doc.currentFrame]?.photo;
   if (!lastPose || !photo) {
     photoCanvas.setPlayerChips([]);
@@ -1877,6 +1921,7 @@ function updateStep4() {
   if (!enabled) {
     resetFacingBtn.disabled = true;
     insightsReadout.textContent = '-';
+    renderInsightStats(insightsStats, null);
     updateStepper();
     return;
   }
@@ -1898,12 +1943,9 @@ function updateStep4() {
   resetFacingBtn.disabled = !hasOverride;
 
   const result = recomputeInsights();
+  renderInsightStats(insightsStats, result);
   if (!result) { insightsReadout.textContent = 'place a ball and pick a target goal to see insights'; return; }
-  const { shot, coveragePct, passes } = result;
-  const clearCount = passes.filter((p) => p.clear).length;
-  insightsReadout.textContent = `angle: ${Math.round(shot.angleDeg)}° · dist: ${Math.round(shot.distance)}mm · `
-    + `coverage: ${coveragePct != null ? Math.round(coveragePct) + '%' : '-'} · `
-    + `clear passes: ${clearCount}/${passes.length}`;
+  insightsReadout.textContent = '';   // the stat grid shows the numbers; this line is for status messages
   updateStepper();
 }
 

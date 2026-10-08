@@ -46,27 +46,30 @@ test.describe('timeline strip on a narrow window', () => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await boot(page);
-    await addFrames(page, 5);
+    // Below 768 px the strip gets its own full-width row (phone layout), so
+    // it takes 12 frames to overflow a 700 px window.
+    const last = 11;
+    await addFrames(page, last);
     await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(0));
     const strip = page.locator('#timeline .tl-strip');
     const overflow = await strip.evaluate((s) => s.scrollWidth - s.clientWidth);
     expect(overflow).toBeGreaterThan(10);
-    expect((await delHit(page, 5)).hits).toBe(false);
+    expect((await delHit(page, last)).hits).toBe(false);
 
     const box = await strip.boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    for (let i = 0; i < 10; i++) await page.mouse.wheel(0, 120);
-    const hit = await delHit(page, 5);
+    for (let i = 0; i < 20; i++) await page.mouse.wheel(0, 120);
+    const hit = await delHit(page, last);
     expect(hit.hits).toBe(true);
 
     await page.mouse.click(hit.x, hit.y);
-    await expect.poll(() => frameCount(page)).toBe(5);
+    await expect.poll(() => frameCount(page)).toBe(last);
     expect(errors).toEqual([]);
   });
 
   test('re-rendering the strip keeps its scroll position', async ({ page }) => {
     await boot(page);
-    await addFrames(page, 5);
+    await addFrames(page, 11);   // overflows 700 px even with the full-width phone strip
     await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(0));
     const strip = page.locator('#timeline .tl-strip');
     await strip.evaluate((s) => { s.scrollLeft = s.scrollWidth; });
@@ -78,9 +81,9 @@ test.describe('timeline strip on a narrow window', () => {
 
   test('selecting a clipped frame scrolls its card into view', async ({ page }) => {
     await boot(page);
-    await addFrames(page, 5);
+    await addFrames(page, 11);   // overflows 700 px even with the full-width phone strip
     await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(0));
-    await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(5));
+    await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(11));
     const inView = await page.evaluate(() => {
       const s = document.querySelector('#timeline .tl-strip').getBoundingClientRect();
       const c = document.querySelector('#timeline .tl-card.editing').getBoundingClientRect();

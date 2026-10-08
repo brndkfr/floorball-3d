@@ -16,6 +16,10 @@ const BUDGETS_MB = {
   dist: 70,
   'dist/assets': 8,
   'web/src': 1.0,   // raised from 0.8 on 2026-09-24 (was at 0.78 before A-BACK-022 shots)
+  // Vendored by scripts/vendor-*.mjs (S-BACK-021). A jump here means the
+  // Web Awesome COMPONENTS list or the font weights grew - check that first.
+  'web/lib/webawesome': 1.0,   // 0.60 MB when added (23 components)
+  'web/lib/fonts': 0.2,        // 0.09 MB when added (6 latin woff2)
 };
 
 function dirSizeBytes(dir) {

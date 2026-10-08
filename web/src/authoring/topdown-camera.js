@@ -39,6 +39,8 @@ export function enterTopDown() {
   document.body.classList.add('topdown-mode');
   applyBallTopDownScale(true);
   setActiveCamera(topDownCamera);
+  // The top bar's 2D / 3D control (web/src/ui/topbar.js) follows this.
+  window.dispatchEvent(new Event('viewModeChanged'));
 }
 
 export function exitTopDown() {
@@ -59,6 +61,7 @@ export function exitTopDown() {
   topDownCamera.position.z = savedTopDown.z;
   topDownCamera.updateProjectionMatrix();
   setActiveCamera(camera);
+  window.dispatchEvent(new Event('viewModeChanged'));
 }
 
 // state.ballGroup may be null at first enterTopDown() call (OBJ loads
@@ -101,7 +104,7 @@ export function resetTopDownView() {
 window.addEventListener('wheel', (e) => {
   if (!isTopDown()) return;
   // Don't hijack wheel events over UI (dock, timeline, HUD panels).
-  if (e.target && e.target !== document.body && e.target.closest?.('#dock, #timeline, #dockOverflow, #dockPalette, #info, #coords')) return;
+  if (e.target && e.target !== document.body && e.target.closest?.('#dock, #timeline, #dockOverflow, #dockPalette, #rightPanel')) return;
   e.preventDefault();
   const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
   topDownCamera.zoom = Math.min(Math.max(topDownCamera.zoom * factor, MIN_ZOOM), MAX_ZOOM);
@@ -113,7 +116,7 @@ let lastX = 0, lastY = 0;
 window.addEventListener('pointerdown', (e) => {
   if (!isTopDown()) return;
   if (e.button !== 1 && e.button !== 2) return;
-  if (e.target && e.target.closest?.('#dock, #timeline, #dockOverflow, #dockPalette, #info, #coords')) return;
+  if (e.target && e.target.closest?.('#dock, #timeline, #dockOverflow, #dockPalette, #rightPanel')) return;
   panning = true;
   lastX = e.clientX;
   lastY = e.clientY;
