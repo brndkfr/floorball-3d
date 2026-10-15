@@ -16,6 +16,17 @@ export const MAX_SHOT_SPEED_MPS = 55;                // ~200 km/h, measured reco
 export const maxSpeedMps = (kind) => (kind === 'shot' ? MAX_SHOT_SPEED_MPS : MAX_PASS_SPEED_MPS);
 export const mpsToKmh = (mps) => Math.round(mps * 3.6);
 const LANE_SAMPLES = 16;
+const LANE_END_TRIM = 0.05;
+
+// Closest distance between two points that each move linearly over the same
+// interval: ball b0 -> b1, defender d0 -> d1 (floor x/z).
+export function minDistLinear(b0, b1, d0, d1) {
+  const rx = d0.x - b0.x, rz = d0.z - b0.z;
+  const vx = (d1.x - b1.x) - rx, vz = (d1.z - b1.z) - rz;
+  const vv = vx * vx + vz * vz;
+  const u = vv > 1e-9 ? Math.min(1, Math.max(0, -(rx * vx + rz * vz) / vv)) : 0;
+  return Math.hypot(rx + vx * u, rz + vz * u);
+}
 
 // --- shots (A-BACK-022) ---
 export const GOAL_Z = { A: GOAL_LINE_FROM_BOARD, B: RINK_L - GOAL_LINE_FROM_BOARD };
@@ -142,13 +153,20 @@ export function passPlan(fa, fb, durationMs) {
     for (const id of ids) {
       const p = fa.players?.[id] || fb.players?.[id];
       if (p.team === team) continue;
-      for (let i = 1; i < LANE_SAMPLES; i++) {
-        const s = i / LANE_SAMPLES;
-        if (s < 0.05 || s > 0.95) continue;   // passer / receiver ends, as in passOptions
-        const t = releaseT + (arriveT - releaseT) * s;
-        const ball = lerpPt(from, to, s);
-        const d = chipPosAt(fa.players?.[id] ? fa : fb, fb, id, t);
-        if (Math.hypot(ball.x - d.x, ball.z - d.z) <= PASS_LANE_HALF_WIDTH_MM) { blockedBy.push(id); break; }
+      // Swept, not point-sampled (S-BACK-029 M1): within each sub-interval
+      // ball and defender move linearly, so their closest approach has a
+      // closed form and a defender between two samples can't slip through.
+      const src = fa.players?.[id] ? fa : fb;
+      const tAt = (s) => releaseT + (arriveT - releaseT) * s;
+      for (let i = 0; i < LANE_SAMPLES; i++) {
+        const s0 = Math.max(LANE_END_TRIM, i / LANE_SAMPLES);   // passer / receiver ends, as in passOptions
+        const s1 = Math.min(1 - LANE_END_TRIM, (i + 1) / LANE_SAMPLES);
+        if (s1 <= s0) continue;
+        const d = minDistLinear(
+          lerpPt(from, to, s0), lerpPt(from, to, s1),
+          chipPosAt(src, fb, id, tAt(s0)), chipPosAt(src, fb, id, tAt(s1)),
+        );
+        if (d <= PASS_LANE_HALF_WIDTH_MM) { blockedBy.push(id); break; }
       }
     }
   }
