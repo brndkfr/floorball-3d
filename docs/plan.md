@@ -917,6 +917,33 @@ Still on the backlog from that exploration:
     outer face too.
   - Tests: node test for assignment / quick-fill helpers; e2e: assign a
     logo to a slot, it renders there and survives a reload.
+- **[A-BACK-031]** [open] **Show the floorball stick in the scene.**
+  - Done (asset only, not loaded by the app yet):
+    - [generate_stick.py](../generators/generate_stick.py) writes
+      `assets/floorball_stick.obj/.mtl` to the IFF Material Regulations
+      SPCR 011 section 2.1.3 and drawings B1/B2: 60 deg lie, blade
+      76 mm high / 9 mm thick / 10 mm hook / 270 mm bottom-edge radius,
+      grip line at 375 mm. Stick length (920 mm), shaft diameter, grip
+      length and blade outline are commented estimates.
+    - Blade holes in the style of a Fat Pipe blade, traced by eye from
+      a product photo; every hole corner rounded >= 2 mm.
+    - Part colours: `--blade/--shaft/--grip/--grip-line/--knob` on the
+      generator, and `applyStickColors(stick, {...})` in
+      [stick-colors.js](../web/src/stick-colors.js) for per-stick
+      runtime colours (clones shared template materials).
+    - Tests: `test/stick-asset.test.js` (IFF dimensions, perforation,
+      closed rim), `test/stick-colors.test.js`.
+  - Open:
+    - Load the stick once, clone per use. Where it goes: next to each
+      chip (needs a facing direction) or, later, in a player figure's
+      hand (see the Quaternius figure idea - not planned yet).
+    - Default colours per team from `tokens.js`; optionally per-player
+      colours in the Inspector (then it is doc data: default it in
+      `ensureDoc()` / `acceptDoc()`).
+    - Left/right-handed blade (mirror the hook).
+    - Asset budget: the OBJ is ~510 KB and `dist/assets` is at
+      6.86 / 8 MB - coarsen the mesh if more models are added.
+    - e2e: the stick renders, recolouring a team updates its sticks.
 - **[A-BACK-021]** [shipped] **Pass timing: release point, pass
   speed, lane check.** Follow-up to A-BACK-020. There, a pass spanned
   the whole frame, from the passer's frame-A spot to the receiver's

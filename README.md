@@ -166,6 +166,7 @@ python generate_goalie.py           # goalie.obj/.mtl (the placeholder figure)
 python generate_tactical_zones.py   # tactical_zones.obj/.mtl
 python generate_grid_tiles.py       # grid_tiles.obj/.mtl
 python generate_player_chip.py      # player_chip.obj/.mtl (authoring tool)
+python generate_stick.py            # floorball_stick.obj/.mtl (--blade/--shaft/--grip colours)
 ```
 
 Each writes directly into `../web/assets/`. The detailed goalie model
@@ -237,6 +238,10 @@ web/
 
 The rink, goal and ball dimensions are sourced from the IFF Material
 Regulations (SPCR 011 / SP-METHOD 1506) and the Rules of the Game 2026.
+The stick's limits (length, shaft diameter, grip line, blade length /
+height / thickness / hook / edge radii, 60 deg lie) come from SPCR 011
+section 2.1.3 and drawings B1/B2; the values chosen inside them are
+estimates.
 
 Everything else is an illustrative estimate, not a sourced specification,
 and is flagged as such in code comments where it matters most:
@@ -245,6 +250,8 @@ and is flagged as such in code comments where it matters most:
   Position) are a proportional reconstruction from Swiss Unihockey's
   coaching lexicon, which defines them only in words and an unmeasured
   diagram - not an IFF spec.
+- The stick blade's hole pattern is in the style of a Fat Pipe blade,
+  traced by eye from a product photo - not a manufacturer drawing.
 - The detailed goalie model's scale is derived anthropometrically
   (180 cm standing male, kneeling butterfly stance), not measured from
   the source asset.
