@@ -20,13 +20,18 @@ compute layer (trajectory, coverage, goal geometry, doc model):
 
 Only the input source differs between the modes; insights render the same.
 
-**Target user (proposed, confirm):** youth coaches, U14 first. They use it on a laptop or tablet to prepare, and on a
+**Target user (confirmed 2026-10-15):** youth coaches, U14 first. They use it on a laptop or tablet to prepare, and on a
 tablet or phone at the rink to show players.
 
-**v1 means (proposed, confirm once M-Q-001 is answered):** a coach can
+**v1 means (confirmed 2026-10-15):** a coach can
 (1) build a short play with passes and a shot and play it back to the
 team, and (2) load a match photo, align it, and show one or two insights
 that agree with what the coach saw. Everything else is post-v1.
+
+**First-demo insights ([M-Q-001], answered 2026-10-15):**
+1. Passing alternatives lead ("your pass was blocked, #7 was open").
+2. Shot verdict + coverage gap second.
+3. Angle and distance as small supporting numbers.
 
 ---
 
@@ -55,22 +60,18 @@ up here first.
 
 ### Now
 
-1. **[M-Q-001]** Rank the insights for the first demo (owner: user, about
-   an hour). Proposal to react to: lead with passing alternatives ("your
-   pass was blocked, #7 was open"), then shot verdict + coverage, angle
-   and distance as small supporting numbers.
-2. **[B-BACK-011]** Check the insights against 5-10 real Jets photos where
-   the true outcome is known (see section 4).
-3. **[S-BACK-023]** Type checking in CI (see section 5).
+1. **[B-BACK-011]** Check the insights against 5-10 real Jets photos where
+   the true outcome is known, passing alternatives first (see section 4).
+2. **[S-BACK-023]** Type checking in CI (see section 5).
 
 ### Next
 
-4. **[S-BACK-024]** Ball and goalies: doc as the only source of truth.
+3. **[S-BACK-024]** Ball and goalies: doc as the only source of truth.
    Before any item that adds actors (arena branding, figure kit).
-5. **[S-BACK-025]** Persistence that scales with project size.
-6. **[S-BACK-026]** Download weight.
-7. Polish the top-ranked insight from M-Q-001 (item to be created from the
-   ranking and the B-BACK-011 results).
+4. **[S-BACK-025]** Persistence that scales with project size.
+5. **[S-BACK-026]** Download weight.
+6. Polish passing alternatives, then shot verdict + coverage (items to
+   be created from the B-BACK-011 results).
 
 ### Later (parked)
 
@@ -191,10 +192,6 @@ coupling visible.
 
 ## 6. Open questions
 
-- **[M-Q-001]** [open] Which insights lead the first demo? All five
-  candidates (shot trajectory, on-target verdict, coverage gap, passing
-  alternatives, angle to goal) are built at similar depth (B-PHASE-003),
-  so the question is what to lead with, polish and trust. See section 3.
 - **[M-Q-002]** [open] Video: single-frame analysis per picked frame
   first, or tracking + interpolation from the start? Sets B-PHASE-006
   scope.
