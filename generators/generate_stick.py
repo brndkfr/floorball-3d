@@ -40,10 +40,36 @@ runs along X (toe at -X, heel at +X), the shaft rises from the heel toward
 concave forehand faces -Z.
 
 Output: floorball_stick.obj + floorball_stick.mtl
+
+Part colours (defaults below) can be set per run, e.g.
+    python generate_stick.py --blade 7ed321 --shaft ffffff --grip 111111
+The app can also recolour each stick at runtime: web/src/stick-colors.js.
 """
 
+import argparse
 import math
 import os
+
+# default part colours (sRGB hex), overridable on the command line
+COLORS = {
+    'blade': '0f0f12',
+    'shaft': 'ebebe6',
+    'grip': '141417',
+    'grip-line': 'd91a1a',
+    'knob': None,           # None = same as the grip
+}
+
+def hex_color(v):
+    v = v.lstrip('#')
+    if len(v) != 6 or any(c not in '0123456789abcdefABCDEF' for c in v):
+        raise argparse.ArgumentTypeError(f'expected a hex colour like 7ed321, got {v!r}')
+    return v.lower()
+
+parser = argparse.ArgumentParser(description='Generate the IFF floorball stick OBJ/MTL.')
+for part, default in COLORS.items():
+    parser.add_argument(f'--{part}', type=hex_color, default=default,
+                        help=f'{part} colour, hex (default: {default or "grip colour"})')
+args = parser.parse_args()
 
 # ------------------------------------------------------------- dimensions --
 
@@ -482,11 +508,12 @@ obj_path = os.path.join(out_dir, 'floorball_stick.obj')
 mtl_path = os.path.join(out_dir, 'floorball_stick.mtl')
 
 with open(mtl_path, 'w') as f:
-    f.write("newmtl Blade\nKd 0.06 0.06 0.07\nKa 0.02 0.02 0.02\nNs 30\n\n")
-    f.write("newmtl Shaft\nKd 0.92 0.92 0.90\nKa 0.2 0.2 0.2\nNs 60\n\n")
-    f.write("newmtl Grip\nKd 0.08 0.08 0.09\nKa 0.02 0.02 0.02\nNs 5\n\n")
-    f.write("newmtl GripLine\nKd 0.85 0.10 0.10\nKa 0.1 0.0 0.0\nNs 40\n\n")
-    f.write("newmtl Knob\nKd 0.08 0.08 0.09\nKa 0.02 0.02 0.02\nNs 20\n")
+    for name, color, shininess in (('Blade', args.blade, 30), ('Shaft', args.shaft, 60),
+                                   ('Grip', args.grip, 5), ('GripLine', args.grip_line, 40),
+                                   ('Knob', args.knob or args.grip, 20)):
+        kd = [int(color[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        f.write(f"newmtl {name}\nKd {kd[0]:.3f} {kd[1]:.3f} {kd[2]:.3f}\n"
+                f"Ka {kd[0] * 0.2:.3f} {kd[1] * 0.2:.3f} {kd[2] * 0.2:.3f}\nNs {shininess}\n\n")
 
 with open(obj_path, 'w') as f:
     f.write("# IFF floorball stick - generated from SPCR 011 section 2.1.3 / drawings B1-B2.\n")
