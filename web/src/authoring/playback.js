@@ -3,8 +3,9 @@
 // stays authoritative for frame content; the scene meshes are just
 // re-driven each tick from main.js's animate() loop via tickPlayback().
 //
-// timer-worker.js is left in the tree as the future recording heartbeat
-// for A6 - the visible-tab path only needs rAF.
+// Playback runs on rAF only. A staged worker heartbeat for tab-hidden
+// recording (timer-worker.js) was never wired up and was removed in
+// 2026-10; it is in git history if recording needs one.
 
 import * as THREE from 'three';
 import { state } from '../state.js';
