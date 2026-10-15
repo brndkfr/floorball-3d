@@ -55,7 +55,10 @@ async function serve(req, res) {
       res.writeHead(404); res.end('not found');
     }
   } catch (e) {
-    res.writeHead(500); res.end(String(e));
+    // Details to the server log, not the response (code scanning
+    // js/stack-trace-exposure).
+    console.error('label-goals:', req.method, req.url, e);
+    res.writeHead(500); res.end('internal error');
   }
 }
 
