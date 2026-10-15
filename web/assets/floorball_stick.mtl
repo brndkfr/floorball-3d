@@ -1,0 +1,25 @@
+newmtl Blade
+Kd 0.059 0.059 0.071
+Ka 0.012 0.012 0.014
+Ns 30
+
+newmtl Shaft
+Kd 0.922 0.922 0.902
+Ka 0.184 0.184 0.180
+Ns 60
+
+newmtl Grip
+Kd 0.078 0.078 0.090
+Ka 0.016 0.016 0.018
+Ns 5
+
+newmtl GripLine
+Kd 0.851 0.102 0.102
+Ka 0.170 0.020 0.020
+Ns 40
+
+newmtl Knob
+Kd 0.078 0.078 0.090
+Ka 0.016 0.016 0.018
+Ns 20
+

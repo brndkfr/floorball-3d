@@ -102,8 +102,9 @@ own file under [items/](items/).
   Same spec file.
 - **[A-BACK-033]** [open] Jersey, shorts and back number on the 3D
   figures. [Spec](items/A-BACK-033-034-player-kit.md).
-- **[A-BACK-034]** [open] Floorball stick (own generator, IFF SPCR 011
-  dimensions to verify). Same spec file.
+- **[A-BACK-034]** [in-progress] Floorball stick. Asset + per-part
+  colours shipped (PR #10, not loaded by the app yet); open: parent to
+  the hand bone, team colours, handedness, size budget. Same spec file.
 
 ### Mode B - Analyze
 

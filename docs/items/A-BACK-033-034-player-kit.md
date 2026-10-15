@@ -1,6 +1,7 @@
 # A-BACK-033 / A-BACK-034 - Player figure kit (jersey, number, stick)
 
-Status: open, parked. A-BACK-031 (static figures) and A-BACK-032
+Status: A-BACK-033 open, parked. A-BACK-034 in progress: the stick
+asset shipped in PR #10, wiring it to the figures is open. A-BACK-031 (static figures) and A-BACK-032
 (animation) are shipped (PRs #7, #8; code in
 [figures.js](../../web/src/authoring/figures.js), `figure-math.js`,
 `figure-gait.js`). The original 031 / 032 specs are in
@@ -40,18 +41,36 @@ Spec as drafted (moved unchanged from the old plan):
   - Tests: node test for the number-texture layout helper; e2e: home
     and away figures have different jersey colours, the back-number
     texture follows a renumber.
-- **[A-BACK-034]** [open] [blocked-by: A-BACK-031] **Floorball stick.**
+- **[A-BACK-034]** [in-progress] **Floorball stick.**
   Own generator `generators/generate_stick.py` like ball and goal,
   attached to the right-hand bone at runtime.
-  - IFF Material Regulations SPCR 011 (2024),
-    https://archive.floorball.sport/cloudfront/2024/06/Material-Regulations-SPCR011_2024_Final.pdf,
-    per an earlier chat, verify against the PDF before using: blade
-    <= 270 mm long, >= 8 mm thick, edge radius >= 2 mm, concavity
-    <= 12 mm, hook <= 30 mm; blade height is checked with a gauge (no
-    single number); stick <= 1140 mm total (least sure of this one).
-  - Model a typical blade (270 mm, 8-10 mm thick, ~15-20 mm hook) and
-    a shaft fitted to the body height (~850-920 mm for Teen); these are
-    estimates, commented as such.
-  - Left / right handedness: open.
-  - Tests: python-side dimension asserts in the generator like the
-    other generators; e2e: stick present and parented to the hand bone.
+  - Done (PR #10, asset only - the app does not load it yet):
+    - [generate_stick.py](../../generators/generate_stick.py) writes
+      `assets/floorball_stick.obj/.mtl`. Checked against the SPCR 011
+      (2024) PDF, section 2.1.3 and drawings B1/B2: stick <= 1140 mm,
+      shaft <= 35 mm, grip line 375 +/- 20 mm, blade <= 270 mm long,
+      height 72-80 mm (a real number after all), >= 8 mm thick, edge
+      radius >= 2 mm, bottom-edge radius <= 270 mm, concavity <= 12 mm,
+      penetration depth <= 20 mm (50 mm cup on the toe - the "hook
+      <= 30 mm" from the earlier chat was wrong), 60 deg lie.
+    - Model: 920 mm stick, 28 mm shaft, blade 76 high / 9 thick /
+      10 mm concavity / 270 mm bottom radius; length, shaft and outline
+      are commented estimates. Origin = blade floor-contact point.
+    - Blade holes in the style of a Fat Pipe blade, traced by eye from
+      a product photo; every hole corner rounded >= 2 mm.
+    - Part colours: `--blade/--shaft/--grip/--grip-line/--knob` on the
+      generator, and `applyStickColors(stick, {...})` in
+      [stick-colors.js](../../web/src/stick-colors.js) for per-stick
+      runtime colours (clones shared template materials).
+    - Tests: `test/stick-asset.test.js` (IFF dimensions, perforation,
+      closed rim), `test/stick-colors.test.js`.
+  - Open:
+    - Load once, clone per figure, parent to the right-hand bone
+      (grip pose / offset to be tuned against the figure).
+    - Default colours per team from `tokens.js`; optionally per-player
+      colours (then it is doc data: default it in `ensureDoc()` /
+      `acceptDoc()`).
+    - Left / right handedness: mirror the blade concavity.
+    - Asset budget: the OBJ is ~510 KB - recheck `check:size` with the
+      figure assets and coarsen the mesh if needed.
+    - e2e: stick present and parented to the hand bone.
