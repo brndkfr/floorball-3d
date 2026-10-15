@@ -57,9 +57,18 @@ export const test = base.extend({
 
 export { expect };
 
+// Polls `fn` in the page until it returns true. Use this, not
+// page.waitForFunction(), for anything async (e.g. `await import(...)`):
+// waitForFunction does not await an async predicate - the returned Promise
+// is truthy, so it resolves after one poll whatever the answer (S-BUG-001,
+// pinned by test/e2e-waits.test.js). page.evaluate does await.
+export async function waitUntil(page, fn, arg, { timeout = 20000 } = {}) {
+  await expect.poll(() => page.evaluate(fn, arg), { timeout }).toBe(true);
+}
+
 // Waits until every model the app loads (chips, ball, goals, goalie, rink)
 // has arrived. Chips spawned before player_chip.obj lands are only built
 // once it does, so specs that spawn chips or read meshes call this first.
-export async function waitForAssets(page) {
-  await page.waitForFunction(async () => (await import('/src/status.js')).pendingLoads() === 0, null, { timeout: 20000 });
+export async function waitForAssets(page, { timeout = 20000 } = {}) {
+  await waitUntil(page, async () => (await import('/src/status.js')).pendingLoads() === 0, undefined, { timeout });
 }

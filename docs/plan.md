@@ -917,14 +917,163 @@ Still on the backlog from that exploration:
     outer face too.
   - Tests: node test for assignment / quick-fill helpers; e2e: assign a
     logo to a slot, it renders there and survives a reload.
-- **[A-BACK-031]** [open] **Show the floorball stick in the scene.**
-  - Done (asset only, not loaded by the app yet):
+- **3D player figures (A-BACK-031 to A-BACK-034).** 031 agreed and
+  built (2026-10-07); 032-034 still a draft. Human figures for players in the 3D views. Sources, all CC0
+  (credit them anyway in README "Sources & disclaimers"):
+  - Bodies: Quaternius "Universal Base Characters",
+    https://quaternius.itch.io/universal-base-characters ("Download
+    Now", price 0). Itch page (2026-10-07): Superhero / Regular / Teen
+    proportions, male + female, ~13k triangles each, humanoid rig. The
+    page says the free Standard tier has 2 base models + 5 hairstyles
+    and the $19.99 SOURCE tier all models + .blend. Checked in the zip
+    (2026-10-07): the free tier has only Superhero male + female, as
+    glTF and FBX; no Regular or Teen (an earlier chat claiming Teen was
+    free was wrong).
+  - Animations: Quaternius "Universal Animation Library",
+    https://quaternius.com/packs/universalanimationlibrary.html (same
+    rig; idle, jog, sprint, 8-direction locomotion). No stick, shot or
+    goalie moves.
+  - Plain bodies, no sports kit; Quaternius has no sticks and only
+    fantasy outfits. Jersey and stick are our own (033, 034).
+  - Order: 031 (static figures), then 032 (animation), 033 (jersey +
+    back number), 034 (stick). Goalie figure: see open questions.
+- **[A-BACK-031]** [in-progress] **Static player figures in 3D (display
+  only).**
+  - As built (2026-10-07, branch `feat/player-figures-a-back-031`):
+    free Superhero male body (decision: use it until a Regular / Teen
+    body is bought; swapping is a re-run of the script). Toggle is a
+    "figures" checkbox in the Layers panel header next to "labels",
+    remembered per browser. GLB + loaders load lazily on first enable
+    (202 KB). The disc stays full size under the figure. No modelled
+    shirt in the free body, so `generators/player-figure-kit.mjs` marks
+    shirt / shorts vertices from bind-pose landmarks and `figures.js`
+    tints them per team in the shader (shorts = team colour x 0.35).
+    Arms are posed down in code (upper-arm bones, local Z +-1.2 rad).
+    `chips.js` skips the figure subtree when recolouring / disposing.
+    Tests: `test/player-figure.test.js`, `test-e2e/player-figures.spec.js`.
+    The plan below is the pre-build draft, kept for the reasoning. Chips stay the authoring object: the doc, share format,
+  hit-testing, drag, top-down view, coverage / trajectory math
+  (`CHIP_RADIUS`) are unchanged. The figure is a child of the chip
+  group, so drag, `player.angle`, hidden state and undo carry over for
+  free.
+  - Toggle: "Player figures" checkbox in the Layers panel (layers.js),
+    off by default, display-only (not in the doc, like A-BACK-028's
+    board labels). Top-down always shows plain chips (a figure seen
+    from 60 m above is a blob). With figures on in 3D, the disc stays
+    as the floor marker and pick / drag target and the number sprite
+    moves above the head.
+  - Body: one Teen body (U14 is a main user) if it is in the free
+    download, else Regular. Ship only that one body.
+  - Asset pipeline: third-party, so it breaks the "every asset comes
+    from `generators/`" rule. Proposal: raw download + license text
+    under `generators/vendor/quaternius/` (not deployed), and a script
+    `generators/prepare_player_figure.mjs` (gltf-transform) produces
+    the shipped `web/assets/player_figure.glb`: one body, the needed
+    clips only, unused hair / meshes dropped, quantized,
+    meshopt-compressed, textures <= 512 px. The shipped file stays
+    script-made and never hand-edited. Note the exception in
+    CLAUDE.md's asset pipeline section.
+  - Size: `dist/assets` is ~6.5 MB of an 8 MB budget. Target <= 1 MB
+    for the GLB (the full packs are ~122 MB). If it can't fit, raise
+    the budget in `check-size.mjs` with a dated comment, as done for
+    `web/src`. Runtime: 10-12 figures x ~13k triangles is fine, also on
+    phones.
+  - Loader: add `loaders/GLTFLoader.js`, `utils/BufferGeometryUtils.js`
+    (GLTFLoader imports it), `utils/SkeletonUtils.js` and
+    `libs/meshopt_decoder.module.js` to `web/lib/three/addons/` from
+    three 0.160.0 (same as the vendored core; import map unchanged).
+    Skinned meshes need `SkeletonUtils.clone()` per player; a plain
+    `clone()` makes all figures share one skeleton. Register with
+    `expectLoad('player_figure.glb')` and rebuild from the current doc
+    when the load lands late (chips.js's `rebuildWhenLoaded` pattern).
+  - Scale trap: the chip group itself is scaled by
+    `CHIP_DISPLAY_SCALE` (5x, `spawnChipMesh` in chips.js), and the
+    drop animation runs 0.7x -> 1x on the group. A child figure
+    therefore needs metres -> mm divided by the display scale
+    (1000 / 5 = 200), not 1000, or players come out ~9 m tall. Origin
+    at the floor-contact point between the feet, facing local +Z
+    (rotate once at load if the model faces -Z; see "Coordinate
+    conventions").
+  - Colour for this item: tint the body material by team if the export
+    has usable separate materials (skin vs. rest); otherwise leave the
+    body untinted and rely on the team-coloured disc until 033.
+  - Pose: one static standing pose (not the bind T-pose; take a frame
+    from the idle clip).
+  - Mode B's 3D preview (`preview-3d.js`) and the MP4 export should
+    pick figures up through the same chip path; check, don't assume.
+  - Tests: node tests for a pure `figureTransform(modelHeightMm,
+    targetHeightMm, displayScale)` (the 200 vs 1000 trap, +Z yaw) and
+    for "the toggle never writes to the doc"; e2e: toggle on -> one
+    figure per chip in the 3D view, world-space figure height ~1.6-1.8 m,
+    top-down still shows chips, drag a chip and its figure follows,
+    toggle off removes them, zero pageerrors.
+- **[A-BACK-032]** [in-progress] [blocked-by: A-BACK-031] **Animated figures
+  during playback.**
+  - As built (2026-10-07, branch `feat/player-figures-anim-a-back-032`,
+    stacked on 031): free Standard tier has Idle / Walk / Jog_Fwd /
+    Sprint loops on the same 65-bone skeleton, so rotations copy across
+    by name (bind rotations differ by <= 17 deg, at the neck); pelvis
+    translation scaled 1.035 to the body's hip height; other
+    translation / scale channels are constant and dropped.
+    `generators/extract_gait_clips.mjs` cuts the four clips into a
+    593 KB vendored file; the GLB grows to 300 KB. Cycle position comes
+    from distance covered along the Bezier path (`strideM` per loop read
+    from the root-motion export: walk 1.3 m, jog 5.0 m, sprint 5.5 m),
+    so feet don't slide. Speed bands: walk from 0.15-0.5, jog from
+    1.6-2.4, sprint from 6-7 m/s (estimates). Faces the run above
+    ~0.8 m/s, the chip angle when standing. `playback.js` gained
+    `addPoseListener()` so seekTo() / export pose figures without a
+    tick. Outside playback figures hold idle frame 0 (no continuous
+    render). Not covered: backwards / sideways running (no such clips
+    in the free tier, a backpedalling defender turns round), and the
+    edit view does not animate idle.
+    Tests: `test/figure-gait.test.js`, `test-e2e/player-figures-anim.spec.js`. Idle when standing, jog / sprint by the chip's
+  speed along its Bezier path (`gaitFor(speedMps)`, thresholds are
+  estimates and commented as such). Facing follows the movement
+  direction while moving, `player.angle` when standing.
+  - One `AnimationMixer` per figure, driven from `animate()` next to
+    `updateChipAnimations()`. Mixer time must come from
+    `playback.elapsed` (`mixer.setTime`), not wall-clock deltas, so
+    `seekTo()` and the video export (export.js) render the same pose
+    for the same time.
+  - Tests: node tests for `gaitFor()` and for mixer time being a pure
+    function of `elapsed`; e2e: `seekTo()` two different times, the
+    bone pose differs and is identical on repeat.
+- **[A-BACK-033]** [open] [blocked-by: A-BACK-031] **Jersey, shorts
+  and back number.**
+  - Jersey + shorts derived from the body in Blender: duplicate the
+    torso / upper arm / hip faces, push outwards (Solidify or
+    Shrink/Fatten); the copy keeps the body's skin weights, so it moves
+    with every animation. UV the back for a number. Script it as
+    `generators/generate_player_jersey.py` (Blender headless,
+    `blender -b -P`), feeding `prepare_player_figure.mjs`, so it can be
+    regenerated. Expect 1-2 fitting rounds (sleeves, hem); render
+    preview images for review. A Blender MCP (e.g. ahujasid/blender-mcp)
+    makes the fitting interactive on a desktop; optional, not required.
+  - Runtime: jersey / shorts materials cloned once per team and tinted
+    from tokens.js (two shared clones, not one per player); back number
+    drawn per player into a `CanvasTexture`, same number as the chip.
+    Optional logo / stripes on the same canvas later.
+  - Fallback if Blender is too much: tint body regions (torso team
+    colour, legs dark) and keep the number above the head.
+  - Tests: node test for the number-texture layout helper; e2e: home
+    and away figures have different jersey colours, the back-number
+    texture follows a renumber.
+- **[A-BACK-034]** [in-progress] [blocked-by: A-BACK-031] **Floorball stick.**
+  Own generator `generators/generate_stick.py` like ball and goal,
+  attached to the right-hand bone at runtime.
+  - Done (PR #10, asset only - the app does not load it yet):
     - [generate_stick.py](../generators/generate_stick.py) writes
-      `assets/floorball_stick.obj/.mtl` to the IFF Material Regulations
-      SPCR 011 section 2.1.3 and drawings B1/B2: 60 deg lie, blade
-      76 mm high / 9 mm thick / 10 mm hook / 270 mm bottom-edge radius,
-      grip line at 375 mm. Stick length (920 mm), shaft diameter, grip
-      length and blade outline are commented estimates.
+      `assets/floorball_stick.obj/.mtl`. Checked against the SPCR 011
+      (2024) PDF, section 2.1.3 and drawings B1/B2: stick <= 1140 mm,
+      shaft <= 35 mm, grip line 375 +/- 20 mm, blade <= 270 mm long,
+      height 72-80 mm (a real number after all), >= 8 mm thick, edge
+      radius >= 2 mm, bottom-edge radius <= 270 mm, concavity <= 12 mm,
+      penetration depth <= 20 mm (50 mm cup on the toe - the "hook
+      <= 30 mm" from the earlier chat was wrong), 60 deg lie.
+    - Model: 920 mm stick, 28 mm shaft, blade 76 high / 9 thick /
+      10 mm concavity / 270 mm bottom radius; length, shaft and outline
+      are commented estimates. Origin = blade floor-contact point.
     - Blade holes in the style of a Fat Pipe blade, traced by eye from
       a product photo; every hole corner rounded >= 2 mm.
     - Part colours: `--blade/--shaft/--grip/--grip-line/--knob` on the
@@ -934,16 +1083,27 @@ Still on the backlog from that exploration:
     - Tests: `test/stick-asset.test.js` (IFF dimensions, perforation,
       closed rim), `test/stick-colors.test.js`.
   - Open:
-    - Load the stick once, clone per use. Where it goes: next to each
-      chip (needs a facing direction) or, later, in a player figure's
-      hand (see the Quaternius figure idea - not planned yet).
+    - Load once, clone per figure, parent to the right-hand bone
+      (grip pose / offset to be tuned against the figure).
     - Default colours per team from `tokens.js`; optionally per-player
-      colours in the Inspector (then it is doc data: default it in
-      `ensureDoc()` / `acceptDoc()`).
-    - Left/right-handed blade (mirror the hook).
-    - Asset budget: the OBJ is ~510 KB and `dist/assets` is at
-      6.86 / 8 MB - coarsen the mesh if more models are added.
-    - e2e: the stick renders, recolouring a team updates its sticks.
+      colours (then it is doc data: default it in `ensureDoc()` /
+      `acceptDoc()`).
+    - Left / right handedness: mirror the blade concavity.
+    - Asset budget: the OBJ is ~510 KB - recheck `check:size` with the
+      figure assets and coarsen the mesh if needed.
+    - e2e: stick present and parented to the hand bone.
+- Open questions for 031 to 034:
+  - Is Teen really in the free download, or buy SOURCE ($19.99)?
+  - Figures on by default in 3D once they look right, or always opt-in?
+  - Goalie as a figure later? It has a real skeleton, so stance /
+    butterfly can be posed in code as presets, but there are no save
+    animations and no gear (helmet could hang off the head bone).
+    coverage.js reads the goalie group (`goalieForGoal`); check whether
+    the coverage heatmap depends on the current goalie mesh's shape
+    before swapping it. Separate item after 031-034.
+  - `goalie_02.obj` was made with Meshy AI. If it came from Meshy's
+    free plan it may be CC BY (attribution needed); check its terms and
+    credit it in README if so.
 - **[A-BACK-021]** [shipped] **Pass timing: release point, pass
   speed, lane check.** Follow-up to A-BACK-020. There, a pass spanned
   the whole frame, from the passer's frame-A spot to the receiver's
@@ -2813,6 +2973,46 @@ added.
   sheet / tab bar. Each surface: extend its e2e spec first, keep
   existing DOM ids, keep module logic unchanged (only markup + CSS +
   mount points), then `pnpm test:e2e:affected` + build + size.
+- **[S-BUG-001]** [shipped] **e2e waits on async predicates never wait.**
+  Fixed (2026-10-07): `waitUntil(page, fn, arg, { timeout })` in
+  `fixtures.js` (expect.poll around page.evaluate), `waitForAssets()`
+  rebuilt on it, every async `waitForFunction` in the specs replaced.
+  Guards: `test/e2e-waits.test.js` (no async `waitForFunction` in
+  `test-e2e/`) and `test-e2e/wait-helpers.spec.js` (the helpers time out
+  on a false predicate and block while a load is pending).
+  Local full runs: 80/80 once on a quiet machine (2.2 min); on a busy
+  one 3 load timeouts remain per run (2.2 vs 14.9 min for similar runs),
+  including a 1 s test whose browser stopped responding and could not
+  close its context, i.e. headless Chromium's software WebGL starving
+  with 3 workers, not wrong waits. The choreo-tutorial specs (heaviest,
+  11-13 s idle) get a 60 s timeout. If local runs stay noisy, next step
+  is fewer local workers or a GPU-backed launch flag, measured.
+- **[S-BACK-022]** [open] **Local e2e runs are slow and noisy.** Same code,
+  same suite (80 tests), on 2026-10-07: 2.2 min / 80 passed, then 4.6,
+  9.7 and 17.5 min with 3-10 load timeouts each, also with other apps
+  closed (~20% real CPU, 18 GB RAM free) and after a server restart (the
+  static server answers in ms, it is not the bottleneck). Failures
+  include "timeout while setting up page" and contexts that cannot
+  close, i.e. headless Chromium itself stalls before any app code runs.
+  `main` showed the same 2-9 min spread before S-BUG-001. CI is not
+  affected. Try one change at a time and time three full runs each:
+  `trace: 'on-first-retry'` locally instead of 'retain-on-failure'
+  (every test records a trace today), `workers: 2`, a Windows Defender
+  exclusion for `test-results/` and `node_modules/.pnpm/`, then a
+  GPU-backed Chromium launch (`--use-angle=d3d11`) instead of software
+  WebGL. Keep whatever measurably helps.
+  `page.waitForFunction(async () => ...)` does not await the predicate:
+  the returned Promise is truthy, so the wait resolves after one poll
+  whatever the answer (checked 2026-10-07 with Playwright 1.63:
+  `waitForFunction(async () => false)` resolves in ~1 s). Affected:
+  `waitForAssets()` in `test-e2e/fixtures.js` (used by most specs) and 18
+  direct calls in 8 specs (`ball-tool`, `chips-slow-load`,
+  `choreo-tutorial`, ...). Specs then race the real load, which fits the
+  timeout flakiness seen in full runs under load. Found while building
+  A-BACK-031, whose spec uses a working `waitUntil()` (expect.poll around
+  `page.evaluate`, which does await). Fix: same helper in `fixtures.js`,
+  replace every async `waitForFunction`, then a full `pnpm test:e2e`;
+  specs that only passed because the wait was skipped may surface.
 
 ---
 

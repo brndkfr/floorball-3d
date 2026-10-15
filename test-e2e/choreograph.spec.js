@@ -2,7 +2,7 @@
 // plus pass timing. rAF is paused in unfocused Playwright tabs, so the spec
 // drives tickActors()/tickChoreo()/tickPassOverlay() directly.
 
-import { test, expect, waitForAssets } from './fixtures.js';
+import { test, expect, waitForAssets, waitUntil } from './fixtures.js';
 
 async function bootApp(page) {
   await page.goto('/', { waitUntil: 'load' });
@@ -49,7 +49,7 @@ test.describe('A-BACK-018 choreograph pass-arrow preview', () => {
       setBallCarrier(a);
       return { a, b };
     });
-    await page.waitForFunction(async () => (await import('/src/state.js')).state.chipGroups.length === 2);
+    await waitUntil(page, async () => (await import('/src/state.js')).state.chipGroups.length === 2);
     await tick(page);
 
     await page.locator('#timeline [data-tl="choreo"]').click();
@@ -90,7 +90,7 @@ test.describe('A-BACK-018 choreograph pass-arrow preview', () => {
       setBallCarrier(a);
       return { a, b };
     });
-    await page.waitForFunction(async () => !!(await import('/src/state.js')).state.ballGroup);
+    await waitUntil(page, async () => !!(await import('/src/state.js')).state.ballGroup);
     await page.evaluate(async () => {
       const { selectObject } = await import('/src/selection.js');
       const { state } = await import('/src/state.js');
@@ -107,7 +107,7 @@ test.describe('A-BACK-018 choreograph pass-arrow preview', () => {
 
   test('playback flies the ball from the old carrier to the new one', async ({ page }) => {
     await bootApp(page);
-    await page.waitForFunction(async () => !!(await import('/src/state.js')).state.ballGroup);
+    await waitUntil(page, async () => !!(await import('/src/state.js')).state.ballGroup);
     const zAt = await page.evaluate(async () => {
       const { ensureDoc } = await import('/src/authoring/doc.js');
       const { spawnChip } = await import('/src/authoring/chips.js');
@@ -148,7 +148,7 @@ test.describe('A-BACK-018 choreograph pass-arrow preview', () => {
       setBallCarrier(a);
       return { a, b };
     });
-    await page.waitForFunction(async () => (await import('/src/state.js')).state.chipGroups.length === 2);
+    await waitUntil(page, async () => (await import('/src/state.js')).state.chipGroups.length === 2);
     const select = (id) => page.evaluate(async (id) => {
       const { selectObject } = await import('/src/selection.js');
       const { state } = await import('/src/state.js');

@@ -15,6 +15,7 @@ import { ballDataFor, setBallHidden, updateBall, removeBall, BALL_DEFAULT_COLOR 
 import { goalDataFor, setGoalHidden, updateGoal, removeGoal } from './goals.js';
 import { onSelectionChanged, selectObject, deselectAll } from '../selection.js';
 import { makeFloatable } from './floatable.js';
+import { setFiguresEnabled } from './figures.js';
 
 // Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
 const root = document.getElementById('layersPanel');
@@ -61,6 +62,18 @@ if (!root) throw new Error('layersPanel element missing from index.html');
       localStorage.setItem(LABELS_KEY, labelsToggle.checked ? '1' : '0');
     });
   }
+
+  // 3D player figures toggle (A-BACK-031). Off by default; display-only,
+  // remembered per browser like the labels toggle, never in the doc.
+  const figuresToggle = document.getElementById('figuresVisibleToggle');
+  if (!figuresToggle) throw new Error('figuresVisibleToggle element missing from index.html');
+  const FIGURES_KEY = 'floorball3d.figures.visible';
+  figuresToggle.checked = localStorage.getItem(FIGURES_KEY) === '1';
+  if (figuresToggle.checked) setFiguresEnabled(true);
+  figuresToggle.addEventListener('change', () => {
+    setFiguresEnabled(figuresToggle.checked);
+    localStorage.setItem(FIGURES_KEY, figuresToggle.checked ? '1' : '0');
+  });
 
   document.addEventListener('layers:dirty', render);
   window.addEventListener('ballCarrierChanged', render);

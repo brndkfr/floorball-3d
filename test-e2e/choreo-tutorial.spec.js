@@ -1,14 +1,14 @@
 // A-BACK-019: guided Choreo tutorial. rAF can be paused in Playwright, so the
 // spec drives tickActors()/tickChoreo() directly after scene mutations.
 
-import { test, expect } from './fixtures.js';
+import { test, expect, waitUntil } from './fixtures.js';
 
 const TUTORIAL_NAME = 'Tutorial: first choreo';
 
 async function boot(page) {
   await page.goto('/', { waitUntil: 'load' });
   await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
-  await page.waitForFunction(async () => !!(await import('/src/state.js')).state.ballGroup);
+  await waitUntil(page, async () => !!(await import('/src/state.js')).state.ballGroup);
 }
 
 async function tick(page) {
@@ -80,6 +80,11 @@ async function startFromWelcomeTip(page) {
 }
 
 test.describe('A-BACK-019 guided Choreo tutorial', () => {
+  // The heaviest specs in the suite (11-13 s each on an idle machine: a
+  // second project, several reloads, a seven-step walk). Since the waits
+  // really wait (S-BUG-001), a busy machine pushed them past 30 s.
+  test.describe.configure({ timeout: 60_000 });
+
   // These tests start from, or dismiss, the first-visit welcome tip.
   test.use({ showOnboarding: true });
 

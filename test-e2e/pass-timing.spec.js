@@ -1,13 +1,13 @@
 // A-BACK-021: pass timing - release point (marker + slider), pass speed, lane check, playback trail.
 // rAF may be paused in Playwright, so the spec drives the tick functions directly.
 
-import { test, expect, waitForAssets } from './fixtures.js';
+import { test, expect, waitForAssets, waitUntil } from './fixtures.js';
 
 async function boot(page) {
   await page.goto('/', { waitUntil: 'load' });
   await waitForAssets(page);
   await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
-  await page.waitForFunction(async () => !!(await import('/src/state.js')).state.ballGroup);
+  await waitUntil(page, async () => !!(await import('/src/state.js')).state.ballGroup);
 }
 
 async function tick(page) {
@@ -39,7 +39,7 @@ async function setupPass(page, { defender = null, nineZ = 15000 } = {}) {
     resetTopDownView();
     return { a, b, d };
   }, { defender, nineZ });
-  await page.waitForFunction(async () => (await import('/src/state.js')).state.chipGroups.length >= 2);
+  await waitUntil(page, async () => (await import('/src/state.js')).state.chipGroups.length >= 2);
   await tick(page);
   return ids;
 }
@@ -92,7 +92,7 @@ test.describe('A-BACK-021 pass timing', () => {
     expect(Math.round(marker.wx)).toBe(400);   // default bezier controls make the run linear in t
 
     await page.reload({ waitUntil: 'load' });
-    await page.waitForFunction(async () => !!(await import('/src/state.js')).state.ballGroup);
+    await waitUntil(page, async () => !!(await import('/src/state.js')).state.ballGroup);
     expect(await storedPass(page)).toEqual({ releaseT: 0.2, speedMps: 25 });
   });
 

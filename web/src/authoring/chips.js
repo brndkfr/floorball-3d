@@ -293,7 +293,7 @@ export function updateChipTeam(id, team, pushHistory = true) {
   const group = state.chipGroups.find((g) => g.userData.chip && g.userData.chip.id === id);
   if (group) {
     group.userData.chip = player;
-    group.traverse((child) => {
+    traverseOwn(group, (child) => {
       if (child.isMesh && child.material?.color) child.material.color.setHex(TEAM_COLORS[team] || 0x888888);
     });
   }
@@ -393,8 +393,18 @@ export function scheduleHistoryPush() {
   }, 250);
 }
 
+// Like Object3D.traverse, but skips a 3D player figure (figures.js,
+// userData.isFigure): its geometry and team material are shared by every
+// figure, so recolouring or disposing them per chip would hit all players.
+function traverseOwn(obj, fn) {
+  fn(obj);
+  for (const child of obj.children) if (!child.userData.isFigure) traverseOwn(child, fn);
+}
+
 function disposeGroup(group) {
-  group.traverse((child) => {
+  // A figure's cloned skeletons are its only per-chip GPU data.
+  group.userData.figure?.traverse((n) => { if (n.isSkinnedMesh) n.skeleton.dispose(); });
+  traverseOwn(group, (child) => {
     if (child.isMesh) {
       child.geometry.dispose?.();
       child.material?.dispose?.();

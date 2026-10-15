@@ -5,14 +5,14 @@
 // at the stale position. Under CI load the model can land late, which made
 // pass-timing.spec.js read #7 at x=0 instead of 2000. Here the model is held
 // back on purpose.
-import { test, expect } from './fixtures.js';
+import { test, expect, waitUntil } from './fixtures.js';
 
 test('chips queued before the chip model loads are built once, from the current frame', async ({ page }) => {
   let release;
   const held = new Promise((r) => { release = r; });
   await page.route('**/player_chip.obj*', async (route) => { await held; await route.continue(); });
   await page.goto('/', { waitUntil: 'load' });
-  await page.waitForFunction(async () => !!(await import('/src/state.js')).state.ballGroup);
+  await waitUntil(page, async () => !!(await import('/src/state.js')).state.ballGroup);
 
   const id = await page.evaluate(async () => {
     const { ensureDoc } = await import('/src/authoring/doc.js');
@@ -28,7 +28,7 @@ test('chips queued before the chip model loads are built once, from the current 
   });
   release();
 
-  await page.waitForFunction(async () => (await import('/src/state.js')).state.chipGroups.length > 0);
+  await waitUntil(page, async () => (await import('/src/state.js')).state.chipGroups.length > 0);
   await page.waitForTimeout(300);
   const chips = await page.evaluate(async (id) => {
     const { state } = await import('/src/state.js');

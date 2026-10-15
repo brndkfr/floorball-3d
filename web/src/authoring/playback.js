@@ -22,6 +22,12 @@ const playback = {
 };
 state.playback = playback;
 
+// Called after every applyPose() (play ticks, seekTo, stepFrame), so
+// anything posed from playback time - the animated figures - follows the
+// export driver too, which renders right after seekTo() without a tick.
+const poseListeners = [];
+export function addPoseListener(fn) { poseListeners.push(fn); }
+
 function advance(dtMs) {
   playback.elapsed += dtMs * playback.speed;
   const total = totalDuration();
@@ -198,6 +204,7 @@ function applyPose(elapsed) {
   }
 
   applyCamera(elapsed);
+  for (const fn of poseListeners) fn(elapsed);
 }
 
 // Camera keyframes only affect the perspective camera. Frames that have
