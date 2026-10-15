@@ -23,11 +23,12 @@ leave open - the default stick length, shaft diameter, grip binding length,
 socket width, the exact banana outline of the blade, colours - is an
 estimate of a typical junior/senior stick, not a manufacturer CAD file.
 
-The blade is perforated like most real blades: a closed rim along the
-outline, a solid neck, and an open lattice of two curved ribs running
-along the blade plus one family of diagonal ribs. The rib layout is a
-stylised estimate (no two manufacturers use the same one) and the hole
-corners are not rounded to the 2 mm edge radius the rules ask for.
+The blade is perforated in the style of a Fat Pipe blade, traced by eye
+from a product photo (not from manufacturer drawings): a closed rim, three
+bands along the blade - pill-shaped slots on top, slanted cells in the
+middle and bottom bands, with the toe openings following the toe curve -
+and a solid heel/neck with two long slanted slots and a small oval. All
+hole corners are rounded to >= 2 mm (rule g, blade edge radius).
 
 Stick length is measured like appendix C2 "a": along the shaft axis from the
 point where the axis meets the floor to the top of the knob.
@@ -66,19 +67,32 @@ SOCKET_HEIGHT = 115.0       # estimate: height of the blade socket centre above 
 SOCKET_WIDTH = 22.0         # estimate: blade neck width where it enters the shaft
 SOCKET_INSERT = 15.0        # shaft overlaps the socket by this much
 
-RIM_WIDTH = 8.0             # estimate: closed frame along the blade outline
-SOLID_NECK_FROM_X = 55.0    # estimate: lattice stops at a line parallel to the shaft through (x, 0)
-RIB_WIDTH = 4.5             # estimate
-RIB_THICKNESS = 7.0         # estimate: a little thinner than the rim, so the ribs sit recessed
-RIB_DIAGONAL_DEG = 52.0     # estimate: slant of the diagonal ribs to the floor
-RIB_DIAGONAL_SPACING = 30.0 # estimate: horizontal distance between diagonal ribs
-RIB_ARC_FRACTIONS = (0.36, 0.68)  # estimate: curved ribs, as fraction of the height from the bottom
+# Perforation layout - all estimates traced from a product photo. Band
+# positions t are mm up from the bottom edge, s is mm along the blade's
+# mid-height arc (0 = above the contact point, negative toward the toe).
+RIM_WIDTH = 8.0             # closed frame along the outline
+HOLE_MARGIN = 7.0           # holes keep at least this distance from the outline
+BANDS = ((8.0, 29.0), (33.0, 50.0))   # bottom + middle band: slanted cells
+TOP_BAND = (54.0, 68.0)     # top band: pill slots
+CROSS_RIBS = (-58.0, -21.0, 16.0)  # cross rib centres at the blade's mid-height
+CROSS_RIB_WIDTH = 4.0
+CROSS_RIB_SLANT = 0.45      # s shift per mm of t: ribs lean toward the heel at the top
+BAND_HEEL_END = 40.0        # cells stop here; the heel beyond is solid
+TOE_OPENING_RADIUS = 30.0   # toe cells end on this circle round the toe-cap centre
+TOP_SLOTS = (-68.0, -27.0, 14.0)  # pill slot centres
+TOP_SLOT_LENGTH = 36.0
+CELL_CORNER_RADIUS = 4.0    # >= 2 mm edge radius
+HEEL_SLOTS = (((50.0, 42.0), (92.0, 80.0), 12.0),     # (start, end, width) in side-view XY
+              ((78.0, 32.0), (122.0, 82.0), 12.0))
+HEEL_OVAL = ((60.0, 22.0), (72.0, 25.0), 7.0)
+
 
 assert STICK_LENGTH <= 1140
 assert SHAFT_DIAMETER <= 35 and KNOB_DIAMETER <= 35
 assert abs(GRIP_LINE_AT - 375) <= 20 and 2 <= GRIP_LINE_WIDTH <= 40
 assert BLADE_BOTTOM_RADIUS <= 270 and 72 <= BLADE_HEIGHT <= 80
 assert BLADE_THICKNESS >= 8 and BLADE_THICKNESS / 2 >= 2 and BLADE_HOOK <= 12
+assert CELL_CORNER_RADIUS >= 2
 
 # ---------------------------------------------------------------- geometry --
 
@@ -198,30 +212,42 @@ def hook_z(x):
     return BLADE_HOOK * 4 * u * (1 - u)
 
 def triangulate(poly):
-    """Ear clipping for a simple CCW polygon; returns index triples."""
-    idx = list(range(len(poly)))
-    out = []
+    """Ear clipping for a simple CCW polygon (bridged holes allowed, so
+    repeated coordinates are fine); returns index triples. Only reflex
+    vertices can lie inside an ear, so only those are tested."""
+    n = len(poly)
+    prv = [(i - 1) % n for i in range(n)]
+    nxt = [(i + 1) % n for i in range(n)]
     def cross2(o, a, b):
         return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    def reflex(i):
+        return cross2(poly[prv[i]], poly[i], poly[nxt[i]]) <= 1e-12
     def inside(p, a, b, c):
         return cross2(a, b, p) >= 0 and cross2(b, c, p) >= 0 and cross2(c, a, p) >= 0
-    guard = 0
-    while len(idx) > 3 and guard < 100000:
-        guard += 1
-        for k in range(len(idx)):
-            i0, i1, i2 = idx[k - 1], idx[k], idx[(k + 1) % len(idx)]
-            a, b, c = poly[i0], poly[i1], poly[i2]
-            if cross2(a, b, c) <= 1e-9:
-                continue
-            if any(inside(poly[j], a, b, c) for j in idx
-                   if j not in (i0, i1, i2) and poly[j] not in (a, b, c)):
-                continue
-            out.append((i0, i1, i2))
-            idx.pop(k)
-            break
+    refl = {i for i in range(n) if reflex(i)}
+    out = []
+    remaining, i, stall = n, 0, 0
+    while remaining > 3:
+        a, b, c = poly[prv[i]], poly[i], poly[nxt[i]]
+        ear = i not in refl and not any(
+            inside(poly[j], a, b, c) for j in refl
+            if j not in (prv[i], nxt[i]) and poly[j] not in (a, b, c))
+        if ear:
+            out.append((prv[i], i, nxt[i]))
+            p, q = prv[i], nxt[i]
+            nxt[p], prv[q] = q, p
+            refl.discard(i)
+            remaining -= 1
+            for k in (p, q):
+                if reflex(k): refl.add(k)
+                else: refl.discard(k)
+            i, stall = q, 0
         else:
-            raise RuntimeError('triangulation failed - outline self-intersects')
-    out.append(tuple(idx))
+            i = nxt[i]
+            stall += 1
+            if stall > remaining:
+                raise RuntimeError('triangulation failed - outline self-intersects')
+    out.append((prv[i], i, nxt[i]))
     return out
 
 # Blade solid: rings around the outline sweep the fully rounded edge from the
@@ -246,30 +272,93 @@ for k in range(N_EDGE):
         j = (i + 1) % n
         add_tri(a[i], a[j], b[j], 'Blade')
         add_tri(a[i], b[j], b[i], 'Blade')
-# Lattice region: the outline inset by the rim width, cut off at the neck by
-# a line parallel to the shaft. Everything outside it stays solid.
-def clip_half_plane(poly, p0, normal):
-    """Sutherland-Hodgman: keep the side where (p - p0) . normal <= 0."""
-    def side(p): return (p[0] - p0[0]) * normal[0] + (p[1] - p0[1]) * normal[1]
+# Perforations. Holes are built in (s, t) blade coordinates, corners
+# filleted, edges subdivided, then mapped onto the curved blade.
+RM = R - BLADE_HEIGHT / 2
+def st_to_xy(p):
+    th, r = p[0] / RM, R - p[1]
+    return (r * math.sin(th), R - r * math.cos(th))
+
+def fillet(poly, radius, steps=5):
+    """Round every corner of a closed polygon with up to `radius`."""
     out = []
-    for i in range(len(poly)):
-        a, b = poly[i - 1], poly[i]
-        sa, sb = side(a), side(b)
-        if sb <= 0:
-            if sa > 0:
-                t = sa / (sa - sb)
-                out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
-            out.append(b)
-        elif sa <= 0:
-            t = sa / (sa - sb)
-            out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+    n = len(poly)
+    for i in range(n):
+        p, a, b = poly[i], poly[i - 1], poly[(i + 1) % n]
+        la, lb = math.dist(p, a), math.dist(p, b)
+        u = ((a[0] - p[0]) / la, (a[1] - p[1]) / la)
+        w = ((b[0] - p[0]) / lb, (b[1] - p[1]) / lb)
+        ang = math.acos(max(-1.0, min(1.0, u[0] * w[0] + u[1] * w[1])))
+        d = min(radius / math.tan(ang / 2), 0.5 * la, 0.5 * lb)
+        r = d * math.tan(ang / 2)
+        bis = v_norm((u[0] + w[0], u[1] + w[1], 0))
+        c = (p[0] + bis[0] * r / math.sin(ang / 2), p[1] + bis[1] * r / math.sin(ang / 2))
+        p0 = (p[0] + u[0] * d, p[1] + u[1] * d)
+        p1 = (p[0] + w[0] * d, p[1] + w[1] * d)
+        a0 = math.atan2(p0[1] - c[1], p0[0] - c[0])
+        a1 = math.atan2(p1[1] - c[1], p1[0] - c[0])
+        da = (a1 - a0 + math.pi) % (2 * math.pi) - math.pi
+        for k in range(steps + 1):
+            out.append((c[0] + r * math.cos(a0 + da * k / steps), c[1] + r * math.sin(a0 + da * k / steps)))
     return out
 
-neck_p0 = (SOLID_NECK_FROM_X, 0.0)
-lattice = [(p[0] + m[0] * RIM_WIDTH, p[1] + m[1] * RIM_WIDTH) for p, m in zip(outline, inward)]
-lattice = clip_half_plane(lattice, neck_p0, ACROSS)
-if signed_area(lattice) < 0:
-    lattice.reverse()
+def subdivide(poly, step=4.0):
+    out = []
+    for i in range(len(poly)):
+        a, b = poly[i], poly[(i + 1) % len(poly)]
+        k = max(1, int(math.dist(a, b) / step))
+        out += [(a[0] + (b[0] - a[0]) * j / k, a[1] + (b[1] - a[1]) * j / k) for j in range(k)]
+    return out
+
+def dedupe(poly):
+    out = []
+    for p in poly:
+        if not out or math.dist(p, out[-1]) > 0.05:
+            out.append(p)
+    if math.dist(out[0], out[-1]) < 0.05:
+        out.pop()
+    return out
+
+def rib_s(s_mid, t):                                   # slanted cross rib centre at height t
+    return s_mid + CROSS_RIB_SLANT * (t - BLADE_HEIGHT / 2)
+
+holes_st = []
+s_toe = TOE_ANGLE * RM
+for (t0, t1) in BANDS:
+    hw = CROSS_RIB_WIDTH / 2
+    # toe cell: from the first cross rib to the toe-opening circle
+    def toe_phi(t):
+        return math.pi - math.asin(max(-1.0, min(1.0, (t - BLADE_HEIGHT / 2) / TOE_OPENING_RADIUS)))
+    cell = [(rib_s(CROSS_RIBS[0], t0) - hw, t0), (rib_s(CROSS_RIBS[0], t1) - hw, t1)]
+    f_top, f_bot = toe_phi(t1), toe_phi(t0)
+    for k in range(9):
+        ph = f_top + (f_bot - f_top) * k / 8
+        cell.append((s_toe + TOE_OPENING_RADIUS * math.cos(ph),
+                     BLADE_HEIGHT / 2 + TOE_OPENING_RADIUS * math.sin(ph)))
+    holes_st.append(cell[::-1])
+    ribs = list(CROSS_RIBS) + [None]
+    for k in range(len(CROSS_RIBS)):
+        lo = lambda t, m=CROSS_RIBS[k]: rib_s(m, t) + hw
+        hi = (lambda t, m=ribs[k + 1]: rib_s(m, t) - hw) if ribs[k + 1] is not None \
+            else (lambda t: rib_s(BAND_HEEL_END, t))
+        holes_st.append([(lo(t0), t0), (hi(t0), t0), (hi(t1), t1), (lo(t1), t1)])
+holes = [dedupe([st_to_xy(p) for p in subdivide(fillet(h, CELL_CORNER_RADIUS))]) for h in holes_st]
+t0, t1 = TOP_BAND
+for sc in TOP_SLOTS:                                   # pill slots, top band
+    pill = [(sc - TOP_SLOT_LENGTH / 2, t0), (sc + TOP_SLOT_LENGTH / 2, t0),
+            (sc + TOP_SLOT_LENGTH / 2, t1), (sc - TOP_SLOT_LENGTH / 2, t1)]
+    holes.append(dedupe([st_to_xy(p) for p in subdivide(fillet(pill, (t1 - t0) / 2, 8))]))
+for (a, b, w) in HEEL_SLOTS + (HEEL_OVAL,):            # heel slots, side-view XY
+    d = v_norm((b[0] - a[0], b[1] - a[1], 0))
+    nrm = (-d[1] * w / 2, d[0] * w / 2)
+    slot = [(a[0] + nrm[0], a[1] + nrm[1]), (a[0] - nrm[0], a[1] - nrm[1]),
+            (b[0] - nrm[0], b[1] - nrm[1]), (b[0] + nrm[0], b[1] + nrm[1])]
+    if signed_area(slot) < 0:
+        slot.reverse()
+    holes.append(dedupe(subdivide(fillet(slot, w / 2, 8))))
+for h in holes:                                        # CCW for the checks below
+    if signed_area(h) < 0:
+        h.reverse()
 
 def point_in_poly(pt, poly):
     x, y = pt
@@ -280,95 +369,68 @@ def point_in_poly(pt, poly):
             inside = not inside
     return inside
 
-# Faces: the rim/neck area = face outline with the lattice as a hole, joined
-# into one simple polygon by a bridge from the hole's neck-most vertex to the
-# nearest face-outline vertex beyond it.
-face_poly = [(verts[i][0], verts[i][1]) for i in rings[0]]
-def across(p): return (p[0] - neck_p0[0]) * ACROSS[0] + (p[1] - neck_p0[1]) * ACROSS[1]
-h0 = max(range(len(lattice)), key=lambda i: across(lattice[i]))
-o0 = min((i for i in range(len(face_poly)) if across(face_poly[i]) > across(lattice[h0]) + 1),
-         key=lambda i: math.dist(face_poly[i], lattice[h0]))
-hole_cw = lattice[h0::-1] + lattice[:h0:-1]               # clockwise, starting at h0
-front_hole = [add_vert((x, y, half_t + hook_z(x))) for x, y in hole_cw]
-back_hole = [add_vert((x, y, -half_t + hook_z(x))) for x, y in hole_cw]
-merged = []                                               # (xy, front index, back index)
-nf = len(face_poly)
-for k in range(nf + 1):
-    i = (o0 + k) % nf
-    merged.append((face_poly[i], rings[-1][i], rings[0][i]))
-for k in range(len(hole_cw) + 1):
-    i = k % len(hole_cw)
-    merged.append((hole_cw[i], front_hole[i], back_hole[i]))
+# every hole keeps HOLE_MARGIN from the outline and CROSS_RIB_WIDTH-ish from the others
+def seg_dist(p, a, b):
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    l2 = dx * dx + dy * dy
+    t = 0 if l2 == 0 else max(0, min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2))
+    return math.dist(p, (a[0] + dx * t, a[1] + dy * t))
+def poly_dist(p, poly):
+    return min(seg_dist(p, poly[i - 1], poly[i]) for i in range(len(poly)))
+for k, h in enumerate(holes):
+    for p in h:
+        assert point_in_poly(p, outline) and poly_dist(p, outline) >= HOLE_MARGIN - 1e-6, \
+            f'hole {k} too close to the blade outline at {p}'
+    for j in range(k):
+        assert min(poly_dist(p, holes[j]) for p in h) >= 3.0, f'holes {j} and {k} too close'
+
+# Faces: the face outline (rings[0]) with every hole bridged in (Eberly's
+# method: holes in order of decreasing max x, each joined to a vertex it
+# can see along +x), then ear-clipped.
+face = [((verts[i][0], verts[i][1]), rings[-1][i], rings[0][i]) for i in range(len(outline))]
+hole_items = []
+for h in holes:
+    cw = h[::-1]
+    fr = [add_vert((x, y, half_t + hook_z(x))) for x, y in cw]
+    bk = [add_vert((x, y, -half_t + hook_z(x))) for x, y in cw]
+    hole_items.append([(cw[i], fr[i], bk[i]) for i in range(len(cw))])
+    wf = [add_vert(verts[i]) for i in fr]             # inner wall, own vertices
+    wb = [add_vert(verts[i]) for i in bk]
+    for i in range(len(cw)):
+        j = (i + 1) % len(cw)
+        add_tri(wf[i], wb[i], wb[j], 'Blade')
+        add_tri(wf[i], wb[j], wf[j], 'Blade')
+
+def bridge(outer, hole):
+    mi = max(range(len(hole)), key=lambda i: hole[i][0][0])
+    mx, my = hole[mi][0]
+    best, bx = None, float('inf')
+    for i in range(len(outer)):
+        (x0, y0), (x1, y1) = outer[i][0], outer[(i + 1) % len(outer)][0]
+        if (y0 - my) * (y1 - my) > 0 or y0 == y1:
+            continue
+        x = x0 + (my - y0) * (x1 - x0) / (y1 - y0)
+        if mx <= x < bx:
+            best, bx = i, x
+    pi = best if outer[best][0][0] > outer[(best + 1) % len(outer)][0][0] else (best + 1) % len(outer)
+    P, I = outer[pi][0], (bx, my)
+    def tri_has(p, a, b, c):
+        d1 = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])
+        d2 = (c[0] - b[0]) * (p[1] - b[1]) - (c[1] - b[1]) * (p[0] - b[0])
+        d3 = (a[0] - c[0]) * (p[1] - c[1]) - (a[1] - c[1]) * (p[0] - c[0])
+        return (d1 > 0 and d2 > 0 and d3 > 0) or (d1 < 0 and d2 < 0 and d3 < 0)
+    cand = [i for i in range(len(outer)) if i != pi and tri_has(outer[i][0], (mx, my), I, P)]
+    if cand:
+        pi = max(cand, key=lambda i: ((outer[i][0][0] - mx) / (math.dist(outer[i][0], (mx, my)) + 1e-12),
+                                      -math.dist(outer[i][0], (mx, my))))
+    return outer[:pi + 1] + hole[mi:] + hole[:mi + 1] + outer[pi:]
+
+merged = face
+for h in sorted(hole_items, key=lambda h: -max(p[0][0] for p in h)):
+    merged = bridge(merged, h)
 for (i0, i1, i2) in triangulate([m[0] for m in merged]):
     add_tri(merged[i0][1], merged[i1][1], merged[i2][1], 'Blade')   # +Z face
     add_tri(merged[i0][2], merged[i2][2], merged[i1][2], 'Blade')   # -Z face
-
-# inner wall of the lattice opening (own vertices -> crisp edge)
-wf = [add_vert(verts[i]) for i in front_hole]
-wb = [add_vert(verts[i]) for i in back_hole]
-for i in range(len(hole_cw)):
-    j = (i + 1) % len(hole_cw)
-    add_tri(wf[i], wb[i], wb[j], 'Blade')
-    add_tri(wf[i], wb[j], wf[j], 'Blade')
-
-# Ribs: centre polylines sampled every 1 mm, kept where they lie inside the
-# lattice, extended a little into the rim so they visibly join it.
-def rib_runs(points):
-    runs, cur = [], []
-    for p in points:
-        if point_in_poly(p, lattice):
-            cur.append(p)
-        elif cur:
-            runs.append(cur); cur = []
-    if cur:
-        runs.append(cur)
-    out = []
-    for r in runs:
-        if len(r) < 6:
-            continue
-        def ext(a, b):
-            d = v_norm((a[0] - b[0], a[1] - b[1], 0))
-            return (a[0] + d[0] * (RIM_WIDTH / 2), a[1] + d[1] * (RIM_WIDTH / 2))
-        mid = r[::3]
-        if mid[-1] != r[-1]:
-            mid.append(r[-1])
-        out.append([ext(r[0], r[1])] + mid + [ext(r[-1], r[-2])])
-    return out
-
-def add_rib(path):
-    """Box-section bar along a 2D path, centred on the (hooked) blade mid-plane."""
-    hw, ht2 = RIB_WIDTH / 2, RIB_THICKNESS / 2
-    n2 = []
-    for i in range(len(path)):
-        a, b = path[max(i - 1, 0)], path[min(i + 1, len(path) - 1)]
-        d = v_norm((b[0] - a[0], b[1] - a[1], 0))
-        n2.append((-d[1], d[0]))
-    def corner(i, sw, sz):
-        x = path[i][0] + n2[i][0] * hw * sw
-        y = path[i][1] + n2[i][1] * hw * sw
-        return (x, y, ht2 * sz + hook_z(x))
-    sides = [((1, 1), (-1, 1)), ((-1, 1), (-1, -1)), ((-1, -1), (1, -1)), ((1, -1), (1, 1))]
-    for (sa, sb) in sides:
-        ca = [add_vert(corner(i, *sa)) for i in range(len(path))]
-        cb = [add_vert(corner(i, *sb)) for i in range(len(path))]
-        for i in range(len(path) - 1):
-            add_tri(ca[i], ca[i + 1], cb[i + 1], 'Blade')
-            add_tri(ca[i], cb[i + 1], cb[i], 'Blade')
-
-rib_paths = []
-for f in RIB_ARC_FRACTIONS:                               # curved ribs along the blade
-    r = R - BLADE_HEIGHT * f
-    t0, t1 = TOE_ANGLE - 0.2, HEEL_ANGLE + 0.2
-    steps = int((t1 - t0) * r)
-    rib_paths += rib_runs([(r * math.sin(t0 + (t1 - t0) * i / steps),
-                            R - r * math.cos(t0 + (t1 - t0) * i / steps)) for i in range(steps + 1)])
-dg = math.radians(RIB_DIAGONAL_DEG)
-xs = min(p[0] for p in lattice) - 120
-while xs < max(p[0] for p in lattice) + 20:               # diagonal ribs
-    rib_paths += rib_runs([(xs + math.cos(dg) * s, -10 + math.sin(dg) * s) for s in range(0, 160)])
-    xs += RIB_DIAGONAL_SPACING
-for path in rib_paths:
-    add_rib(path)
 
 # Shaft parts: tubes along the axis, s = distance from FLOOR_POINT.
 def axis_point(s):

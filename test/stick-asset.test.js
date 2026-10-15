@@ -123,7 +123,7 @@ function covered(x, y) {
 const R = 270;
 const onArc = (r, t) => [r * Math.sin(t), R - r * Math.cos(t)];
 
-test('blade is a lattice: open holes between the ribs', () => {
+test('blade is perforated: open holes in the side view', () => {
   let open = 0, total = 0;
   for (let t = -0.32; t <= 0.12; t += 0.01) {
     for (let r = R - 66; r <= R - 10; r += 4) {
