@@ -303,6 +303,15 @@ test('acceptDoc drops players that are not objects or have no finite position', 
   assert.deepEqual(doc.scheme.players.p_ok, { id: 'p_ok', team: 1, x: 0, z: 0 });
 });
 
+test('acceptDoc keeps a valid stick hand and drops an invalid one (A-BACK-034)', () => {
+  const doc = acceptDoc(frameWith({ players: {
+    p_r: { id: 'p_r', team: 1, x: 0, z: 0, hand: 'R' },
+    p_x: { id: 'p_x', team: 1, x: 0, z: 0, hand: 'left' },
+  } }));
+  assert.equal(doc.scheme.players.p_r.hand, 'R');
+  assert.ok(!('hand' in doc.scheme.players.p_x));
+});
+
 test('acceptDoc keeps a player id consistent with its key', () => {
   const doc = acceptDoc(frameWith({ players: { p_a: { id: 'p_b', team: 1, x: 0, z: 0 } } }));
   assert.equal(doc.scheme.players.p_a.id, 'p_a');

@@ -111,9 +111,9 @@ own file under [items/](items/).
   Same spec file.
 - **[A-BACK-033]** [open] Jersey, shorts and back number on the 3D
   figures. [Spec](items/A-BACK-033-034-player-kit.md).
-- **[A-BACK-034]** [in-progress] Floorball stick. Asset + per-part
-  colours shipped (PR #10, not loaded by the app yet); open: parent to
-  the hand bone, team colours, handedness, size budget. Same spec file.
+- **[A-BACK-034]** [in-progress] Floorball stick. Figures hold it in
+  both hands in a ready stance, per-player Stick L / R (2026-10-16);
+  open: pose tuning, hand wrap, team colours. Same spec file.
 
 ### Mode B - Analyze
 

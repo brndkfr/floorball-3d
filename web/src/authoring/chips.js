@@ -22,6 +22,7 @@ import { drawRoleGlyph } from './role-icons.js';
 import { reorderAtSlots } from './reorder.js';
 import { nextAvailableNumber } from './numbering.js';
 import { markRenderDirty } from '../render-dirty.js';
+import { setHandInFrames } from './stick-pose.js';
 
 export const CHIP_HEIGHT = 20;   // matches generate_player_chip.py
 export const CHIP_RADIUS = 100;  // matches generate_player_chip.py
@@ -314,6 +315,15 @@ export function updateChipLabel(id, label) {
   if (group) refreshChipSprites(group, player);
   saveDoc();
   document.dispatchEvent(new CustomEvent('layers:dirty'));
+  import('./history.js').then((h) => h.pushHistory());
+}
+
+// A-BACK-034: stick side, set on every frame (see setHandInFrames).
+export function updateChipHand(id, hand) {
+  const doc = ensureDoc();
+  if (!setHandInFrames(doc.frames, id, hand)) return;
+  saveDoc();
+  markRenderDirty();
   import('./history.js').then((h) => h.pushHistory());
 }
 

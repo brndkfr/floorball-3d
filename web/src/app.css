@@ -736,6 +736,8 @@
     font-family:inherit; font-size:11px; text-transform:uppercase;
     letter-spacing:0.06em; margin-top:6px;
   }
+  #chipPopover .pop-hand-row .pop-btn { margin-top:0; }
+  #chipPopover .pop-btn.active { background:rgba(79,224,255,0.28); border-color:#4fe0ff; color:#fff; }
   #chipPopover .pop-btn.danger {
     border-color:rgba(255,120,120,0.5); background:rgba(255,120,120,0.1);
     color:#ffb0b0;
