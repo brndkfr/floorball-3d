@@ -72,7 +72,7 @@ function animate() {
   const figuresChanged = tickFigures();
   const passChanged = tickPassOverlay();
   const ballCenter = getBallWorldCenter(); // computed once, shared by both calls below
-  updateTrajectory(ballCenter);
+  const trajectoryChanged = updateTrajectory(ballCenter);
   updateCoverage(ballCenter);
   updateGoalieLabel();
   const labelsChanged = updateFloorLabelOrientations(state.activeCamera);
@@ -91,7 +91,7 @@ function animate() {
   // consumeRenderDirty() must run every frame (it's edge-triggered) - keep
   // it first so `||` short-circuiting never skips clearing it.
   const needsRender = consumeRenderDirty() || pollChanged || chipsActive || markersActive
-    || walksActive || choreoActive || actorsActive || figuresChanged || passChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
+    || walksActive || choreoActive || actorsActive || figuresChanged || passChanged || trajectoryChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
   if (needsRender) renderer.render(scene, state.activeCamera);
 }
 animate();
