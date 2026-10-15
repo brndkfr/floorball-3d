@@ -39,10 +39,39 @@ function assertNoLeak(body) {
 test('serve-static: a 500 does not expose the error or file paths', async () => {
   const s = await start('serve-static.mjs');
   try {
-    // web/src/ is a directory without index.html -> readFile throws.
-    const res = await fetch(`http://127.0.0.1:${s.port}/src/`);
+    // A malformed escape makes decodeURIComponent throw.
+    const res = await fetch(`http://127.0.0.1:${s.port}/%E0%A4%A`);
     assert.equal(res.status, 500);
     assertNoLeak(await res.text());
+  } finally {
+    s.child.kill();
+  }
+});
+
+// Code scanning js/file-system-race (#6): stat() then readFile() on a path
+// is check-then-use. The server now opens the file once and stats the
+// handle. The race itself can't be provoked reliably in a test; these pin
+// the serving behaviour the rewrite must keep.
+test('serve-static: files, directory index, 404s and traversal', async () => {
+  const s = await start('serve-static.mjs');
+  const get = (p) => fetch(`http://127.0.0.1:${s.port}${p}`);
+  try {
+    let res = await get('/index.html');
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type'), /text\/html/);
+    assert.match(await res.text(), /<html/i);
+    res = await get('/');
+    assert.equal(res.status, 200);
+    assert.match(await res.text(), /<html/i);
+    res = await get('/src/main.js');
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type'), /javascript/);
+    await res.arrayBuffer();
+    assert.equal((await get('/nope.js')).status, 404);
+    assert.equal((await get('/src/')).status, 404, 'directory without index.html');
+    // The URL parser normalises %2e%2e segments; an encoded slash survives
+    // it and decodeURIComponent turns it into ../ - a real escape attempt.
+    assert.equal((await get('/..%2fpackage.json')).status, 403, 'escapes web/');
   } finally {
     s.child.kill();
   }

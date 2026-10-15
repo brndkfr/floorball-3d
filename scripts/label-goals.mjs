@@ -17,6 +17,8 @@ const DIR = path.resolve(HERE, '..', 'test', 'fixtures', 'goals');
 const TRUTH = path.join(DIR, 'truth.json');
 const PORT = Number(process.env.PORT) || 8010;
 const IMG = /\.(png|jpe?g|webp)$/i;
+// Log text with control characters replaced (code scanning js/log-injection).
+const logSafe = (v) => String(v).replace(/[\r\n\u0000-\u001f\u007f\u2028\u2029]/g, '?');
 const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
 
 async function readTruth() {
@@ -57,7 +59,7 @@ async function serve(req, res) {
   } catch (e) {
     // Details to the server log, not the response (code scanning
     // js/stack-trace-exposure).
-    console.error('label-goals:', req.method, req.url, e);
+    console.error('label-goals:', logSafe(req.method), logSafe(req.url), logSafe(e?.stack ?? e));
     res.writeHead(500); res.end('internal error');
   }
 }

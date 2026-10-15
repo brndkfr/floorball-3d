@@ -222,8 +222,6 @@ web/
       share.js                     deflate-raw share URL
       faceoff-snap.js              snap-to-dot for chip placement
       export.js, export-dialog.js  MP4 / WebM / PNG export
-      timer-worker.js              background heartbeat (staged for future
-                                    tab-hidden recording)
       photo-overlay/               Mode B: photo/video analysis
         pnp.js                     OpenCV.js solvePnP wrapper (camera pose)
         landmarks.js, border-mode.js,

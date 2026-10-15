@@ -148,5 +148,5 @@ Pages pipeline (no server, no multiplayer). XSS hygiene was rated good
 
 ## Not reviewed by the audit
 
-`timer-worker.js`, most of `photo-overlay.js` UI wiring, known CVEs in
+`timer-worker.js` (since removed, unused), most of `photo-overlay.js` UI wiring, known CVEs in
 the vendored library versions, the asset generators.
