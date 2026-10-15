@@ -7,7 +7,7 @@
 // parser and this doesn't justify adding one.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 
 // CRLF on Windows checkouts (core.autocrlf) would break the \n-anchored regexes.
 const read = (f) => readFileSync(new URL(`../.github/workflows/${f}`, import.meta.url), 'utf8')
@@ -34,7 +34,7 @@ test('publishing runs after CI and on label changes', () => {
 test('publishing checks out main only, never PR code, and uses no cache', () => {
   const checkouts = pages.split('uses: actions/checkout').slice(1);
   assert.equal(checkouts.length, 1);
-  assert.match(checkouts[0], /^@v\d+\n\s+with:\n\s+ref: main\n\s+persist-credentials: false/);
+  assert.match(checkouts[0], /^@[0-9a-f]{40} # v[\d.]+\n\s+with:\n\s+ref: main\n\s+persist-credentials: false/);
   assert.doesNotMatch(pages, /pull_request\.head|workflow_run\.head_sha|cache: pnpm/);
 });
 
@@ -63,4 +63,43 @@ test('a preview run from another repository is skipped', () => {
 
 test('publishes serialise without cancelling each other', () => {
   assert.match(pages, /group: pages-publish\n {6}cancel-in-progress: false/);
+});
+
+// S-BACK-029 M7 / L6: supply-chain hardening of every workflow.
+const codeql = read('codeql.yml');
+const all = { 'deploy-pages.yml': ci, 'pages.yml': pages, 'codeql.yml': codeql };
+
+test('every action is pinned to a full commit SHA with its version as a comment', () => {
+  for (const [file, text] of Object.entries(all)) {
+    const uses = [...text.matchAll(/uses:\s*(\S+)(.*)$/gm)];
+    assert.ok(uses.length > 0, file);
+    for (const [, ref, rest] of uses) {
+      assert.match(ref, /^[\w.-]+\/[\w./-]+@[0-9a-f]{40}$/, `${file}: ${ref} is not pinned to a SHA`);
+      assert.match(rest, /^\s+# v\d+\.\d+\.\d+/, `${file}: ${ref} lacks a "# vX.Y.Z" comment`);
+    }
+  }
+});
+
+test('no checkout keeps the GitHub token for later steps', () => {
+  for (const [file, text] of Object.entries(all)) {
+    for (const block of text.split('uses: actions/checkout').slice(1)) {
+      assert.match(block.split(/\n\s*- /)[0], /persist-credentials: false/, `${file}: checkout without persist-credentials: false`);
+    }
+  }
+});
+
+test('CodeQL runs the security-extended suite and ignores only paths that exist', () => {
+  assert.match(codeql, /queries: security-extended/);
+  const cfg = readFileSync(new URL('../.github/codeql/codeql-config.yml', import.meta.url), 'utf8');
+  const ignored = [...cfg.matchAll(/^\s+-\s+(\S+)\s*$/gm)].map((m) => m[1]);
+  assert.ok(ignored.length > 0);
+  for (const p of ignored) assert.ok(existsSync(new URL(`../${p}`, import.meta.url)), `codeql-config ignores missing path ${p}`);
+});
+
+test('Dependabot watches GitHub Actions and npm', () => {
+  const url = new URL('../.github/dependabot.yml', import.meta.url);
+  assert.ok(existsSync(url), '.github/dependabot.yml missing');
+  const dep = readFileSync(url, 'utf8');
+  assert.match(dep, /package-ecosystem: "?github-actions"?/);
+  assert.match(dep, /package-ecosystem: "?npm"?/);
 });
