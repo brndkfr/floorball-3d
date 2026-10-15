@@ -245,7 +245,7 @@ aside.
 
 - **Before every commit, run `pnpm test` and it must pass in full
   (0 failures).** Tests live in `test/*.test.js` (`node --test`, no
-  browser needed - see `docs/plan.md` section 10, S-BACK-009, for which
+  browser needed - see S-BACK-009 in `docs/archive/plan-2026-10.md` (section 10) for which
   modules are covered and why). If a change touches a module with
   existing tests, extend them rather than leaving the new behaviour
   uncovered. If `pnpm`/`npm` genuinely isn't available in the environment,
