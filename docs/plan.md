@@ -60,17 +60,26 @@ up here first.
 
 ### Now
 
-1. **[B-BACK-011]** Check the insights against 5-10 real Jets photos where
+1. **[S-BACK-029] H1-H4** Audit highs: preview artifact poisoning, share
+   links that brick the app, label texture leak, per-frame goalie
+   raycast. One PR each.
+   [items/S-BACK-029](items/S-BACK-029-audit-2026-10.md).
+2. **[B-BACK-011]** Check the insights against 5-10 real Jets photos where
    the true outcome is known, passing alternatives first (see section 4).
-2. **[S-BACK-023]** Type checking in CI (see section 5).
+   Fix S-BACK-029 M1 (pass-lane tunnelling) first so long passes are
+   judged correctly.
+3. **[S-BACK-023]** Type checking in CI (see section 5).
 
 ### Next
 
-3. **[S-BACK-024]** Ball and goalies: doc as the only source of truth.
+4. **[S-BACK-024]** Ball and goalies: doc as the only source of truth.
    Before any item that adds actors (arena branding, figure kit).
-4. **[S-BACK-025]** Persistence that scales with project size.
-5. **[S-BACK-026]** Download weight.
-6. Polish passing alternatives, then shot verdict + coverage (items to
+5. **[S-BACK-029]** Rest of the audit, in the order given in the item
+   file: privacy + pipeline (M6, M9, M7), then robustness, frame time,
+   hardening. Until M6 is fixed, label PRs `preview` only when needed.
+6. **[S-BACK-025]** Persistence that scales with project size.
+7. **[S-BACK-026]** Download weight.
+8. Polish passing alternatives, then shot verdict + coverage (items to
    be created from the B-BACK-011 results).
 
 ### Later (parked)
@@ -132,6 +141,10 @@ own file under [items/](items/).
   runs each: local `trace: 'on-first-retry'`, `workers: 2`, a Defender
   exclusion for `test-results/` and `node_modules/.pnpm/`, then a
   GPU-backed launch (`--use-angle=d3d11`). Keep what measurably helps.
+- **[S-BACK-029]** [in-progress] Security and performance audit of
+  2026-10-07 (4 high, 9 medium, 10 low).
+  [Findings and order](items/S-BACK-029-audit-2026-10.md). M5 is part
+  of S-BACK-024, L4 of S-BACK-023.
 
 ## 5. Architecture debt
 
