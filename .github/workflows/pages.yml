@@ -58,12 +58,14 @@ jobs:
           RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           # Open, labelled, same-repo PRs only (a fork's branch is never published).
+          # One "<branch> <head sha>" line each; the sha pins which CI run's
+          # artifact is used (S-BACK-029 H1).
           gh pr list --repo "$GITHUB_REPOSITORY" --state open --label preview \
-            --json headRefName,isCrossRepository \
-            --jq '.[] | select(.isCrossRepository | not) | .headRefName' > previews.txt
+            --json headRefName,headRefOid,isCrossRepository \
+            --jq '.[] | select(.isCrossRepository | not) | "\(.headRefName) \(.headRefOid)"' > previews.txt
           go=true
           if [ "$EVENT" = workflow_run ] && [ "$RUN_EVENT" = pull_request ] \
-             && ! grep -qxF -- "$RUN_BRANCH" previews.txt; then
+             && ! cut -d' ' -f1 previews.txt | grep -qxF -- "$RUN_BRANCH"; then
             go=false
           fi
           echo "go=$go" >> "$GITHUB_OUTPUT"
@@ -94,16 +96,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p main/dist/preview
-          while IFS= read -r branch; do
-            [ -n "$branch" ] || continue
+          # By head commit, not branch name: a fork PR can reuse a branch name,
+          # and its CI run would then match --branch (S-BACK-029 H1).
+          while read -r branch sha; do
+            [ -n "$branch" ] && [ -n "$sha" ] || continue
             slug=$(printf '%s' "$branch" | tr -c 'A-Za-z0-9._-' '-')
             run=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow deploy-pages.yml \
-              --branch "$branch" --event pull_request --status success --limit 1 \
+              --commit "$sha" --event pull_request --status success --limit 1 \
               --json databaseId --jq '.[0].databaseId // empty')
             if [ -z "$run" ]; then
-              echo "::warning::no green CI run with a site artifact for $branch - preview skipped"
+              echo "::warning::no green CI run with a site artifact for $branch@$sha - preview skipped"
               continue
             fi
+            # Defence in depth: the run must have been built from this repository.
+            repo=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq '.head_repository.full_name')
+            [ "$repo" = "$GITHUB_REPOSITORY" ] || { echo "::warning::run $run for $branch is from $repo - preview skipped"; continue; }
             if gh run download "$run" --repo "$GITHUB_REPOSITORY" --name site --dir "main/dist/preview/$slug"; then
               echo "preview: $branch (run $run) -> /preview/$slug/"
             else

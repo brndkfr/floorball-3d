@@ -45,6 +45,22 @@ test('previews are open, labelled, same-repo PRs, taken from green CI artifacts'
   assert.match(pages, /gh run download "\$run" [^\n]*--name site --dir "main\/dist\/preview\/\$slug"/);
 });
 
+// S-BACK-029 H1: a fork PR can reuse a same-repo branch name, and its
+// pull_request CI run then carries that head_branch. Resolving the artifact
+// by branch name could publish fork code on the production origin, so the
+// run is pinned to the labelled PR's head commit and must come from this repo.
+test('preview artifacts are resolved by PR head commit, never by branch name', () => {
+  assert.match(pages, /--json headRefName,headRefOid,isCrossRepository/);
+  assert.match(pages, /while read -r branch sha; do/);
+  assert.match(pages, /gh run list [^\n]*\\\n\s+--commit "\$sha" --event pull_request --status success/);
+  assert.doesNotMatch(pages, /--branch "\$branch"/);
+});
+
+test('a preview run from another repository is skipped', () => {
+  assert.match(pages, /gh api "repos\/\$GITHUB_REPOSITORY\/actions\/runs\/\$run" --jq '\.head_repository\.full_name'/);
+  assert.match(pages, /\[ "\$repo" = "\$GITHUB_REPOSITORY" \] \|\| \{[^\n]*continue; \}/);
+});
+
 test('publishes serialise without cancelling each other', () => {
   assert.match(pages, /group: pages-publish\n {6}cancel-in-progress: false/);
 });
