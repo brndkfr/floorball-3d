@@ -11,17 +11,25 @@ const ASSETS = fileURLToPath(new URL('../web/assets/', import.meta.url));
 function parseObj(text) {
   const verts = [];
   const byMat = new Map();
+  const trisByMat = new Map();
   let mat = null;
   let mtllib = null;
   for (const line of text.split('\n')) {
     const p = line.trim().split(/\s+/);
     if (p[0] === 'v') verts.push(p.slice(1, 4).map(Number));
     else if (p[0] === 'mtllib') mtllib = p[1];
-    else if (p[0] === 'usemtl') { mat = p[1]; if (!byMat.has(mat)) byMat.set(mat, new Set()); }
-    else if (p[0] === 'f') for (const i of p.slice(1)) byMat.get(mat).add(Number(i.split('/')[0]) - 1);
+    else if (p[0] === 'usemtl') {
+      mat = p[1];
+      if (!byMat.has(mat)) { byMat.set(mat, new Set()); trisByMat.set(mat, []); }
+    } else if (p[0] === 'f') {
+      const idx = p.slice(1).map((i) => Number(i.split('/')[0]) - 1);
+      for (const i of idx) byMat.get(mat).add(i);
+      trisByMat.get(mat).push(idx);
+    }
   }
   const pts = (m) => [...(byMat.get(m) ?? [])].map((i) => verts[i]);
-  return { verts, mtllib, mats: [...byMat.keys()], pts };
+  const tris = (m) => (trisByMat.get(m) ?? []).map((t) => t.map((i) => verts[i]));
+  return { verts, mtllib, mats: [...byMat.keys()], pts, tris };
 }
 
 const obj = parseObj(readFileSync(ASSETS + 'floorball_stick.obj', 'utf8'));
@@ -92,4 +100,44 @@ test('shaft: 60 deg lie, diameter <= 35 mm', () => {
   const across = shaft.map((v) => [v[0] * n[0] + v[1] * n[1], 0, v[2]]);
   assert.ok(extent(across, 0) <= 35, `shaft diameter (in plane) ${extent(across, 0)}`);
   assert.ok(extent(across, 2) <= 35, `shaft diameter (z) ${extent(across, 2)}`);
+});
+
+// --- perforated blade -------------------------------------------------------
+
+// Does any Blade triangle, projected onto the XY side view, cover (x, y)?
+// Triangles that project to (near) zero area are vertical walls - skip them.
+const bladeTris = obj.tris('Blade').filter(([a, b, c]) =>
+  Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) > 1e-6);
+function covered(x, y) {
+  for (const [a, b, c] of bladeTris) {
+    const d1 = (x - b[0]) * (a[1] - b[1]) - (a[0] - b[0]) * (y - b[1]);
+    const d2 = (x - c[0]) * (b[1] - c[1]) - (b[0] - c[0]) * (y - c[1]);
+    const d3 = (x - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (y - a[1]);
+    const neg = d1 < 0 || d2 < 0 || d3 < 0;
+    const pos = d1 > 0 || d2 > 0 || d3 > 0;
+    if (!(neg && pos)) return true;
+  }
+  return false;
+}
+// side-view point on the 270 mm bottom-edge arc's family of concentric arcs
+const R = 270;
+const onArc = (r, t) => [r * Math.sin(t), R - r * Math.cos(t)];
+
+test('blade is a lattice: open holes between the ribs', () => {
+  let open = 0, total = 0;
+  for (let t = -0.32; t <= 0.12; t += 0.01) {
+    for (let r = R - 66; r <= R - 10; r += 4) {
+      total++;
+      if (!covered(...onArc(r, t))) open++;
+    }
+  }
+  const frac = open / total;
+  assert.ok(frac > 0.25 && frac < 0.8, `open fraction ${frac.toFixed(2)}`);
+});
+
+test('blade rim along the bottom edge is closed', () => {
+  for (let t = -0.38; t <= 0.28; t += 0.01) {
+    const [x, y] = onArc(R - 3, t);
+    assert.ok(covered(x, y), `gap in the rim at x=${x.toFixed(1)}`);
+  }
 });

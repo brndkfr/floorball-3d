@@ -22,7 +22,12 @@ The chosen values below sit inside those limits. Everything the regulations
 leave open - the default stick length, shaft diameter, grip binding length,
 socket width, the exact banana outline of the blade, colours - is an
 estimate of a typical junior/senior stick, not a manufacturer CAD file.
-The blade is solid (no perforations) to keep the mesh small.
+
+The blade is perforated like most real blades: a closed rim along the
+outline, a solid neck, and an open lattice of two curved ribs running
+along the blade plus one family of diagonal ribs. The rib layout is a
+stylised estimate (no two manufacturers use the same one) and the hole
+corners are not rounded to the 2 mm edge radius the rules ask for.
 
 Stick length is measured like appendix C2 "a": along the shaft axis from the
 point where the axis meets the floor to the top of the knob.
@@ -60,6 +65,14 @@ HEEL_ANGLE = 0.30           # rad along the bottom arc where the neck starts
 SOCKET_HEIGHT = 115.0       # estimate: height of the blade socket centre above the floor
 SOCKET_WIDTH = 22.0         # estimate: blade neck width where it enters the shaft
 SOCKET_INSERT = 15.0        # shaft overlaps the socket by this much
+
+RIM_WIDTH = 8.0             # estimate: closed frame along the blade outline
+SOLID_NECK_FROM_X = 55.0    # estimate: lattice stops at a line parallel to the shaft through (x, 0)
+RIB_WIDTH = 4.5             # estimate
+RIB_THICKNESS = 7.0         # estimate: a little thinner than the rim, so the ribs sit recessed
+RIB_DIAGONAL_DEG = 52.0     # estimate: slant of the diagonal ribs to the floor
+RIB_DIAGONAL_SPACING = 30.0 # estimate: horizontal distance between diagonal ribs
+RIB_ARC_FRACTIONS = (0.36, 0.68)  # estimate: curved ribs, as fraction of the height from the bottom
 
 assert STICK_LENGTH <= 1140
 assert SHAFT_DIAMETER <= 35 and KNOB_DIAMETER <= 35
@@ -200,7 +213,8 @@ def triangulate(poly):
             a, b, c = poly[i0], poly[i1], poly[i2]
             if cross2(a, b, c) <= 1e-9:
                 continue
-            if any(inside(poly[j], a, b, c) for j in idx if j not in (i0, i1, i2)):
+            if any(inside(poly[j], a, b, c) for j in idx
+                   if j not in (i0, i1, i2) and poly[j] not in (a, b, c)):
                 continue
             out.append((i0, i1, i2))
             idx.pop(k)
@@ -232,10 +246,129 @@ for k in range(N_EDGE):
         j = (i + 1) % n
         add_tri(a[i], a[j], b[j], 'Blade')
         add_tri(a[i], b[j], b[i], 'Blade')
+# Lattice region: the outline inset by the rim width, cut off at the neck by
+# a line parallel to the shaft. Everything outside it stays solid.
+def clip_half_plane(poly, p0, normal):
+    """Sutherland-Hodgman: keep the side where (p - p0) . normal <= 0."""
+    def side(p): return (p[0] - p0[0]) * normal[0] + (p[1] - p0[1]) * normal[1]
+    out = []
+    for i in range(len(poly)):
+        a, b = poly[i - 1], poly[i]
+        sa, sb = side(a), side(b)
+        if sb <= 0:
+            if sa > 0:
+                t = sa / (sa - sb)
+                out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+            out.append(b)
+        elif sa <= 0:
+            t = sa / (sa - sb)
+            out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+    return out
+
+neck_p0 = (SOLID_NECK_FROM_X, 0.0)
+lattice = [(p[0] + m[0] * RIM_WIDTH, p[1] + m[1] * RIM_WIDTH) for p, m in zip(outline, inward)]
+lattice = clip_half_plane(lattice, neck_p0, ACROSS)
+if signed_area(lattice) < 0:
+    lattice.reverse()
+
+def point_in_poly(pt, poly):
+    x, y = pt
+    inside = False
+    for i in range(len(poly)):
+        (x0, y0), (x1, y1) = poly[i - 1], poly[i]
+        if (y0 > y) != (y1 > y) and x < x0 + (y - y0) * (x1 - x0) / (y1 - y0):
+            inside = not inside
+    return inside
+
+# Faces: the rim/neck area = face outline with the lattice as a hole, joined
+# into one simple polygon by a bridge from the hole's neck-most vertex to the
+# nearest face-outline vertex beyond it.
 face_poly = [(verts[i][0], verts[i][1]) for i in rings[0]]
-for (i0, i1, i2) in triangulate(face_poly):
-    add_tri(rings[-1][i0], rings[-1][i1], rings[-1][i2], 'Blade')   # +Z face
-    add_tri(rings[0][i0], rings[0][i2], rings[0][i1], 'Blade')      # -Z face
+def across(p): return (p[0] - neck_p0[0]) * ACROSS[0] + (p[1] - neck_p0[1]) * ACROSS[1]
+h0 = max(range(len(lattice)), key=lambda i: across(lattice[i]))
+o0 = min((i for i in range(len(face_poly)) if across(face_poly[i]) > across(lattice[h0]) + 1),
+         key=lambda i: math.dist(face_poly[i], lattice[h0]))
+hole_cw = lattice[h0::-1] + lattice[:h0:-1]               # clockwise, starting at h0
+front_hole = [add_vert((x, y, half_t + hook_z(x))) for x, y in hole_cw]
+back_hole = [add_vert((x, y, -half_t + hook_z(x))) for x, y in hole_cw]
+merged = []                                               # (xy, front index, back index)
+nf = len(face_poly)
+for k in range(nf + 1):
+    i = (o0 + k) % nf
+    merged.append((face_poly[i], rings[-1][i], rings[0][i]))
+for k in range(len(hole_cw) + 1):
+    i = k % len(hole_cw)
+    merged.append((hole_cw[i], front_hole[i], back_hole[i]))
+for (i0, i1, i2) in triangulate([m[0] for m in merged]):
+    add_tri(merged[i0][1], merged[i1][1], merged[i2][1], 'Blade')   # +Z face
+    add_tri(merged[i0][2], merged[i2][2], merged[i1][2], 'Blade')   # -Z face
+
+# inner wall of the lattice opening (own vertices -> crisp edge)
+wf = [add_vert(verts[i]) for i in front_hole]
+wb = [add_vert(verts[i]) for i in back_hole]
+for i in range(len(hole_cw)):
+    j = (i + 1) % len(hole_cw)
+    add_tri(wf[i], wb[i], wb[j], 'Blade')
+    add_tri(wf[i], wb[j], wf[j], 'Blade')
+
+# Ribs: centre polylines sampled every 1 mm, kept where they lie inside the
+# lattice, extended a little into the rim so they visibly join it.
+def rib_runs(points):
+    runs, cur = [], []
+    for p in points:
+        if point_in_poly(p, lattice):
+            cur.append(p)
+        elif cur:
+            runs.append(cur); cur = []
+    if cur:
+        runs.append(cur)
+    out = []
+    for r in runs:
+        if len(r) < 6:
+            continue
+        def ext(a, b):
+            d = v_norm((a[0] - b[0], a[1] - b[1], 0))
+            return (a[0] + d[0] * (RIM_WIDTH / 2), a[1] + d[1] * (RIM_WIDTH / 2))
+        mid = r[::3]
+        if mid[-1] != r[-1]:
+            mid.append(r[-1])
+        out.append([ext(r[0], r[1])] + mid + [ext(r[-1], r[-2])])
+    return out
+
+def add_rib(path):
+    """Box-section bar along a 2D path, centred on the (hooked) blade mid-plane."""
+    hw, ht2 = RIB_WIDTH / 2, RIB_THICKNESS / 2
+    n2 = []
+    for i in range(len(path)):
+        a, b = path[max(i - 1, 0)], path[min(i + 1, len(path) - 1)]
+        d = v_norm((b[0] - a[0], b[1] - a[1], 0))
+        n2.append((-d[1], d[0]))
+    def corner(i, sw, sz):
+        x = path[i][0] + n2[i][0] * hw * sw
+        y = path[i][1] + n2[i][1] * hw * sw
+        return (x, y, ht2 * sz + hook_z(x))
+    sides = [((1, 1), (-1, 1)), ((-1, 1), (-1, -1)), ((-1, -1), (1, -1)), ((1, -1), (1, 1))]
+    for (sa, sb) in sides:
+        ca = [add_vert(corner(i, *sa)) for i in range(len(path))]
+        cb = [add_vert(corner(i, *sb)) for i in range(len(path))]
+        for i in range(len(path) - 1):
+            add_tri(ca[i], ca[i + 1], cb[i + 1], 'Blade')
+            add_tri(ca[i], cb[i + 1], cb[i], 'Blade')
+
+rib_paths = []
+for f in RIB_ARC_FRACTIONS:                               # curved ribs along the blade
+    r = R - BLADE_HEIGHT * f
+    t0, t1 = TOE_ANGLE - 0.2, HEEL_ANGLE + 0.2
+    steps = int((t1 - t0) * r)
+    rib_paths += rib_runs([(r * math.sin(t0 + (t1 - t0) * i / steps),
+                            R - r * math.cos(t0 + (t1 - t0) * i / steps)) for i in range(steps + 1)])
+dg = math.radians(RIB_DIAGONAL_DEG)
+xs = min(p[0] for p in lattice) - 120
+while xs < max(p[0] for p in lattice) + 20:               # diagonal ribs
+    rib_paths += rib_runs([(xs + math.cos(dg) * s, -10 + math.sin(dg) * s) for s in range(0, 160)])
+    xs += RIB_DIAGONAL_SPACING
+for path in rib_paths:
+    add_rib(path)
 
 # Shaft parts: tubes along the axis, s = distance from FLOOR_POINT.
 def axis_point(s):
