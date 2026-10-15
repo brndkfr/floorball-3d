@@ -48,7 +48,11 @@ async function serve(req, res) {
     res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
     res.end(body);
   } catch (e) {
-    res.writeHead(500); res.end(String(e));
+    // Details go to the server log, never into the response: an error
+    // message carries absolute file-system paths (code scanning
+    // js/stack-trace-exposure).
+    console.error('serve-static:', req.url, e);
+    res.writeHead(500); res.end('internal error');
   }
 }
 
