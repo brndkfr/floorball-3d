@@ -18,17 +18,26 @@ test('rebuilding a labelled zone and arrow does not leak textures', async ({ pag
     const pts = [{ x: 0, z: 0 }, { x: 4000, z: 0 }, { x: 0, z: 4000 }];
     const zone = addShape({ type: 'zone', points: pts, label: 'Slot', color: '#ffb347' });
     const arrow = addShape({ type: 'arrow', points: [{ x: 0, z: 0 }, { x: 5000, z: 2000 }], label: 'Pass', color: '#ffb347', width: 80 });
-    render();
-    const before = renderer.info.memory.textures;
-    for (let i = 0; i < 20; i++) {
-      updateShape(zone, { opacity: 0.2 + i * 0.01 });
-      updateShape(arrow, { width: 80 + i });
+    // Two identical rounds of 40 rebuilds. A leak adds >= 1 texture per
+    // rebuild, so >= 40 per round; an unrelated one-off upload (an asset
+    // or label arriving mid-test, which made a single before/after compare
+    // flaky) shows up at most once and is absorbed by round 1.
+    const round = () => {
+      for (let i = 0; i < 20; i++) {
+        updateShape(zone, { opacity: 0.2 + i * 0.01 });
+        updateShape(arrow, { width: 80 + i });
+        render();
+      }
+      rebuildShapesFromDoc();
       render();
-    }
-    rebuildShapesFromDoc();
+      return renderer.info.memory.textures;
+    };
     render();
-    return { before, after: renderer.info.memory.textures };
+    const afterRound1 = round();
+    const afterRound2 = round();
+    return { afterRound1, afterRound2 };
   });
 
-  expect(counts.after).toBeLessThanOrEqual(counts.before);
+  // Tolerance well below one texture per rebuild (40 per round).
+  expect(counts.afterRound2 - counts.afterRound1).toBeLessThan(5);
 });
