@@ -176,8 +176,11 @@ static file under `web/assets/`.
 
 ```
 docs/
-  plan.md                          single source of truth: product plan,
-                                    work-item backlog (stable IDs), phases
+  plan.md                          short live plan: vision, ranked priorities,
+                                    open items (stable IDs), open questions
+  items/                           full specs of large open items
+  decisions/                       short records of lasting choices
+  archive/                         frozen older plans and handoffs
   phase-2-plan.md, phase-3-plan.md Mode B phase plans
   reference/                       old 2D-clone reference plan (inspiration only)
 generators/                        Python scripts that generate every .obj/.mtl asset
