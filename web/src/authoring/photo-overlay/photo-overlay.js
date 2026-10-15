@@ -61,6 +61,9 @@ function commitPhotoAction(action) {
 
 const fileInput = document.getElementById('photoFileInput');
 const restoreRow = document.getElementById('photoRestoreRow');
+const forgetBtn = document.getElementById('photoForgetBtn');
+const forgetStatus = document.getElementById('photoForgetStatus');
+if (!forgetBtn || !forgetStatus) throw new Error('photo-overlay: #photoForgetBtn / #photoForgetStatus missing from index.html');
 const restoreLabel = document.getElementById('photoRestoreLabel');
 const restoreLandmarksBtn = document.getElementById('photoRestoreLandmarksBtn');
 const listEl = document.getElementById('photoLandmarkList');
@@ -618,7 +621,8 @@ fileInput.addEventListener('change', async () => {
   const file = fileInput.files?.[0];
   if (!file) return;
   await photoCanvas.loadPhoto(file);
-  photoCache.saveCachedPhoto(file);
+  await photoCache.saveCachedPhoto(file);
+  showForget(true);
   listEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
   listEl.querySelectorAll('.photo-landmark-row').forEach((r) => r.classList.remove('placed', 'armed'));
   // Drop any dynamic board-top landmarks and their rows - they were tied
@@ -723,6 +727,19 @@ function restoreSavedOverlay() {
 
 restoreLandmarksBtn.addEventListener('click', restoreSavedOverlay);
 
+// S-BACK-029 M9: the cached match photo (likely of minors) can be removed
+// from this browser at any time; it also expires on its own (photo-cache.js).
+function showForget(cached) {
+  forgetBtn.style.display = cached ? '' : 'none';
+  if (cached) forgetStatus.textContent = '';
+}
+
+forgetBtn.addEventListener('click', async () => {
+  await photoCache.clearCachedPhoto();
+  showForget(false);
+  forgetStatus.textContent = 'Saved photo removed from this browser.';
+});
+
 // Auto-load the last calibrated photo from the IndexedDB cache, but only
 // once the user is in Analyze - setCalibrating() hides the WebGL renderer,
 // so restoring eagerly from Plan would hijack the Plan-mode view. Deferred
@@ -732,9 +749,10 @@ let cachedPhotoRestored = false;
 async function restoreCachedPhotoIfAny() {
   if (cachedPhotoRestored) return;
   cachedPhotoRestored = true;
-  const cached = await photoCache.loadCachedPhoto();
+  const cached = await photoCache.loadCachedPhoto(); // null when none or expired (deleted then)
   if (!cached) return;
   await photoCanvas.loadPhoto(cached.blob);
+  showForget(true);
   setCalibrating(true);
   if (!checkRestoreAvailable()) {
     startGuidedHints(autoDetectEnd.value === 'B' ? 'goalB' : 'goalA');

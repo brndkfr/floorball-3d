@@ -60,6 +60,7 @@ test('shipped controls are present in the DOM', async ({ page }) => {
     'photoResetFacingBtn',       // B-PHASE-004
     'photoClearSelFacingBtn',    // B-BACK-002
     'photoFeedbackToggle',
+    'photoForgetBtn',            // S-BACK-029 M9
   ];
   for (const id of ids) {
     await expect(page.locator(`#${id}`), `#${id} missing`).toHaveCount(1);

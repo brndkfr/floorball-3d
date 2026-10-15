@@ -242,7 +242,11 @@
       <button type="button" class="ps-step" data-step="3"><span class="ps-num" aria-hidden="true">3</span> Players</button>
       <button type="button" class="ps-step" data-step="4"><span class="ps-num" aria-hidden="true">4</span> Insights</button>
     </nav>
-    <input type="file" id="photoFileInput" accept="image/*" aria-label="Upload photo to analyze"><br><br>
+    <input type="file" id="photoFileInput" accept="image/*" aria-label="Upload photo to analyze"><br>
+    <div style="margin:4px 0 8px;">
+      <button id="photoForgetBtn" class="dock-btn" style="display:none; padding:2px 6px; font-size:10px;" title="This browser keeps the last photo for up to 7 days so a reload does not need re-picking. Remove it now.">Forget saved photo</button>
+      <span id="photoForgetStatus" role="status" style="font-size:11px; opacity:0.7;"></span>
+    </div>
     <div id="photoRestoreRow" style="display:none; margin-bottom:8px;">
       <span id="photoRestoreLabel" style="font-size:11px; opacity:0.7;"></span>
       <button id="photoRestoreLandmarksBtn" class="dock-btn" style="padding:2px 6px; font-size:10px; margin-left:6px;" title="Re-place the landmarks and camera pose saved from the last time this exact photo was calibrated - saves re-clicking everything after a reload.">Load saved overlay</button>
