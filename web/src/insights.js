@@ -9,6 +9,8 @@ import * as THREE from 'three';
 export const GOALIE_CENTERED_THRESHOLD = 200; // mm of lateral (X) offset still counted as "centred" - an estimate, not a sourced number
 
 const shotDirScratch = new THREE.Vector3();
+const shotOriginScratch = new THREE.Vector3();
+const shotHitsScratch = [];
 const shootingLineRaycaster = new THREE.Raycaster();
 
 // Where does the ball->goalCenter line sit in X at a given Z? (linear
@@ -46,9 +48,11 @@ export function shotVerdict({ ballWorld, goalCenterWorld, goalieMesh, path }) {
       const seg = shotDirScratch.set(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y, pts[i].z - pts[i - 1].z);
       const len = seg.length();
       if (len < 1) continue;
-      shootingLineRaycaster.set(new THREE.Vector3(pts[i - 1].x, pts[i - 1].y, pts[i - 1].z), seg.clone().normalize());
+      // Scratch objects only: this runs whenever a shot input moves (S-BACK-029 H4).
+      shootingLineRaycaster.set(shotOriginScratch.set(pts[i - 1].x, pts[i - 1].y, pts[i - 1].z), seg.divideScalar(len));
       shootingLineRaycaster.far = i === pts.length - 1 ? len - 1 : len;
-      hit = shootingLineRaycaster.intersectObject(goalieMesh, true).length > 0;
+      shotHitsScratch.length = 0;
+      hit = shootingLineRaycaster.intersectObject(goalieMesh, true, shotHitsScratch).length > 0;
     }
     if (hit) {
       const lineX = shotLineXAtZ(ballWorld, goalCenterWorld, goalieMesh.position.z);
