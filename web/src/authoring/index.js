@@ -34,6 +34,7 @@ import './timeline.js';   // side-effect: wires up the timeline UI
 import './photo-overlay/photo-overlay.js'; // side-effect: wires up the photo overlay panel
 import './choreo-tutorial-ui.js'; // side-effect: guided Choreo tutorial card (A-BACK-019)
 import { notifyProjectChanged } from './library-dialog.js';
+import { showAlert } from './dialog.js';
 export { tickChoreo } from './choreograph.js';
 export { tickPassOverlay } from './pass-overlay.js';
 export { tickActors } from './actors.js';
@@ -75,11 +76,33 @@ if (!getCurrentProjectId()) saveDoc();
 // state.doc was finalised - kick a project-changed event so the
 // project-name label picks up the migrated / loaded name.
 notifyProjectChanged();
-rebuildFromDoc();
-rebuildShapesFromDoc();
-rebuildConesFromDoc();
-rebuildBallsFromDoc();
-rebuildGoalsFromDoc();
+
+function rebuildAll() {
+  rebuildFromDoc();
+  rebuildShapesFromDoc();
+  rebuildConesFromDoc();
+  rebuildBallsFromDoc();
+  rebuildGoalsFromDoc();
+}
+
+// S-BACK-029 H2: last line of defence. acceptDoc() drops what it knows the
+// rebuild code can't handle, but anything that still throws here would
+// abort this top-level-await module - and, since the project stays current,
+// on every reload. Leave that project untouched in the Library and open a
+// fresh one instead.
+try {
+  rebuildAll();
+} catch (err) {
+  console.error('Project failed to open; starting a fresh one', err);
+  const badName = state.doc?.meta?.name || 'Untitled';
+  const id = createProject('Untitled');
+  setCurrentProjectId(id);
+  state.doc = loadProject(id);
+  ensureDoc();
+  notifyProjectChanged();
+  rebuildAll();
+  showAlert(`The project "${badName}" could not be opened and was set aside. It is still in the Library; your other projects are unchanged.`);
+}
 initHistory();
 initFaceoffSnapToggle();
 

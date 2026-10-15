@@ -41,6 +41,17 @@ test('readHashDoc returns null for a malformed payload instead of throwing', asy
   assert.equal(await readHashDoc(), null);
 });
 
+// S-BACK-029 H2: deflate reaches ~1000:1, so a small hash could expand to
+// gigabytes and crash the tab. Real docs are far below the cap.
+test('readHashDoc refuses a payload that inflates past the size cap', async () => {
+  const doc = acceptDoc(JSON.parse(JSON.stringify(emptyDoc())));
+  doc.meta.name = 'a'.repeat(3 * 1024 * 1024);
+  const url = await encodeShareUrl(doc, 'http://localhost/app');
+  assert.ok(url, 'highly compressible payload still fits the URL limit');
+  fakeLocation.hash = url.slice(url.indexOf('#'));
+  assert.equal(await readHashDoc(), null);
+});
+
 test('clearHashDoc strips only the doc= fragment, keeping the rest of the hash', async () => {
   fakeLocation.hash = '#foo=bar&doc=abc123';
   fakeLocation.pathname = '/app';

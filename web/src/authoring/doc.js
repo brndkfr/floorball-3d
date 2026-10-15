@@ -47,22 +47,143 @@ function migrateGoalieScheme(scheme) {
   }
 }
 
-// Strips scheme/photo entries with malformed ids from a doc that just came
-// from an untrusted source (file import, share link). Mutates in place.
-function sanitizeDoc(doc) {
-  if (!doc || !Array.isArray(doc.frames)) return doc;
-  for (const frame of doc.frames) {
-    const scheme = frame?.scheme;
-    migrateGoalieScheme(scheme);
-    if (scheme?.players && typeof scheme.players === 'object') {
-      for (const id of Object.keys(scheme.players)) {
-        if (!isValidId(id)) delete scheme.players[id];
+// --- structural validation (S-BACK-029 H2) ------------------------------
+// Ids alone are not enough: a share link with e.g. a zone without `points`
+// was saved as the current project and then threw in rebuildShapesFromDoc()
+// during boot, on every reload. The rules below drop entries the rebuild
+// code cannot build (missing or non-finite position, malformed points) and
+// remove optional fields of the wrong type, so the renderer falls back to its
+// defaults. Fields not listed are kept as they are: nothing here may change a
+// doc the app itself wrote, since every saved project passes through it too.
+
+// Limits are estimates, far above any real play.
+const MAX_FRAMES = 500;
+const MAX_ITEMS = 2000;   // entries per collection per frame
+const MAX_POINTS = 5000;  // points per shape
+const MAX_STR = 500;      // characters per string field
+
+const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+const isPos = (v) => isNum(v) && v > 0;
+const isStr = (v) => typeof v === 'string';
+const isPt = (p) => isObj(p) && isNum(p.x) && isNum(p.z);
+const isNumArray = (n) => (a) => Array.isArray(a) && a.length === n && a.every(isNum);
+const hasPos = (e) => isObj(e) && isNum(e.x) && isNum(e.z);
+
+const PLAYER_FIELDS = { angle: isNum, label: isStr, role: isStr, number: (v) => isStr(v) || isNum(v) };
+const SHAPE_FIELDS = {
+  color: isStr, label: isStr, text: isStr, kind: isStr, shaftStyle: isStr, headStyle: isStr,
+  layer: (v) => v === 'low' || v === 'mid' || v === 'high',
+  opacity: isNum, labelRotation: isNum, width: isPos, size: isPos, labelSize: isPos,
+  x: isNum, z: isNum, w: isNum, h: isNum, cx: isNum, cz: isNum, r: isNum,
+};
+const CONE_FIELDS = { color: isStr, kind: isStr };
+const BALL_FIELDS = { color: isStr, carrier: isValidId };
+const GOAL_LABEL_FIELDS = { label: isStr, labelColor: isStr, labelSize: isPos };
+const GOAL_FIELDS = { ...GOAL_LABEL_FIELDS, rotY: isNum };
+const GOALIE_FIELDS = { angle: isNum };
+const CAMERA_FIELDS = { mode: isStr, fov: isPos, zoom: isPos };
+
+// Removes listed fields whose value has the wrong type; truncates strings.
+// null / undefined are left alone (every reader treats them as "unset").
+function cleanFields(entry, spec) {
+  for (const key of Object.keys(spec)) {
+    const v = entry[key];
+    if (v == null) continue;
+    if (!spec[key](v)) delete entry[key];
+    else if (isStr(v) && v.length > MAX_STR) entry[key] = v.slice(0, MAX_STR);
+  }
+  return entry;
+}
+
+function isValidShape(s) {
+  if (!isObj(s) || !isValidId(s.id)) return false;
+  if (s.type === 'arrow' || s.type === 'zone') {
+    return Array.isArray(s.points) && s.points.length <= MAX_POINTS && s.points.every(isPt);
+  }
+  if (s.type === 'text') return isNum(s.x) && isNum(s.z);
+  return false;
+}
+
+// id-keyed list (cones, extra balls, extra goals): valid id + finite position.
+const cleanList = (list, fields) => list
+  .filter((e) => hasPos(e) && isValidId(e.id))
+  .map((e) => cleanFields(e, fields));
+
+// Returns false when the scheme is too large to accept at all.
+function sanitizeScheme(scheme) {
+  if (!isObj(scheme.players)) scheme.players = {};
+  if (!Array.isArray(scheme.shapes)) scheme.shapes = [];
+  if (!Array.isArray(scheme.cones)) scheme.cones = [];
+  if (!isObj(scheme.balls)) scheme.balls = {};
+  const playerIds = Object.keys(scheme.players);
+  if (playerIds.length > MAX_ITEMS || scheme.shapes.length > MAX_ITEMS || scheme.cones.length > MAX_ITEMS) return false;
+
+  for (const id of playerIds) {
+    const p = scheme.players[id];
+    if (!isValidId(id) || !hasPos(p)) { delete scheme.players[id]; continue; }
+    cleanFields(p, PLAYER_FIELDS);
+    if (p.id !== undefined && p.id !== id) p.id = id;
+  }
+  scheme.shapes = scheme.shapes.filter(isValidShape).map((s) => cleanFields(s, SHAPE_FIELDS));
+  scheme.cones = cleanList(scheme.cones, CONE_FIELDS);
+
+  const balls = scheme.balls;
+  if (balls.main != null && !hasPos(balls.main)) delete balls.main;
+  else if (balls.main) cleanFields(balls.main, BALL_FIELDS);
+  if (balls.extras != null) {
+    if (!Array.isArray(balls.extras) || balls.extras.length > MAX_ITEMS) balls.extras = [];
+    balls.extras = cleanList(balls.extras, BALL_FIELDS);
+  }
+
+  if (scheme.goals != null && !isObj(scheme.goals)) delete scheme.goals;
+  const goals = scheme.goals;
+  if (goals) {
+    if (goals.extras != null) {
+      if (!Array.isArray(goals.extras) || goals.extras.length > MAX_ITEMS) goals.extras = [];
+      goals.extras = cleanList(goals.extras, GOAL_FIELDS);
+    }
+    if (goals.fixed != null) {
+      if (!isObj(goals.fixed)) goals.fixed = {};
+      for (const k of Object.keys(goals.fixed)) {
+        if ((k !== 'A' && k !== 'B') || !isObj(goals.fixed[k])) delete goals.fixed[k];
+        else cleanFields(goals.fixed[k], GOAL_LABEL_FIELDS);
       }
     }
-    if (Array.isArray(scheme?.shapes)) {
-      scheme.shapes = scheme.shapes.filter((s) => isValidId(s?.id));
-    }
-    const photo = frame?.photo;
+  }
+
+  if (!isObj(scheme.goalies)) scheme.goalies = {};
+  for (const k of Object.keys(scheme.goalies)) {
+    const g = scheme.goalies[k];
+    if ((k !== 'A' && k !== 'B') || !hasPos(g)) delete scheme.goalies[k];
+    else cleanFields(g, GOALIE_FIELDS);
+  }
+  return true;
+}
+
+function sanitizeFrame(frame) {
+  if (frame.duration != null && !isPos(frame.duration)) delete frame.duration;
+  const cam = frame.camera;
+  if (cam != null) {
+    if (!isObj(cam) || !isNumArray(3)(cam.position) || !isNumArray(4)(cam.quaternion)) delete frame.camera;
+    else cleanFields(cam, CAMERA_FIELDS);
+  }
+  if (!isObj(frame.scheme)) frame.scheme = emptyScheme();
+  migrateGoalieScheme(frame.scheme);
+  return sanitizeScheme(frame.scheme);
+}
+
+// Validates a doc that came from an untrusted source (file import, share
+// link) or storage: structure (see above) and ids, since some ids reach
+// innerHTML (see isValidId). Mutates in place. Returns null when the doc
+// can't be accepted at all.
+function sanitizeDoc(doc) {
+  if (!doc || !Array.isArray(doc.frames) || doc.frames.length > MAX_FRAMES) return null;
+  doc.frames = doc.frames.filter(isObj);
+  if (doc.frames.length === 0) return null;
+  for (const frame of doc.frames) {
+    if (!sanitizeFrame(frame)) return null;
+    const photo = frame.photo;
     if (photo && Array.isArray(photo.players)) {
       photo.players = photo.players.filter((p) => isValidId(p?.id));
       const validIds = new Set(photo.players.map((p) => p.id));
@@ -159,6 +280,7 @@ export function acceptDoc(raw) {
   if (!raw || typeof raw !== 'object') return null;
   if (raw.version !== 1 && raw.version !== DOC_VERSION) return null;
   const migrated = sanitizeDoc(migrate(raw));
+  if (!migrated) return null;
   ensureMeta(migrated);
   installSchemeAccessor(migrated);
   return migrated;
