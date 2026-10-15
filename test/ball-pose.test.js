@@ -6,7 +6,7 @@ const {
   BALL_CARRY_OFFSET, PASS_FLIGHT_S, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS,
   GOAL_Z, DEFAULT_SHOT_SPEED_MPS, SHOT_REST_DEPTH, makeShot, clampAim, padToAim, aimToPad, shotTargetFrame,
   shotHeightAt, shotHeightAlong, shotPathPoints,
-  MAX_PASS_SPEED_MPS, MAX_SHOT_SPEED_MPS, maxSpeedMps, mpsToKmh,
+  MAX_PASS_SPEED_MPS, MAX_SHOT_SPEED_MPS, maxSpeedMps, mpsToKmh, PASS_LANE_HALF_WIDTH_MM,
 } = await import('../web/src/authoring/ball-pose.js');
 const { BALL_RADIUS } = await import('../web/src/constants.js');
 
@@ -279,6 +279,46 @@ test('lane check is time-aware: an opponent who has left the lane before the bal
   fa.players.d4 = pl('d4', 2, 0, 12500);      // on the lane at t=0 ...
   fb.players.d4 = pl('d4', 2, 6000, 12500);   // ... and far away by the time the ball flies
   assert.deepEqual(passPlan(fa, fb, DUR).blockedBy, []);
+});
+
+// S-BACK-029 M1: the lane check sampled the ball at 16 points with a 400 mm
+// radius. Past ~12.8 m the gap between samples exceeds the 800 mm lane, so
+// a defender standing on the lane between two samples was reported clear.
+const longPass = (defender) => {
+  const p7 = pl('p7', 1, 0, 0), p9 = pl('p9', 1, 0, 20000);
+  return [
+    frame({ p7, p9, d4: defender }, { x: -1, z: -1, carrier: 'p7' }),
+    frame({ p7, p9, d4: defender }, { x: -1, z: -1, carrier: 'p9' }),
+  ];
+};
+const LONG_DUR = 4000; // 20 m at 15 m/s = 1333 ms, so the pass is not late
+
+test('lane check: a static defender between two samples of a 20 m pass blocks it', () => {
+  // The ball flies from z=250 to z=20250; s = 1.5/16 falls between samples.
+  const z = 250 + 20000 * (1.5 / 16);
+  const plan = passPlan(...longPass(pl('d4', 2, 0, z)), LONG_DUR);
+  assert.equal(plan.late, false);
+  assert.deepEqual(plan.blockedBy, ['d4']);
+});
+
+test('lane check: a defender just outside the lane width stays clear on a long pass', () => {
+  const z = 250 + 20000 * (1.5 / 16);
+  assert.deepEqual(passPlan(...longPass(pl('d4', 2, PASS_LANE_HALF_WIDTH_MM + 50, z)), LONG_DUR).blockedBy, []);
+});
+
+test('lane check: a defender crossing the lane between samples while the ball passes blocks it', () => {
+  // Runs across the lane at 1.5 m/s and reaches x = 0 exactly when the ball
+  // does, at s = 8.5/16 of the flight (between two samples).
+  const p7 = pl('p7', 1, 0, 0), p9 = pl('p9', 1, 0, 20000);
+  const fa = frame({ p7, p9, d4: pl('d4', 2, 0, 0) }, { x: -1, z: -1, carrier: 'p7' });
+  const fb = frame({ p7, p9, d4: pl('d4', 2, 0, 0) }, { x: -1, z: -1, carrier: 'p9' });
+  const plan0 = passPlan(fa, fb, LONG_DUR);
+  const s = 8.5 / 16;
+  const tCross = plan0.releaseT + (plan0.arriveT - plan0.releaseT) * s;
+  // Straight run (no bezier handles): x(t) = -6000 tCross + 6000 t, so x(tCross) = 0.
+  Object.assign(fa.players.d4, { x: -6000 * tCross, z: plan0.from.z + (plan0.to.z - plan0.from.z) * s });
+  Object.assign(fb.players.d4, { x: 6000 * (1 - tCross), z: fa.players.d4.z });
+  assert.deepEqual(passPlan(fa, fb, LONG_DUR).blockedBy, ['d4']);
 });
 
 test('nearestReleaseT: projects a floor point onto the passer run', () => {
