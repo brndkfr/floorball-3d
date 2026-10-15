@@ -18,6 +18,7 @@ import { state } from '../state.js';
 import { scene } from '../scene.js';
 import { pointerToWorld } from '../selection.js';
 import { buildShapeObject, addShape, rebuildZonePoints } from './shapes.js';
+import { disposeObject } from '../dispose.js';
 
 const ZONE_CLOSE_TOLERANCE = 500;   // mm - click within this of point 0 closes the zone
 const PREVIEW_Y = 8;                // above SHAPE_Y so preview never z-fights with committed shapes
@@ -33,9 +34,7 @@ let textInputEl = null;
 function clearPreview() {
   if (previewObj) {
     scene.remove(previewObj);
-    previewObj.traverse?.((n) => { n.geometry?.dispose?.(); n.material?.dispose?.(); });
-    previewObj.geometry?.dispose?.();
-    previewObj.material?.dispose?.();
+    disposeObject(previewObj);
     previewObj = null;
   }
 }

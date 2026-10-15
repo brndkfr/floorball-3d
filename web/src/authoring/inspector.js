@@ -15,6 +15,7 @@ import { ballDataFor, updateBall, BALL_DEFAULT_COLOR } from './balls.js';
 import { goalDataFor, updateGoal, fixedGoalLetterOf, fixedGoalDataFor, updateFixedGoal, GOAL_LABEL_DEFAULT_COLOR, GOAL_LABEL_DEFAULT_SIZE, GOAL_LABEL_MIN_SIZE, GOAL_LABEL_MAX_SIZE } from './goals.js';
 import { arrowRoleColor } from '../tokens.js';
 import { ensureDoc } from './doc.js';
+import { coalesceToFrame } from './coalesce.js';
 import { getBallCarrier, setBallCarrier, promoteExtraBall, getBallColor, setBallColor, setPassTiming, shootAt, setShotAim } from './actors.js';
 import { passTargets, passStatus } from './choreo-pass.js';
 import { currentPass, shotVerdictFor } from './pass-overlay.js';
@@ -805,9 +806,8 @@ function renderShape(shape) {
     input.min = '20'; input.max = '240'; input.step = '10';
     input.value = String(shape.width ?? 80);
     input.style.cssText = 'flex:1;';
-    input.addEventListener('input', () => {
-      updateShape(shape.id, { width: parseInt(input.value, 10) });
-    });
+    const setWidth = coalesceToFrame((v) => updateShape(shape.id, { width: v }));
+    input.addEventListener('input', () => setWidth(parseInt(input.value, 10)));
     row.appendChild(input);
     body.appendChild(row);
 
@@ -903,9 +903,9 @@ function renderShape(shape) {
     input.min = '0.05'; input.max = '0.8'; input.step = '0.05';
     input.value = String(shape.opacity ?? 0.3);
     input.style.cssText = 'flex:1;';
-    input.addEventListener('input', () => {
-      updateShape(shape.id, { opacity: parseFloat(input.value) });
-    });
+    // One rebuild per frame while dragging, not one per input event (S-BACK-029 H3).
+    const setOpacity = coalesceToFrame((v) => updateShape(shape.id, { opacity: v }));
+    input.addEventListener('input', () => setOpacity(parseFloat(input.value)));
     row.appendChild(input);
     body.appendChild(row);
 
