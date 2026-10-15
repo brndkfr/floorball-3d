@@ -1,0 +1,20 @@
+# S-BACK-029 M7: keep the SHA-pinned actions and the dev dependencies
+# current. Dependabot updates both the SHA and its "# vX.Y.Z" comment.
+# Runtime libraries are vendored under web/lib/ and not covered here
+# (S-BACK-029 L5).
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      dev-dependencies:
+        patterns: ["*"]

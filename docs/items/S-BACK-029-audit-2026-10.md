@@ -81,7 +81,7 @@ Pages pipeline (no server, no multiplayer). XSS hygiene was rated good
   and IndexedDB (and all `brndkfr.github.io/*` project pages share that
   origin). Fix: previews on a separate origin. Until then: label PRs
   `preview` only when needed.
-- **M7** [open] Actions pinned to mutable major tags, including
+- **M7** [shipped 2026-10-16] Actions pinned to mutable major tags, including
   third-party `pnpm/action-setup` in the job with `pages: write` and
   `id-token: write`. Pin to full commit SHAs; add `dependabot.yml` for
   `github-actions` and `npm`.
@@ -118,7 +118,7 @@ Pages pipeline (no server, no multiplayer). XSS hygiene was rated good
   manifest (three r160, ONNX Runtime Web 1.19.2, opencv.js unrecorded,
   mp4-muxer). Add `web/lib/VENDORED.md` with SHA-256 checked in CI;
   plan a three.js upgrade.
-- **L6** [open] No `dependabot.yml`; CodeQL default suite (use
+- **L6** [shipped 2026-10-16, `web/lib/` ignored as vendored] No `dependabot.yml`; CodeQL default suite (use
   `security-extended`) with a stale ignore path (`web/lib/webawesome`);
   CI checkout keeps the read-only token (`persist-credentials: false`).
 - **L7** [open] `photo-overlay/detect.js` frees OpenCV Mats manually
@@ -140,7 +140,7 @@ Pages pipeline (no server, no multiplayer). XSS hygiene was rated good
 ## Order for what is left
 
 1. Privacy: M9, M6 (M6 needs a hosting decision).
-2. Pipeline: M7 + L6, L5.
+2. Pipeline: L5 (M7, L6 shipped).
 3. C1 (coverage staleness).
 4. Robustness: M8 + L9 (export), L7, L10, L8, EXIF.
 5. Frame time: M4, M2, M3, L2 (with S-BACK-027).
