@@ -15,9 +15,9 @@ surface is share links, imported JSON, uploaded photos and the CI /
 Pages pipeline (no server, no multiplayer). XSS hygiene was rated good
 (user strings via `textContent`, ids regex-validated, no `eval`).
 
-## High - fix now, one PR each, before B-BACK-011
+## High - shipped 2026-10-15
 
-- **H1** [open] **Preview artifact poisoning.** `pages.yml` resolves a
+- **H1** [shipped, PR #13] **Preview artifact poisoning.** `pages.yml` resolves a
   preview's `site` artifact with `gh run list --branch "$branch"`, which
   matches the head branch name only. A fork PR with a colliding branch
   name can get its build published at `/preview/<slug>/` on the
@@ -25,7 +25,7 @@ Pages pipeline (no server, no multiplayer). XSS hygiene was rated good
   the run by `--commit "$sha"`, and check the run's
   `head_repository.full_name` equals `$GITHUB_REPOSITORY`. Pin in
   `test/deploy-workflow.test.js`.
-- **H2** [open] **Poisoned share link bricks the app.**
+- **H2** [shipped, PR #14] **Poisoned share link bricks the app.**
   `sanitizeDoc()` (`doc.js`) checks only id strings; types, array
   shapes, enums and string lengths are trusted. A crafted `#doc=` link
   passes `acceptDoc()`, is saved as the current project, then throws in
@@ -39,7 +39,7 @@ Pages pipeline (no server, no multiplayer). XSS hygiene was rated good
   array), (c) a boot-time try around the rebuilds that sets the bad
   project aside and starts a fresh one. Unit tests for (a) and (b), an
   e2e that a poisoned link still boots for (c).
-- **H3** [open] **CanvasTexture leak on label meshes.**
+- **H3** [shipped, PR #15] **CanvasTexture leak on label meshes.**
   `disposeObject()` (`shapes.js`) frees `material.map` only for
   sprites; arrow and zone labels are meshes with a CanvasTexture.
   Leaks on every `updateShape()`, undo / redo, frame switch and each
@@ -47,7 +47,7 @@ Pages pipeline (no server, no multiplayer). XSS hygiene was rated good
   frees maps on any material (reuse in `draw-tool.js` `clearPreview()`
   and `selection.js`), and coalesce slider input to one update per
   animation frame.
-- **H4** [open] **Ungated per-frame goalie raycast.** With trajectories
+- **H4** [shipped, PR #17] **Ungated per-frame goalie raycast.** With trajectories
   on, `updateTrajectory()` runs `shotVerdict()` every frame: a recursive
   raycast against the ~10k-triangle goalie, plus a new Vector3, a
   `clone()` and a hit array per call. Fix: dirty-check the inputs like
@@ -56,7 +56,7 @@ Pages pipeline (no server, no multiplayer). XSS hygiene was rated good
 
 ## Medium
 
-- **M1** [open] **Pass-lane tunnelling** (`ball-pose.js`). 16 point
+- **M1** [shipped, PR #18] **Pass-lane tunnelling** (`ball-pose.js`). 16 point
   samples with a 400 mm radius miss a defender standing on the lane once
   the pass is longer than ~12.8 m; Mode B's `passOptions()` uses an
   exact perpendicular distance, so the modes can disagree. Fix: swept
@@ -94,6 +94,14 @@ Pages pipeline (no server, no multiplayer). XSS hygiene was rated good
   minors, readable by any page on the origin (see M6). Add a visible
   "Forget photo" control (`clearCachedPhoto()` exists) and an expiry.
 
+- **C1** [open] **Coverage can stay one move stale** (found while fixing
+  H4, not in the audit). `coverage.js` skips its 221-ray pass when no
+  input changed, but raycasts the goalie's cached `matrixWorld`, which
+  is only refreshed on render. If the frame that moves the goalie is
+  the one that computes, the result uses the old pose and then sticks.
+  Fix as in `trajectory.js`: `updateMatrixWorld(true)` on goal and
+  goalie before the pass; e2e as in `trajectory.spec.js`.
+
 ## Low
 
 - **L1** [open] `history.apply()` deselects via `import().then()` after
@@ -129,13 +137,14 @@ Pages pipeline (no server, no multiplayer). XSS hygiene was rated good
   (`default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; img-src
   'self' blob: data:`), verified against the ONNX and OpenCV loaders.
 
-## Order after the highs
+## Order for what is left
 
-1. M1 (with B-BACK-011).
-2. Privacy + pipeline: M6 / M9, M7 + L6, L5.
-3. Robustness: M8 + L9 (export), L7, L10, L8, EXIF.
-4. Frame time: M4, M2, M3, L2 (with S-BACK-027).
-5. Hardening: CSP, L1.
+1. Privacy: M9, M6 (M6 needs a hosting decision).
+2. Pipeline: M7 + L6, L5.
+3. C1 (coverage staleness).
+4. Robustness: M8 + L9 (export), L7, L10, L8, EXIF.
+5. Frame time: M4, M2, M3, L2 (with S-BACK-027).
+6. Hardening: CSP, L1.
 
 ## Not reviewed by the audit
 
