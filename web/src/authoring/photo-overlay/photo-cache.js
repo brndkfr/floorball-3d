@@ -7,6 +7,23 @@ const DB_NAME = 'floorball-photo-cache';
 const STORE = 'photos';
 const KEY = 'last';
 
+// S-BACK-029 M9: a match photo of a youth team is personal data of minors,
+// and IndexedDB is readable by any page on the same origin. Keep it only as
+// long as the re-pick convenience is worth it (estimate: one training /
+// match week), then drop it. Records without `savedAt` predate this and are
+// treated as expired.
+export const PHOTO_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function makeCacheRecord(file, now) {
+  return { blob: file, name: file.name, size: file.size, lastModified: file.lastModified, savedAt: now };
+}
+
+export function isCacheRecordExpired(record, now) {
+  const at = record?.savedAt;
+  if (typeof at !== 'number' || !Number.isFinite(at)) return true;
+  return at > now || now - at > PHOTO_CACHE_MAX_AGE_MS;
+}
+
 function openDb() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 1);
@@ -23,7 +40,7 @@ export async function saveCachedPhoto(file) {
     const db = await openDb();
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, 'readwrite');
-      tx.objectStore(STORE).put({ blob: file, name: file.name, size: file.size, lastModified: file.lastModified }, KEY);
+      tx.objectStore(STORE).put(makeCacheRecord(file, Date.now()), KEY);
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
     });
@@ -32,16 +49,22 @@ export async function saveCachedPhoto(file) {
   }
 }
 
-// Returns { blob, name, size, lastModified } or null.
+// Returns { blob, name, size, lastModified, savedAt } or null. An expired
+// record is deleted, not returned.
 export async function loadCachedPhoto() {
   try {
     const db = await openDb();
-    return await new Promise((resolve, reject) => {
+    const record = await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, 'readonly');
       const req = tx.objectStore(STORE).get(KEY);
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
     });
+    if (record && isCacheRecordExpired(record, Date.now())) {
+      await clearCachedPhoto();
+      return null;
+    }
+    return record;
   } catch (e) {
     console.warn('loadCachedPhoto: could not read IndexedDB', e);
     return null;
