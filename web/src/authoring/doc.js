@@ -70,7 +70,10 @@ const isPt = (p) => isObj(p) && isNum(p.x) && isNum(p.z);
 const isNumArray = (n) => (a) => Array.isArray(a) && a.length === n && a.every(isNum);
 const hasPos = (e) => isObj(e) && isNum(e.x) && isNum(e.z);
 
-const PLAYER_FIELDS = { angle: isNum, label: isStr, role: isStr, number: (v) => isStr(v) || isNum(v) };
+const PLAYER_FIELDS = {
+  angle: isNum, label: isStr, role: isStr, number: (v) => isStr(v) || isNum(v),
+  hand: (v) => v === 'L' || v === 'R', // stick side, A-BACK-034
+};
 const SHAPE_FIELDS = {
   color: isStr, label: isStr, text: isStr, kind: isStr, shaftStyle: isStr, headStyle: isStr,
   layer: (v) => v === 'low' || v === 'mid' || v === 'high',

@@ -42,8 +42,7 @@ Spec as drafted (moved unchanged from the old plan):
     and away figures have different jersey colours, the back-number
     texture follows a renumber.
 - **[A-BACK-034]** [in-progress] **Floorball stick.**
-  Own generator `generators/generate_stick.py` like ball and goal,
-  attached to the right-hand bone at runtime.
+  Own generator `generators/generate_stick.py` like ball and goal.
   - Done (PR #10, asset only - the app does not load it yet):
     - [generate_stick.py](../../generators/generate_stick.py) writes
       `assets/floorball_stick.obj/.mtl`. Checked against the SPCR 011
@@ -64,13 +63,36 @@ Spec as drafted (moved unchanged from the old plan):
       runtime colours (clones shared template materials).
     - Tests: `test/stick-asset.test.js` (IFF dimensions, perforation,
       closed rim), `test/stick-colors.test.js`.
+  - Done (stick in the hands, decided 2026-10-16: left-handed default
+    with a per-player toggle, two hands at all speeds):
+    - Not parented to the hand bone: the gait clips swing the arms, so
+      the stick would fly around. The stick is placed relative to the
+      figure (blade on the floor, front and stick side) and both arms
+      are bent onto it each pose ([figure-stick.js](../../web/src/authoring/figure-stick.js),
+      math in [stick-pose.js](../../web/src/authoring/stick-pose.js)).
+    - The clips are upright (hands hang at ~0.96 m, out of reach of a
+      floor-planted stick), so a ready stance is layered on top: pelvis
+      down 240 mm with the legs re-bent to keep the feet planted, spine
+      lean 40 deg, shoulders turned 20 deg toward the stick. All
+      look-based estimates.
+    - The idle clip leans asymmetrically, so the bottom hand slides up
+      the shaft when its planned grip is out of reach (min 100 mm hand
+      spacing). Right-handed standing ends at ~130-160 mm, the rest at
+      the planned 220 mm.
+    - Handedness: `player.hand` ('R' stored, 'L' default not stored),
+      set on every frame; Stick L / R in the chip popover; right-handed
+      players get the stick mirrored.
+    - Loaded with the figures only (not at boot).
+    - Tests: `test/stick-pose.test.js`, `test-e2e/player-stick.spec.js`
+      (hands on the shaft, blade on the floor, L and R, standing / jog /
+      sprint, toggle, lazy load).
   - Open:
-    - Load once, clone per figure, parent to the right-hand bone
-      (grip pose / offset to be tuned against the figure).
+    - Tuning: running poses lean far (clip lean + stance lean); the top
+      arm crosses the chest for right-handed players. A real reference
+      stance (photos) would help.
+    - Hand bones are not rotated to wrap the shaft (fingers point along
+      the forearm).
     - Default colours per team from `tokens.js`; optionally per-player
-      colours (then it is doc data: default it in `ensureDoc()` /
-      `acceptDoc()`).
-    - Left / right handedness: mirror the blade concavity.
-    - Asset budget: the OBJ is ~510 KB - recheck `check:size` with the
-      figure assets and coarsen the mesh if needed.
-    - e2e: stick present and parented to the hand bone.
+      colours (then it is doc data).
+    - Asset budget: OBJ ~520 KB, loaded with the figures; recheck when
+      S-BACK-026 converts assets to GLB.
