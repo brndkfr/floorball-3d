@@ -88,6 +88,9 @@ up here first.
   [items/A-BACK-028-030](items/A-BACK-028-030-arena-branding.md).
 - A-BACK-033 / 034 jersey, number, stick,
   [items/A-BACK-033-034](items/A-BACK-033-034-player-kit.md).
+- A-BACK-035 to 037 and the other coaching features (frame notes, drill
+  sheet, templates, drill notation shapes, player view, ...),
+  [items/A-BACK-035](items/A-BACK-035-coaching-features.md).
 - S-BACK-021 Broadcast port,
   [items/S-BACK-021](items/S-BACK-021-broadcast-port.md).
 - B-BACK-010 goal auto-detect, [items/B-BACK-010](items/B-BACK-010-goal-detect.md).
@@ -114,6 +117,14 @@ own file under [items/](items/).
 - **[A-BACK-034]** [in-progress] Floorball stick. Figures hold it in
   both hands in a ready stance, per-player Stick L / R (2026-10-16);
   open: pose tuning, hand wrap, team colours. Same spec file.
+- **[A-BACK-035]** [open] Frame notes: a caption per frame, shown in
+  playback and export.
+  [Spec](items/A-BACK-035-coaching-features.md), which also lists the
+  unnumbered coaching ideas and missing drill-notation shapes.
+- **[A-BACK-036]** [open] [blocked-by: A-BACK-035] Printable drill
+  sheet: one-page storyboard of numbered frames with notes. Same file.
+- **[A-BACK-037]** [open] Formation and set-piece templates (2-2-1,
+  box, 5v4, 4v5, face-offs, breakouts). Same file.
 
 ### Mode B - Analyze
 
@@ -213,7 +224,10 @@ coupling visible.
   scope.
 - **[M-Q-003]** [open] Sharing: the Library is local (localStorage);
   share links URL-encode a doc (32 KB limit). Is a shareable landing
-  surface needed, and does it affect S-BACK-025?
+  surface needed, and does it affect S-BACK-025? The read-only player
+  view / quiz mode and library export / import in
+  [items/A-BACK-035](items/A-BACK-035-coaching-features.md) depend on
+  the answer.
 - **[M-Q-004]** [open] Team assignment in Mode B beyond jersey-colour
   k-means + "Flip teams": per-chip override or manual paint?
 - **[A-Q-001]** [open] 3D figures on by default once they look right, or
@@ -223,6 +237,9 @@ coupling visible.
   current goalie mesh shape before swapping it.
 - **[A-Q-003]** [open] `goalie_02.obj` was made with Meshy AI. If from the
   free plan it may be CC BY; check its terms and credit it in README.
+- **[A-Q-004]** [open] Tablet authoring: coaches prepare on a laptop or
+  tablet and use a tablet at the rink, but the UX principle is "desktop
+  first". Should touch authoring move ahead of desktop polish?
 
 ---
 
@@ -273,4 +290,6 @@ system part of §2 also lives in
 - **[S-DROP-001]** 2D tactical-board.com clone. Reference only:
   [reference/floorball-board-clone-plan.md](reference/floorball-board-clone-plan.md).
 - **[S-DROP-002]** Backend, accounts, cloud sync. Static site only.
+  Exporting / importing the library as a file is fine; live sync
+  between coaches is not.
 - **[B-DROP-001]** Superseded by B-PHASE-005 (auto-pose facing shipped).
