@@ -3,7 +3,7 @@ import { RINK_L, RINK_W, HALF_W } from './constants.js';
 import { state } from './state.js';
 import { markRenderDirty } from './render-dirty.js';
 import { pickRendererQuality } from './renderer-quality.js';
-import { stageFrustum } from './ui/stage-frustum.js';
+import { stageFrustum, readShellInsets } from './ui/stage-frustum.js';
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1b1b1f);
@@ -51,11 +51,6 @@ let topDownRotationSteps = 1;
 
 // Shell insets (rail, top bar, docked right panel, phone tab bar) as set in
 // app.css; the 2D view fits the rink into what they leave free.
-function shellInsets() {
-  const css = getComputedStyle(document.documentElement);
-  const px = (name) => parseFloat(css.getPropertyValue(name)) || 0;
-  return { left: px('--shell-rail'), top: px('--shell-topbar'), right: px('--right-panel'), bottom: px('--tabbar') };
-}
 
 export function fitTopDownFrustum() {
   // Rink is 40x20 m long-side along Z. Odd rotations put the long side on
@@ -63,7 +58,7 @@ export function fitTopDownFrustum() {
   const swap = (topDownRotationSteps % 2) === 1;
   const marginLong = 21500, marginShort = 11000;
   const half = swap ? { x: marginLong, y: marginShort } : { x: marginShort, y: marginLong };
-  const f = stageFrustum({ vw: window.innerWidth, vh: window.innerHeight, insets: shellInsets(), half });
+  const f = stageFrustum({ vw: window.innerWidth, vh: window.innerHeight, insets: readShellInsets(), half });
   topDownCamera.left = f.left;
   topDownCamera.right = f.right;
   topDownCamera.top = f.top;

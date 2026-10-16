@@ -101,3 +101,31 @@ test('2D view centres the whole rink in the stage, clear of the docked panel', a
     expect(y).toBeLessThanOrEqual(stage.bottom);
   }
 });
+
+// In the 3D view the canvas runs under the docked panel, so a chip near the
+// right edge used to put its popover under the panel, out of reach.
+test('the chip popover stays clear of the docked panel in the 3D view', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/', { waitUntil: 'load' });
+  await waitForAssets(page);
+  await page.evaluate(async () => {
+    const { ensureDoc } = await import('/src/authoring/doc.js');
+    const chips = await import('/src/authoring/chips.js');
+    const td = await import('/src/authoring/topdown-camera.js');
+    ensureDoc().scheme.players = {};
+    chips.rebuildFromDoc();
+    chips.spawnChip({ team: 1, x: 0, z: 10000, number: 7, pushHistory: false });
+    if (td.isTopDown()) td.exitTopDown();
+    const { state } = await import('/src/state.js');
+    (await import('/src/selection.js')).selectObject(state.chipGroups[0]);
+  });
+  const chevron = page.locator('#chipPopover .pop-chevron');
+  await expect(chevron).toBeVisible();
+  const { right, panelLeft } = await page.evaluate(() => ({
+    right: document.getElementById('chipPopover').getBoundingClientRect().right,
+    panelLeft: document.getElementById('rightPanel').getBoundingClientRect().left,
+  }));
+  expect(right).toBeLessThanOrEqual(panelLeft);
+  await chevron.click();
+  await expect(page.locator('#chipPopover')).not.toHaveClass(/collapsed/);
+});

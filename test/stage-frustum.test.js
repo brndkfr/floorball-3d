@@ -4,7 +4,7 @@
 // window, so the docked panel covered the right end of the rink.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { stageFrustum } from '../web/src/ui/stage-frustum.js';
+import { stageFrustum, clampToStage } from '../web/src/ui/stage-frustum.js';
 
 const HALF = { x: 21500, y: 11000 };   // rink half-extent on screen x / y, with margin
 
@@ -51,4 +51,36 @@ test('a stage squeezed to nothing falls back to the whole window', () => {
   const f = stageFrustum({ vw: 300, vh: 200, insets: { left: 200, right: 200 }, half: HALF });
   assert.ok(Number.isFinite(f.left) && f.right > f.left && f.top > f.bottom);
   assert.ok(Math.abs(f.left + f.right) < 1e-6);
+});
+
+// The chip popover hangs above its chip (anchor = bottom centre of the card).
+// It is clamped into the stage too: in the 3D view the canvas runs under the
+// docked right panel, so a chip near the right edge put the popover under
+// the panel, where nothing in it could be clicked.
+const DESKTOP = { left: 64, top: 52, right: 320, bottom: 0 };
+
+test('clampToStage keeps a popover clear of the docked right panel', () => {
+  const p = clampToStage({ x: 960, y: 190, cardW: 98, cardH: 24, vw: 1280, vh: 720, insets: DESKTOP });
+  assert.ok(p.x + 98 / 2 <= 1280 - 320, `card right edge ${p.x + 49} must stay left of the panel at 960`);
+  assert.equal(p.y, 190);
+});
+
+test('clampToStage keeps a popover clear of the rail and the top bar', () => {
+  const p = clampToStage({ x: 10, y: 5, cardW: 120, cardH: 80, vw: 1280, vh: 720, insets: DESKTOP });
+  assert.ok(p.x - 60 >= 64, 'card left edge must stay right of the rail');
+  assert.ok(p.y - 80 >= 52, 'card top must stay below the top bar');
+});
+
+test('clampToStage leaves a popover inside the stage where it is', () => {
+  assert.deepEqual(clampToStage({ x: 500, y: 300, cardW: 120, cardH: 80, vw: 1280, vh: 720, insets: DESKTOP }), { x: 500, y: 300 });
+});
+
+test('clampToStage keeps the phone tab bar clear', () => {
+  const p = clampToStage({ x: 200, y: 840, cardW: 120, cardH: 80, vw: 390, vh: 844, insets: { left: 0, top: 52, right: 0, bottom: 56 } });
+  assert.ok(p.y <= 844 - 56, 'card bottom must stay above the tab bar');
+});
+
+test('clampToStage falls back to the window when the insets leave no room', () => {
+  const p = clampToStage({ x: 5, y: 5, cardW: 120, cardH: 80, vw: 300, vh: 200, insets: { left: 200, right: 200 } });
+  assert.ok(p.x - 60 >= 0 && p.x + 60 <= 300);
 });
