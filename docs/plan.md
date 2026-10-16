@@ -91,8 +91,6 @@ up here first.
 - A-BACK-035 to 037 and the other coaching features (frame notes, drill
   sheet, templates, drill notation shapes, player view, ...),
   [items/A-BACK-035](items/A-BACK-035-coaching-features.md).
-- S-BACK-021 Broadcast port,
-  [items/S-BACK-021](items/S-BACK-021-broadcast-port.md).
 - B-BACK-010 goal auto-detect, [items/B-BACK-010](items/B-BACK-010-goal-detect.md).
 - B-PHASE-006 video, S-BACK-022 local e2e noise, S-BACK-027 idle CPU,
   S-BACK-028 split oversized modules.
@@ -144,9 +142,6 @@ own file under [items/](items/).
 
 ### Shared / infrastructure
 
-- **[S-BACK-021]** [open] Port surfaces to Broadcast, one per commit.
-  All surfaces ported on draft PR #5 (`broadcast_ux_redesign`); open: a
-  real-device pass. [Spec](items/S-BACK-021-broadcast-port.md).
 - **[S-BACK-022]** [open] Local e2e runs are slow and noisy (2.2 to
   17.5 min for the same 80 tests; headless Chromium stalls before app
   code runs; CI unaffected). Try one change at a time, three timed full
@@ -201,6 +196,10 @@ make cheaper or safer.
     `detect-pose.js`. The threaded wasm build needs COOP / COEP headers,
     which GitHub Pages does not send; check whether detection runs
     single-threaded and whether the non-threaded build is smaller.
+  - Web Awesome (S-BACK-021): `index.html` loads its theme CSS and
+    `src/ui/webawesome.js` (core + icon registry) on every boot, but no
+    `wa-*` component is used yet. Drop both until the first component
+    (likely the photo-vs-overlay `wa-comparison` slider) needs them.
 - **[S-BACK-027]** [open] **Idle CPU.** `animate()` skips the draw call
   when nothing changed (S-BACK-011) but still runs every per-frame tick,
   allocates and joins strings every frame, forever. Run the loop only
@@ -281,7 +280,7 @@ Code comments cite sections of the old plan (`docs/plan.md §4.3`,
 system, §3 Mode A, §4 Mode B (4.3 target UX, 4.4 `frame.photo` data
 model), §9 deferred, §10 robustness backlog, §11 questions. The design
 system part of §2 also lives in
-[items/S-BACK-021](items/S-BACK-021-broadcast-port.md).
+[archive/S-BACK-021](archive/S-BACK-021-broadcast-port.md).
 
 ---
 

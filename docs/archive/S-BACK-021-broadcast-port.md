@@ -1,11 +1,12 @@
 # S-BACK-021 - Broadcast redesign port
 
-Status: open, parked until the M-Q-001 ranking says the redesign helps the
-first demo. Decisions behind it: [decisions/001](../decisions/001-web-awesome.md)
+Status: shipped with PR #5 (branch `broadcast_ux_redesign`), archived
+2026-10-16. Follow-ups are listed under "Still open" at the end and in
+[plan.md](../plan.md). Decisions behind it: [decisions/001](../decisions/001-web-awesome.md)
 (Web Awesome) and [decisions/002](../decisions/002-broadcast-direction.md)
 (Broadcast direction). Shipped groundwork: S-BACK-019 (tokens + theme
 mapping, no visible change) and S-BACK-020 (design canvas gap-fill), see
-[archive/plan-2026-10.md](../archive/plan-2026-10.md).
+[archive/plan-2026-10.md](plan-2026-10.md).
 
 ## Step 0 (deferred from S-BACK-019)
 

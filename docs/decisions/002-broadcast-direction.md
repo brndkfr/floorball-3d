@@ -1,7 +1,7 @@
 # 002 - Broadcast visual direction
 
-Date: 2026-09. Status: accepted; tokens shipped (S-BACK-019), port open
-(S-BACK-021).
+Date: 2026-09. Status: accepted; tokens shipped (S-BACK-019), port
+shipped (S-BACK-021, PR #5).
 
 ## Context
 
