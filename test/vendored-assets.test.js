@@ -37,8 +37,10 @@ test('the Web Awesome subset holds every component the app loads', () => {
   }
 });
 
-test('the default icon library resolves locally, never to fontawesome.com', () => {
+test('the default icon library resolves locally, never to a remote host (e.g. fontawesome.com)', () => {
   const loader = readFileSync(web('src/ui/webawesome.js'), 'utf8');
   assert.match(loader, /registerIconLibrary\(\s*'default'/);
-  assert.ok(!loader.includes('fontawesome.com'), 'web/src/ui/webawesome.js must not reference fontawesome.com');
+  // Any absolute or protocol-relative URL would be a request to another host.
+  const remote = loader.match(/(?:\bhttps?:)?\/\/[\w-]+(?:\.[\w-]+)+/gi) || [];
+  assert.deepEqual(remote, [], 'web/src/ui/webawesome.js must only load local files');
 });
