@@ -1,9 +1,10 @@
 # CodeQL config for .github/workflows/codeql.yml.
 #
-# web/lib/webawesome/ is third-party code copied in from the Web Awesome
-# package (docs/plan.md section 2, S-BACK-021). Its predecessor Shoelace
-# tripped js/bad-tag-filter inside its own source (S-BACK-013); alerts in
-# vendored code are not ours to fix, so it is not analysed. Only add paths
-# here for vendored third-party code, never for our own source.
+# web/lib/ holds vendored third-party code only (three.js, OpenCV.js,
+# ONNX Runtime Web, mp4-muxer, the YOLO models). Alerts in vendored code
+# are not ours to fix (S-BACK-013: Shoelace, since removed, tripped
+# js/bad-tag-filter in its own source), so it is not analysed. Only add
+# paths here for vendored third-party code, never for our own source.
+# test/deploy-workflow.test.js fails on a path that no longer exists.
 paths-ignore:
-  - web/lib/webawesome
+  - web/lib

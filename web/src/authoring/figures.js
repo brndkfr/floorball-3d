@@ -32,8 +32,11 @@ import { figureModelScale, figureShouldShow, figureSpriteLift } from './figure-m
 import { GAIT_CLIPS, gaitWeights, clipPhase, chipMotionAt, facingYaw } from './figure-gait.js';
 import { getFrames } from './frames.js';
 import { addPoseListener } from './playback.js';
+import { stickHand } from './stick-pose.js';
+import { applyStanceAndStick, resetStanceBones } from './figure-stick.js';
 
 const ASSET = 'player_figure.glb';
+const STICK_ASSET = 'floorball_stick';
 const BODY_MATERIAL = /^MI_Superhero_/;
 // Shorts: the team colour darkened, so shirt and shorts read as one kit
 // but stay distinct. Factor is a look-based estimate.
@@ -45,6 +48,7 @@ let prototype = null;
 let loading = null;
 let SkeletonUtils = null;
 let clips = null; // gait -> THREE.AnimationClip
+let stickPrototype = null; // A-BACK-034, loaded with the figure
 const teamMaterials = new Map(); // team -> body material with kit tint
 
 export function figuresLoaded() {
@@ -64,10 +68,16 @@ function loadFigure() {
     import('three/addons/loaders/GLTFLoader.js'),
     import('three/addons/libs/meshopt_decoder.module.js'),
     import('three/addons/utils/SkeletonUtils.js'),
-  ]).then(([{ GLTFLoader }, { MeshoptDecoder }, skel]) => {
+    import('three/addons/loaders/MTLLoader.js'),
+    import('three/addons/loaders/OBJLoader.js'),
+  ]).then(async ([{ GLTFLoader }, { MeshoptDecoder }, skel, { MTLLoader }, { OBJLoader }]) => {
     SkeletonUtils = skel;
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
+    const materials = await new MTLLoader().loadAsync(`assets/${STICK_ASSET}.mtl${CACHE_BUST}`);
+    materials.preload();
+    stickPrototype = await new OBJLoader().setMaterials(materials).loadAsync(`assets/${STICK_ASSET}.obj${CACHE_BUST}`);
+    stickPrototype.userData.isStick = true;
     return loader.loadAsync('assets/' + ASSET + CACHE_BUST);
   }).then((gltf) => {
     clips = {};
@@ -136,6 +146,9 @@ function makeFigure(team) {
     actions[gait].play();
   }
   fig.userData.anim = { mixer, actions, key: null };
+  // Shares geometry and materials with the prototype; nothing to dispose.
+  fig.userData.stick = stickPrototype.clone();
+  fig.add(fig.userData.stick);
   return fig;
 }
 
@@ -197,11 +210,12 @@ function poseFigure(group) {
   if (!anim) return false;
   const active = playbackActive();
   const elapsed = active ? state.playback.elapsed : 0;
-  const key = `${elapsed}|${group.rotation.y}`;
+  const id = group.userData.chip?.id;
+  const hand = stickHand(chipDataFor(group));
+  const key = `${elapsed}|${group.rotation.y}|${hand}`;
   if (anim.key === key) return false;
   anim.key = key;
 
-  const id = group.userData.chip?.id;
   const motion = active ? chipMotionAt(getFrames(), id, elapsed) : chipMotionAt(null);
   const weights = gaitWeights(motion.speedMps);
   for (const [gait, action] of Object.entries(anim.actions)) {
@@ -209,9 +223,12 @@ function poseFigure(group) {
     action.time = c.strideM ? clipPhase(motion.distanceM, c) : (elapsed / 1000) % c.durationS;
     action.setEffectiveWeight(weights[gait]);
   }
+  resetStanceBones(fig);
   anim.mixer.update(0);
   // Figure is a child of the chip group, so its yaw is relative to the chip.
   fig.rotation.y = facingYaw(group.rotation.y, motion.heading, motion.speedMps) - group.rotation.y;
+  // Ready stance + stick on top of the clip pose (A-BACK-034).
+  applyStanceAndStick(fig, fig.userData.stick, hand);
   return true;
 }
 

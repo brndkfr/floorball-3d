@@ -5,6 +5,7 @@ import { scene } from './scene.js';
 import { selectObject } from './selection.js';
 import { shotVerdict, shotLineXAtZ } from './insights.js';
 import { VECTOR_TRAJECTORY, SHOT_LINE_TOKENS } from './tokens.js';
+import { createTrajectoryGate } from './trajectory-gate.js';
 
 // --- ball-to-goal trajectory lines ---
 const trajectoryCheckbox = document.getElementById('trajectoryCheckbox');
@@ -86,14 +87,34 @@ function setGoalieOutlineVisible(visible, color, letter) {
   }
 }
 
+// S-BACK-029 H4: shotVerdict() raycasts the goalie mesh (~10k triangles), so
+// everything below runs only when an input changed, not every frame.
+const trajectoryGate = createTrajectoryGate();
+
+// Returns true when the lines changed this frame (main.js renders then).
 export function updateTrajectory(ballCenter) {
   if (!trajectoryCheckbox.checked || !ballCenter || !state.targetGoal) {
+    const wasVisible = trajectoryLines.visible;
     trajectoryLines.visible = false;
     shootingLine.visible = false;
     setGoalieOutlineVisible(false, null, 'A');
     setGoalieOutlineVisible(false, null, 'B');
-    return;
+    trajectoryGate.reset(); // re-showing must redo the outline / colour work
+    return wasVisible;
   }
+  const changed = trajectoryGate.changed({
+    ball: ballCenter,
+    goal: state.targetGoal,
+    goalie: goalieForGoal(state.targetGoal),
+    goalieKey: state.activeGoalieKey,
+    outline: goalieOutlineCheckbox.checked,
+  });
+  if (!changed) return false;
+  // Raycasting and localToWorld read the cached matrixWorld, which is only
+  // refreshed on render. Ungated, a stale frame fixed itself one frame later;
+  // gated, it would stick until the next input change.
+  state.targetGoal.updateMatrixWorld(true);
+  goalieForGoal(state.targetGoal)?.updateMatrixWorld(true);
   const positions = trajectoryGeometry.attributes.position.array;
   let idx = 0;
   for (const corner of GOAL_MOUTH_CORNERS_LOCAL) {
@@ -119,6 +140,7 @@ export function updateTrajectory(ballCenter) {
   const targetGoalie = goalieForGoal(state.targetGoal);
   setGoalieOutlineVisible(showOutline && !!(targetGoalie && targetGoalie.visible), shotColor, targetLetter);
   setGoalieOutlineVisible(false, null, targetLetter === 'A' ? 'B' : 'A');
+  return true;
 }
 
 // Snaps the goalie's lateral (X) position onto the shot line at whatever

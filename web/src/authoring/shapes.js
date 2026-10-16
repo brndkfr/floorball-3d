@@ -17,6 +17,7 @@ import { saveDoc } from './storage.js';
 import { reorderAtSlots } from './reorder.js';
 import { translateShapeCoords } from './shape-coords.js';
 import { shouldFlipFloorLabel } from './label-flip.js';
+import { disposeObject } from '../dispose.js';
 
 const ARROW_DEFAULT_WIDTH = 80;   // mm; shaft full width
 const ARROW_HEAD_LEN_RATIO = 5;   // head_len  = width * this
@@ -716,9 +717,7 @@ export function updateShapeLabel(id, label) {
   const oldLabel = obj.children.find((c) => c.userData[labelFlag]);
   if (oldLabel) {
     obj.remove(oldLabel);
-    oldLabel.geometry?.dispose?.();
-    oldLabel.material?.map?.dispose?.();
-    oldLabel.material?.dispose?.();
+    disposeObject(oldLabel);
   }
   if (next) {
     const color = new THREE.Color(shape.color || '#ffb347');
@@ -765,23 +764,6 @@ export function updateShape(id, patch) {
     import('../selection.js').then((s) => s.selectObject(obj));
   }
   return obj;
-}
-
-function disposeObject(obj) {
-  obj.traverse?.((child) => {
-    if (child.isMesh) {
-      child.geometry?.dispose?.();
-      child.material?.dispose?.();
-    }
-    if (child.isSprite) {
-      child.material?.map?.dispose?.();
-      child.material?.dispose?.();
-    }
-  });
-  if (obj.isSprite) {
-    obj.material?.map?.dispose?.();
-    obj.material?.dispose?.();
-  }
 }
 
 // Batch-translate several shapes by (dx, dz) and rebuild their objects in one

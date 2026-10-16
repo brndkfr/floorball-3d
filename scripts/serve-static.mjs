@@ -30,6 +30,25 @@ const MIME = {
   '.wasm': 'application/wasm',
 };
 
+// Log text with control characters (CR/LF etc.) replaced, so a request
+// can't forge extra log lines (code scanning js/log-injection).
+const logSafe = (v) => String(v).replace(/[\r\n\u0000-\u001f\u007f\u2028\u2029]/g, '?');
+
+// Opens `p` if it is a regular file, else null. Stat goes through the open
+// handle, so what was checked is what gets read (code scanning
+// js/file-system-race: stat() then readFile() on a path is check-then-use).
+async function openFile(p) {
+  let fh;
+  try {
+    fh = await fs.open(p, 'r');
+    if ((await fh.stat()).isFile()) return fh;
+  } catch {
+    // missing, a directory (EISDIR on Windows) or unreadable
+  }
+  await fh?.close();
+  return null;
+}
+
 async function serve(req, res) {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
@@ -37,18 +56,32 @@ async function serve(req, res) {
     if (rel === '/' || rel === '') rel = '/index.html';
     // Resolve safely - reject anything that escapes ROOT.
     const abs = path.resolve(ROOT, '.' + rel);
-    if (!abs.startsWith(ROOT)) {
+    if (abs !== ROOT && !abs.startsWith(ROOT + path.sep)) {
       res.writeHead(403); res.end('forbidden'); return;
     }
-    const stat = await fs.stat(abs).catch(() => null);
-    if (!stat) { res.writeHead(404); res.end('not found'); return; }
-    const target = stat.isDirectory() ? path.join(abs, 'index.html') : abs;
-    const body = await fs.readFile(target);
+    // A file, else a directory's index.html.
+    let target = abs;
+    let fh = await openFile(target);
+    if (!fh) {
+      target = path.join(abs, 'index.html');
+      fh = await openFile(target);
+    }
+    if (!fh) { res.writeHead(404); res.end('not found'); return; }
+    let body;
+    try {
+      body = await fh.readFile();
+    } finally {
+      await fh.close();
+    }
     const ext = path.extname(target).toLowerCase();
     res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
     res.end(body);
   } catch (e) {
-    res.writeHead(500); res.end(String(e));
+    // Details go to the server log, never into the response: an error
+    // message carries absolute file-system paths (code scanning
+    // js/stack-trace-exposure).
+    console.error('serve-static:', logSafe(req.url), logSafe(e?.stack ?? e));
+    res.writeHead(500); res.end('internal error');
   }
 }
 

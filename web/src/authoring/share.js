@@ -15,10 +15,28 @@ async function deflateRaw(str) {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
+// S-BACK-029 H2: deflate reaches ~1000:1, so a link under HASH_LIMIT could
+// otherwise expand to gigabytes and crash the tab. Real docs inflate to well
+// under this (estimate: a full multi-frame play is a few hundred KB).
+const MAX_INFLATED_BYTES = 2 * 1024 * 1024;
+
 async function inflateRaw(bytes) {
-  const ds = new DecompressionStream('deflate-raw');
-  const stream = new Blob([bytes]).stream().pipeThrough(ds);
-  return await new Response(stream).text();
+  const reader = new Blob([bytes]).stream()
+    .pipeThrough(new DecompressionStream('deflate-raw'))
+    .getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_INFLATED_BYTES) {
+      await reader.cancel();
+      throw new Error('share payload exceeds size limit');
+    }
+    chunks.push(value);
+  }
+  return new TextDecoder().decode(await new Blob(chunks).arrayBuffer());
 }
 
 function toBase64Url(bytes) {

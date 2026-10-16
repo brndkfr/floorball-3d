@@ -250,7 +250,7 @@ aside.
 
 - **Before every commit, run `pnpm test` and it must pass in full
   (0 failures).** Tests live in `test/*.test.js` (`node --test`, no
-  browser needed - see `docs/plan.md` section 10, S-BACK-009, for which
+  browser needed - see S-BACK-009 in `docs/archive/plan-2026-10.md` (section 10) for which
   modules are covered and why). If a change touches a module with
   existing tests, extend them rather than leaving the new behaviour
   uncovered. If `pnpm`/`npm` genuinely isn't available in the environment,
@@ -307,8 +307,9 @@ aside.
 - **Web Workers spawned from a Playwright evaluate silently never post
   messages back** even for inline `Blob` workers - matched behaviour across
   module and classic workers. Any worker-driven feature has to be
-  validated in a real focused browser tab, not automated here. This is why
-  `timer-worker.js` is staged but the visible-tab path still uses rAF.
+  validated in a real focused browser tab, not automated here. (A staged,
+  never-used `timer-worker.js` was removed in 2026-10 after a code-scanning
+  alert; recover it from git history if tab-hidden recording needs one.)
 - After any change to `web/`, syntax-check via
   `Copy-Item file.js file.mjs; node --check file.mjs; Remove-Item file.mjs`
   since plain `.js` won't parse `import`/`export`.

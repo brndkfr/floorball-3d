@@ -14,6 +14,7 @@ import { setPointerHint, isPrimitiveTool, beginPrimitiveDrag, updatePrimitiveDra
 import { spawnMoveMarker } from './authoring/move-marker.js';
 import { startWalk, setWalkTickCallback } from './authoring/walk-tween.js';
 import { isTopDown } from './authoring/topdown-camera.js';
+import { disposeObject } from './dispose.js';
 
 // --- coordinate readout: hover to preview, click to pin a coordinate ---
 const coordXEl = document.getElementById('coordX');
@@ -73,7 +74,7 @@ scene.add(shapeHighlightGroup);
 function clearShapeHighlight() {
   for (const c of [...shapeHighlightGroup.children]) {
     shapeHighlightGroup.remove(c);
-    c.traverse?.((n) => { n.geometry?.dispose?.(); n.material?.dispose?.(); });
+    disposeObject(c);
   }
 }
 

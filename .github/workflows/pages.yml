@@ -58,12 +58,14 @@ jobs:
           RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           # Open, labelled, same-repo PRs only (a fork's branch is never published).
+          # One "<branch> <head sha>" line each; the sha pins which CI run's
+          # artifact is used (S-BACK-029 H1).
           gh pr list --repo "$GITHUB_REPOSITORY" --state open --label preview \
-            --json headRefName,isCrossRepository \
-            --jq '.[] | select(.isCrossRepository | not) | .headRefName' > previews.txt
+            --json headRefName,headRefOid,isCrossRepository \
+            --jq '.[] | select(.isCrossRepository | not) | "\(.headRefName) \(.headRefOid)"' > previews.txt
           go=true
           if [ "$EVENT" = workflow_run ] && [ "$RUN_EVENT" = pull_request ] \
-             && ! grep -qxF -- "$RUN_BRANCH" previews.txt; then
+             && ! cut -d' ' -f1 previews.txt | grep -qxF -- "$RUN_BRANCH"; then
             go=false
           fi
           echo "go=$go" >> "$GITHUB_OUTPUT"
@@ -71,17 +73,17 @@ jobs:
 
       # Root: main, built here (trusted code, no cache).
       - if: steps.plan.outputs.go == 'true'
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           persist-credentials: false
           path: main
       - if: steps.plan.outputs.go == 'true'
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           package_json_file: main/package.json
       - if: steps.plan.outputs.go == 'true'
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
       - if: steps.plan.outputs.go == 'true'
@@ -94,16 +96,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p main/dist/preview
-          while IFS= read -r branch; do
-            [ -n "$branch" ] || continue
+          # By head commit, not branch name: a fork PR can reuse a branch name,
+          # and its CI run would then match --branch (S-BACK-029 H1).
+          while read -r branch sha; do
+            [ -n "$branch" ] && [ -n "$sha" ] || continue
             slug=$(printf '%s' "$branch" | tr -c 'A-Za-z0-9._-' '-')
             run=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow deploy-pages.yml \
-              --branch "$branch" --event pull_request --status success --limit 1 \
+              --commit "$sha" --event pull_request --status success --limit 1 \
               --json databaseId --jq '.[0].databaseId // empty')
             if [ -z "$run" ]; then
-              echo "::warning::no green CI run with a site artifact for $branch - preview skipped"
+              echo "::warning::no green CI run with a site artifact for $branch@$sha - preview skipped"
               continue
             fi
+            # Defence in depth: the run must have been built from this repository.
+            repo=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq '.head_repository.full_name')
+            [ "$repo" = "$GITHUB_REPOSITORY" ] || { echo "::warning::run $run for $branch is from $repo - preview skipped"; continue; }
             if gh run download "$run" --repo "$GITHUB_REPOSITORY" --name site --dir "main/dist/preview/$slug"; then
               echo "preview: $branch (run $run) -> /preview/$slug/"
             else
@@ -113,11 +120,11 @@ jobs:
           done < previews.txt
 
       - if: steps.plan.outputs.go == 'true'
-        uses: actions/configure-pages@v6
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - if: steps.plan.outputs.go == 'true'
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: main/dist
       - if: steps.plan.outputs.go == 'true'
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

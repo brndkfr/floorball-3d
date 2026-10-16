@@ -39,7 +39,9 @@ async function figureStats(page) {
     return state.chipGroups.map((g) => {
       const fig = g.userData.figure;
       if (!fig) return null;
-      const box = new THREE.Box3().setFromObject(fig);
+      // Body only: the stick (A-BACK-034) reaches ~0.7 m in front.
+      const box = new THREE.Box3();
+      fig.traverse((n) => { if (n.isSkinnedMesh) box.expandByObject(n); });
       const sprite = (g.userData.sprites || [])[0];
       const spriteWorld = sprite ? sprite.getWorldPosition(new THREE.Vector3()) : null;
       return {
@@ -100,9 +102,10 @@ test('toggle on: one real-size figure per chip, numbers above the heads, doc unt
   await enableFigures(page);
   const stats = await expectFigures(page, true);
   for (const f of stats) {
-    // 1.81 m body; the chip group's 5x display scale must not leak in.
-    expect(f.heightMm).toBeGreaterThan(1700);
-    expect(f.heightMm).toBeLessThan(1900);
+    // 1.81 m body in the A-BACK-034 ready stance (knees bent, torso
+    // leaning: ~1.33 m tall); a leaked 5x display scale would be ~6.6 m.
+    expect(f.heightMm).toBeGreaterThan(1200);
+    expect(f.heightMm).toBeLessThan(1600);
     expect(Math.abs(f.minY)).toBeLessThan(50);              // feet on the floor
     expect(Math.abs(f.centerX - f.chipX)).toBeLessThan(150); // standing on its chip
     expect(Math.abs(f.centerZ - f.chipZ)).toBeLessThan(200);
@@ -150,12 +153,13 @@ test('figure follows its chip, switches kit on team change, and leaves the chip 
     chips.persistChipPosition(g);
     const id = g.userData.chip.id;
     const bodyColorBefore = [];
-    g.userData.figure.traverse((n) => { if (n.isMesh) bodyColorBefore.push(n.material.color.getHex()); });
+    // Body meshes only: the stick has its own (multi-part) materials.
+    g.userData.figure.traverse((n) => { if (n.isSkinnedMesh) bodyColorBefore.push(n.material.color.getHex()); });
     chips.updateChipTeam(id, 2, false);
     tickFigures();
     const fig = g.userData.figure;
     const bodyColorAfter = [];
-    fig.traverse((n) => { if (n.isMesh) bodyColorAfter.push(n.material.color.getHex()); });
+    fig.traverse((n) => { if (n.isSkinnedMesh) bodyColorAfter.push(n.material.color.getHex()); });
     const wp = fig.getWorldPosition(new (await import('three')).Vector3());
     return { team: fig.userData.team, x: wp.x, z: wp.z, bodyColorBefore, bodyColorAfter };
   });
