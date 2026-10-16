@@ -14,6 +14,7 @@ import { onSelectionChanged, deselectAll, selectedChips } from '../selection.js'
 import { chipDataFor, removeChip, updateChipTeam, updateChipLabel, updateChipRole, updateChipHand, ROLES, TEAM_COLORS, CHIP_HEIGHT, CHIP_DISPLAY_SCALE } from './chips.js';
 import { drawRoleGlyph } from './role-icons.js';
 import { stickHand } from './stick-pose.js';
+import { clampToStage, readShellInsets } from '../ui/stage-frustum.js';
 
 const root = document.createElement('div');
 root.id = 'chipPopover';
@@ -126,14 +127,13 @@ function tick() {
     root.style.visibility = 'hidden';
   } else {
     root.style.visibility = 'visible';
-    // Clamp so the card never leaves the viewport when the chip is near an edge.
+    // Clamp so the card stays on the stage (clear of the rail, top bar and
+    // docked panels, which the 3D canvas runs under) when the chip is near an edge.
     const cardW = root.offsetWidth || 180;
     const cardH = root.offsetHeight || 80;
-    const margin = 8;
-    const clampedX = Math.max(cardW / 2 + margin, Math.min(w - cardW / 2 - margin, x));
-    const clampedY = Math.max(cardH + margin, Math.min(h - margin, y));
-    root.style.left = clampedX + 'px';
-    root.style.top = clampedY + 'px';
+    const p = clampToStage({ x, y, cardW, cardH, vw: w, vh: h, insets: readShellInsets() });
+    root.style.left = p.x + 'px';
+    root.style.top = p.y + 'px';
   }
   rafHandle = requestAnimationFrame(tick);
 }

@@ -1,11 +1,12 @@
 # S-BACK-021 - Broadcast redesign port
 
-Status: open, parked until the M-Q-001 ranking says the redesign helps the
-first demo. Decisions behind it: [decisions/001](../decisions/001-web-awesome.md)
+Status: shipped with PR #5 (branch `broadcast_ux_redesign`), archived
+2026-10-16. Follow-ups are listed under "Still open" at the end and in
+[plan.md](../plan.md). Decisions behind it: [decisions/001](../decisions/001-web-awesome.md)
 (Web Awesome) and [decisions/002](../decisions/002-broadcast-direction.md)
 (Broadcast direction). Shipped groundwork: S-BACK-019 (tokens + theme
 mapping, no visible change) and S-BACK-020 (design canvas gap-fill), see
-[archive/plan-2026-10.md](../archive/plan-2026-10.md).
+[archive/plan-2026-10.md](plan-2026-10.md).
 
 ## Step 0 (deferred from S-BACK-019)
 
@@ -150,3 +151,37 @@ view-from-ball, coverage / trajectory toggles, goalie model); export /
 share / import / help dialogs; the choreography tutorial; empty / loading
 / error / save states; tablet layouts and phone Analyze. Design these in
 Broadcast before porting the surface they belong to.
+
+## Progress (branch `broadcast_ux_redesign`, draft PR #5)
+
+Step 0 is done: Web Awesome 3.14.0 subset (23 components, 0.6 MB) and
+Archivo + IBM Plex Mono woff2 vendored by `scripts/vendor-webawesome.mjs`
+/ `vendor-fonts.mjs` from pinned devDependencies, size budgets added,
+`web/src/ui/webawesome.js` points the default icon library at
+`web/lib/icons/`.
+
+Shipped on the branch, one commit each with its e2e spec: e2e hardening
+(onboarding tip in fixtures; chips built twice on a late model load; undo
+lost to an actors tick; `waitForAssets`), Broadcast recolour of app.css
+and the JS-built chrome, rail + top bar (crumb, 2D/3D, Export), docked
+right panel (Inspector / Layers / View stacked, as in the chosen "Plan"
+artboard - not `wa-tab-group` tabs; the floating Info panel is gone),
+icon tool palette + flyouts, timeline / dock / Choreo banner, docked
+Analyze panel with bar stepper, first-run card, < 1200 px drawers for
+both side panels, phone layout (< 768 px) with a real viewport meta.
+Second round: the 2D fit targets the stage (rail, top bar, docked panel,
+tab bar) not the window; Analyze step 1 drop zone, step 3 numbered
+checklist with done ticks, step 4 verdict pill + 2x2 stat grid; dialog
+titles in sentence case (`.fb-dialog-title`); Inspector fields in the
+canvas field style (inline HUD field styles removed); phone Analyze
+bottom sheet (peek + grab).
+
+**Still open:** Web Awesome components are vendored but not used. Left
+on purpose: the dialogs are native `<dialog>` (focus trap, Esc, backdrop)
+and the side panels are plain CSS drawers, so `wa-dialog` / `wa-drawer`
+would not remove code, only add Lit component loading; the
+photo-vs-overlay `wa-comparison` slider is the one real candidate and
+wants its own change. Also open: a human visual pass on real devices
+(touch, notch safe areas, real photos through all four Analyze steps -
+e2e can't solve a camera pose, so step 4 is only checked with a rendered
+result).

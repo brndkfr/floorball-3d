@@ -13,9 +13,9 @@ function ensureStyle() {
   style.textContent = `
     dialog.app-dialog {
       max-width:min(420px, 92vw);
-      background:rgba(20,16,10,0.97); color:#f7e6cf;
-      border:1px solid rgba(255,179,71,0.5); border-radius:10px;
-      padding:18px 20px; font-family:'Consolas','Courier New',monospace;
+      background:var(--fb-surf-1); color:var(--fb-text-1);
+      border:1px solid var(--fb-line-strong); border-radius:10px;
+      padding:18px 20px; font-family:var(--fb-font);
       line-height:1.5;
     }
     dialog.app-dialog::backdrop { background:rgba(0,0,0,0.55); }
@@ -23,20 +23,20 @@ function ensureStyle() {
     dialog.app-dialog .app-dialog-msg { margin:0 0 14px; font-size:13px; }
     dialog.app-dialog .app-dialog-input {
       width:100%; box-sizing:border-box; margin-bottom:14px;
-      background:rgba(0,0,0,0.3); color:#f7e6cf;
-      border:1px solid rgba(255,179,71,0.35); border-radius:6px;
+      background:rgba(0,0,0,0.3); color:var(--fb-text-1);
+      border:1px solid var(--fb-line-strong); border-radius:6px;
       padding:6px 8px; font-family:inherit; font-size:13px;
     }
     dialog.app-dialog .app-dialog-actions {
       display:flex; justify-content:flex-end; gap:8px; margin:0; padding:0;
     }
     dialog.app-dialog .app-dialog-actions button {
-      background:transparent; color:#f7e6cf;
-      border:1px solid rgba(255,179,71,0.35); border-radius:6px;
+      background:transparent; color:var(--fb-text-1);
+      border:1px solid var(--fb-line-strong); border-radius:6px;
       padding:5px 14px; font-family:inherit; font-size:12px; cursor:pointer;
     }
     dialog.app-dialog .app-dialog-actions button[value="ok"] {
-      border-color:#ffb347; color:#ffb347;
+      border-color:var(--fb-brand); color:var(--fb-brand);
     }
   `;
   document.head.appendChild(style);

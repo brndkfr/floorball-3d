@@ -14,7 +14,6 @@ async function bootAnalyze(page) {
   await page.goto('/', { waitUntil: 'load' });
   await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
   await page.locator('[data-mode="analyze"]').click();
-  await page.locator('[data-panel="photoPanel"]').click();
 }
 
 // Reads the raw cache record (or null) straight from IndexedDB.

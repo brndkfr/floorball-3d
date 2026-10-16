@@ -126,3 +126,28 @@ test('guidedHint Step 4 mentions the target goal', () => {
   });
   assert.match(hint, /goal/i);
 });
+
+// S-BACK-021 gaps canvas, step 3: a numbered checklist (find players, check
+// teams, mark the ball, facing) with a done tick per item.
+import { playersChecklist } from '../web/src/authoring/photo-overlay/photo-step-tracker.js';
+
+test('playersChecklist: nothing done on an empty frame', () => {
+  const items = playersChecklist({});
+  assert.deepEqual(items.map((i) => [i.key, i.done]), [['find', false], ['teams', false], ['ball', false], ['facing', false]]);
+  assert.equal(items[0].detail, 'None yet.');
+  assert.equal(items[3].optional, true);
+});
+
+test('playersChecklist: counts players, needs both teams, ball and a facing', () => {
+  const players = [{ team: 'home' }, { team: 'home', facingDeg: 30 }, { team: 'away' }];
+  const items = playersChecklist({ players, hasBall: true });
+  assert.deepEqual(items.map((i) => i.done), [true, true, true, true]);
+  assert.equal(items[0].detail, '3 found. Missed someone? Add them below.');
+});
+
+test('playersChecklist: one team only is not checked yet', () => {
+  const items = playersChecklist({ players: [{ team: 'home' }, { team: 'home' }], hasBall: false });
+  assert.equal(items[1].done, false);
+  assert.equal(items[0].detail, '2 found. Missed someone? Add them below.');
+  assert.equal(playersChecklist({ players: [{ team: 'away' }] }).at(0).detail, '1 found. Missed someone? Add them below.');
+});
