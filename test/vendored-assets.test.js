@@ -40,5 +40,5 @@ test('the Web Awesome subset holds every component the app loads', () => {
 test('the default icon library resolves locally, never to fontawesome.com', () => {
   const loader = readFileSync(web('src/ui/webawesome.js'), 'utf8');
   assert.match(loader, /registerIconLibrary\(\s*'default'/);
-  assert.doesNotMatch(loader, /fontawesome\.com/);
+  assert.ok(!loader.includes('fontawesome.com'), 'web/src/ui/webawesome.js must not reference fontawesome.com');
 });
