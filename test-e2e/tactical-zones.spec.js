@@ -25,7 +25,7 @@ test('one Layers row per zone, all off by default; no View checkbox or legend', 
   await expect(page.locator('#tacticalCheckbox')).toHaveCount(0);
   await expect(page.locator('#legend')).toHaveCount(0);
   const rows = page.locator('#layersPanel .lp-row[data-zone]');
-  await expect(rows).toHaveText(ZONE_LABELS.map((l) => new RegExp(l.replace(/[()]/g, '\\$&'))));
+  await expect(rows.locator('.lp-name')).toHaveText(ZONE_LABELS);
   await expect(rows.locator('.lp-eye[aria-pressed="true"]')).toHaveCount(0);
   await expect.poll(async () => Object.keys(await meshVisible(page)).length).toBe(5);
   expect(Object.values(await meshVisible(page))).toEqual([false, false, false, false, false]);
