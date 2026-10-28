@@ -301,3 +301,16 @@ test.describe('previewing playback never edits the frame', () => {
     expect(await frame0BallAfter(page, 'seek')).toBe(x0);
   });
 });
+
+// The timeline rendered once at module init, before the bootstrap loaded
+// the saved project, and only re-rendered on framesChanged: a reload of a
+// 6-frame play showed "frame 1 / 6" in the top bar but a single card.
+test('a reloaded project shows all its frames on the timeline', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await boot(page);
+  await addFrames(page, 5);
+  await expect(page.locator('#timeline .tl-card')).toHaveCount(6);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => document.getElementById('dockProjectName')?.textContent?.length > 0);
+  await expect(page.locator('#timeline .tl-card')).toHaveCount(6);
+});
