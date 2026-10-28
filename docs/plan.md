@@ -69,24 +69,21 @@ up here first.
 2. **[B-BACK-011]** Check the insights against 5-10 real Jets photos where
    the true outcome is known, passing alternatives first (see section 4).
 3. **[S-BACK-023]** Type checking in CI (see section 5).
-4. **[A-BACK-038]** steps 1-2: scene recorder overlap fix and controls
-   in the current layout ("play it back to the team" is half of v1).
-   [items/A-BACK-038](items/A-BACK-038-scene-recorder.md).
 
 ### Next
 
-5. **[S-BACK-021]** Broadcast port, moved up 2026-10-28 so the recorder
+4. **[S-BACK-021]** Broadcast port, moved up 2026-10-28 so the recorder
    redesign (A-BACK-038 step 3, Variant A) lands in the real layout:
    step 0 (vendoring, fonts), app shell, right panel, then the timeline.
    [items/S-BACK-021](items/S-BACK-021-broadcast-port.md).
-6. **[S-BACK-024]** Ball and goalies: doc as the only source of truth.
+5. **[S-BACK-024]** Ball and goalies: doc as the only source of truth.
    Before any item that adds actors (arena branding, figure kit).
-7. **[S-BACK-029]** Rest of the audit, in the order given in the item
+6. **[S-BACK-029]** Rest of the audit, in the order given in the item
    file: pipeline (M7, L6, L5), coverage staleness (C1), then
    robustness, frame time, hardening.
-8. **[S-BACK-025]** Persistence that scales with project size.
-9. **[S-BACK-026]** Download weight.
-10. Polish passing alternatives, then shot verdict + coverage (items to
+7. **[S-BACK-025]** Persistence that scales with project size.
+8. **[S-BACK-026]** Download weight.
+9. Polish passing alternatives, then shot verdict + coverage (items to
    be created from the B-BACK-011 results).
 
 ### Later (parked)
@@ -130,9 +127,9 @@ own file under [items/](items/).
   sheet: one-page storyboard of numbered frames with notes. Same file.
 - **[A-BACK-037]** [open] Formation and set-piece templates (2-2-1,
   box, 5v4, 4v5, face-offs, breakouts). Same file.
-- **[A-BACK-038]** [open] Scene recorder redesign: overlap fix, controls
-  (seconds, scrubber, slow motion, frame menu, Export button), then the
-  Variant A layout with S-BACK-021.
+- **[A-BACK-038]** [in-progress] Scene recorder redesign. Steps 1-2
+  (overlap fix, controls) shipped 2026-10-28; next is the Variant A
+  layout with S-BACK-021.
   [Review, steps and design canvas](items/A-BACK-038-scene-recorder.md).
 
 ### Mode B - Analyze

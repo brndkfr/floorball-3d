@@ -212,7 +212,7 @@
   #timeline {
     position:absolute; left:50%; bottom:70px; z-index:13;
     transform:translateX(-50%);
-    display:flex; align-items:center; gap:8px;
+    display:flex; flex-direction:column; align-items:stretch; gap:4px;
     max-width:min(96vw, 1400px);
     padding:6px 10px;
     background:rgba(20,16,10,0.82);
@@ -223,7 +223,18 @@
     color:#f7e6cf;
     backdrop-filter:blur(4px);
   }
+  #timeline .tl-row { display:flex; align-items:center; gap:8px; }
+  #timeline .tl-scrubrow { display:flex; align-items:center; gap:10px; padding:0 2px; }
+  #timeline .tl-scrub { flex:1; min-width:0; margin:0; accent-color:#ffb347; cursor:pointer; }
+  #timeline .tl-scrub:disabled { opacity:0.35; cursor:default; }
+  #timeline .tl-time { font-size:11px; white-space:nowrap; color:#f7e6cf; opacity:0.85; }
   #timeline .tl-transport { display:flex; align-items:center; gap:4px; }
+  #timeline .tl-export {
+    height:28px; margin-left:4px; padding:0 12px;
+    background:#ffb347; color:#1a120a; border:1px solid #ffb347; border-radius:8px;
+    font-family:inherit; font-size:12px; font-weight:700; cursor:pointer;
+  }
+  #timeline .tl-export:hover { filter:brightness(1.1); }
   #timeline .tl-transport button, #timeline .tl-transport [data-tl="speed"] {
     height:28px; min-width:32px; padding:0 8px;
     background:rgba(255,179,71,0.08);
@@ -254,35 +265,51 @@
   #timeline .tl-card:hover { background:rgba(255,179,71,0.14); }
   #timeline .tl-card.editing { border-color:#ffb347; box-shadow:0 0 0 1px rgba(255,179,71,0.5) inset; }
   #timeline .tl-card.playing { border-color:#7ee06b; }
+  #timeline .tl-card .tl-head { display:flex; align-items:center; gap:3px; width:100%; }
   #timeline .tl-card .tl-num {
-    font-size:12px; font-weight:700; color:#ffb347; line-height:1;
+    font-size:12px; font-weight:700; color:#ffb347; line-height:1; padding-left:2px;
   }
   #timeline .tl-card.editing .tl-num { color:#fff2d0; }
+  #timeline .tl-card .tl-cam { display:inline-flex; color:#7ee06b; }
+  #timeline .tl-card .tl-menu {
+    margin-left:auto; height:20px; min-width:22px; padding:0 4px;
+    background:transparent; border:1px solid transparent; border-radius:5px;
+    color:#f7e6cf; font-family:inherit; font-size:13px; line-height:1; cursor:pointer;
+  }
+  #timeline .tl-card .tl-menu:hover, #timeline .tl-card .tl-menu[aria-expanded="true"] {
+    border-color:rgba(255,179,71,0.45); background:rgba(255,179,71,0.18);
+  }
   #timeline .tl-card .tl-thumb {
     display:block; border-radius:3px;
     background:rgba(0,0,0,0.35);
     image-rendering:auto;
     pointer-events:none;
   }
+  #timeline .tl-card .tl-durwrap { display:flex; align-items:center; gap:2px; width:100%; font-size:10px; }
   #timeline .tl-card .tl-dur {
-    width:100%; min-width:36px;
+    flex:1; min-width:0; width:100%;
     background:rgba(0,0,0,0.35); color:#f7e6cf;
     border:1px solid rgba(255,179,71,0.28); border-radius:4px;
     font-family:inherit; font-size:10px; padding:1px 2px; text-align:center;
-    -moz-appearance:textfield;
   }
-  #timeline .tl-card .tl-dur::-webkit-outer-spin-button,
-  #timeline .tl-card .tl-dur::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
-  #timeline .tl-card .tl-acts { display:flex; flex-wrap:wrap; justify-content:center; gap:1px; max-width:100%; }
-  #timeline .tl-card .tl-acts button {
-    background:transparent; border:none; color:#f7e6cf; cursor:pointer;
-    font-family:inherit; font-size:11px; padding:0 3px; line-height:1;
-    opacity:0.7;
+  #timeline .tl-card .tl-dur-end { font-size:10px; opacity:0.6; line-height:18px; }
+  #tlFrameMenu {
+    position:fixed; z-index:30;
+    display:flex; flex-direction:column; min-width:190px;
+    background:rgba(20,16,10,0.96);
+    border:1px solid rgba(255,179,71,0.45);
+    border-radius:10px; overflow:hidden;
+    box-shadow:0 6px 20px rgba(0,0,0,0.4);
+    font-family:'Consolas','Courier New',monospace;
   }
-  #timeline .tl-card .tl-acts button:hover { opacity:1; color:#ffb347; }
-  #timeline .tl-card .tl-acts button.lit { opacity:1; color:#7ee06b; }
-  #timeline .tl-card .tl-acts button.lit:hover { color:#ff8080; }
-  #timeline .tl-card .tl-acts button:disabled { opacity:0.25; cursor:not-allowed; }
+  #tlFrameMenu[hidden] { display:none; }
+  #tlFrameMenu button {
+    background:transparent; color:#f7e6cf; border:none; text-align:left;
+    padding:9px 14px; font-family:inherit; font-size:12px; cursor:pointer;
+  }
+  #tlFrameMenu button:hover:not(:disabled), #tlFrameMenu button:focus-visible { background:rgba(255,179,71,0.18); outline:none; }
+  #tlFrameMenu button.danger { color:#ff8a7a; border-top:1px solid rgba(255,179,71,0.25); }
+  #tlFrameMenu button:disabled { opacity:0.35; cursor:not-allowed; }
 
   /* Lives inside #timeline and sits just above it, so it follows the
      timeline's height (card width changes with the wheel) instead of a

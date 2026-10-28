@@ -1,6 +1,6 @@
 # A-BACK-038 - Scene recorder redesign
 
-Status: open. Design canvas (review + three variants, 2026-10-28):
+Status: in progress; steps 1-2 done 2026-10-28. Design canvas (review + three variants, 2026-10-28):
 <https://claude.ai/artifact/9HDiAjU276ZLXhr5DFwLW6>. Chosen: **Variant A,
 "edit bay"**: a full-width time track under the rink, the frame's
 details in the right panel. Variant C (compact on-air player) is the
@@ -25,8 +25,8 @@ land.
 
 ## Steps
 
-1. **Overlap fix.** `#dockStatus` must not overlap `#timeline`.
-2. **Controls, current layout** (logic survives any restyle):
+1. **[done] Overlap fix.** `#dockStatus` must not overlap `#timeline`.
+2. **[done] Controls, current layout** (logic survives any restyle):
    durations shown and stepped in seconds; scrubber + playhead +
    `00:03.4 / 00:08.0` readout; speeds 0.25x / 0.5x / 1x / 2x (keys 1-4);
    distinct loop icon; one "⋯" menu per frame (Duplicate, Insert before /
@@ -38,6 +38,13 @@ land.
 4. **Frame details in the right panel**: name, duration, camera keyframe,
    coach note (the note is A-BACK-035).
 5. Later: Variant C player under 1200 px and while playing.
+
+Found and fixed with step 2: stepping, pausing mid-play, scrubbing and
+the export driver posed the scene from playback time, and `tickActors()`
+wrote that ball / goalie pose back into the edit frame. A
+`playback.previewing` flag now blocks the write-back until Stop, a frame
+switch or a click on the 2D rink. In 3D, a ball moved while a preview is
+showing is not saved (same root cause as S-BACK-024).
 
 Keys stay: Space play / pause, `,` / `.` step, R loop. Left / Right stay
 unbound (they move chips).
