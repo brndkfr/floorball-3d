@@ -64,8 +64,8 @@ export const KEY_SECTIONS = [
       ['1-4', 'playback speed 0.25x / 0.5x / 1x / 2x'],
       ['+', 'append a new keyframe (copy of current)'],
       ['&#8943; / right-click', 'frame menu: duplicate, insert, camera keyframe, delete'],
-      ['duration', 'seconds to the next frame, in the box on each card'],
-      ['scrubber', 'drag to preview any moment; Stop or a click on the rink returns to editing'],
+      ['duration', 'drag the right edge of a frame, or type seconds in its box'],
+      ['ruler', 'click or drag to preview any moment (arrows / Home / End when focused); Stop or a click on the rink returns to editing'],
     ],
   },
   {

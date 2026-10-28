@@ -154,22 +154,69 @@ test.describe('transport controls', () => {
     await expect.poll(() => durations(page)).toEqual([1500, 1000, 1000]);
   });
 
-  test('scrubber seeks, and the readout follows playback time', async ({ page }) => {
+  const elapsedNow = (page) => page.evaluate(async () => (await import('/src/authoring/playback.js')).playbackState().elapsed);
+  const setDurations = (page, ds) => page.evaluate(async (ds) => {
+    const f = await import('/src/authoring/frames.js');
+    ds.forEach((d, i) => f.setFrameDuration(i, d));
+  }, ds);
+  const cardBox = (page, i) => page.locator('#timeline .tl-card').nth(i).boundingBox();
+
+  test('ruler seeks by click and keyboard; readout and playhead follow', async ({ page }) => {
     await boot(page);
     await addFrames(page, 2);   // 3 frames -> 2.0 s of animation
-    const scrub = page.locator('#timeline .tl-scrub');
+    const ruler = page.locator('#timeline .tl-ruler');
     const readout = page.locator('#timeline .tl-time');
-    await expect(scrub).toHaveAttribute('max', '2000');
+    await expect(ruler).toHaveAttribute('role', 'slider');
+    await expect(ruler).toHaveAttribute('aria-valuemax', '2000');
     await expect(readout).toHaveText('00:00.0 / 00:02.0');
 
-    await scrub.fill('1500');
-    await expect.poll(() => page.evaluate(async () => (await import('/src/authoring/playback.js')).playbackState().elapsed)).toBe(1500);
-    await expect(readout).toHaveText('00:01.5 / 00:02.0');
+    // middle of frame 2's segment = 1.5 s
+    const c1 = await cardBox(page, 1);
+    const r = await ruler.boundingBox();
+    await page.mouse.click(c1.x + c1.width / 2, r.y + r.height / 2);
+    await expect.poll(async () => Math.abs((await elapsedNow(page)) - 1500)).toBeLessThanOrEqual(20);
+
+    await ruler.focus();
+    await page.keyboard.press('End');
+    await expect.poll(() => elapsedNow(page)).toBe(2000);
+    await page.keyboard.press('Home');
+    await expect.poll(() => elapsedNow(page)).toBe(0);
+    await page.keyboard.press('ArrowRight');
+    await expect.poll(() => elapsedNow(page)).toBe(100);
 
     // rAF is paused in headless tabs, so drive time the way the export does.
     await page.evaluate(async () => (await import('/src/authoring/playback.js')).seekTo(500));
     await expect(readout).toHaveText('00:00.5 / 00:02.0');
-    await expect(scrub).toHaveValue('500');
+    const c0 = await cardBox(page, 0);
+    const head = await page.locator('#timeline .tl-playhead').boundingBox();
+    expect(Math.abs(head.x + head.width / 2 - (c0.x + c0.width / 2))).toBeLessThanOrEqual(3);
+  });
+
+  test('docked full width under the stage; the 2D view keeps clear of it', async ({ page }) => {
+    await boot(page);
+    const tl = await page.locator('#timeline').boundingBox();
+    const panel = await page.locator('#rightPanel').boundingBox();
+    expect(tl.x).toBe(64);                                   // right of the rail
+    expect(Math.abs(tl.x + tl.width - panel.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(tl.y + tl.height - 900)).toBeLessThanOrEqual(1);
+    const inset = await page.evaluate(async () => (await import('/src/ui/stage-frustum.js')).readShellInsets().bottom);
+    expect(Math.abs(inset - (900 - tl.y))).toBeLessThanOrEqual(1);
+  });
+
+  test('segments are as wide as they are long; dragging the edge sets the duration', async ({ page }) => {
+    await boot(page);
+    await addFrames(page, 2);
+    await setDurations(page, [1000, 2000]);
+    await expect.poll(async () => Math.round((await cardBox(page, 1)).width / (await cardBox(page, 0)).width)).toBe(2);
+
+    const c0 = await cardBox(page, 0);
+    const handle = await page.locator('#timeline .tl-card').first().locator('.tl-handle').boundingBox();
+    const y = handle.y + handle.height / 2;
+    await page.mouse.move(handle.x + handle.width / 2, y);
+    await page.mouse.down();
+    await page.mouse.move(handle.x + handle.width / 2 + c0.width / 2, y, { steps: 4 });
+    await page.mouse.up();
+    await expect.poll(() => durations(page)).toEqual([1500, 2000, 1000]);
   });
 
   test('one menu per frame: delete is last and disabled on the only frame', async ({ page }) => {

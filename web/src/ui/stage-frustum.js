@@ -31,10 +31,19 @@ export function clampToStage({ x, y, cardW, cardH, vw, vh, insets = {}, margin =
   };
 }
 
-// The shell insets as the CSS sets them for the current breakpoint
-// (--shell-rail, --shell-topbar, --right-panel, --tabbar; 0 when unset).
+// The shell insets from the CSS custom properties (--shell-rail,
+// --shell-topbar, --right-panel, --tabbar, --recorder-inset; 0 when unset).
+// The docked scene recorder (timeline.js sets --recorder-inset to the
+// distance from its top edge to the window bottom) sits above the phone
+// tab bar, so the bottom inset is whichever reaches higher.
+export function shellInsetsFrom(px) {
+  return {
+    left: px('--shell-rail'), top: px('--shell-topbar'), right: px('--right-panel'),
+    bottom: Math.max(px('--tabbar'), px('--recorder-inset')),
+  };
+}
+
 export function readShellInsets() {
   const css = getComputedStyle(document.documentElement);
-  const px = (name) => parseFloat(css.getPropertyValue(name)) || 0;
-  return { left: px('--shell-rail'), top: px('--shell-topbar'), right: px('--right-panel'), bottom: px('--tabbar') };
+  return shellInsetsFrom((name) => parseFloat(css.getPropertyValue(name)) || 0);
 }
