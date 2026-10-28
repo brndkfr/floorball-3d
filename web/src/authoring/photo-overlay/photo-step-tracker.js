@@ -91,3 +91,18 @@ export function guidedHint(state) {
       return '';
   }
 }
+
+// Step 3 checklist (S-BACK-021 gaps canvas): find players, check teams, mark
+// the ball, facing (optional). "Teams" counts as checked once both teams
+// have at least one player - the closest thing to "the colours were looked
+// at" the data can tell us.
+export function playersChecklist({ players = [], hasBall = false } = {}) {
+  const n = players.length;
+  const teams = new Set(players.map((p) => p.team));
+  return [
+    { key: 'find', done: n > 0, detail: n ? `${n} found. Missed someone? Add them below.` : 'None yet.' },
+    { key: 'teams', done: teams.has('home') && teams.has('away'), detail: 'Colours backwards?' },
+    { key: 'ball', done: !!hasBall, detail: 'Click it on the photo.' },
+    { key: 'facing', done: players.some((p) => p.facingDeg != null), optional: true, detail: 'Optional. Reads shoulders and head.' },
+  ];
+}

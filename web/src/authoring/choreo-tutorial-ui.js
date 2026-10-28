@@ -45,29 +45,29 @@ css.textContent = `
   #tutorialCard {
     position:fixed; bottom:190px; left:50%; transform:translateX(-50%); z-index:26;
     width:min(360px, 92vw); padding:12px 16px;
-    background:rgba(20,16,10,0.94); color:#f7e6cf;
-    border:1px solid rgba(255,179,71,0.55); border-radius:10px;
+    background:var(--fb-surf-1); color:var(--fb-text-1);
+    border:1px solid var(--fb-line-strong); border-radius:10px;
     box-shadow:0 6px 20px rgba(0,0,0,0.45);
-    font-family:Consolas,monospace; font-size:12px; line-height:1.5;
+    font-family:var(--fb-font); font-size:12px; line-height:1.5;
   }
   #tutorialCard[hidden] { display:none; }
-  #tutorialCard h2 { margin:0 0 6px; font-size:12px; color:#ffb347; text-transform:uppercase; letter-spacing:0.06em; }
+  #tutorialCard h2 { margin:0 0 6px; }
   #tutorialCard ol { margin:0 0 8px; padding-left:0; list-style:none; }
   #tutorialCard li { opacity:0.55; }
   #tutorialCard li::before { content:'\\25CB  '; }
   #tutorialCard li[data-status="active"] { opacity:1; font-weight:700; }
-  #tutorialCard li[data-status="active"]::before { content:'\\25CF  '; color:#ffb347; }
+  #tutorialCard li[data-status="active"]::before { content:'\\25CF  '; color:var(--fb-brand); }
   #tutorialCard li[data-status="complete"] { opacity:0.8; }
   #tutorialCard li[data-status="complete"]::before { content:'\\2713  '; color:#7ee06b; }
   #tutorialCard .tut-hint { margin:0 0 10px; }
-  #tutorialCard.stalled .tut-hint { color:#ffb347; font-weight:700; }
-  #tutorialCard button { background:#ffb347; color:#1a120a; border:none; border-radius:6px; padding:5px 12px; font-family:inherit; font-weight:700; cursor:pointer; margin-right:6px; }
-  #tutorialCard button.secondary { background:transparent; color:#f7e6cf; border:1px solid rgba(255,179,71,0.35); font-weight:400; }
+  #tutorialCard.stalled .tut-hint { color:var(--fb-brand); font-weight:700; }
+  #tutorialCard button { background:var(--fb-brand); color:#fff; border:none; border-radius:6px; padding:5px 12px; font-family:inherit; font-weight:700; cursor:pointer; margin-right:6px; }
+  #tutorialCard button.secondary { background:transparent; color:var(--fb-text-1); border:1px solid var(--fb-line-strong); font-weight:400; }
   .tutorial-pulse { animation:tutorialPulse 1.2s ease-in-out infinite; }
-  .tutorial-highlight { outline:2px solid #ffb347 !important; outline-offset:2px; }
+  .tutorial-highlight { outline:2px solid var(--fb-brand) !important; outline-offset:2px; }
   @keyframes tutorialPulse {
-    0%, 100% { box-shadow:0 0 0 0 rgba(255,179,71,0.9); }
-    50% { box-shadow:0 0 0 6px rgba(255,179,71,0); }
+    0%, 100% { box-shadow:0 0 0 0 var(--fb-line-strong); }
+    50% { box-shadow:0 0 0 6px var(--fb-brand-quiet); }
   }
 `;
 document.head.appendChild(css);
@@ -158,6 +158,7 @@ function render() {
   const v = tutorialView(tut, { carrierSelected: !!carrier && state.selected === carrier });
   card.innerHTML = '';
   const h = document.createElement('h2');
+  h.className = 'fb-dialog-title';
   h.textContent = v.done ? 'Guided play - done' : `Guided play - step ${v.index + 1} of ${STEPS.length}`;
   const ol = document.createElement('ol');
   for (const s of STEPS) {

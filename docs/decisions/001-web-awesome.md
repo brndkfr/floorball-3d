@@ -1,6 +1,7 @@
 # 001 - Web Awesome for UI components, own CSS for tokens and layout
 
-Date: 2026-09-24. Status: accepted, not yet built (S-BACK-021 step 0).
+Date: 2026-09-24. Status: accepted. Subset vendored (S-BACK-021 step 0, PR #5); no
+component used yet, see S-BACK-026 in [plan.md](../plan.md).
 
 ## Context
 
