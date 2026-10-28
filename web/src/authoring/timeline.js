@@ -24,6 +24,7 @@ import {
   layoutTrack, timeToX, xToTime, rulerTicks, durationFromDrag, clampZoom,
 } from './transport-math.js';
 import { fitTopDownFrustum } from '../scene.js';
+import { onProjectChanged } from './library-dialog.js';
 
 const el = document.getElementById('timeline');
 if (!el) throw new Error('timeline element missing from index.html');
@@ -411,6 +412,9 @@ if (btnChoreo) {
 
 window.addEventListener('framesChanged', render);
 window.addEventListener('playbackChanged', render);
+// The first render() below runs at module init, before the bootstrap loads
+// the saved project; it and every project switch announce themselves here.
+onProjectChanged(render);
 
 // Playback keybindings. `,` / `.` step, 1-4 speed, R loop, Space toggle.
 // Left/Right aren't bound - they conflict with WASD/arrow chip movement.
