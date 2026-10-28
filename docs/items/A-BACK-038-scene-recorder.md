@@ -1,6 +1,6 @@
 # A-BACK-038 - Scene recorder redesign
 
-Status: in progress. Design canvas (review + three variants, 2026-10-28):
+Status: in progress; steps 1-2 done 2026-10-28. Design canvas (review + three variants, 2026-10-28):
 <https://claude.ai/artifact/9HDiAjU276ZLXhr5DFwLW6>. Chosen: **Variant A,
 "edit bay"**: a full-width time track under the rink, the frame's
 details in the right panel. Variant C (compact on-air player) is the
@@ -32,11 +32,12 @@ the stage; the control problems below were unchanged by it.
 
 1. **[done] Overlap fix.** `#dockStatus` must not overlap `#timeline`
    (fixed by the Broadcast port; e2e test added with step 2).
-2. **Controls, current layout** (logic survives any restyle):
+2. **[done] Controls, current layout** (logic survives any restyle):
    durations shown and stepped in seconds; scrubber + playhead +
    `00:03.4 / 00:08.0` readout; speeds 0.25x / 0.5x / 1x / 2x (keys 1-4);
    distinct loop icon; one "⋯" menu per frame (Duplicate, Insert before /
-   after, Camera, Delete last); an Export button on the recorder.
+   after, Camera, Delete last). Export: the Broadcast top bar already has
+   it, so no second button on the recorder.
 3. **Variant A layout** on the Broadcast shell: full-width track, frame segments as wide as they are
    long, playhead, "Next move" split button (Choreo default), tools move
    from the dock into the palette.
