@@ -73,7 +73,8 @@ test('at 1200 px and wider the panel is docked and the toggle is hidden', async 
 });
 
 // The 2D fit used the whole window, so the docked panel covered the right
-// end of the rink. It now fits the stage between rail, top bar and panel.
+// end of the rink. It now fits the stage between rail, top bar, panel and
+// the docked scene recorder (A-BACK-038).
 test('2D view centres the whole rink in the stage, clear of the docked panel', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/', { waitUntil: 'load' });
@@ -91,7 +92,8 @@ test('2D view centres the whole rink in the stage, clear of the docked panel', a
     };
     return { centre: at(0, RINK_L / 2), ends: [at(0, 0), at(0, RINK_L)], sides: [at(-HALF_W, RINK_L / 2), at(HALF_W, RINK_L / 2)] };
   });
-  const stage = { left: 64, right: 1440 - 320, top: 52, bottom: 900 };
+  const recorderTop = (await page.locator('#timeline').boundingBox()).y;
+  const stage = { left: 64, right: 1440 - 320, top: 52, bottom: recorderTop };
   expect(pts.centre[0]).toBeCloseTo((stage.left + stage.right) / 2, 0);
   expect(pts.centre[1]).toBeCloseTo((stage.top + stage.bottom) / 2, 0);
   for (const [x, y] of [...pts.ends, ...pts.sides]) {

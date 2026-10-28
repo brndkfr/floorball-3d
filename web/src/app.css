@@ -118,7 +118,7 @@
      from the analytical HUD panels (rounded pills, amber accent) so
      "author" and "analyse" read as different modes of use. */
   #dock {
-    position:absolute; left:var(--stage-center); bottom:18px; z-index:14;
+    position:absolute; left:var(--stage-center); bottom:calc(var(--recorder-inset, 0px) + 12px); z-index:14;
     transform:translateX(-50%);
     display:flex; align-items:center; gap:8px;
     padding:8px 12px;
@@ -189,99 +189,138 @@
   }
   #dockPalette button.active { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.35); }
 
-  /* Timeline (Broadcast bottom bar, design canvas "Plan"): scrubber row on
-     top (A-BACK-038), then transport, frame cards, + frame, Choreo.
-     Centred on the stage like the dock. */
+  /* Scene recorder (A-BACK-038, Variant A "edit bay"): docked full width
+     under the stage, between the rail and the right panel. Row 1 transport,
+     row 2 a time ruler with a playhead over frame segments as wide as they
+     are long. timeline.js publishes its height as --recorder-inset so the
+     2D view and the floating dock keep clear of it. */
   #timeline {
-    position:absolute; left:var(--stage-center); bottom:70px; z-index:13;
-    transform:translateX(-50%);
-    display:flex; flex-direction:column; align-items:stretch; gap:6px;
-    max-width:min(var(--stage-width), 1400px); box-sizing:border-box;
-    padding:8px 12px;
+    position:fixed; left:var(--shell-rail); right:var(--right-panel, 0px); bottom:0; z-index:13;
+    display:flex; flex-direction:column;
     background:var(--fb-surf-1);
-    border:1px solid var(--fb-line);
-    border-radius:var(--fb-radius-2);
-    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+    border-top:1px solid var(--fb-line-strong);
     font:500 12px/1 var(--fb-font);
     color:var(--fb-text-1);
   }
+  #timeline .tl-bar {
+    display:flex; align-items:center; gap:8px;
+    min-height:56px; padding:0 16px; box-sizing:border-box;
+    border-bottom:1px solid var(--fb-line);
+  }
+  #timeline .tl-spacer { flex:1; }
+  #timeline button:focus-visible, #timeline .tl-ruler:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
+  #timeline .tl-transport { display:flex; align-items:center; gap:6px; }
+  #timeline .tl-transport button {
+    height:36px; min-width:36px; padding:0 10px;
+    background:transparent;
+    border:1px solid var(--fb-line-strong);
+    color:var(--fb-text-1); font:500 13px/1 var(--fb-font);
+    border-radius:var(--fb-radius-1); cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  #timeline .tl-transport [data-tl="speed"] { font-family:var(--fb-mono); background:var(--fb-surf-2); }
+  #timeline .tl-transport button:hover { background:var(--fb-surf-3); }
+  #timeline .tl-transport button.active { background:var(--fb-brand-quiet); color:var(--fb-text-1); border-color:var(--fb-brand); }
+  #timeline .tl-transport .tl-play {
+    width:44px; height:44px; background:var(--fb-brand); border-color:var(--fb-brand); color:#fff; font-size:16px;
+  }
+  #timeline .tl-transport .tl-play:hover { background:var(--fb-brand); filter:brightness(1.1); }
+  #timeline .tl-time { font:500 15px/1 var(--fb-mono); color:var(--fb-text-1); margin:0 8px; white-space:nowrap; }
   #timeline .tl-add, #timeline .tl-choreo, #timeline .tl-learn {
-    height:30px; padding:0 12px; border-radius:var(--fb-radius-1); cursor:pointer; white-space:nowrap;
-    font:600 12px/1 var(--fb-font); border:1px solid var(--fb-line-strong);
+    height:36px; padding:0 14px; border-radius:var(--fb-radius-1); cursor:pointer; white-space:nowrap;
+    font:600 13px/1 var(--fb-font); border:1px solid var(--fb-line-strong);
     background:var(--fb-surf-2); color:var(--fb-text-1);
   }
   #timeline .tl-add { border-style:dashed; color:var(--fb-text-2); }
   #timeline .tl-choreo { background:var(--fb-brand); border-color:var(--fb-brand); color:#fff; }
   #timeline .tl-learn { background:transparent; color:var(--fb-text-2); }
   #timeline .tl-add:hover, #timeline .tl-learn:hover { color:var(--fb-text-1); border-color:var(--fb-text-3); }
-  #timeline button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
-  #timeline .tl-row { display:flex; align-items:center; gap:10px; }
-  #timeline .tl-scrubrow { display:flex; align-items:center; gap:10px; padding:0 2px; }
-  #timeline .tl-scrub { flex:1; min-width:0; margin:0; accent-color:var(--fb-brand); cursor:pointer; }
-  #timeline .tl-scrub:disabled { opacity:0.35; cursor:default; }
-  #timeline .tl-time { font:500 11px/1 var(--fb-mono); white-space:nowrap; color:var(--fb-text-2); }
-  #timeline .tl-transport { display:flex; align-items:center; gap:4px; }
-  #timeline .tl-transport button, #timeline .tl-transport [data-tl="speed"] {
-    height:28px; min-width:32px; padding:0 8px;
-    background:var(--fb-brand-quiet);
-    border:1px solid var(--fb-line-strong);
-    color:var(--fb-text-1); font-family:inherit; font-size:12px;
-    border-radius:8px; cursor:pointer;
-    display:inline-flex; align-items:center; justify-content:center;
-  }
-  #timeline .tl-transport button:hover, #timeline .tl-transport [data-tl="speed"]:hover { background:var(--fb-brand-quiet); }
-  #timeline .tl-transport button.active { background:var(--fb-brand); color:#fff; border-color:var(--fb-brand); }
-  #timeline .tl-sep { width:1px; height:22px; background:var(--fb-line-strong); margin:0 4px; }
+
+  /* Row 2: one scroll container for ruler, segments and playhead, so they
+     scroll together. Segments touch; x on the ruler = x on the cards. */
   #timeline .tl-strip {
-    display:flex; align-items:stretch; gap:6px;
-    overflow-x:auto; overflow-y:hidden;
-    max-width:70vw; min-width:120px; padding:2px 2px 4px 2px;
-    scrollbar-width:thin;
-  }
-  #timeline .tl-card {
     position:relative;
-    display:flex; flex-direction:column; align-items:center;
-    padding:4px 3px 3px 3px; gap:2px;
-    background:var(--fb-brand-quiet);
-    border:1px solid var(--fb-line-strong);
-    border-radius:8px;
-    cursor:pointer; flex:none;
-    transition:border-color 0.1s, background 0.1s;
+    overflow-x:auto; overflow-y:hidden;
+    padding:0 16px 12px; scrollbar-width:thin;
   }
-  #timeline .tl-card:hover { background:var(--fb-brand-quiet); }
-  #timeline .tl-card.editing { border-color:var(--fb-brand); box-shadow:0 0 0 1px var(--fb-line-strong) inset; }
+  #timeline .tl-ruler {
+    position:relative; height:26px; cursor:pointer; touch-action:none;
+  }
+  #timeline .tl-tick {
+    position:absolute; bottom:0; height:6px; padding-left:4px;
+    border-left:1px solid var(--fb-line-strong);
+    font:500 11px/1 var(--fb-mono); color:var(--fb-text-2); white-space:nowrap;
+    pointer-events:none;
+  }
+  #timeline .tl-tick.major { height:14px; }
+  #timeline .tl-segs { display:flex; height:72px; margin-top:6px; }
+  #timeline .tl-card {
+    position:relative; flex:none; box-sizing:border-box;
+    display:flex; flex-direction:column; justify-content:space-between;
+    padding:7px 10px 8px; gap:4px;
+    background:var(--fb-surf-2);
+    border:1px solid var(--fb-line-strong); border-left-width:0;
+    cursor:pointer;
+    transition:background 0.1s;
+  }
+  #timeline .tl-card:first-child { border-left-width:1px; border-radius:var(--fb-radius-1) 0 0 var(--fb-radius-1); }
+  #timeline .tl-card.end { border-radius:0 var(--fb-radius-1) var(--fb-radius-1) 0; }
+  #timeline .tl-card:first-child.end { border-radius:var(--fb-radius-1); }
+  #timeline .tl-card:hover { background:var(--fb-surf-3); }
+  /* Editing frame: brand outline plus the Broadcast 3 px accent on top. */
+  #timeline .tl-card.editing {
+    background:var(--fb-brand-quiet); border-color:var(--fb-brand); border-left-width:1px;
+    box-shadow:inset 0 3px 0 var(--fb-brand); z-index:1;
+  }
   #timeline .tl-card.playing { border-color:#7ee06b; }
-  #timeline .tl-card .tl-head { display:flex; align-items:center; gap:3px; width:100%; }
-  #timeline .tl-card .tl-num {
-    font-size:12px; font-weight:700; color:var(--fb-brand); line-height:1; padding-left:2px;
-  }
+  #timeline .tl-card .tl-head { display:flex; align-items:center; gap:4px; width:100%; }
+  #timeline .tl-card .tl-num { font:600 12px/1 var(--fb-mono); color:var(--fb-text-2); }
   #timeline .tl-card.editing .tl-num { color:var(--fb-text-1); }
   #timeline .tl-card .tl-cam { display:inline-flex; color:var(--fb-brand); }
   #timeline .tl-card .tl-menu {
-    margin-left:auto; height:20px; min-width:22px; padding:0 4px;
+    margin-left:auto; height:22px; min-width:24px; padding:0 4px;
     background:transparent; border:1px solid transparent; border-radius:var(--fb-radius-1);
-    color:var(--fb-text-2); font:600 13px/1 var(--fb-font); cursor:pointer;
+    color:var(--fb-text-2); font:600 14px/1 var(--fb-font); cursor:pointer;
   }
   #timeline .tl-card .tl-menu:hover, #timeline .tl-card .tl-menu[aria-expanded="true"] {
     color:var(--fb-text-1); border-color:var(--fb-line-strong); background:var(--fb-surf-3);
   }
+  #timeline .tl-card .tl-body { display:flex; align-items:center; gap:8px; min-width:0; }
   #timeline .tl-card .tl-thumb {
-    display:block; border-radius:3px;
+    display:block; flex:none; border-radius:3px;
     background:rgba(0,0,0,0.35);
-    image-rendering:auto;
     pointer-events:none;
   }
   #timeline .tl-card .tl-durwrap {
-    display:flex; align-items:center; gap:2px; width:100%;
-    font:500 10px/1 var(--fb-mono); color:var(--fb-text-2);
+    display:flex; align-items:center; gap:3px; min-width:0;
+    font:500 12px/1 var(--fb-mono); color:var(--fb-text-2);
   }
   #timeline .tl-card .tl-dur {
-    flex:1; min-width:0; width:100%;
-    background:var(--fb-surf-2); color:var(--fb-text-1);
-    border:1px solid var(--fb-line-strong); border-radius:4px;
-    font:500 10px/1 var(--fb-mono); padding:2px; text-align:center;
+    width:44px; min-width:0;
+    background:transparent; color:var(--fb-text-2);
+    border:1px solid transparent; border-radius:4px;
+    font:500 12px/1 var(--fb-mono); padding:3px 2px; text-align:right;
   }
-  #timeline .tl-card .tl-dur-end { font:500 10px/18px var(--fb-mono); color:var(--fb-text-2); }
+  #timeline .tl-card .tl-dur:hover, #timeline .tl-card .tl-dur:focus {
+    border-color:var(--fb-line-strong); background:var(--fb-surf-1); color:var(--fb-text-1); outline:none;
+  }
+  #timeline .tl-card .tl-dur-end { font:500 12px/1 var(--fb-mono); color:var(--fb-text-3); }
+  /* Right-edge grip: drag to change the frame's duration. */
+  #timeline .tl-card .tl-handle {
+    position:absolute; right:-5px; top:50%; z-index:2;
+    width:10px; height:30px; transform:translateY(-50%);
+    border-radius:3px; background:var(--fb-line-strong);
+    cursor:ew-resize; touch-action:none;
+  }
+  #timeline .tl-card .tl-handle:hover, #timeline .tl-card.editing .tl-handle { background:var(--fb-brand); }
+  #timeline .tl-playhead {
+    position:absolute; top:0; bottom:12px; width:2px; margin-left:-1px; z-index:3;
+    background:var(--fb-text-1); pointer-events:none;
+  }
+  #timeline .tl-playhead::before {
+    content:""; position:absolute; top:0; left:-6px;
+    border:7px solid transparent; border-top:9px solid var(--fb-text-1); border-bottom:0;
+  }
   /* Per-frame menu (A-BACK-038): one shared popover, opened from a card's
      "..." button or by right-clicking the card. */
   #tlFrameMenu {
@@ -304,9 +343,9 @@
   #tlFrameMenu button.danger { color:var(--fb-danger); border-top:1px solid var(--fb-line); margin-top:4px; }
   #tlFrameMenu button:disabled { color:var(--fb-text-3); cursor:not-allowed; }
 
-  /* Bottom-left of the stage: centred it overlapped the timeline's cards. */
+  /* Bottom-left of the stage, above the docked recorder. */
   #dockStatus {
-    position:absolute; left:calc(var(--shell-rail) + 16px); bottom:40px;
+    position:absolute; left:calc(var(--shell-rail) + 16px); bottom:calc(var(--recorder-inset, 0px) + 18px);
     z-index:15; font-family:var(--fb-mono);
     font-size:11px; color:var(--fb-text-1); letter-spacing:0.04em;
     background:var(--fb-surf-1);
@@ -953,19 +992,17 @@
     #toolPalette .floatable-grip { display:none; }
     #toolPalette button { flex:none; }
     #toolPalette .tp-submenu { left:0; top:auto; bottom:100%; margin:0 0 8px; }
-    #timeline {
-      left:8px; right:8px; transform:none; max-width:none;
-      flex-wrap:wrap; gap:6px; padding:6px 8px;
-    }
-    #timeline .tl-row { flex-wrap:wrap; gap:6px; }
-    #timeline .tl-strip { order:3; flex:1 1 100%; min-width:0; }
-    #timeline .tl-sep, #timeline .tl-learn { display:none; }
+    #timeline { left:0; right:0; }
+    #timeline .tl-bar { flex-wrap:wrap; gap:6px; padding:6px 8px; min-height:0; }
+    #timeline .tl-spacer, #timeline .tl-learn { display:none; }
+    #timeline .tl-time { font-size:13px; margin:0 4px; }
+    #timeline .tl-strip { padding:0 8px 8px; }
     /* Bottom-up: tab bar, palette strip, timeline. The dock moves to the top
        of the stage; the walking D-pad only shows in 3D, above the timeline. */
     #timeline { bottom:calc(var(--tabbar) + 74px); }
     #dock { top:calc(var(--shell-topbar) + 8px); bottom:auto; left:50%; }
     body.topdown-mode #touchControls { display:none; }
-    #touchDpad, #touchActions { bottom:calc(var(--tabbar) + 200px); }
+    #touchDpad, #touchActions { bottom:calc(var(--recorder-inset, 0px) + 8px); }
     #dockStatus { display:none; }
     #libraryView { bottom:var(--tabbar); }
     /* Analyze: the step panel is a bottom sheet (peek: grab + stepper),

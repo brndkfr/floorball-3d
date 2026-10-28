@@ -84,3 +84,16 @@ test('clampToStage falls back to the window when the insets leave no room', () =
   const p = clampToStage({ x: 5, y: 5, cardW: 120, cardH: 80, vw: 300, vh: 200, insets: { left: 200, right: 200 } });
   assert.ok(p.x - 60 >= 0 && p.x + 60 <= 300);
 });
+
+// A-BACK-038 step 3: the docked recorder takes the bottom of the stage; the
+// phone tab bar sits below it, so the larger of the two wins.
+import { shellInsetsFrom } from '../web/src/ui/stage-frustum.js';
+
+test('shellInsetsFrom: bottom is the docked recorder or the tab bar, whichever is taller', () => {
+  const vars = (o) => (name) => o[name] ?? 0;
+  assert.deepEqual(
+    shellInsetsFrom(vars({ '--shell-rail': 64, '--shell-topbar': 52, '--right-panel': 320, '--recorder-inset': 150 })),
+    { left: 64, top: 52, right: 320, bottom: 150 });
+  assert.equal(shellInsetsFrom(vars({ '--tabbar': 58, '--recorder-inset': 300 })).bottom, 300);
+  assert.equal(shellInsetsFrom(vars({ '--tabbar': 58 })).bottom, 58);
+});

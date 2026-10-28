@@ -1,6 +1,6 @@
 # A-BACK-038 - Scene recorder redesign
 
-Status: in progress; steps 1-2 done 2026-10-28. Design canvas (review + three variants, 2026-10-28):
+Status: in progress; steps 1-3 done 2026-10-28. Design canvas (review + three variants, 2026-10-28):
 <https://claude.ai/artifact/9HDiAjU276ZLXhr5DFwLW6>. Chosen: **Variant A,
 "edit bay"**: a full-width time track under the rink, the frame's
 details in the right panel. Variant C (compact on-air player) is the
@@ -38,9 +38,14 @@ the stage; the control problems below were unchanged by it.
    distinct loop icon; one "⋯" menu per frame (Duplicate, Insert before /
    after, Camera, Delete last). Export: the Broadcast top bar already has
    it, so no second button on the recorder.
-3. **Variant A layout** on the Broadcast shell: full-width track, frame segments as wide as they are
-   long, playhead, "Next move" split button (Choreo default), tools move
-   from the dock into the palette.
+3. **[done] Variant A layout** on the Broadcast shell: docked full width
+   between rail and right panel; a time ruler with a playhead (click,
+   drag, or arrows / Home / End when focused) over frame segments as wide
+   as they are long; drag a segment's right edge to change its duration;
+   wheel zooms the track. The 2D view refits above it (`--recorder-inset`
+   in `readShellInsets`). Still open from the mockup: one "Next move"
+   split button instead of "+ frame" / "Choreo" / "Learn", and the dock's
+   tools moving into the palette.
 4. **Frame details in the right panel**: name, duration, camera keyframe,
    coach note (the note is A-BACK-035).
 5. Later: Variant C player under 1200 px and while playing.

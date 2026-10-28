@@ -62,3 +62,58 @@ export function frameMenuItems({ count, hasCamera }) {
     { action: 'del', label: 'Delete frame', danger: true, disabled: count <= 1 },
   ];
 }
+
+// --- Variant A time track (A-BACK-038 step 3) ---------------------------
+// Frame segments are as wide as their duration (pxPerSec), with a minimum
+// so a 0.2 s frame still holds its number and menu. The last frame has no
+// duration (playback ends on it) and gets a fixed end cap. Time <-> x maps
+// through the segments, so the playhead and the ruler stay on the cards
+// even where a segment is clamped.
+
+export function layoutTrack(durations, { pxPerSec, minW = 72, endW = 56 }) {
+  const segs = [];
+  let x = 0, t = 0;
+  durations.forEach((d, i) => {
+    if (i === durations.length - 1) { segs.push({ x, w: endW, startMs: t, endMs: t }); return; }
+    const w = Math.max(minW, (d / 1000) * pxPerSec);
+    segs.push({ x, w, startMs: t, endMs: t + d });
+    x += w; t += d;
+  });
+  return segs;
+}
+
+export function timeToX(ms, segs) {
+  for (const s of segs) {
+    if (s.endMs > s.startMs && ms < s.endMs) {
+      return s.x + (Math.max(ms, s.startMs) - s.startMs) / (s.endMs - s.startMs) * s.w;
+    }
+  }
+  return segs.length ? segs[segs.length - 1].x : 0;
+}
+
+export function xToTime(x, segs) {
+  for (const s of segs) {
+    if (s.endMs > s.startMs && x < s.x + s.w) {
+      const f = Math.max(0, x - s.x) / s.w;
+      return Math.round((s.startMs + f * (s.endMs - s.startMs)) / 10) * 10;
+    }
+  }
+  return segs.length ? segs[segs.length - 1].startMs : 0;
+}
+
+export function rulerTicks(segs, stepMs = 500) {
+  const total = segs.length ? segs[segs.length - 1].startMs : 0;
+  const ticks = [];
+  for (let t = 0; t <= total; t += stepMs) {
+    ticks.push({ x: timeToX(t, segs), label: t % 1000 === 0 ? `${t / 1000}s` : '' });
+  }
+  return ticks;
+}
+
+// Dragging a segment's right edge by dx px changes its duration at the
+// track's scale, on the same 50 ms grid as typed durations.
+export function durationFromDrag(startMs, dxPx, pxPerSec) {
+  return Math.max(50, Math.round((startMs + (dxPx / pxPerSec) * 1000) / 50) * 50);
+}
+
+export function clampZoom(pxPerSec) { return Math.min(Math.max(pxPerSec, 30), 480); }

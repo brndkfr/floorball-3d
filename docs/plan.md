@@ -69,8 +69,9 @@ up here first.
 2. **[B-BACK-011]** Check the insights against 5-10 real Jets photos where
    the true outcome is known, passing alternatives first (see section 4).
 3. **[S-BACK-023]** Type checking in CI (see section 5).
-4. **[A-BACK-038]** Scene recorder: the Variant A layout (step 3); the
-   controls shipped ("play it back to the team" is half of v1).
+4. **[A-BACK-038]** Scene recorder: "Next move" button and frame details
+   in the right panel; controls and the Variant A layout shipped ("play
+   it back to the team" is half of v1).
    [items/A-BACK-038](items/A-BACK-038-scene-recorder.md).
 
 ### Next
@@ -127,8 +128,10 @@ own file under [items/](items/).
 - **[A-BACK-037]** [open] Formation and set-piece templates (2-2-1,
   box, 5v4, 4v5, face-offs, breakouts). Same file.
 - **[A-BACK-038]** [in-progress] Scene recorder redesign. Controls
-  (seconds, scrubber, slow motion, frame menu) shipped 2026-10-28; next
-  the Variant A layout (full-width time track) on the Broadcast shell.
+  (seconds, slow motion, frame menu) and the Variant A layout (docked
+  time track, segments as wide as they are long, drag to set durations)
+  shipped 2026-10-28; next the "Next move" button and frame details in
+  the right panel.
   [Review, steps and design canvas](items/A-BACK-038-scene-recorder.md).
 
 ### Mode B - Analyze

@@ -87,3 +87,67 @@ test('frame menu: camera entry says what it will do', () => {
   assert.equal(cam(false), 'Set camera to current view');
   assert.equal(cam(true), 'Clear camera keyframe');
 });
+
+// --- Variant A time track (A-BACK-038 step 3) ---------------------------
+import {
+  layoutTrack, timeToX, xToTime, rulerTicks, durationFromDrag, clampZoom,
+} from '../web/src/authoring/transport-math.js';
+
+const opts = { pxPerSec: 100, minW: 72, endW: 56 };
+
+test('layoutTrack: segments as wide as they are long, last frame a fixed end cap', () => {
+  const segs = layoutTrack([1000, 1500, 2000], opts);
+  assert.deepEqual(segs.map((s) => [s.x, s.w, s.startMs, s.endMs]), [
+    [0, 100, 0, 1000],
+    [100, 150, 1000, 2500],
+    [250, 56, 2500, 2500],   // last frame: playback ends on it
+  ]);
+});
+
+test('layoutTrack: short frames keep a usable minimum width', () => {
+  const segs = layoutTrack([200, 1000, 1000], opts);
+  assert.equal(segs[0].w, 72);
+  assert.equal(segs[1].x, 72);
+});
+
+test('layoutTrack: a single frame is just the end cap', () => {
+  assert.deepEqual(layoutTrack([1000], opts).map((s) => [s.x, s.w, s.startMs, s.endMs]), [[0, 56, 0, 0]]);
+});
+
+test('timeToX / xToTime map through the segments and back', () => {
+  const segs = layoutTrack([1000, 1500, 2000], opts);
+  assert.equal(timeToX(0, segs), 0);
+  assert.equal(timeToX(500, segs), 50);
+  assert.equal(timeToX(1750, segs), 175);
+  assert.equal(timeToX(2500, segs), 250);   // end of play = start of the end cap
+  assert.equal(timeToX(9999, segs), 250);
+  assert.equal(xToTime(50, segs), 500);
+  assert.equal(xToTime(175, segs), 1750);
+  assert.equal(xToTime(-20, segs), 0);
+  assert.equal(xToTime(280, segs), 2500);   // inside the end cap
+});
+
+test('timeToX follows a clamped (minimum width) segment proportionally', () => {
+  const segs = layoutTrack([200, 1000, 1000], opts);   // first segment 72 px for 200 ms
+  assert.equal(timeToX(100, segs), 36);
+  assert.equal(xToTime(36, segs), 100);
+});
+
+test('rulerTicks: every 0.5 s, labelled on whole seconds', () => {
+  const ticks = rulerTicks(layoutTrack([1000, 1500, 2000], opts));
+  assert.deepEqual(ticks.map((t) => [t.x, t.label]), [
+    [0, '0s'], [50, ''], [100, '1s'], [150, ''], [200, '2s'], [250, ''],
+  ]);
+});
+
+test('durationFromDrag: drag right edge, snapped to 50 ms, min 50', () => {
+  assert.equal(durationFromDrag(1000, 50, 100), 1500);
+  assert.equal(durationFromDrag(1000, 12, 100), 1100);
+  assert.equal(durationFromDrag(1000, -500, 100), 50);
+});
+
+test('clampZoom keeps px per second sensible', () => {
+  assert.equal(clampZoom(10), 30);
+  assert.equal(clampZoom(120), 120);
+  assert.equal(clampZoom(9999), 480);
+});

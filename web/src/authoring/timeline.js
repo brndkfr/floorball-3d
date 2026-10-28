@@ -1,10 +1,10 @@
-// Timeline strip (A4): horizontal list of frame cards + playback transport.
-// Lives at the bottom of the viewport, above the dock. Wheel over the strip
-// resizes the cards while they all fit and scrolls once they overflow
-// (Ctrl / Cmd + wheel always resizes), see timeline-wheel.js.
-// A-BACK-038: scrubber + time readout, durations in seconds, speeds
-// 0.25x..2x, one "..." menu per frame (also on right-click). Export lives
-// in the top bar (topbar.js).
+// Scene recorder (A4, redesigned in A-BACK-038 as Variant A "edit bay"):
+// docked full width under the stage. Row 1 is the transport; row 2 a time
+// ruler with a playhead over frame segments as wide as they are long
+// (transport-math.js layoutTrack). Drag a segment's right edge to change its
+// duration; one "..." menu per frame (also on right-click). Wheel over the
+// track zooms while it fits and scrolls once it overflows (Ctrl / Cmd +
+// wheel always zooms), see timeline-wheel.js. Export lives in the top bar.
 
 import {
   getFrames, getCurrentIndex, selectFrame, duplicateFrame,
@@ -15,18 +15,23 @@ import {
   stop, toggle, pause, toggleLoop, setSpeed, stepFrame, seekTo,
   playbackState, frameIndexAt, totalDuration, addPoseListener,
 } from './playback.js';
-import { startChoreo, cancelChoreo, commitChoreo, isChoreoActive } from './choreograph.js';
+import { startChoreo, commitChoreo, isChoreoActive } from './choreograph.js';
 import { getFrameThumb } from './frame-thumb.js';
 import { stripWheelAction } from './timeline-wheel.js';
 import {
   nextSpeed, speedForKey, speedLabel, formatTimecode, formatSeconds,
   parseSecondsInput, durationEditable, frameMenuItems,
+  layoutTrack, timeToX, xToTime, rulerTicks, durationFromDrag, clampZoom,
 } from './transport-math.js';
+import { fitTopDownFrustum } from '../scene.js';
 
 const el = document.getElementById('timeline');
 if (!el) throw new Error('timeline element missing from index.html');
 
-const strip = el.querySelector('.tl-strip');
+const strip = el.querySelector('.tl-strip');   // scroll container: ruler, segments, playhead
+const segsEl = el.querySelector('.tl-segs');
+const ruler = el.querySelector('.tl-ruler');
+const playhead = el.querySelector('.tl-playhead');
 const btnPlay = el.querySelector('[data-tl="play"]');
 const btnStop = el.querySelector('[data-tl="stop"]');
 const btnPrev = el.querySelector('[data-tl="prev"]');
@@ -34,12 +39,12 @@ const btnNext = el.querySelector('[data-tl="next"]');
 const btnLoop = el.querySelector('[data-tl="loop"]');
 const speedEl = el.querySelector('[data-tl="speed"]');
 const btnAdd = el.querySelector('[data-tl="add"]');
-const scrub = el.querySelector('.tl-scrub');
 const timeEl = el.querySelector('.tl-time');
 
-let cardWidth = 72;   // 40..120 px per plan; wheel adjusts
-const MIN_W = 40, MAX_W = 120;
-let lastRenderedCur = -1;   // scroll the editing card into view only when it changes
+let pxPerSec = 120;            // track zoom; wheel adjusts (clampZoom)
+const SEG_MIN_W = 76, END_W = 64;
+let segs = [];                 // layoutTrack() of the current frames
+let lastRenderedCur = -1;      // scroll the editing card into view only when it changes
 
 const CAM_ICON = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><rect x="2" y="7" width="14" height="11" rx="1"/><path d="M16 11l6-3v9l-6-3"/></svg>';
 
@@ -71,7 +76,7 @@ function closeMenu() {
   menuButton = null;
 }
 
-// Opens above the anchor point (the strip sits at the bottom of the
+// Opens above the anchor point (the recorder sits at the bottom of the
 // viewport), clamped to the window.
 function openMenu(i, x, y, button = null) {
   const frames = getFrames();
@@ -115,17 +120,116 @@ window.addEventListener('keydown', (e) => {
   b?.focus();
 }, true);
 
-// --- render -------------------------------------------------------------
+// --- time readout, playhead, stage inset --------------------------------
 
 function updateTime() {
   const total = totalDuration();
   const elapsed = Math.min(playbackState().elapsed, total);
-  scrub.max = String(total);
-  scrub.value = String(elapsed);
-  scrub.disabled = total === 0;
   const text = `${formatTimecode(elapsed)} / ${formatTimecode(total)}`;
   timeEl.textContent = text;
-  scrub.setAttribute('aria-valuetext', text);
+  ruler.setAttribute('aria-valuemax', String(total));
+  ruler.setAttribute('aria-valuenow', String(elapsed));
+  ruler.setAttribute('aria-valuetext', text);
+  playhead.style.left = (segsEl.offsetLeft + timeToX(elapsed, segs)) + 'px';
+}
+
+// The docked recorder covers the bottom of the stage: publish how far it
+// reaches up (0 while hidden, e.g. in Analyze) so the 2D view fits the rink
+// above it (stage-frustum.js readShellInsets) and the dock floats over it.
+let lastInset = -1;
+function syncInset() {
+  const r = el.getBoundingClientRect();
+  const inset = r.height ? Math.max(0, Math.round(window.innerHeight - r.top)) : 0;
+  if (inset === lastInset) return;
+  lastInset = inset;
+  document.documentElement.style.setProperty('--recorder-inset', inset + 'px');
+  fitTopDownFrustum();
+}
+new ResizeObserver(syncInset).observe(el);
+window.addEventListener('resize', syncInset);
+
+// --- render -------------------------------------------------------------
+
+let suppressClick = false;   // a handle drag ends in a click on its card
+
+function makeThumb(f) {
+  const thumb = document.createElement('img');
+  thumb.className = 'tl-thumb';
+  thumb.width = 48;
+  thumb.height = 24;
+  thumb.alt = '';
+  thumb.decoding = 'async';
+  thumb.draggable = false;
+  // getFrameThumb caches by frame id + hash: once per frame per size.
+  const url = getFrameThumb(f, 48, 24);
+  if (url) thumb.src = url;
+  return thumb;
+}
+
+function makeDurationInput(i, f) {
+  const wrap = document.createElement('label');
+  wrap.className = 'tl-durwrap';
+  wrap.title = 'Time to move to the next frame, in seconds (or drag the edge)';
+  const dur = document.createElement('input');
+  dur.className = 'tl-dur';
+  dur.type = 'text';
+  dur.inputMode = 'decimal';
+  dur.value = formatSeconds(f.duration);
+  dur.setAttribute('aria-label', `Frame ${i + 1} duration in seconds`);
+  dur.addEventListener('click', (e) => e.stopPropagation());
+  dur.addEventListener('keydown', (e) => { if (e.key === 'Enter') dur.blur(); });
+  dur.addEventListener('change', () => {
+    const ms = parseSecondsInput(dur.value);
+    if (ms == null) { dur.value = formatSeconds(f.duration); return; }
+    setFrameDuration(i, ms);
+  });
+  wrap.append(dur, 's');
+  return { wrap, dur };
+}
+
+// Right-edge handle: drag to change the frame's duration at the track's
+// scale. The card resizes live; the doc is written once, on release.
+function makeHandle(i, f, card, durInput) {
+  const handle = document.createElement('span');
+  handle.className = 'tl-handle';
+  handle.title = 'Drag to change the duration';
+  handle.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    handle.setPointerCapture(e.pointerId);
+    const x0 = e.clientX, start = f.duration;
+    let ms = start;
+    const move = (ev) => {
+      ms = durationFromDrag(start, ev.clientX - x0, pxPerSec);
+      card.style.width = Math.max(SEG_MIN_W, (ms / 1000) * pxPerSec) + 'px';
+      durInput.value = formatSeconds(ms);
+    };
+    const up = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      handle.removeEventListener('pointercancel', up);
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+      if (ms !== start) setFrameDuration(i, ms);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+    handle.addEventListener('pointercancel', up);
+  });
+  return handle;
+}
+
+function renderRuler(trackW) {
+  ruler.style.width = trackW + 'px';
+  ruler.innerHTML = '';
+  for (const t of rulerTicks(segs)) {
+    const tick = document.createElement('span');
+    tick.className = t.label ? 'tl-tick major' : 'tl-tick';
+    tick.style.left = t.x + 'px';
+    tick.textContent = t.label;
+    ruler.appendChild(tick);
+  }
 }
 
 function render() {
@@ -135,13 +239,21 @@ function render() {
   const p = playbackState();
   const playIdx = p.playing ? frameIndexAt(p.elapsed) : cur;
 
-  strip.innerHTML = '';
+  segs = layoutTrack(frames.map((f) => f.duration), { pxPerSec, minW: SEG_MIN_W, endW: END_W });
+  const last = segs[segs.length - 1];
+  const trackW = last ? last.x + last.w : 0;
+  segsEl.style.width = trackW + 'px';
+  renderRuler(trackW);
+
+  segsEl.innerHTML = '';
   frames.forEach((f, i) => {
+    const seg = segs[i];
     const card = document.createElement('div');
     card.className = 'tl-card';
     if (i === cur) card.classList.add('editing');
     if (i === playIdx && p.playing) card.classList.add('playing');
-    card.style.width = cardWidth + 'px';
+    if (i === frames.length - 1) card.classList.add('end');
+    card.style.width = seg.w + 'px';
     card.title = `Frame ${i + 1} - click to edit, right-click for actions`;
 
     const head = document.createElement('div');
@@ -175,61 +287,38 @@ function render() {
     head.appendChild(menuBtn);
     card.appendChild(head);
 
-    // Thumbnail (top-down snapshot). Rink is 2:1 (long:short), so thumb
-    // height is half the card's usable width; getFrameThumb caches by
-    // frame id + hash so this runs at most once per frame per size.
-    const thumbW = Math.max(24, cardWidth - 8);
-    const thumbH = Math.max(12, Math.round(thumbW / 2));
-    const thumb = document.createElement('img');
-    thumb.className = 'tl-thumb';
-    thumb.width = thumbW;
-    thumb.height = thumbH;
-    thumb.alt = '';
-    thumb.decoding = 'async';
-    thumb.draggable = false;
-    const thumbUrl = getFrameThumb(f, thumbW, thumbH);
-    if (thumbUrl) thumb.src = thumbUrl;
-    card.appendChild(thumb);
-
+    const body = document.createElement('div');
+    body.className = 'tl-body';
+    if (seg.w >= 132) body.appendChild(makeThumb(f));
     // A frame's duration is the move to the next frame, so the last one
     // has none to edit.
     if (durationEditable(i, frames.length)) {
-      const wrap = document.createElement('label');
-      wrap.className = 'tl-durwrap';
-      wrap.title = 'Time to move to the next frame, in seconds';
-      const dur = document.createElement('input');
-      dur.className = 'tl-dur';
-      dur.type = 'text';
-      dur.inputMode = 'decimal';
-      dur.value = formatSeconds(f.duration);
-      dur.setAttribute('aria-label', `Frame ${i + 1} duration in seconds`);
-      dur.addEventListener('click', (e) => e.stopPropagation());
-      dur.addEventListener('keydown', (e) => { if (e.key === 'Enter') dur.blur(); });
-      dur.addEventListener('change', () => {
-        const ms = parseSecondsInput(dur.value);
-        if (ms == null) { dur.value = formatSeconds(f.duration); return; }
-        setFrameDuration(i, ms);
-      });
-      wrap.append(dur, 's');
-      card.appendChild(wrap);
+      const { wrap, dur } = makeDurationInput(i, f);
+      body.appendChild(wrap);
+      card.appendChild(body);
+      card.appendChild(makeHandle(i, f, card, dur));
     } else {
       const end = document.createElement('span');
       end.className = 'tl-dur-end';
       end.textContent = 'end';
       end.title = 'Playback ends on the last frame';
-      card.appendChild(end);
+      body.appendChild(end);
+      card.appendChild(body);
     }
 
-    card.addEventListener('click', () => selectFrame(i));
+    card.addEventListener('click', () => {
+      if (suppressClick) { suppressClick = false; return; }
+      selectFrame(i);
+    });
     card.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       openMenu(i, e.clientX, e.clientY);
     });
-    strip.appendChild(card);
+    segsEl.appendChild(card);
   });
 
   if (cur !== lastRenderedCur) {
-    strip.children[cur]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    segsEl.children[cur]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     lastRenderedCur = cur;
   }
 
@@ -240,7 +329,54 @@ function render() {
   btnLoop.setAttribute('aria-pressed', String(p.loop));
   speedEl.textContent = speedLabel(p.speed);
   updateTime();
+  syncInset();
 }
+
+// --- ruler: click / drag / keys move the playhead ------------------------
+// Pauses playback; the scene is a preview until Stop or a click on the rink.
+// Keyboard when focused: arrows 0.1 s (Shift 1 s), Home / End, Page Up /
+// Down a frame.
+
+function seekToClientX(clientX) {
+  if (playbackState().playing) pause();
+  seekTo(xToTime(clientX - segsEl.getBoundingClientRect().left, segs));
+}
+ruler.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+  ruler.setPointerCapture(e.pointerId);
+  seekToClientX(e.clientX);
+  const move = (ev) => seekToClientX(ev.clientX);
+  const up = () => {
+    ruler.removeEventListener('pointermove', move);
+    ruler.removeEventListener('pointerup', up);
+    ruler.removeEventListener('pointercancel', up);
+  };
+  ruler.addEventListener('pointermove', move);
+  ruler.addEventListener('pointerup', up);
+  ruler.addEventListener('pointercancel', up);
+});
+ruler.addEventListener('keydown', (e) => {
+  const total = totalDuration();
+  const now = Math.min(playbackState().elapsed, total);
+  const step = e.shiftKey ? 1000 : 100;
+  let target = null;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') target = now + step;
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') target = now - step;
+  else if (e.key === 'Home') target = 0;
+  else if (e.key === 'End') target = total;
+  else if (e.key === 'PageDown' || e.key === 'PageUp') {
+    e.preventDefault();
+    e.stopPropagation();
+    stepFrame(e.key === 'PageDown' ? 1 : -1);
+    return;
+  }
+  if (target == null) return;
+  e.preventDefault();
+  e.stopPropagation();   // arrows would otherwise move the selected chip
+  if (playbackState().playing) pause();
+  seekTo(Math.min(Math.max(target, 0), total));
+});
+addPoseListener(updateTime);
 
 strip.addEventListener('wheel', (e) => {
   const action = stripWheelAction({
@@ -250,17 +386,9 @@ strip.addEventListener('wheel', (e) => {
   e.preventDefault();
   if (!action) return;
   if (action.kind === 'scroll') { strip.scrollLeft += action.dx; return; }
-  cardWidth = Math.min(Math.max(cardWidth + action.dir * 6, MIN_W), MAX_W);
+  pxPerSec = clampZoom(pxPerSec * (action.dir > 0 ? 1.15 : 1 / 1.15));
   render();
 }, { passive: false });
-
-// Dragging the scrubber pauses and shows that moment; the scene stays a
-// preview (never written to the doc) until Stop or a click on the rink.
-scrub.addEventListener('input', () => {
-  if (playbackState().playing) pause();
-  seekTo(+scrub.value);
-});
-addPoseListener(updateTime);
 
 btnPlay.addEventListener('click', toggle);
 btnStop.addEventListener('click', stop);
@@ -288,9 +416,7 @@ window.addEventListener('playbackChanged', render);
 // Left/Right aren't bound - they conflict with WASD/arrow chip movement.
 window.addEventListener('keydown', (event) => {
   const tag = event.target?.tagName;
-  // The scrubber is an <input type="range"> that takes no text, so keys
-  // still drive playback after dragging it.
-  if ((tag === 'INPUT' && event.target.type !== 'range') || tag === 'TEXTAREA') return;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
   if (event.ctrlKey || event.metaKey || event.altKey) return;
   if (event.key === ' ') { event.preventDefault(); toggle(); }
   else if (event.key === ',') { event.preventDefault(); stepFrame(-1); }
@@ -302,8 +428,4 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
-// Re-render whenever chips/shapes are added etc. - the current card should
-// reflect the working scene. render() is cheap (small DOM). We hook into
-// the same events dock/frames already emit.
-window.addEventListener('framesChanged', render);
 render();
