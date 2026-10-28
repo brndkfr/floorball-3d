@@ -22,6 +22,7 @@ function afterMutation(pushHistory = true) {
   rebuildBallsFromDoc();
   rebuildGoalsFromDoc();
   applyActorsFromScheme();
+  if (state.playback) state.playback.previewing = false;   // meshes show the doc again
   if (pushHistory) import('./history.js').then((h) => h.pushHistory());
   window.dispatchEvent(new Event('framesChanged'));
 }

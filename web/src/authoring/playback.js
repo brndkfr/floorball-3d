@@ -11,15 +11,21 @@ import * as THREE from 'three';
 import { state } from '../state.js';
 import { ensureDoc } from './doc.js';
 import { getFrames } from './frames.js';
-import { camera, topDownCamera } from '../scene.js';
+import { camera, topDownCamera, renderer, getActiveCamera } from '../scene.js';
+import { normalizeSpeed } from './transport-math.js';
 
 const playback = {
   playing: false,
   loop: false,
-  speed: 1,      // 1..9 multiplier
+  speed: 1,      // one of transport-math.js SPEEDS (0.25..2)
   elapsed: 0,    // ms since play() (in playback time, i.e. dt * speed)
   savedFrame: 0, // frame index to restore to when stopping
   savedCamera: null, // pose snapshot restored on stop()
+  // True while the meshes show a playback-time pose (playing, paused
+  // mid-play, stepped, scrubbed, exported) instead of the edit frame.
+  // tickActors() must not write that pose back into the doc; stop() and
+  // any frame switch (frames.js afterMutation) clear it.
+  previewing: false,
 };
 state.playback = playback;
 
@@ -94,7 +100,7 @@ export function stop() {
 export function toggle() { playback.playing ? pause() : play(); }
 
 export function setSpeed(n) {
-  playback.speed = Math.min(Math.max(n | 0, 1), 9);
+  playback.speed = normalizeSpeed(n);
   window.dispatchEvent(new Event('playbackChanged'));
 }
 
@@ -168,6 +174,7 @@ import { applyActorsFromScheme } from './actors.js';
 function applyPose(elapsed) {
   const frames = getFrames();
   if (frames.length === 0) return;
+  playback.previewing = true;
   const { a, b, t } = segmentAt(elapsed);
   const fa = frames[a].scheme, fb = frames[b].scheme;
 
@@ -264,7 +271,15 @@ function restoreEditFrame() {
   }
   // Ball + goalie too: else tickActors writes their playback pose into the edit frame.
   applyActorsFromScheme();
+  playback.previewing = false;
 }
+
+// Clicking the 2D rink while a preview pose is showing goes back to the
+// edit frame first, so the gesture edits what the doc holds rather than a
+// pose that is never saved. 3D look-around keeps the preview.
+renderer.domElement.addEventListener('pointerdown', () => {
+  if (playback.previewing && !playback.playing && getActiveCamera() === topDownCamera) stop();
+}, true);
 
 export function playbackState() { return playback; }
 

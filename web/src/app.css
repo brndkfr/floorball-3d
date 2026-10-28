@@ -189,14 +189,13 @@
   }
   #dockPalette button.active { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.35); }
 
-  /* --- Timeline strip (A4): sits above the dock, holds playback transport
-     and frame cards. Same amber-authoring language as the dock. */
-  /* Timeline (Broadcast bottom bar, design canvas "Plan"): transport, frame
-     cards, + frame, Choreo. Centred on the stage like the dock. */
+  /* Timeline (Broadcast bottom bar, design canvas "Plan"): scrubber row on
+     top (A-BACK-038), then transport, frame cards, + frame, Choreo.
+     Centred on the stage like the dock. */
   #timeline {
     position:absolute; left:var(--stage-center); bottom:70px; z-index:13;
     transform:translateX(-50%);
-    display:flex; align-items:center; gap:10px;
+    display:flex; flex-direction:column; align-items:stretch; gap:6px;
     max-width:min(var(--stage-width), 1400px); box-sizing:border-box;
     padding:8px 12px;
     background:var(--fb-surf-1);
@@ -216,6 +215,11 @@
   #timeline .tl-learn { background:transparent; color:var(--fb-text-2); }
   #timeline .tl-add:hover, #timeline .tl-learn:hover { color:var(--fb-text-1); border-color:var(--fb-text-3); }
   #timeline button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
+  #timeline .tl-row { display:flex; align-items:center; gap:10px; }
+  #timeline .tl-scrubrow { display:flex; align-items:center; gap:10px; padding:0 2px; }
+  #timeline .tl-scrub { flex:1; min-width:0; margin:0; accent-color:var(--fb-brand); cursor:pointer; }
+  #timeline .tl-scrub:disabled { opacity:0.35; cursor:default; }
+  #timeline .tl-time { font:500 11px/1 var(--fb-mono); white-space:nowrap; color:var(--fb-text-2); }
   #timeline .tl-transport { display:flex; align-items:center; gap:4px; }
   #timeline .tl-transport button, #timeline .tl-transport [data-tl="speed"] {
     height:28px; min-width:32px; padding:0 8px;
@@ -247,35 +251,58 @@
   #timeline .tl-card:hover { background:var(--fb-brand-quiet); }
   #timeline .tl-card.editing { border-color:var(--fb-brand); box-shadow:0 0 0 1px var(--fb-line-strong) inset; }
   #timeline .tl-card.playing { border-color:#7ee06b; }
+  #timeline .tl-card .tl-head { display:flex; align-items:center; gap:3px; width:100%; }
   #timeline .tl-card .tl-num {
-    font-size:12px; font-weight:700; color:var(--fb-brand); line-height:1;
+    font-size:12px; font-weight:700; color:var(--fb-brand); line-height:1; padding-left:2px;
   }
   #timeline .tl-card.editing .tl-num { color:var(--fb-text-1); }
+  #timeline .tl-card .tl-cam { display:inline-flex; color:var(--fb-brand); }
+  #timeline .tl-card .tl-menu {
+    margin-left:auto; height:20px; min-width:22px; padding:0 4px;
+    background:transparent; border:1px solid transparent; border-radius:var(--fb-radius-1);
+    color:var(--fb-text-2); font:600 13px/1 var(--fb-font); cursor:pointer;
+  }
+  #timeline .tl-card .tl-menu:hover, #timeline .tl-card .tl-menu[aria-expanded="true"] {
+    color:var(--fb-text-1); border-color:var(--fb-line-strong); background:var(--fb-surf-3);
+  }
   #timeline .tl-card .tl-thumb {
     display:block; border-radius:3px;
     background:rgba(0,0,0,0.35);
     image-rendering:auto;
     pointer-events:none;
   }
+  #timeline .tl-card .tl-durwrap {
+    display:flex; align-items:center; gap:2px; width:100%;
+    font:500 10px/1 var(--fb-mono); color:var(--fb-text-2);
+  }
   #timeline .tl-card .tl-dur {
-    width:100%; min-width:36px;
-    background:rgba(0,0,0,0.35); color:var(--fb-text-1);
+    flex:1; min-width:0; width:100%;
+    background:var(--fb-surf-2); color:var(--fb-text-1);
     border:1px solid var(--fb-line-strong); border-radius:4px;
-    font-family:inherit; font-size:10px; padding:1px 2px; text-align:center;
-    -moz-appearance:textfield;
+    font:500 10px/1 var(--fb-mono); padding:2px; text-align:center;
   }
-  #timeline .tl-card .tl-dur::-webkit-outer-spin-button,
-  #timeline .tl-card .tl-dur::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
-  #timeline .tl-card .tl-acts { display:flex; flex-wrap:wrap; justify-content:center; gap:1px; max-width:100%; }
-  #timeline .tl-card .tl-acts button {
-    background:transparent; border:none; color:var(--fb-text-1); cursor:pointer;
-    font-family:inherit; font-size:11px; padding:0 3px; line-height:1;
-    opacity:0.7;
+  #timeline .tl-card .tl-dur-end { font:500 10px/18px var(--fb-mono); color:var(--fb-text-2); }
+  /* Per-frame menu (A-BACK-038): one shared popover, opened from a card's
+     "..." button or by right-clicking the card. */
+  #tlFrameMenu {
+    position:fixed; z-index:30;
+    display:flex; flex-direction:column; min-width:200px; padding:4px 0;
+    background:var(--fb-surf-1);
+    border:1px solid var(--fb-line-strong);
+    border-radius:var(--fb-radius-2);
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+    font:500 13px/1 var(--fb-font);
   }
-  #timeline .tl-card .tl-acts button:hover { opacity:1; color:var(--fb-brand); }
-  #timeline .tl-card .tl-acts button.lit { opacity:1; color:#7ee06b; }
-  #timeline .tl-card .tl-acts button.lit:hover { color:var(--fb-danger); }
-  #timeline .tl-card .tl-acts button:disabled { opacity:0.25; cursor:not-allowed; }
+  #tlFrameMenu[hidden] { display:none; }
+  #tlFrameMenu button {
+    background:transparent; color:var(--fb-text-1); border:none; text-align:left;
+    padding:9px 14px; font:inherit; cursor:pointer;
+  }
+  #tlFrameMenu button:hover:not(:disabled), #tlFrameMenu button:focus-visible {
+    background:var(--fb-brand-quiet); outline:none;
+  }
+  #tlFrameMenu button.danger { color:var(--fb-danger); border-top:1px solid var(--fb-line); margin-top:4px; }
+  #tlFrameMenu button:disabled { color:var(--fb-text-3); cursor:not-allowed; }
 
   /* Bottom-left of the stage: centred it overlapped the timeline's cards. */
   #dockStatus {
@@ -930,6 +957,7 @@
       left:8px; right:8px; transform:none; max-width:none;
       flex-wrap:wrap; gap:6px; padding:6px 8px;
     }
+    #timeline .tl-row { flex-wrap:wrap; gap:6px; }
     #timeline .tl-strip { order:3; flex:1 1 100%; min-width:0; }
     #timeline .tl-sep, #timeline .tl-learn { display:none; }
     /* Bottom-up: tab bar, palette strip, timeline. The dock moves to the top

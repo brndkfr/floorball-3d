@@ -89,7 +89,7 @@ scene.add(carrierRing);
 
 export function tickActors() {
   const doc = ensureDoc();
-  if (state.playback?.playing) {
+  if (state.playback?.playing || state.playback?.previewing) {
     carrierRing.visible = false;   // playback moves chips; the ring would sit at the edit-time spot
     return false;
   }
