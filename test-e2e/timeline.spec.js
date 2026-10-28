@@ -89,3 +89,30 @@ test.describe('timeline strip on a narrow window', () => {
     expect(inView).toBe(true);
   });
 });
+
+// A-BACK-038 step 1: the dock status pill ("Team 1 - next #1") used to sit
+// at a fixed bottom offset that landed inside the timeline, on top of the
+// frame card. The timeline's height changes with the card width (wheel), so
+// check both the default and the largest card size.
+test.describe('dock status pill', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  const overlap = (page) => page.evaluate(() => {
+    const a = document.getElementById('dockStatus').getBoundingClientRect();
+    const b = document.getElementById('timeline').getBoundingClientRect();
+    return Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
+      * Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+  });
+
+  test('does not overlap the timeline', async ({ page }) => {
+    await boot(page);
+    expect(await overlap(page)).toBe(0);
+
+    const box = await page.locator('#timeline .tl-strip').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.keyboard.down('Control');
+    for (let i = 0; i < 12; i++) await page.mouse.wheel(0, -120);
+    await page.keyboard.up('Control');
+    expect(await overlap(page)).toBe(0);
+  });
+});
