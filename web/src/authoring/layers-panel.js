@@ -1,5 +1,6 @@
 // Layers panel (Mode A). Lists every doc-authored object (chips + shapes)
-// for the current frame with per-row eye toggles + click-to-select.
+// for the current frame with per-row eye toggles + click-to-select, plus
+// the Swiss Way tactical zones as project-level layers (A-BACK-039).
 //
 // Refresh model: mutations in chips.js / shapes.js / frames.js /
 // history.js dispatch a `layers:dirty` CustomEvent on `document`; this
@@ -15,6 +16,8 @@ import { ballDataFor, setBallHidden, updateBall, removeBall, BALL_DEFAULT_COLOR 
 import { goalDataFor, setGoalHidden, updateGoal, removeGoal } from './goals.js';
 import { onSelectionChanged, selectObject, deselectAll } from '../selection.js';
 import { setFiguresEnabled } from './figures.js';
+import { saveDoc } from './storage.js';
+import { ZONES, isZoneVisible, withZone } from './zones-model.js';
 
 // Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
 const root = document.getElementById('layersPanel');
@@ -131,6 +134,49 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     renderSection('cones', `Cones \u00b7 ${cones.length}`, cones.map(coneRow(selId)));
     renderSection('balls', `Balls \u00b7 ${balls.length + 1}`, [matchBallRow(doc), ...balls.map(ballRow(selId))]);
     renderSection('goals', `Goals \u00b7 ${goals.length}`, goals.map(goalRow(selId)));
+    renderSection('tactical', `Tactical zones \u00b7 ${ZONES.length}`, ZONES.map(tacticalRow(doc)));
+  }
+
+  // Swiss Way tactical zones (A-BACK-039): one row per zone; the eye (or a
+  // click on the row) shows / hides it. Saved with the project in
+  // doc.zones, so undo and share links carry it; layers.js syncs the meshes.
+  function tacticalRow(doc) {
+    return (zone) => {
+      const on = isZoneVisible(doc.zones, zone.key);
+      const row = document.createElement('div');
+      row.className = 'lp-row';
+      row.dataset.zone = zone.key;
+      row.title = 'Swiss Way tactical zone - not an IFF spec, estimated from the swissunihockey.ch coaching lexicon';
+
+      const eye = document.createElement('button');
+      eye.className = 'lp-eye';
+      eye.title = on ? 'Hide' : 'Show';
+      eye.textContent = on ? '\u25CF' : '\u25CB';
+      eye.setAttribute('aria-pressed', String(on));
+      eye.setAttribute('aria-label', `${on ? 'Hide' : 'Show'} ${zone.label}`);
+      row.appendChild(eye);
+
+      const swatch = document.createElement('span');
+      swatch.className = 'lp-swatch';
+      swatch.style.background = zone.color;
+      row.appendChild(swatch);
+
+      const name = document.createElement('span');
+      name.className = 'lp-name';
+      name.textContent = zone.label;
+      row.appendChild(name);
+
+      row.addEventListener('click', () => setZoneShown(zone.key, !on));
+      return row;
+    };
+  }
+
+  function setZoneShown(key, on) {
+    const doc = ensureDoc();
+    doc.zones = withZone(doc.zones, key, on);
+    saveDoc();
+    document.dispatchEvent(new CustomEvent('layers:dirty'));
+    import('./history.js').then((h) => h.pushHistory());
   }
 
   function renderSection(key, title, rows, onReorder) {

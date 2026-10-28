@@ -26,8 +26,9 @@ tactical compute layer on it (**Mode B**).
   highlight on the goalie itself
 - A goal-coverage heatmap showing what fraction of the goal mouth the
   goalie blocks from the ball's current position
-- Swiss Way tactical zone overlay (naher / hoher Slot, Tasche,
-  Playmaker Position) and an optional numbered reference grid
+- Swiss Way tactical zones (naher / hoher Slot, Tasche, Playmaker
+  Position, Zentrallinie) as layers you show one by one, saved with the
+  play, and an optional numbered reference grid
 - First-person walk controls (WASD / arrows, drag to look, scroll to
   zoom) with context-sensitive controls for the selected object
 

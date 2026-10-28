@@ -6,6 +6,8 @@ import { state } from './state.js';
 import { scene } from './scene.js';
 import { bindLayerToggle, makeLabelSprite } from './utils.js';
 import { expectLoad, loaded, failed } from './status.js';
+import { markRenderDirty } from './render-dirty.js';
+import { ZONES, isZoneVisible } from './authoring/zones-model.js';
 
 // --- layer: rink (board + IFF markings) ---
 const rinkCheckbox = document.getElementById('rinkCheckbox');
@@ -178,10 +180,20 @@ gridTilesMtlLoader.load(
 );
 
 // --- layer: Swiss Way tactical zone overlay (not an IFF spec, see script header) ---
-const tacticalCheckbox = document.getElementById('tacticalCheckbox');
-const legendEl = document.getElementById('legend');
-let tacticalGroup = null;
-bindLayerToggle(tacticalCheckbox, () => tacticalGroup);
+// One child mesh per zone (named after its material). Which zones show is
+// project data (doc.zones, A-BACK-039), toggled from the Layers panel; the
+// meshes follow the doc on every Layers refresh (edits, undo, project
+// switch) and once the OBJ has loaded.
+const ZONE_BY_MTL = new Map(ZONES.map((z) => [z.mtl, z.key]));
+function syncZoneMeshes() {
+  if (!state.tacticalZones) return;
+  for (const mesh of state.tacticalZones.children) {
+    mesh.visible = isZoneVisible(state.doc?.zones, ZONE_BY_MTL.get(mesh.name));
+  }
+  markRenderDirty();
+}
+document.addEventListener('layers:dirty', syncZoneMeshes);
+window.addEventListener('framesChanged', syncZoneMeshes);
 
 expectLoad('tactical_zones.obj');
 const tacticalMtlLoader = new MTLLoader();
@@ -203,10 +215,9 @@ tacticalMtlLoader.load(
     objLoader.load(
       'assets/tactical_zones.obj' + CACHE_BUST,
       (object) => {
-        object.visible = tacticalCheckbox.checked;
-        tacticalGroup = object;
+        state.tacticalZones = object;
         scene.add(object);
-        legendEl.style.display = 'block';
+        syncZoneMeshes();
         loaded('tactical_zones.obj');
       },
       undefined,

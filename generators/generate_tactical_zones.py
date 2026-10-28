@@ -178,12 +178,14 @@ with open(obj_path, 'w') as f:
     f.write("mtllib tactical_zones.mtl\n")
     for v in verts:
         f.write(f"v {v[0]:.3f} {v[1]:.3f} {v[2]:.3f}\n")
-    cur_mat = None
-    for (a, b, c, mat) in tris:
-        if mat != cur_mat:
-            f.write(f"usemtl {mat}\n")
-            cur_mat = mat
-        f.write(f"f {a} {b} {c}\n")
+    # One object per zone, named after its material, so the app can show
+    # each zone on its own as a layer (A-BACK-039, web/src/authoring/
+    # zones-model.js). Both goal ends of a zone share its object.
+    for mat in dict.fromkeys(t[3] for t in tris):
+        f.write(f"o {mat}\nusemtl {mat}\n")
+        for (a, b, c, m) in tris:
+            if m == mat:
+                f.write(f"f {a} {b} {c}\n")
 
 print(f"vertices: {len(verts)}  triangles: {len(tris)}")
 print(f"written: {obj_path}")
