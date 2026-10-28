@@ -12,6 +12,7 @@
 // v1 docs (single implicit frame) are auto-migrated on load via ensureDoc.
 
 import { state } from '../state.js';
+import { sanitizeZones } from './zones-model.js';
 
 export const DOC_VERSION = 2;
 
@@ -184,6 +185,7 @@ function sanitizeDoc(doc) {
   if (!doc || !Array.isArray(doc.frames) || doc.frames.length > MAX_FRAMES) return null;
   doc.frames = doc.frames.filter(isObj);
   if (doc.frames.length === 0) return null;
+  doc.zones = sanitizeZones(doc.zones);   // A-BACK-039: shown tactical zones, project-level
   for (const frame of doc.frames) {
     if (!sanitizeFrame(frame)) return null;
     const photo = frame.photo;
@@ -213,6 +215,7 @@ export function emptyDoc() {
     version: DOC_VERSION,
     meta: emptyMeta(),
     hideMarkup: false,
+    zones: [],
     currentFrame: 0,
     frames: [ emptyFrame() ],
   };
@@ -293,6 +296,7 @@ export function ensureDoc() {
   if (!state.doc || typeof state.doc !== 'object') state.doc = emptyDoc();
   if (state.doc.version !== DOC_VERSION) state.doc = migrate(state.doc);
   ensureMeta(state.doc);
+  if (!Array.isArray(state.doc.zones)) state.doc.zones = [];
   if (!Array.isArray(state.doc.frames) || state.doc.frames.length === 0) {
     state.doc.frames = [ emptyFrame() ];
   }

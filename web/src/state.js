@@ -15,6 +15,7 @@ export const DEFAULT_SHAPE_COLOR = '#ffb347';
 export const state = {
   // layers.js
   ballGroup: null,
+  tacticalZones: null, // Swiss Way zone overlay, one child mesh per zone (A-BACK-039)
   goalInstances: [], // individual goal Object3Ds, for click-to-select
 
   // goalie.js - one goalie per goal end (A-BACK-024). state.goalies[letter]

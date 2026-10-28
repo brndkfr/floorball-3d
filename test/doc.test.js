@@ -203,6 +203,7 @@ function fullValidDoc() {
     version: DOC_VERSION,
     meta: { id: 'proj_abc', name: 'Zone entry', createdAt: 1, modifiedAt: 2 },
     hideMarkup: false,
+    zones: ['slotNear', 'pocket'],
     currentFrame: 1,
     frames: [
       {

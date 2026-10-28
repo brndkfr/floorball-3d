@@ -80,9 +80,6 @@
     background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--fb-text-1);
     border:1px solid var(--hud-accent-dim); padding:2px 4px;
   }
-  #legend { display:none; margin-top:6px; margin-left:20px; font-size:11px; }
-  #legend div { display:flex; align-items:center; gap:6px; margin:2px 0; }
-  #legend .swatch { width:11px; height:11px; flex:none; }
 
   /* on-screen touch controls: hidden on desktop, shown only on touch-primary
      devices (no keyboard) - see touch-controls.js. Buttons use touch-action:
