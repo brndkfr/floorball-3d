@@ -123,10 +123,14 @@ PLAYMAKER_Z_FAR   = 4500.0
 
 Y_FILL = 1.0        # sit just under the official markings (y=2.0 mm in rink.obj)
 Y_FILL_PLAYMAKER = 1.15   # slightly above Y_FILL - avoids z-fighting where it overlaps the Pocket zone
+Y_LINE = 1.3        # over the slot fills it crosses, still under the markings
 
 # ---------------------------------------------------------- zentrallinie --
 
-add_dashed_line(-HALF_W, RINK_L / 2, HALF_W, RINK_L / 2, 400.0, 300.0, 60.0, Y_FILL, 'ZentralLine')
+# Lexicon: "eine imaginaere Linie, welche das Spielfeld laengsseitig in zwei
+# Haelften teilt" - goal to goal along x = 0. No width given; 100 mm is an
+# estimate that stays readable in the 2D view (~40 mm per pixel).
+add_dashed_line(0.0, 0.0, 0.0, RINK_L, 400.0, 300.0, 100.0, Y_LINE, 'ZentralLine')
 
 # -------------------------------------------------- per-goal tactical zones --
 
