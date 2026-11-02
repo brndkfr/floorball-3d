@@ -299,8 +299,8 @@
       <button id="photoRoiBtn" class="dock-btn" title="Draw a box around the goal - the photo zooms into that box so you can click landmarks precisely. Also constrains auto-detect to the boxed area.">Draw + zoom to goal region</button>
       <label style="font-size:11px; opacity:0.75;">
         detect as: <select id="photoAutoDetectEnd">
-          <option value="A" selected>Goal A end</option>
-          <option value="B">Goal B end</option>
+          <option value="A" selected>Home goal end</option>
+          <option value="B">Away goal end</option>
         </select>
       </label>
       <button id="photoEnterBtn" class="dock-btn">Enter Photo View</button>
@@ -390,8 +390,8 @@
       <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">
         <fieldset id="photoTargetGoalFieldset" disabled style="border:1px solid #444; border-radius:4px; padding:4px 6px; font-size:11px;">
           <legend style="font-size:10px; opacity:0.75; padding:0 4px;">target goal</legend>
-          <label style="margin-right:8px;"><input type="radio" name="photoTargetGoal" id="photoTargetGoalA" value="A"> Goal A</label>
-          <label><input type="radio" name="photoTargetGoal" id="photoTargetGoalB" value="B"> Goal B</label>
+          <label style="margin-right:8px;"><input type="radio" name="photoTargetGoal" id="photoTargetGoalA" value="A"> Home goal</label>
+          <label><input type="radio" name="photoTargetGoal" id="photoTargetGoalB" value="B"> Away goal</label>
         </fieldset>
         <label style="font-size:11px;">home goalie: <select id="photoGoalieHome" disabled></select></label>
         <label style="font-size:11px;">away goalie: <select id="photoGoalieAway" disabled></select></label>

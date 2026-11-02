@@ -16,7 +16,8 @@ test('shoot step: after commit, targets the Shoot button, only counts after comm
   const v = tutorialView(committed);
   assert.equal(v.step, 'shoot');
   assert.equal(v.target, 'shootButton');
-  assert.match(v.hint, /Shoot at B/);
+  assert.match(v.hint, /Shoot at Away/);
+  assert.doesNotMatch(v.hint, /goal B\b/);
   assert.equal(tutorialView(run([{ type: 'choreoStart' }, { type: 'shot' }])).statuses.shoot, 'pending');
   assert.equal(tutorialView(run([{ type: 'shot' }], committed)).step, 'play');
 });

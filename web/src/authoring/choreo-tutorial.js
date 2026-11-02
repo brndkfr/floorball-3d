@@ -12,7 +12,7 @@ const HINTS = {
   pass: 'Pass: click #7 (he has the ball), then press #9 under "Pass to".',
   release: 'Choose when #7 passes: drag the orange diamond on his run (or use the Release slider). A green arrow means a clear lane, red means an opponent is in the way.',
   commit: 'Press Commit to keep the new frame.',
-  shoot: 'Now #9 shoots: select him and press "Shoot at B" in the Inspector (or right-click goal B). Drag the dot in the goal picture to aim.',
+  shoot: 'Now #9 shoots: select him and press "Shoot at Away" in the Inspector (or right-click the Away goal). Drag the dot in the goal picture to aim.',
   play: 'Press Space to watch your play.',
 };
 const TARGETS = { choreo: 'choreoButton', move: 'chip:7', pass: 'carrier', release: 'releaseMarker', commit: 'commitButton', shoot: 'shootButton', play: 'playButton' };

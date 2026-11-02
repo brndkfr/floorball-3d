@@ -25,6 +25,7 @@ import { assignTeams } from './team-cluster.js';
 import { readFocalLength35mm, focal35mmToHFovDeg } from './exif.js';
 import * as borderMode from './border-mode.js';
 import { RINK_L, HALF_W, GOAL_LINE_FROM_BOARD } from '../../constants.js';
+import { endName } from '../../end-names.js';
 import { CHIP_RADIUS, CHIP_DISPLAY_SCALE } from '../chips.js';
 import * as photoCache from './photo-cache.js';
 import { recomputeInsights } from './insights-overlay.js';
@@ -1426,13 +1427,12 @@ function computePlayerLabels(players) {
   for (const p of sorted) {
     if (p.role === 'goalie') {
       const end = Math.abs(p.world[2] - GOAL_LINE_FROM_BOARD) <= Math.abs(p.world[2] - (RINK_L - GOAL_LINE_FROM_BOARD)) ? 'A' : 'B';
-      labels.set(p.id, `Goalie ${end}`);
+      labels.set(p.id, `${endName(end)} goalie`);
       continue;
     }
-    const teamKey = p.team === 'home' ? 'A' : p.team === 'away' ? 'B' : '?';
-    if (teamKey === '?') { labels.set(p.id, `#${p.id}`); continue; }
+    if (p.team !== 'home' && p.team !== 'away') { labels.set(p.id, `#${p.id}`); continue; }
     teamCounters[p.team] += 1;
-    labels.set(p.id, `Team ${teamKey} #${teamCounters[p.team]}`);
+    labels.set(p.id, `${p.team === 'home' ? 'Home' : 'Away'} #${teamCounters[p.team]}`);
   }
   return labels;
 }

@@ -15,6 +15,7 @@ import { spawnMoveMarker } from './authoring/move-marker.js';
 import { startWalk, setWalkTickCallback } from './authoring/walk-tween.js';
 import { isTopDown } from './authoring/topdown-camera.js';
 import { disposeObject } from './dispose.js';
+import { goalName } from './end-names.js';
 
 // --- coordinate readout: hover to preview, click to pin a coordinate ---
 const coordXEl = document.getElementById('coordX');
@@ -122,11 +123,11 @@ function buildShapeHighlight(obj) {
 
 export function labelFor(obj) {
   if (obj === state.ballGroup) return 'ball';
-  if (obj === state.goalies.A) return 'goalie A';
-  if (obj === state.goalies.B) return 'goalie B';
+  if (obj === state.goalies.A) return `${goalName(state.doc?.scheme, 'A')} goalie`;
+  if (obj === state.goalies.B) return `${goalName(state.doc?.scheme, 'B')} goalie`;
   const i = state.goalInstances.indexOf(obj);
-  if (i === 0) return 'goal A (z=0 end)';
-  if (i === 1) return 'goal B (z=40000 end)';
+  if (i === 0) return `${goalName(state.doc?.scheme, 'A')} goal`;
+  if (i === 1) return `${goalName(state.doc?.scheme, 'B')} goal`;
   const chip = chipDataFor(obj);
   if (chip) return `Team ${chip.team} #${chip.number}`;
   const cone = coneDataFor(obj);

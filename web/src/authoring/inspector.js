@@ -7,6 +7,7 @@
 // history + persistence + rebuilds "just work".
 
 import { state, DEFAULT_SHAPE_COLOR } from '../state.js';
+import { endName, goalName } from '../end-names.js';
 import { onSelectionChanged, deselectAll, labelFor, selectObject } from '../selection.js';
 import { chipDataFor } from './chips.js';
 import { shapeDataFor, removeShape, updateShape, updateShapeLabel, TEXT_MIN_SIZE, TEXT_MAX_SIZE, TEXT_DEFAULT_SIZE } from './shapes.js';
@@ -177,11 +178,12 @@ function shootRow() {
   label.textContent = 'Shoot';
   row.appendChild(label);
   for (const goal of ['A', 'B']) {
+    const name = goalName(ensureDoc().scheme, goal);
     const btn = document.createElement('button');
     btn.className = 'ins-btn';
     btn.dataset.shoot = goal;
-    btn.textContent = `Shoot at ${goal}`;
-    btn.title = `Shot at goal ${goal}: adds a frame with the ball in the goal (in Choreo: this draft, if it has no pass yet)`;
+    btn.textContent = `Shoot at ${name}`;
+    btn.title = `Shot at the ${name} goal: adds a frame with the ball in the goal (in Choreo: this draft, if it has no pass yet)`;
     btn.addEventListener('click', () => shootAt(goal));
     row.appendChild(btn);
   }
@@ -216,7 +218,7 @@ function passTimingSection({ plan, dur, fa, fb }) {
   const title = document.createElement('div');
   title.className = 'ins-label';
   title.style.margin = '8px 0 4px';
-  title.textContent = plan.kind === 'shot' ? `Shot at goal ${plan.goal}` : 'Pass into this frame';
+  title.textContent = plan.kind === 'shot' ? `Shot at the ${goalName(ensureDoc().scheme, plan.goal)} goal` : 'Pass into this frame';
   wrap.appendChild(title);
 
   const releaseRow = document.createElement('div');
@@ -295,7 +297,7 @@ function aimPad(plan) {
   pad.id = 'shotAimPad';
   pad.tabIndex = 0;
   pad.setAttribute('role', 'group');
-  pad.setAttribute('aria-label', `Aim in goal ${plan.goal}: drag the dot or use the arrow keys`);
+  pad.setAttribute('aria-label', `Aim in the ${goalName(ensureDoc().scheme, plan.goal)} goal: drag the dot or use the arrow keys`);
   pad.title = 'Drag to aim (arrow keys: fine, Shift: coarse)';
   pad.style.cssText = `position:relative; width:${PAD_W}px; height:${PAD_H}px; margin:6px 0; box-sizing:content-box;
     border:4px solid #d94b2f; border-bottom-color:rgba(255,255,255,0.35); border-radius:3px 3px 0 0;
@@ -627,7 +629,7 @@ function renderFixedGoal(letter) {
   const data = fixedGoalDataFor(letter);
   const heading = document.createElement('div');
   heading.className = 'ins-heading';
-  heading.textContent = `Goal ${letter}`;
+  heading.textContent = `${endName(letter)} end goal`;
   body.appendChild(heading);
 
   const labelRow = document.createElement('div');
@@ -639,7 +641,7 @@ function renderFixedGoal(letter) {
   const labelInput = document.createElement('input');
   labelInput.type = 'text';
   labelInput.maxLength = 32;
-  labelInput.placeholder = letter === 'A' ? 'Home' : 'Away';
+  labelInput.placeholder = endName(letter);
   labelInput.value = data.label;
   labelInput.addEventListener('change', () => updateFixedGoal(letter, { label: labelInput.value }));
   labelRow.appendChild(labelInput);

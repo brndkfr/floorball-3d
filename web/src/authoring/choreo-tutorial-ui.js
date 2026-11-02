@@ -24,7 +24,7 @@ const STEP_LABELS = {
   pass: 'Pass the ball to #9',
   release: 'Choose when #7 passes',
   commit: 'Commit the frame',
-  shoot: 'Shoot at goal B',
+  shoot: 'Shoot at the Away goal',
   play: 'Press Space to watch',
 };
 

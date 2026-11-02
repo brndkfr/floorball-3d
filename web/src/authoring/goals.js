@@ -15,6 +15,7 @@ import { scene } from '../scene.js';
 import { ensureDoc, newId } from './doc.js';
 import { saveDoc } from './storage.js';
 import { makeTextSprite } from './shapes.js';
+import { END_NAMES } from '../end-names.js';
 
 export const GOAL_LABEL_DEFAULT_COLOR = '#ffffff';
 export const GOAL_LABEL_DEFAULT_SIZE = 1200;
@@ -210,7 +211,7 @@ export function rebuildGoalsFromDoc() {
 // extras array does. State fields per side mirror the extras' schema:
 // label?, labelVisible?, labelColor?, labelSize?.
 export const FIXED_GOAL_LETTERS = ['A', 'B'];
-const FIXED_GOAL_DEFAULT_LABEL = { A: 'Home', B: 'Away' };
+const FIXED_GOAL_DEFAULT_LABEL = END_NAMES;
 
 export function fixedGoalLetterOf(obj) {
   const i = state.goalInstances?.indexOf(obj) ?? -1;

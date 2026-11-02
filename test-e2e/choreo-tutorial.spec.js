@@ -111,7 +111,7 @@ test.describe('A-BACK-019 guided Choreo tutorial', () => {
 
     await page.locator('#choreoCommitBtn').click();
     await expect(step(page, 'shoot')).toHaveAttribute('data-status', 'active');
-    await expect(page.locator('#tutorialCard .tut-hint')).toContainText('Shoot at B');
+    await expect(page.locator('#tutorialCard .tut-hint')).toContainText('Shoot at Away');
 
     await shootWithNine(page);
     await expect(step(page, 'shoot')).toHaveAttribute('data-status', 'complete');

@@ -20,6 +20,7 @@ import { setFiguresEnabled } from './figures.js';
 import { saveDoc } from './storage.js';
 import { ZONES, isZoneVisible, withZone } from './zones-model.js';
 import { FIXED_OBJECTS, isFixedShown, withFixedShown } from './fixed-objects-model.js';
+import { endName } from '../end-names.js';
 
 // Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
 const root = document.getElementById('layersPanel');
@@ -157,7 +158,8 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     return (obj) => {
       const on = isFixedShown(doc.hiddenFixed, obj.key);
       const isGoal = obj.kind === 'goal';
-      const label = isGoal ? fixedGoalDataFor(obj.end).label : `Goalie ${obj.end}`;
+      const goalLabel = fixedGoalDataFor(obj.end).label;
+      const label = isGoal ? goalLabel : `${goalLabel} goalie`;
       const row = document.createElement('div');
       row.className = 'lp-row';
       row.dataset.fixed = obj.key;
@@ -184,10 +186,10 @@ if (!root) throw new Error('layersPanel element missing from index.html');
       name.className = 'lp-name';
       name.textContent = label;
       if (isGoal) {
-        name.title = `Goal ${obj.end} - double-click to rename`;
+        name.title = `${endName(obj.end)} end goal - double-click to rename`;
         attachInlineRename(name, row, {
           current: label,
-          placeholder: obj.end === 'A' ? 'Home' : 'Away',
+          placeholder: endName(obj.end),
           commit: (v) => updateFixedGoal(obj.end, { label: v }),
         });
       }

@@ -27,8 +27,8 @@ test('goals and goalies are Layers rows, all shown; the View checkboxes are gone
   }
   await expect(row(page, 'goalA').locator('.lp-name')).toHaveText('Home');
   await expect(row(page, 'goalB').locator('.lp-name')).toHaveText('Away');
-  await expect(row(page, 'goalieA').locator('.lp-name')).toHaveText('Goalie A');
-  await expect(row(page, 'goalieB').locator('.lp-name')).toHaveText('Goalie B');
+  await expect(row(page, 'goalieA').locator('.lp-name')).toHaveText('Home goalie');
+  await expect(row(page, 'goalieB').locator('.lp-name')).toHaveText('Away goalie');
   await expect(page.locator('#layersPanel .lp-row[data-fixed] .lp-eye[aria-pressed="true"]')).toHaveCount(4);
   await expect.poll(() => meshVisible(page)).toEqual(ALL_SHOWN);
 });
@@ -83,7 +83,7 @@ test('clicking a row selects the goal or goalie; hiding it deselects', async ({ 
   expect(await selected()).toBe(null);
 });
 
-test('double-clicking a goal name renames it', async ({ page }) => {
+test('double-clicking a goal name renames it, and its goalie and shot button follow', async ({ page }) => {
   await boot(page);
   await row(page, 'goalA').click();
   await expect(row(page, 'goalA')).toHaveClass(/selected/);
@@ -94,4 +94,16 @@ test('double-clicking a goal name renames it', async ({ page }) => {
   await expect(row(page, 'goalA').locator('.lp-name')).toHaveText('Jets');
   const label = await page.evaluate(async () => (await import('/src/authoring/goals.js')).fixedGoalDataFor('A').label);
   expect(label).toBe('Jets');
+  await expect(row(page, 'goalieA').locator('.lp-name')).toHaveText('Jets goalie');
+
+  await page.evaluate(async () => {
+    const { spawnChip } = await import('/src/authoring/chips.js');
+    const { setBallCarrier } = await import('/src/authoring/actors.js');
+    const { selectObject } = await import('/src/selection.js');
+    const { state } = await import('/src/state.js');
+    const id = spawnChip({ team: 1, x: 0, z: 20000, number: 9, pushHistory: false });
+    setBallCarrier(id);
+    selectObject(state.chipGroups.find((g) => g.userData.chip?.id === id));
+  });
+  await expect(page.locator('#inspectorShoot [data-shoot]')).toHaveText(['Shoot at Jets', 'Shoot at Away']);
 });

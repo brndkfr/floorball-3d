@@ -219,7 +219,7 @@ function hitTestChipFacing(clientX, clientY) {
 }
 
 // Resolves a landmark key to a friendly display label for the on-photo
-// marker text (e.g. "goalA_postL" -> "Goal A - left post (base)") - kept
+// marker text (e.g. "goalA_postL" -> "Home goal - left post (base)") - kept
 // as an injected callback rather than importing landmarks.js directly, so
 // this module stays domain-agnostic. Falls back to the raw key.
 let labelResolver = (key) => key;

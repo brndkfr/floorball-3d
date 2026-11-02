@@ -5,6 +5,7 @@
 // Lets the user calibrate off arbitrary boards when named landmarks
 // (centre, crease, posts) aren't in frame.
 import { RINK_L, HALF_W } from '../../constants.js';
+import { endName } from '../../end-names.js';
 
 const BOARD_R = 2000;
 const BOARD_H = 500;
@@ -93,7 +94,7 @@ function updateZoomBtn() {
   if (!zoomBtn) return;
   if (!focusEnd) { zoomBtn.style.display = 'none'; return; }
   zoomBtn.style.display = '';
-  zoomBtn.textContent = showWhole ? `Zoom to Goal ${focusEnd}` : 'Show whole rink';
+  zoomBtn.textContent = showWhole ? `Zoom to the ${endName(focusEnd)} goal` : 'Show whole rink';
 }
 
 // Called by photo-overlay.js whenever it knows which goal end the photo is
@@ -276,8 +277,8 @@ function redraw() {
   // when zoomed out of view rather than drawn off-canvas.
   ctx.fillStyle = '#e8d34a';
   ctx.font = 'bold 10px system-ui, sans-serif';
-  labelIfVisible('Goal A', x0 + 2, y0 + 2, 'left', 'top');
-  labelIfVisible('Goal B', x1 - 2, y0 + 2, 'right', 'top');
+  labelIfVisible('Home goal', x0 + 2, y0 + 2, 'left', 'top');
+  labelIfVisible('Away goal', x1 - 2, y0 + 2, 'right', 'top');
   const midX = (x0 + x1) / 2;
   labelIfVisible('board L (-x)', midX, y0 - 1, 'center', 'bottom');
   labelIfVisible('board R (+x)', midX, y1 + 1, 'center', 'top');
