@@ -1,6 +1,7 @@
 // Layers panel (Mode A). Lists every doc-authored object (chips + shapes)
 // for the current frame with per-row eye toggles + click-to-select, plus
-// the Swiss Way tactical zones as project-level layers (A-BACK-039).
+// the fixed goals / goalies and the Swiss Way tactical zones as
+// project-level layers (A-BACK-039).
 //
 // Refresh model: mutations in chips.js / shapes.js / frames.js /
 // history.js dispatch a `layers:dirty` CustomEvent on `document`; this
@@ -13,11 +14,12 @@ import { chipDataFor, setChipHidden, TEAM_COLORS, setLabelsVisible, updateChipLa
 import { shapeDataFor, setShapeHidden, updateShapeLabel, updateShape, removeShape, reorderShapes } from './shapes.js';
 import { coneDataFor, setConeHidden, updateCone, removeCone, CONE_DEFAULT_COLOR } from './cones.js';
 import { ballDataFor, setBallHidden, updateBall, removeBall, BALL_DEFAULT_COLOR } from './balls.js';
-import { goalDataFor, setGoalHidden, updateGoal, removeGoal } from './goals.js';
+import { goalDataFor, setGoalHidden, updateGoal, removeGoal, fixedGoalDataFor, updateFixedGoal } from './goals.js';
 import { onSelectionChanged, selectObject, deselectAll } from '../selection.js';
 import { setFiguresEnabled } from './figures.js';
 import { saveDoc } from './storage.js';
 import { ZONES, isZoneVisible, withZone } from './zones-model.js';
+import { FIXED_OBJECTS, isFixedShown, withFixedShown } from './fixed-objects-model.js';
 
 // Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
 const root = document.getElementById('layersPanel');
@@ -80,7 +82,9 @@ if (!root) throw new Error('layersPanel element missing from index.html');
   document.addEventListener('layers:dirty', render);
   window.addEventListener('ballCarrierChanged', render);
   window.addEventListener('ballColorChanged', render);
-  onSelectionChanged(render);
+  // Re-selecting the same object must not rebuild the rows: the second click of a double-click would detach the name being renamed.
+  let renderedSelection;
+  onSelectionChanged(() => { if (state.selected !== renderedSelection) render(); });
   // Initial render after the DOM is wired; chips/shapes may still be
   // spawning async but re-fires will catch up via layers:dirty.
   render();
@@ -105,10 +109,11 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     if (ball) return ball.id;
     const goal = goalDataFor(state.selected);
     if (goal) return goal.id;
-    return null;
+    return FIXED_OBJECTS.find((o) => fixedObject(o.key) === state.selected)?.key ?? null;
   }
 
   function render() {
+    renderedSelection = state.selected;
     body.innerHTML = '';
     const doc = ensureDoc();
     const players = Object.values(doc.scheme.players || {});
@@ -133,8 +138,77 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     renderSection('texts', `Text · ${texts.length}`, texts.map(shapeRow(selId)), (ids) => reorderShapes(ids));
     renderSection('cones', `Cones \u00b7 ${cones.length}`, cones.map(coneRow(selId)));
     renderSection('balls', `Balls \u00b7 ${balls.length + 1}`, [matchBallRow(doc), ...balls.map(ballRow(selId))]);
-    renderSection('goals', `Goals \u00b7 ${goals.length}`, goals.map(goalRow(selId)));
+    const fixed = (kind) => FIXED_OBJECTS.filter((o) => o.kind === kind).map(fixedRow(doc, selId));
+    renderSection('goals', `Goals \u00b7 ${goals.length + 2}`, [...fixed('goal'), ...goals.map(goalRow(selId))]);
+    renderSection('goalies', 'Goalies \u00b7 2', fixed('goalie'));
     renderSection('tactical', `Tactical zones \u00b7 ${ZONES.length}`, ZONES.map(tacticalRow(doc)));
+  }
+
+  // The two fixed rink goals and their goalies: shown / hidden per project
+  // in doc.hiddenFixed (layers.js and goalie.js sync the meshes); the goals
+  // keep their per-frame label (Home / Away), renamed by double-click.
+  function fixedObject(key) {
+    const o = FIXED_OBJECTS.find((f) => f.key === key);
+    if (!o) return null;
+    return o.kind === 'goalie' ? state.goalies[o.end] : state.goalInstances[o.end === 'A' ? 0 : 1];
+  }
+
+  function fixedRow(doc, selId) {
+    return (obj) => {
+      const on = isFixedShown(doc.hiddenFixed, obj.key);
+      const isGoal = obj.kind === 'goal';
+      const label = isGoal ? fixedGoalDataFor(obj.end).label : `Goalie ${obj.end}`;
+      const row = document.createElement('div');
+      row.className = 'lp-row';
+      row.dataset.fixed = obj.key;
+      if (obj.key === selId) row.classList.add('selected');
+
+      const eye = document.createElement('button');
+      eye.className = 'lp-eye';
+      eye.title = on ? 'Hide' : 'Show';
+      eye.textContent = on ? '\u25CF' : '\u25CB';
+      eye.setAttribute('aria-pressed', String(on));
+      eye.setAttribute('aria-label', `${on ? 'Hide' : 'Show'} ${label}`);
+      eye.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setFixedShown(obj.key, !on);
+      });
+      row.appendChild(eye);
+
+      const swatch = document.createElement('span');
+      swatch.className = 'lp-swatch';
+      swatch.style.background = '#c0c0c0';
+      row.appendChild(swatch);
+
+      const name = document.createElement('span');
+      name.className = 'lp-name';
+      name.textContent = label;
+      if (isGoal) {
+        name.title = `Goal ${obj.end} - double-click to rename`;
+        attachInlineRename(name, row, {
+          current: label,
+          placeholder: obj.end === 'A' ? 'Home' : 'Away',
+          commit: (v) => updateFixedGoal(obj.end, { label: v }),
+        });
+      }
+      row.appendChild(name);
+
+      row.addEventListener('click', () => {
+        const node = fixedObject(obj.key);
+        if (node) selectObject(node);
+      });
+      return row;
+    };
+  }
+
+  function setFixedShown(key, shown) {
+    const node = fixedObject(key);
+    if (!shown && node && state.selected === node) deselectAll();
+    const doc = ensureDoc();
+    doc.hiddenFixed = withFixedShown(doc.hiddenFixed, key, shown);
+    saveDoc();
+    document.dispatchEvent(new CustomEvent('layers:dirty'));
+    import('./history.js').then((h) => h.pushHistory());
   }
 
   // Swiss Way tactical zones (A-BACK-039): one row per zone; the eye (or a

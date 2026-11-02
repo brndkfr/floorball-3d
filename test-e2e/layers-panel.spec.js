@@ -25,7 +25,7 @@ test.describe('A-BACK-001 layers-panel drag reorder', () => {
       spawnChip({ team: 1, x: 2000, z: 0, number: 3, pushHistory: false });
     });
 
-    const rows = page.locator('#layersPanel .lp-section-body > .lp-row:not([data-match-ball]):not([data-zone])');   // match ball and tactical zone rows are always there (A-BACK-026, A-BACK-039)
+    const rows = page.locator('#layersPanel .lp-section-body > .lp-row:not([data-match-ball]):not([data-zone]):not([data-fixed])');   // match ball, tactical zone and fixed goal / goalie rows are always there
     await expect(rows).toHaveCount(3);
     await expect(rows.nth(0)).toContainText('#1');
     await expect(rows.nth(2)).toContainText('#3');
@@ -56,7 +56,7 @@ test.describe('A-BACK-001 layers-panel drag reorder', () => {
       addShape({ type: 'zone', kind: 'rect', label: 'Charlie', x: 4000, z: 0, w: 1000, h: 1000, color: '#0000ff' });
     });
 
-    const rows = page.locator('#layersPanel .lp-section-body > .lp-row:not([data-match-ball]):not([data-zone])');   // match ball and tactical zone rows are always there (A-BACK-026, A-BACK-039)
+    const rows = page.locator('#layersPanel .lp-section-body > .lp-row:not([data-match-ball]):not([data-zone]):not([data-fixed])');   // match ball, tactical zone and fixed goal / goalie rows are always there
     await expect(rows).toHaveCount(3);
     await expect(rows.nth(0)).toContainText('Alpha');
 
@@ -67,5 +67,23 @@ test.describe('A-BACK-001 layers-panel drag reorder', () => {
       return ensureDoc().scheme.shapes.map((s) => s.label);
     });
     expect(order).toEqual(['Bravo', 'Charlie', 'Alpha']);
+  });
+
+  // A re-render on every click used to detach the name before dblclick fired. Select first: selecting opens the Inspector, which shifts the list.
+  test('double-clicking a chip name renames it', async ({ page }) => {
+    await bootApp(page);
+    await page.evaluate(async () => {
+      const { ensureDoc } = await import('/src/authoring/doc.js');
+      const { spawnChip } = await import('/src/authoring/chips.js');
+      ensureDoc().scheme.players = {};
+      spawnChip({ team: 1, x: 0, z: 5000, number: 7, pushHistory: false });
+    });
+    const row = page.locator('#layersPanel .lp-row[data-item-id]').first();
+    await row.click();
+    await expect(row).toHaveClass(/selected/);
+    await row.locator('.lp-name').dblclick();
+    await row.locator('input.lp-name-input').fill('Wing');
+    await row.locator('input.lp-name-input').press('Enter');
+    await expect(page.locator('#layersPanel .lp-row[data-item-id]').first()).toContainText('Wing');
   });
 });

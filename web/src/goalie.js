@@ -7,6 +7,7 @@ import { scene, renderer } from './scene.js';
 import { expectLoad, loaded, failed } from './status.js';
 import { selectObject } from './selection.js';
 import { markRenderDirty } from './render-dirty.js';
+import { isFixedShown } from './authoring/fixed-objects-model.js';
 
 // --- layer: goalie - one instance per goal end (A-BACK-024), each
 // switchable between two models. `state.goalies.A` / `state.goalies.B`
@@ -15,18 +16,16 @@ import { markRenderDirty } from './render-dirty.js';
 // raycasting, the floating label, trajectory targeting) keeps working
 // unchanged regardless of which model is on screen. Both ends share the
 // same model choice (one dropdown), but position/rotation/visibility are
-// independent per goal. ---
-const goalieCheckboxA = document.getElementById('goalieCheckboxA');
-const goalieCheckboxB = document.getElementById('goalieCheckboxB');
+// independent per goal. Visibility is project data (doc.hiddenFixed),
+// toggled from the Layers panel. ---
 const goalieModelSelect = document.getElementById('goalieModelSelect');
-goalieCheckboxA.addEventListener('change', () => {
-  if (state.goalies.A) state.goalies.A.visible = goalieCheckboxA.checked;
+function syncGoalieVisibility() {
+  if (state.goalies.A) state.goalies.A.visible = isFixedShown(state.doc?.hiddenFixed, 'goalieA');
+  if (state.goalies.B) state.goalies.B.visible = isFixedShown(state.doc?.hiddenFixed, 'goalieB');
   markRenderDirty(); // S-BACK-011
-});
-goalieCheckboxB.addEventListener('change', () => {
-  if (state.goalies.B) state.goalies.B.visible = goalieCheckboxB.checked;
-  markRenderDirty(); // S-BACK-011
-});
+}
+document.addEventListener('layers:dirty', syncGoalieVisibility);
+window.addEventListener('framesChanged', syncGoalieVisibility);
 
 function loadGoalieModel(mtlUrl, objUrl, onReady) {
   expectLoad(objUrl);
@@ -119,8 +118,7 @@ export function activateGoalieModel(key) {
   if (prevB) { nextModels.B.position.copy(prevB.position); nextModels.B.rotation.copy(prevB.rotation); prevB.visible = false; }
   state.goalies.A = nextModels.A;
   state.goalies.B = nextModels.B;
-  state.goalies.A.visible = goalieCheckboxA.checked;
-  state.goalies.B.visible = goalieCheckboxB.checked;
+  syncGoalieVisibility();
   state.activeGoalieKey = key;
   if (wasSelectedA) selectObject(state.goalies.A); // keep the ring/controls following
   else if (wasSelectedB) selectObject(state.goalies.B);

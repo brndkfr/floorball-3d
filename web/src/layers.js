@@ -8,6 +8,7 @@ import { bindLayerToggle, makeLabelSprite } from './utils.js';
 import { expectLoad, loaded, failed } from './status.js';
 import { markRenderDirty } from './render-dirty.js';
 import { ZONES, isZoneVisible } from './authoring/zones-model.js';
+import { isFixedShown } from './authoring/fixed-objects-model.js';
 
 // --- layer: rink (board + IFF markings) ---
 const rinkCheckbox = document.getElementById('rinkCheckbox');
@@ -42,10 +43,18 @@ rinkMtlLoader.load(
   (err) => failed('rink.mtl', err)
 );
 
-// --- layer: goals (loaded once, two oriented instances, one toggle) ---
-const goalsCheckbox = document.getElementById('goalsCheckbox');
-let goalsGroup = null;
-bindLayerToggle(goalsCheckbox, () => goalsGroup);
+// --- layer: goals (loaded once, two oriented instances) ---
+// Each goal's visibility is project data (doc.hiddenFixed), toggled from the
+// Layers panel; synced on every Layers refresh and once the OBJ has loaded.
+function syncGoalMeshes() {
+  const [goalA, goalB] = state.goalInstances;
+  if (!goalA || !goalB) return;
+  goalA.visible = isFixedShown(state.doc?.hiddenFixed, 'goalA');
+  goalB.visible = isFixedShown(state.doc?.hiddenFixed, 'goalB');
+  markRenderDirty();
+}
+document.addEventListener('layers:dirty', syncGoalMeshes);
+window.addEventListener('framesChanged', syncGoalMeshes);
 
 expectLoad('floorball_goal.obj');
 const goalMtlLoader = new MTLLoader();
@@ -76,12 +85,12 @@ goalMtlLoader.load(
         goalB.position.set(0, 0, RINK_L - GOAL_LINE_FROM_BOARD);
         goalB.rotation.y = 0;
 
-        goalsGroup = new THREE.Group();
+        const goalsGroup = new THREE.Group();
         goalsGroup.add(object, goalB);
-        goalsGroup.visible = goalsCheckbox.checked;
         goalsGroup.userData.wireframeSource = 'goals';
         scene.add(goalsGroup);
         state.goalInstances.push(object, goalB);
+        syncGoalMeshes();
 
         // Signals authoring/goals.js that the goal OBJ is now cloneable
         // for user-placed extra goals (rebuildGoalsFromDoc + spawnGoal).

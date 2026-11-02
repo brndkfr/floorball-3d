@@ -204,6 +204,7 @@ function fullValidDoc() {
     meta: { id: 'proj_abc', name: 'Zone entry', createdAt: 1, modifiedAt: 2 },
     hideMarkup: false,
     zones: ['slotNear', 'pocket'],
+    hiddenFixed: ['goalieB'],
     currentFrame: 1,
     frames: [
       {
