@@ -199,6 +199,34 @@ test.describe('A-BACK-019 guided Choreo tutorial', () => {
     });
   }
 
+  for (const [name, open] of [
+    ['topbar button', async (page) => page.locator('#appTopbar [data-action="tutorial"]').click()],
+    ['timeline button', async (page) => page.locator('#timeline [data-action="tutorial"]').click()],
+  ]) {
+    test(`starting from the ${name} closes the welcome tip`, async ({ page }) => {
+      await boot(page);
+      await expect(page.locator('#onboardingTip')).toBeVisible();
+      await open(page);
+      await expect(page.locator('#tutorialCard')).toBeVisible();
+      await expect(page.locator('#onboardingTip')).toHaveCount(0);
+      expect(await page.evaluate(() => localStorage.getItem('floorball-3d:onboarded'))).toBe('1');
+    });
+  }
+
+  for (const viewport of [{ width: 1280, height: 720 }, { width: 1440, height: 900 }]) {
+    test(`the card sits above the dock, centred on the stage (${viewport.width}x${viewport.height})`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await startFromWelcomeTip(page);
+      const r = await page.evaluate(() => {
+        const box = (sel) => document.querySelector(sel).getBoundingClientRect();
+        const c = box('#tutorialCard'), d = box('#dock');
+        return { cardBottom: c.bottom, cardMid: c.left + c.width / 2, dockTop: d.top, dockMid: d.left + d.width / 2 };
+      });
+      expect(r.cardBottom).toBeLessThanOrEqual(r.dockTop);
+      expect(Math.abs(r.cardMid - r.dockMid)).toBeLessThan(2);
+    });
+  }
+
   test('after a real mouse drag of #7 the pass hint does not ask to click him again', async ({ page }) => {
     await startFromWelcomeTip(page);
     await page.locator('#timeline [data-tl="choreo"]').click();

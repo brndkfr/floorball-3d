@@ -152,6 +152,8 @@ function showOnboarding() {
   `;
   document.body.appendChild(tip);
   const dismiss = () => { tip.remove(); localStorage.setItem(ONBOARDED_KEY, '1'); };
+  // The topbar, recorder and Library start the tutorial without going through this tip.
+  window.addEventListener('tutorial:started', dismiss, { once: true });
   tip.querySelector('[data-x="ok"]').addEventListener('click', dismiss);
   tip.querySelector('[data-x="tutorial"]').addEventListener('click', () => { dismiss(); startTutorial(); });
   tip.querySelector('[data-x="help"]').addEventListener('click', () => { dismiss(); openHelp(); });

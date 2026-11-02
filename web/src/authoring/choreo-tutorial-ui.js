@@ -42,8 +42,9 @@ document.body.appendChild(card);
 
 const css = document.createElement('style');
 css.textContent = `
+  /* 78px = #dock's 12px offset + 54px height + a 12px gap. */
   #tutorialCard {
-    position:fixed; bottom:190px; left:50%; transform:translateX(-50%); z-index:26;
+    position:fixed; bottom:calc(var(--recorder-inset, 0px) + 78px); left:var(--stage-center, 50%); transform:translateX(-50%); z-index:26;
     width:min(360px, 92vw); padding:12px 16px;
     background:var(--fb-surf-1); color:var(--fb-text-1);
     border:1px solid var(--fb-line-strong); border-radius:10px;
@@ -91,6 +92,7 @@ export function startTutorial() {
   const prevProjectId = onOldTutorial ? saved.prevProjectId : current;
   const adopted = adoptDocAsProject(buildTutorialDoc(), { name: TUTORIAL_NAME });
   if (!adopted) return;
+  window.dispatchEvent(new Event('tutorial:started'));
   writeSaved({ projectId: adopted.meta.id, prevProjectId, completed: [], active: true });
   tut = null;
   switchToProject(adopted.meta.id);   // onProjectChanged below shows the card
