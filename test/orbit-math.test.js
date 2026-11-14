@@ -6,8 +6,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  rigToCamera, cameraToRig, orbitBy, panBy, panKeys, dollyBy, clampRig, lerpRig,
-  fitRigToRink, projectToScreen, ORBIT_LIMITS,
+  rigToCamera, cameraToRig, orbitBy, panBy, panGrab, panKeys, dollyBy, clampRig, lerpRig,
+  fitRigToRink, projectToScreen, screenToFloor, ORBIT_LIMITS,
 } from '../web/src/orbit-math.js';
 import { RINK_L, HALF_W } from '../web/src/constants.js';
 
@@ -73,6 +73,28 @@ test('panBy keeps the grabbed floor point under the cursor', () => {
   assert.ok(near(after.y - before.y, 0, 0.5));
 });
 
+test('panGrab keeps a floor point grabbed anywhere on screen under the cursor', () => {
+  const view = { vw: 1440, vh: 900, viewportH: 900, fovDeg: 70 };
+  const base = { tx: 9000, tz: 20000, yaw: -1.4, pitch: deg(-27), dist: 7000 };
+  const grabbed = { x: 3000, y: 0, z: 24000 };       // far from the window centre
+  const from = projectToScreen(base, grabbed, view);
+  const r = panGrab(base, from.x, from.y, from.x + 90, from.y + 40, view);
+  const after = projectToScreen(r, grabbed, view);
+  assert.ok(near(after.x, from.x + 90, 0.01) && near(after.y, from.y + 40, 0.01), `${after.x - from.x}, ${after.y - from.y}`);
+  assert.equal(r.yaw, base.yaw);
+  assert.equal(r.pitch, base.pitch);
+  assert.equal(r.dist, base.dist);
+});
+
+test('panGrab still pans when the drag starts or ends over the horizon', () => {
+  const view = { vw: 1440, vh: 900, viewportH: 900, fovDeg: 70 };
+  const base = { tx: 0, tz: 20000, yaw: 0, pitch: deg(-10), dist: 10000 };
+  const r = panGrab(base, 700, 10, 760, 10, view);    // sky
+  assert.ok(Number.isFinite(r.tx) && Number.isFinite(r.tz));
+  assert.ok(r.tx > base.tx);                           // same direction as panBy
+  assert.ok(Math.hypot(r.tx - base.tx, r.tz - base.tz) < 5000);
+});
+
 test('panKeys: forward goes where the camera looks, right goes to its right', () => {
   const base = { tx: 0, tz: 20000, yaw: 0, pitch: deg(-45), dist: 10000 };
   const f = panKeys(base, 1, 0, 1000);
@@ -119,6 +141,32 @@ test('lerpRig goes the short way round in yaw', () => {
 test('projectToScreen: the target is at the window centre', () => {
   const p = projectToScreen(RIG, { x: RIG.tx, y: 0, z: RIG.tz }, { vw: 1440, vh: 900, fovDeg: 45 });
   assert.ok(near(p.x, 720, 1e-6) && near(p.y, 450, 1e-6));
+});
+
+test('pitch limits stay inside setCameraLook\'s clamp', () => {
+  // scene.js clamps the applied pitch to +-1.4 rad. A rig pitch outside
+  // that would be cut on the way to the camera and the target would drift.
+  assert.ok(ORBIT_LIMITS.minPitch >= -1.4);
+  assert.ok(ORBIT_LIMITS.maxPitch <= 1.4);
+});
+
+test('screenToFloor is the inverse of projectToScreen on the floor', () => {
+  const view = { vw: 1440, vh: 900, fovDeg: 70 };
+  const rig = { tx: 2000, tz: 18000, yaw: -1.2, pitch: deg(-35), dist: 14000 };
+  for (const p of [{ x: 0, z: 20000 }, { x: -6000, z: 9000 }, { x: 8000, z: 31000 }]) {
+    const s = projectToScreen(rig, { x: p.x, y: 0, z: p.z }, view);
+    const back = screenToFloor(rig, s.x, s.y, view);
+    assert.ok(back && near(back.x, p.x, 0.01) && near(back.z, p.z, 0.01), JSON.stringify(back));
+  }
+});
+
+test('screenToFloor: no pivot above the horizon or far outside the rink', () => {
+  const view = { vw: 1440, vh: 900, fovDeg: 70 };
+  const rig = { tx: 0, tz: 20000, yaw: 0, pitch: deg(-10), dist: 10000 };
+  assert.equal(screenToFloor(rig, 720, 0, view), null);       // top edge looks at the sky
+  // just under the horizon the floor point is hundreds of metres away
+  const horizonY = 450 - Math.tan(deg(10)) * (450 / Math.tan(deg(35)));
+  assert.equal(screenToFloor(rig, 720, horizonY + 2, view), null);
 });
 
 test('fitRigToRink: the whole rink is inside the stage and fills it', () => {

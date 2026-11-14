@@ -75,8 +75,11 @@ the last 600 ms (estimate), not a per-frame low-pass.
 ## Progress
 
 - 2026-11-14, branch `look-and-motion`: step 1 done
-  (`web/src/orbit-math.js`, `test/orbit-math.test.js`, 15 tests). Nothing is wired to the UI yet, so the app
-  behaves as before. Next: step 2.
+  (`web/src/orbit-math.js`, `test/orbit-math.test.js`).
+- 2026-11-14: step 2 done, see "as built" under the step
+  (`test-e2e/camera-orbit.spec.js`, 8 scenarios). Next: step 3
+  (fitted default view, FOV 45), which also moves the default orbit
+  target from a point at the near board to the middle of the rink.
 
 ## Steps
 
@@ -101,7 +104,24 @@ the last 600 ms (estimate), not a per-frame low-pass.
    `rigToCamera()` back through `camera.position` + `setCameraLook()`.
    So frame camera keyframes, "View from ball", `exitTopDown()` and
    `playback.js`'s `savedCamera` need no changes.
-2. `[lead]` **Wire the gestures.** Add `getCameraRig()` /
+2. `[done 2026-11-14]` **Wire the gestures.** As built, where it
+   differs from the text below:
+   - `getCameraRig()` reads yaw / pitch from `camera.rotation`, not
+     from `state.camYaw` / `camPitch`: playback and `exitTopDown()`
+     restore the camera through its quaternion and leave those stale.
+   - Pan is `panGrab()` (new): the floor point grabbed anywhere on
+     screen stays under the cursor. `panBy()` is exact at the window
+     centre only and is the fallback near the horizon.
+   - Wheel pivot is `screenToFloor()` (new), null over the horizon or
+     outside the rink margin. `applyZoomDelta` is gone; pinch calls
+     `dollyCamera()` too (not checked on a real tablet, see step 6).
+   - `ORBIT_LIMITS.minPitch` is -80 degrees, inside `setCameraLook`'s
+     1.4 rad clamp.
+   - The FOV no longer changes by gesture but stays at 70 until
+     step 3 moves it to 45 together with the fitted default view.
+   - Not covered by the spec: a frame camera recorded earlier playing
+     back the same (that code path was not touched).
+   Original text: Add `getCameraRig()` /
    `applyCameraRig(rig)` to `scene.js` (read `camera.position`,
    `state.camYaw`, `state.camPitch`; write position +
    `setCameraLook`). `selection.js`: on entering `lmb.mode === 'look'`

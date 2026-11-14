@@ -21,7 +21,7 @@ const DEG = Math.PI / 180;
 
 // All estimates, chosen by feel.
 export const ORBIT_LIMITS = Object.freeze({
-  minPitch: -85 * DEG,   // almost straight down
+  minPitch: -80 * DEG,   // almost straight down; inside setCameraLook's 1.4 rad clamp
   maxPitch: -3 * DEG,    // never at or under the floor plane
   minDist: 1500,
   maxDist: 120000,
@@ -29,6 +29,7 @@ export const ORBIT_LIMITS = Object.freeze({
 });
 const ORBIT_SENSITIVITY = 0.004;   // rad per px, same feel as the old look-drag
 const DOLLY_RATE = 0.0015;         // per unit of wheel deltaY: 100 -> ~16 %
+const GRAB_REACH = 6;              // grab-pan only floor within this many camera distances of the target
 const BOARD_HEIGHT = 500;
 const FIT_PITCH = { landscape: -40 * DEG, portrait: -55 * DEG };
 const FIT_MARGIN_PX = 12;
@@ -163,6 +164,39 @@ export function projectToScreen(rig, p, { vw, vh, fovDeg }) {
     y: vh / 2 - ((dx * u.x + dy * u.y + dz * u.z) / zc) * focal,
     behind: zc <= 0,
   };
+}
+
+// Floor point under window pixel (px, py), the inverse of projectToScreen
+// for y = 0. null when the pixel looks over the horizon or at floor further
+// outside the boards than the target may go (a wheel pivot out there would
+// throw the camera across the hall).
+export function screenToFloor(rig, px, py, view) {
+  const p = floorUnder(rig, px, py, view);
+  const m = ORBIT_LIMITS.targetMargin;
+  if (!p || Math.abs(p.x) > HALF_W + m || p.z < -m || p.z > RINK_L + m) return null;
+  return p;
+}
+
+function floorUnder(rig, px, py, { vw, vh, fovDeg }) {
+  const c = rigToCamera(rig);
+  const { f, r, u } = basis(rig.yaw, rig.pitch);
+  const focal = focalPx(vh, fovDeg);
+  const a = (px - vw / 2) / focal, b = -(py - vh / 2) / focal;
+  const dy = f.y + r.y * a + u.y * b;
+  if (dy > -1e-6) return null;
+  const t = -c.y / dy;
+  return { x: c.x + (f.x + r.x * a + u.x * b) * t, z: c.z + (f.z + r.z * a + u.z * b) * t };
+}
+
+// Drag from pixel (x0, y0) to (x1, y1): the floor point grabbed at the
+// start stays under the cursor, wherever on screen it is. Over the horizon,
+// or so close to it that a pixel is many metres, there is nothing to grab:
+// fall back to panBy, which is exact at the window centre only.
+export function panGrab(rig, x0, y0, x1, y1, view) {
+  const a = floorUnder(rig, x0, y0, view), b = floorUnder(rig, x1, y1, view);
+  const far = (p) => Math.hypot(p.x - rig.tx, p.z - rig.tz) > rig.dist * GRAB_REACH;
+  if (!a || !b || far(a) || far(b)) return panBy(rig, x1 - x0, y1 - y0, view);
+  return clampRig({ ...rig, tx: rig.tx + a.x - b.x, tz: rig.tz + a.z - b.z });
 }
 
 const RINK_CORNERS = [];

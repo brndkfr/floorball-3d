@@ -29,11 +29,12 @@ tactical compute layer on it (**Mode B**).
 - Swiss Way tactical zones (naher / hoher Slot, Tasche, Playmaker
   Position, Zentrallinie) as layers you show one by one, saved with the
   play, and an optional numbered reference grid
-- First-person walk controls (WASD / arrows, drag to look, scroll to
-  zoom) with context-sensitive controls for the selected object
+- Orbit camera in 3D (drag to turn around a point on the floor,
+  right-drag or WASD / arrows to pan, scroll to move closer) with
+  context-sensitive controls for the selected object
 
 ### Mode A - tactical planning & animation
-- 2D / 3D view toggle - top-down orthographic for planning, first-person
+- 2D / 3D view toggle - top-down orthographic for planning, orbit
   perspective for review. Both default to a landscape orientation of the
   rink; the top-down view rotates in 90° steps via a dock button. Wheel
   zoom + right-drag pan in 2D.
@@ -96,12 +97,12 @@ can't drift from the actual key bindings - the highlights:
 |---|---|
 | left-click | select (empty floor = deselect, or place with the active tool) |
 | left-drag chip/shape | move it under the cursor |
-| left-drag empty floor | marquee-select (Shift-drag unions, Shift-click toggles one) |
+| left-drag empty floor | 2D: marquee-select (Shift-drag unions, Shift-click toggles one); 3D: orbit the camera (Shift-drag pans) |
 | right-click floor | move-command: selected chip / ball / goalie walks there |
 | right-click (tool active) | cancel the active tool |
-| right-drag / middle-drag | pan the top-down camera |
-| scroll / pinch | zoom |
-| WASD / arrows | pan camera (2D) / walk (3D, first-person) - never moves a selection |
+| right-drag / middle-drag | pan the camera (2D and 3D) |
+| scroll / pinch | zoom (3D: move closer to the point under the cursor) |
+| WASD / arrows | pan the camera (2D and 3D) - never moves a selection |
 | Q / E | rotate the selected goalie (Shift = fine) |
 | Tab / Shift+Tab | cycle selection |
 | Esc | cancel active tool, then deselect on a second press |

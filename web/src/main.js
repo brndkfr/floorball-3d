@@ -34,7 +34,7 @@ initHud();
 //    for doc mutations via storage.js's saveDoc(), and layer-visibility
 //    toggles that aren't part of the doc - see render-dirty.js's callers).
 //  - The active camera's pose/zoom differs from last frame (covers every
-//    camera-movement path: WASD walk, mouse-look drag, top-down pan/zoom -
+//    camera-movement path: WASD pan, orbit drag, wheel dolly, top-down pan/zoom -
 //    polled rather than hooked at each mutation site, since there are many
 //    and polling can't miss one).
 //  - The selection (primary + full set) differs from last frame (a fresh

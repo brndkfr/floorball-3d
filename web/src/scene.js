@@ -4,16 +4,18 @@ import { state } from './state.js';
 import { markRenderDirty } from './render-dirty.js';
 import { pickRendererQuality } from './renderer-quality.js';
 import { stageFrustum, readShellInsets } from './ui/stage-frustum.js';
+import { cameraToRig, rigToCamera, dollyBy, screenToFloor } from './orbit-math.js';
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1b1b1f);
 scene.fog = new THREE.Fog(0x1b1b1f, 35000, 90000);
 
-// --- first-person "walk the rink" camera: no OrbitControls. Position is
-// free-walked with WASD/arrows (eye height fixed, floor-plane movement
-// only); look direction is yaw/pitch, turned by holding the left mouse
-// button and dragging (a plain click, i.e. no drag, still selects objects -
-// see selection.js's pointerdown/pointerup handlers).
+// --- 3D camera: an orbit rig (A-BACK-040, orbit-math.js), no OrbitControls.
+// Left-drag turns the camera around the floor point it looks at, right /
+// middle drag and WASD slide that point, the wheel moves closer or away
+// (see selection.js and controls.js). A plain click, i.e. no drag, still
+// selects objects. The camera itself stays the source of truth: gestures
+// go through getCameraRig() / applyCameraRig() below.
 export const DEFAULT_FOV = 70;
 export const camera = new THREE.PerspectiveCamera(DEFAULT_FOV, window.innerWidth / window.innerHeight, 50, 200000);
 export const EYE_HEIGHT = 1600; // mm, roughly adult standing eye height
@@ -25,8 +27,6 @@ export const EYE_HEIGHT = 1600; // mm, roughly adult standing eye height
 export const DEFAULT_CAMERA_POSITION = new THREE.Vector3(18000, 3200, RINK_L / 2);
 export const DEFAULT_YAW = -Math.PI / 2; // facing -X, i.e. looking across the width from the +X long side
 export const DEFAULT_PITCH = -0.48; // ~-27deg, tilts down toward the rink surface
-const MIN_FOV = 20, MAX_FOV = 90; // narrower FOV reads as "zoomed in"
-const ZOOM_SENSITIVITY = 0.05; // degrees of FOV per unit of wheel deltaY
 
 state.camYaw = DEFAULT_YAW;
 state.camPitch = DEFAULT_PITCH;
@@ -132,8 +132,8 @@ export const photoCamera = new THREE.PerspectiveCamera(60, window.innerWidth / w
 // "forward" (yaw 0). Three.js cameras default to looking down -Z, so we add
 // a fixed 180deg offset when actually applying rotation.y - that keeps
 // camYaw consistent with the rest of the codebase (and with the forward/
-// right vectors used for WASD walking in controls.js) while still pointing
-// the camera the right way on screen.
+// right vectors in orbit-math.js) while still pointing the camera the
+// right way on screen.
 export function setCameraLook(yaw, pitch) {
   state.camYaw = yaw;
   state.camPitch = THREE.MathUtils.clamp(pitch, -1.4, 1.4); // ~-80deg..+80deg, avoids flipping over
@@ -148,6 +148,28 @@ export function lookAtFrom(fromPos, targetPos) {
   const yaw = Math.atan2(dx, dz);
   const pitch = Math.atan2(dy, Math.hypot(dx, dz));
   setCameraLook(yaw, pitch);
+}
+
+// The orbit rig of the perspective camera as it stands. Read from the
+// camera's own rotation, not state.camYaw / camPitch: playback and
+// exitTopDown() restore the camera through its quaternion and leave those
+// two untouched.
+export function getCameraRig() {
+  return cameraToRig({
+    x: camera.position.x, y: camera.position.y, z: camera.position.z,
+    yaw: camera.rotation.y - Math.PI, pitch: camera.rotation.x,
+  });
+}
+
+export function applyCameraRig(rig) {
+  const c = rigToCamera(rig);
+  camera.position.set(c.x, c.y, c.z);
+  setCameraLook(c.yaw, c.pitch);
+}
+
+// The view the orbit math needs to turn pixels into millimetres.
+export function cameraView() {
+  return { vw: window.innerWidth, vh: window.innerHeight, viewportH: window.innerHeight, fovDeg: camera.fov };
 }
 
 // lighting
@@ -228,12 +250,14 @@ document.getElementById('resetViewBtn').addEventListener('click', () => {
   camera.updateProjectionMatrix();
 });
 
-// --- scroll-wheel zoom: narrows/widens the FOV rather than dollying the
-// camera position, so it works the same whether you're walking, or have
-// something selected, without pushing through walls/objects ---
-export function applyZoomDelta(deltaFov) {
-  camera.fov = THREE.MathUtils.clamp(camera.fov + deltaFov, MIN_FOV, MAX_FOV);
-  camera.updateProjectionMatrix();
+// --- scroll-wheel / pinch zoom: moves the camera toward or away from its
+// target (A-BACK-040); the FOV stays. `wheelDelta` is in wheel deltaY
+// units, negative = closer. With a pointer position the floor point under
+// it stays where it is on screen.
+export function dollyCamera(wheelDelta, clientX = null, clientY = null) {
+  const rig = getCameraRig();
+  const pivot = clientX === null ? null : screenToFloor(rig, clientX, clientY, cameraView());
+  applyCameraRig(dollyBy(rig, wheelDelta, pivot));
 }
 
 renderer.domElement.addEventListener('wheel', (event) => {
@@ -241,7 +265,7 @@ renderer.domElement.addEventListener('wheel', (event) => {
   // own wheel-zoom handler in authoring/topdown-camera.js.
   if (state.activeCamera !== camera) return;
   event.preventDefault();
-  applyZoomDelta(event.deltaY * ZOOM_SENSITIVITY);
+  dollyCamera(event.deltaY, event.clientX, event.clientY);
 }, { passive: false });
 
 window.addEventListener('resize', () => {

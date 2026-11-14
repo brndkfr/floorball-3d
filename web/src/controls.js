@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { HALF_W, RINK_L } from './constants.js';
 import { state } from './state.js';
-import { camera, topDownCamera } from './scene.js';
+import { camera, topDownCamera, getCameraRig, applyCameraRig } from './scene.js';
+import { panKeys } from './orbit-math.js';
 import { selectObject, deselectAll, labelFor } from './selection.js';
 import { removeChip } from './authoring/chips.js';
 import { removeShape } from './authoring/shapes.js';
@@ -21,8 +22,7 @@ const targetGoalLabelEl = document.getElementById('targetGoalLabel');
 
 const clock = new THREE.Clock();
 const keysPressed = new Set();
-const WALK_SPEED = 2500;              // mm/second, first-person perspective camera
-const WALK_BOUNDARY_MARGIN = 3000;    // mm past the boards you can still walk
+const ORBIT_PAN_RATE = 0.8;           // 3D pan: share of the camera distance per second (estimate)
 const TOPDOWN_PAN_SPEED = 12000;      // mm/second at zoom=1; scaled inversely so pans feel constant on screen
 const TOPDOWN_BOUNDARY_MARGIN = 30000;
 const GOALIE_ROTATE_SPEED = 2.2;      // radians/second
@@ -71,7 +71,8 @@ function handleKeyboardMovement(dt) {
   }
 
   // Arrows / WASD pan the camera. In 2D top-down we shift the ortho camera
-  // in world XZ; in 3D perspective we walk relative to the current look yaw.
+  // in world XZ; in 3D perspective we slide the orbit target relative to the
+  // current look yaw.
   let f = 0, r = 0;
   if (keysPressed.has('ArrowUp') || keysPressed.has('w') || keysPressed.has('W')) f += 1;
   if (keysPressed.has('ArrowDown') || keysPressed.has('s') || keysPressed.has('S')) f -= 1;
@@ -93,14 +94,12 @@ function handleKeyboardMovement(dt) {
   }
 
   if (state.activeCamera === camera) {
-    const dist = WALK_SPEED * dt;
-    const forwardX = Math.sin(state.camYaw), forwardZ = Math.cos(state.camYaw);
-    // Right must be derived from the camera's ACTUAL applied rotation
-    // (camYaw + PI, see scene.js's setCameraLook), not naively from camYaw
-    // alone - that PI offset flips the apparent left/right too.
-    const rightX = -Math.cos(state.camYaw), rightZ = Math.sin(state.camYaw);
-    camera.position.x = THREE.MathUtils.clamp(camera.position.x + (forwardX * nf + rightX * nr) * dist, -HALF_W - WALK_BOUNDARY_MARGIN, HALF_W + WALK_BOUNDARY_MARGIN);
-    camera.position.z = THREE.MathUtils.clamp(camera.position.z + (forwardZ * nf + rightZ * nr) * dist, -WALK_BOUNDARY_MARGIN, RINK_L + WALK_BOUNDARY_MARGIN);
+    // Slide the orbit target (A-BACK-040). The step grows with the distance
+    // so a pan covers the same share of the screen near and far; forward /
+    // right come from orbit-math.js, which knows about setCameraLook's PI
+    // offset (deriving "right" from camYaw alone points the wrong way).
+    const rig = getCameraRig();
+    applyCameraRig(panKeys(rig, nf, nr, rig.dist * ORBIT_PAN_RATE * dt));
   }
 }
 
