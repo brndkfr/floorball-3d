@@ -1,4 +1,4 @@
-import { renderer, applyZoomDelta, topDownCamera } from './scene.js';
+import { renderer, dollyCamera, topDownCamera } from './scene.js';
 import { keysPressed, cycleSelection } from './controls.js';
 import { deselectAll } from './selection.js';
 import { state } from './state.js';
@@ -30,8 +30,8 @@ document.getElementById('tcCycle').addEventListener('click', () => cycleSelectio
 document.getElementById('tcDeselect').addEventListener('click', () => deselectAll());
 
 // --- pinch-to-zoom: two-finger gesture on the canvas, alongside the
-// existing scroll-wheel zoom (both drive the same applyZoomDelta helper) ---
-const PINCH_SENSITIVITY = 0.15; // degrees of FOV per mm of pinch-distance change
+// existing scroll-wheel zoom (both drive the same dollyCamera helper) ---
+const PINCH_SENSITIVITY = 4; // wheel units per px of pinch-distance change (estimate)
 let pinchStartDist = null;
 
 function touchDistance(touches) {
@@ -55,7 +55,7 @@ renderer.domElement.addEventListener('touchmove', (event) => {
     topDownCamera.zoom = Math.min(Math.max(topDownCamera.zoom * factor, 0.5), 8);
     topDownCamera.updateProjectionMatrix();
   } else {
-    applyZoomDelta(-delta * PINCH_SENSITIVITY);
+    dollyCamera(-delta * PINCH_SENSITIVITY);
   }
   pinchStartDist = dist;
 }, { passive: false });

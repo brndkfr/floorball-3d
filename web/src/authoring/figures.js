@@ -28,7 +28,7 @@ import { expectLoad, loaded, failed } from '../status.js';
 import { markRenderDirty } from '../render-dirty.js';
 import { isTopDown } from './topdown-camera.js';
 import { CHIP_DISPLAY_SCALE, TEAM_COLORS, chipDataFor } from './chips.js';
-import { figureModelScale, figureShouldShow, figureSpriteLift } from './figure-math.js';
+import { figureModelScale, figureShouldShow, figureSpriteLift, figureRingRadii } from './figure-math.js';
 import { GAIT_CLIPS, gaitWeights, clipPhase, chipMotionAt, facingYaw } from './figure-gait.js';
 import { getFrames } from './frames.js';
 import { addPoseListener } from './playback.js';
@@ -41,6 +41,7 @@ const BODY_MATERIAL = /^MI_Superhero_/;
 // Shorts: the team colour darkened, so shirt and shorts read as one kit
 // but stay distinct. Factor is a look-based estimate.
 const SHORTS_DARKEN = 0.35;
+const FIGURE_RING_Y_MM = 4;   // world mm above the floor
 
 state.figuresEnabled = false;
 
@@ -163,6 +164,43 @@ function removeFigure(group) {
   group.userData.figure = null;
 }
 
+// While a figure shows, the filled team disc under it is hidden and a thin
+// team-coloured ring marks the spot instead (S-BACK-030 step 8). The disc
+// stays in the group, invisible: the raycaster and Box3 ignore `visible`,
+// so clicking, dragging and the selection ring work as before. The ring
+// owns its geometry and material like the disc does, so chips.js recolours
+// it on a team change and disposes it with the chip. Returns true when
+// something changed.
+function setFootprint(group, figureShown) {
+  let changed = false;
+  for (const child of group.children) {
+    if (!child.isMesh || child.userData.isFigureRing || child.visible === !figureShown) continue;
+    child.visible = !figureShown;
+    changed = true;
+  }
+  let ring = group.userData.figureRing;
+  if (figureShown && !ring) {
+    const { inner, outer } = figureRingRadii(CHIP_DISPLAY_SCALE);
+    const geo = new THREE.RingGeometry(inner, outer, 48);
+    geo.rotateX(-Math.PI / 2);
+    ring = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      color: TEAM_COLORS[chipDataFor(group)?.team] || 0x888888, side: THREE.DoubleSide,
+      // 4 mm over the floor, above the blob shadow: keep the two apart at a distance
+      depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+    }));
+    ring.position.y = FIGURE_RING_Y_MM / CHIP_DISPLAY_SCALE;
+    ring.userData.isFigureRing = true;
+    ring.visible = false;
+    group.userData.figureRing = ring;
+    group.add(ring);
+  }
+  if (ring && ring.visible !== figureShown) {
+    ring.visible = figureShown;
+    changed = true;
+  }
+  return changed;
+}
+
 // Per-frame reconcile. Returns true when something changed (main.js then
 // renders this frame - S-BACK-011).
 export function tickFigures() {
@@ -182,6 +220,7 @@ export function tickFigures() {
       removeFigure(group);
       changed = true;
     }
+    changed = setFootprint(group, !!group.userData.figure) || changed;
     for (const sprite of group.userData.sprites || []) {
       sprite.userData.baseY ??= sprite.position.y;
       const y = sprite.userData.baseY + lift;

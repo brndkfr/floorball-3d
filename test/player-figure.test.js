@@ -10,6 +10,8 @@ const {
   figureSpriteLift,
   FIGURE_MODEL_HEIGHT_M,
   FIGURE_LABEL_HEIGHT_MM,
+  figureRingRadii,
+  FIGURE_RING_RADIUS_MM,
 } = await import('../web/src/authoring/figure-math.js');
 const { kitWeights, KIT_LANDMARKS } = await import('../generators/player-figure-kit.mjs');
 
@@ -47,6 +49,18 @@ test('figureSpriteLift puts the number above the head, in chip-local units', () 
   assert.ok(lift * 5 >= FIGURE_MODEL_HEIGHT_M * 1000, `lift ${lift * 5} mm is below the head`);
   assert.ok(close(lift * 5, FIGURE_LABEL_HEIGHT_MM));
   assert.equal(figureSpriteLift(5, false), 0);
+});
+
+test('figureRingRadii: a thin ring around the feet, the same size whatever the chip scale', () => {
+  // S-BACK-030 step 8: under a figure the team disc is replaced by a ring.
+  for (const s of [1, 3.5, 5]) {
+    const { inner, outer } = figureRingRadii(s);
+    assert.ok(close(outer * s, FIGURE_RING_RADIUS_MM), `outer at scale ${s}`);
+    const widthMm = (outer - inner) * s;
+    assert.ok(widthMm >= 20 && widthMm <= 80, `ring is thin: ${widthMm} mm`);
+  }
+  // wider than a stance (about 0.4 m), clearly smaller than the old 1 m disc
+  assert.ok(FIGURE_RING_RADIUS_MM >= 250 && FIGURE_RING_RADIUS_MM <= 350);
 });
 
 // Bind-pose (T-pose) points on the Superhero male body, metres, +Y up,

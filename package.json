@@ -12,6 +12,7 @@
     "test:e2e:failed": "playwright test --last-failed",
     "build": "node scripts/build.mjs",
     "check:size": "node scripts/check-size.mjs",
+    "look": "node scripts/look-shots.mjs",
     "label:goals": "node scripts/label-goals.mjs",
     "eval:goals": "node scripts/eval-goal-detect.mjs",
     "vendor:webawesome": "node scripts/vendor-webawesome.mjs",

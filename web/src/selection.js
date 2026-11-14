@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { HALF_W, GRID_TILE_SIZE, GRID_N_COLS, GRID_N_ROWS } from './constants.js';
 import { state } from './state.js';
-import { scene, camera, renderer, setCameraLook } from './scene.js';
+import { scene, camera, renderer, getCameraRig, applyCameraRig, cameraView } from './scene.js';
+import { orbitBy, panGrab } from './orbit-math.js';
 import { handleFloorClickForTool, activateTool } from './authoring/dock.js';
 import { chipDataFor, persistChipPosition, scheduleHistoryPush } from './authoring/chips.js';
 import * as pathHandles from './authoring/path-handles.js';
@@ -242,24 +243,37 @@ function notifySelection() { for (const cb of selectionSubs) { try { cb(state.se
 // --- input model (RTS-style, dedicated verbs per button) --------------
 //
 // LMB    = select / drag-move a chip / place with active tool.
-// LMB-drag in 3D perspective still turns the camera (walking view). In 2D
-//         top-down there is no camera yaw, so LMB never turns anything.
+// LMB-drag in 3D perspective orbits the camera around the floor point it
+//         looks at (A-BACK-040); with Shift it pans instead. In 2D top-down
+//         there is no camera yaw, so LMB never turns anything.
 // RMB    = move-command (selected chip / ball / goalie walks to click point)
-//         or cancel active tool. Right-DRAG is pan and is owned entirely
-//         by topdown-camera.js.
-// MMB    = pan (topdown-camera.js).
-// Wheel  = zoom (topdown-camera.js).
+//         or cancel active tool. Right-DRAG is pan: topdown-camera.js in
+//         2D, camPan below in 3D.
+// MMB    = pan (same split).
+// Wheel  = zoom (topdown-camera.js in 2D, scene.js in 3D).
 // Keyboard = camera pan / tool hotkeys / goalie rotate (controls.js).
 
 const DRAG_THRESHOLD = 5; // px of movement before a press is considered a drag
-const LOOK_SENSITIVITY = 0.0035; // radians per pixel of 3D look-drag
 
 // Left-button state; null when the button isn't down.
-let lmb = null;   // { downX, downY, lastX, lastY, hit, mode, additive, dragObjs, dragBase, dragOrigin, dragDelta }
-// modes: 'idle' | 'obj-drag' | 'look' | 'path-handle' | 'shape-handle' | 'shape-drag' | 'marquee'
+let lmb = null;   // { downX, downY, lastX, lastY, hit, mode, additive, rig, dragObjs, dragBase, dragOrigin, dragDelta }
+// modes: 'idle' | 'obj-drag' | 'look' | 'pan' | 'path-handle' | 'shape-handle' | 'shape-drag' | 'marquee'
 
 // Right-button state; null when the button isn't down.
 let rmb = null;   // { downX, downY }
+
+// Right- or middle-button pan in 3D; null when neither is down.
+let camPan = null;   // { button, downX, downY, lastX, lastY, rig }
+
+// One step of a 3D camera drag: `gesture` (lmb or camPan) carries the rig
+// between moves, so limits hold the pose instead of piling up error.
+function dragCamera(gesture, event, step) {
+  gesture.rig = step(gesture.rig || getCameraRig(), gesture.lastX, gesture.lastY, event.clientX, event.clientY, cameraView());
+  applyCameraRig(gesture.rig);
+  gesture.lastX = event.clientX;
+  gesture.lastY = event.clientY;
+}
+const orbitDrag = (rig, x0, y0, x1, y1) => orbitBy(rig, x1 - x0, y1 - y0);
 
 // --- marquee (box) multi-select -------------------------------------
 // A screen-space rubber-band rect drawn on empty top-down floor. On release
@@ -361,6 +375,14 @@ renderer.domElement.addEventListener('pointermove', (event) => {
   if (pathHandles.isDragging()) { pathHandles.onDragMove(event); return; }
   if (passOverlay.isDragging()) { passOverlay.onDragMove(event); return; }
   if (shapeHandles.isDragging()) { shapeHandles.onDragMove(event); return; }
+
+  // 3D perspective: right- or middle-drag slides the floor under the cursor.
+  if (camPan && state.activeCamera === camera) {
+    if (camPan.rig || Math.hypot(event.clientX - camPan.downX, event.clientY - camPan.downY) > DRAG_THRESHOLD) {
+      dragCamera(camPan, event, panGrab);
+    }
+    return;
+  }
   if (!lmb) return;
 
   // Primitive-tool drag: continuous update, no threshold - the ghost preview
@@ -372,15 +394,11 @@ renderer.domElement.addEventListener('pointermove', (event) => {
 
   const moved = Math.hypot(event.clientX - lmb.downX, event.clientY - lmb.downY) > DRAG_THRESHOLD;
 
-  // 3D perspective: left-drag turns the camera (no tool active, walking view).
-  if (lmb.mode === 'look' || (lmb.mode === 'idle' && moved && state.activeCamera === camera && !state.activeTool)) {
-    lmb.mode = 'look';
-    setCameraLook(
-      state.camYaw - (event.clientX - lmb.lastX) * LOOK_SENSITIVITY,
-      state.camPitch - (event.clientY - lmb.lastY) * LOOK_SENSITIVITY,
-    );
-    lmb.lastX = event.clientX;
-    lmb.lastY = event.clientY;
+  // 3D perspective, no tool active: left-drag orbits the camera, Shift +
+  // left-drag pans it.
+  if (lmb.mode === 'look' || lmb.mode === 'pan' || (lmb.mode === 'idle' && moved && state.activeCamera === camera && !state.activeTool)) {
+    if (lmb.mode === 'idle') lmb.mode = lmb.additive ? 'pan' : 'look';
+    dragCamera(lmb, event, lmb.mode === 'pan' ? panGrab : orbitDrag);
     return;
   }
 
@@ -425,8 +443,13 @@ renderer.domElement.addEventListener('pointermove', (event) => {
 });
 
 renderer.domElement.addEventListener('pointerdown', (event) => {
-  // Right button: track for click-vs-drag. The pan-drag itself is wired in
-  // topdown-camera.js; we only care about clicks (no-move releases).
+  // Right / middle button in 3D: may become a pan-drag (pointermove).
+  if ((event.button === 1 || event.button === 2) && state.activeCamera === camera) {
+    camPan = { button: event.button, downX: event.clientX, downY: event.clientY, lastX: event.clientX, lastY: event.clientY, rig: null };
+    if (event.button === 1) event.preventDefault();   // no browser autoscroll
+  }
+  // Right button: track for click-vs-drag. The 2D pan-drag is wired in
+  // topdown-camera.js; here we only care about clicks (no-move releases).
   if (event.button === 2) {
     rmb = { downX: event.clientX, downY: event.clientY };
     return;
@@ -477,6 +500,7 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
 });
 
 window.addEventListener('pointerup', (event) => {
+  if (camPan && event.button === camPan.button) camPan = null;
   // Right-button up: if it wasn't a pan-drag, treat as a right-click command.
   if (event.button === 2 && rmb) {
     const moved = Math.hypot(event.clientX - rmb.downX, event.clientY - rmb.downY) > DRAG_THRESHOLD;
@@ -535,7 +559,7 @@ window.addEventListener('pointerup', (event) => {
     commitMarquee(captured, event);
     return;
   }
-  if (captured.mode === 'look') return;   // just finished turning the camera
+  if (captured.mode === 'look' || captured.mode === 'pan') return;   // just finished moving the camera
 
   // Genuine click - tiny wobble still counts as click.
   const moved = Math.hypot(event.clientX - captured.downX, event.clientY - captured.downY) > DRAG_THRESHOLD;

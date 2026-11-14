@@ -6,7 +6,7 @@
 // Wheel-zoom scales topDownCamera.zoom; middle-mouse or right-drag pans by
 // shifting the camera's x/z. Both reset when you exit the tool.
 
-import { camera, topDownCamera, setActiveCamera, scene, setFlatLighting } from '../scene.js';
+import { camera, topDownCamera, setActiveCamera, scene, setFlatLighting, isDefaultView, applyDefaultView } from '../scene.js';
 import { state } from '../state.js';
 
 const MIN_ZOOM = 0.5, MAX_ZOOM = 8;
@@ -32,6 +32,9 @@ export function enterTopDown() {
     position: camera.position.clone(),
     quaternion: camera.quaternion.clone(),
     fov: camera.fov,
+    // An untouched default view is fitted again on the way back: the
+    // window or the shell insets may change while 2D is showing.
+    isDefault: isDefaultView(),
   };
   savedFog = scene.fog;
   scene.fog = null;
@@ -49,6 +52,7 @@ export function exitTopDown() {
   camera.quaternion.copy(savedPerspective.quaternion);
   camera.fov = savedPerspective.fov;
   camera.updateProjectionMatrix();
+  if (savedPerspective.isDefault) applyDefaultView();
   savedPerspective = null;
   scene.fog = savedFog;
   savedFog = null;

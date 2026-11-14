@@ -64,6 +64,17 @@ aside.
    and again after large refactors or when it warns the map is old
    (needs a clean `web/` + `test-e2e/`). It also lists changed code
    no e2e test executes - add a spec when that code is UI-facing.
+   **When it prints `FULL RUN` on a feature branch, do not run the
+   whole suite locally** (7+ minutes, with load timeouts that are not
+   real failures, S-BACK-022). Run an area set instead: the specs you
+   added or edited, `bootstrap.spec.js`, `a11y.spec.js`, and every
+   spec that exercises the touched area (grep `test-e2e/` for the
+   changed export, constant or DOM id; S-BACK-031 will make this one
+   command). Re-run a timed-out test alone before calling it a
+   failure, and name the specs you ran in the commit message. Run the
+   full suite locally only for changes to `index.html`, the bootstrap
+   order in `authoring/index.js` or the saved-doc format, or right
+   before a push when a red CI run would cost more than the wait.
    CI still runs the full `pnpm test:e2e` on every push and stays
    the real gate; a red CI run blocks the deploy. `pnpm test:e2e:failed`
    re-runs only the last failures. If anything fails, go back to
@@ -81,7 +92,9 @@ aside.
    this is fixed" are not evidence.
 8. **Only commit when the goal is fully reached.** Failing tests,
    red e2e, blown size budget, or an unverified behavioural claim
-   all block the commit. Never `--no-verify` past a failing hook,
+   all block the commit. On a feature branch "e2e green" means the
+   run from step 5 (affected or area set); the full suite is CI's job
+   on the pull request, and nothing merges to `main` on a red CI. Never `--no-verify` past a failing hook,
    never `git restore` unfamiliar working-tree changes to make a
    test go green.
 
@@ -171,7 +184,7 @@ aside.
   fails on it and pins the token files.
 - Numbers without a cited source (Swiss Way tactical zone boundaries, the
   detailed goalie's anthropometric scale, the shooting-line "centred"
-  threshold, default camera/ball positions, the 5x chip display scale) are
+  threshold, default camera/ball positions, the 3.5x chip display scale) are
   estimates, clearly commented as such at their definition site - don't
   cite them as spec'd values.
 - **DOM-owning modules must throw when their root element is missing, not
@@ -217,14 +230,21 @@ aside.
   closed codec" - which is the confusing symptom. Also latch the encoder's
   `error:` callback into a captured `encoderError` and rethrow it from the
   loop.
-- Chip meshes are runtime-scaled by `CHIP_DISPLAY_SCALE` in `chips.js` (5x
-  base OBJ = 1 m disc). The underlying geometry stays at real player-radius
+- Chip meshes are runtime-scaled by `CHIP_DISPLAY_SCALE` in `chips.js` (3.5x
+  base OBJ = 0.7 m disc; 1 m until 2026-11-14). When 3D figures show,
+  `figures.js` hides the disc and draws a thin team ring instead; the
+  hidden disc stays the click target (Raycaster ignores `visible`). The underlying geometry stays at real player-radius
   so coverage / trajectory math keeps working; the scale only affects the
   visible mesh + number sprite + selection ring.
-- `scene.fog` (near 35 000, far 90 000 toward dark grey) dims the top-down
+- `scene.fog` (near 45 000, far 140 000 toward the slate hall colour) dims the top-down
   view because `topDownCamera` sits 60 000 mm above the rink - right in the
   middle of the fog band. `topdown-camera.js` saves and clears `scene.fog`
-  in `enterTopDown()` and restores it in `exitTopDown()`; anything else
+  in `enterTopDown()` and restores it in `exitTopDown()`. The rest of
+  the 3D-only look (S-BACK-030) follows the active camera in
+  `scene.js`: ACES tone mapping and the `hallFloor` plane are on only
+  for the perspective camera (`setActiveCamera()`), the slate
+  background only while `setFlatLighting(false)`; blob shadows
+  (`blob-shadow.js`) draw only for the perspective camera. Anything else
   that swaps to the ortho camera needs to do the same or accept the dim.
 
 ## Photo overlay (Mode B) gotchas

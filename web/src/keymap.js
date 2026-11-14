@@ -26,11 +26,12 @@ export const KEY_SECTIONS = [
     ],
   },
   {
-    title: '3D walking view',
+    title: '3D view (orbit camera)',
     entries: [
-      ['left-drag', 'look around (first-person)'],
-      ['WASD / arrows', 'walk relative to look direction'],
-      ['scroll', 'zoom / dolly'],
+      ['left-drag', 'turn the camera around the point it looks at'],
+      ['right-drag / middle-drag', 'pan (Shift + left-drag does the same)'],
+      ['scroll', 'move closer / away, toward the point under the cursor'],
+      ['WASD / arrows', 'pan camera (never moves the selected item)'],
     ],
   },
   {
@@ -50,7 +51,7 @@ export const KEY_SECTIONS = [
   {
     title: 'Authoring dock',
     entries: [
-      ['3D / 2D', 'toggle first-person and top-down camera'],
+      ['3D / 2D', 'toggle the 3D orbit camera and the top-down camera'],
       ['T1 / T2', 'flip active team (chip color)'],
       ['color swatch', 'pick color for next shape or the selected shape'],
     ],

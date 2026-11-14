@@ -119,6 +119,85 @@ test('toggle on: one real-size figure per chip, numbers above the heads, doc unt
   expect(pageErrors).toEqual([]);
 });
 
+// S-BACK-030 step 8: the player stands on the floor, not on a game piece.
+async function footprints(page) {
+  return page.evaluate(async () => {
+    const THREE = await import('three');
+    const { state } = await import('/src/state.js');
+    const chips = await import('/src/authoring/chips.js');
+    const { tickFigures } = await import('/src/authoring/figures.js');
+    tickFigures();
+    return state.chipGroups.map((g) => {
+      const discs = g.children.filter((c) => c.isMesh && !c.userData.isFigureRing);
+      const ring = g.userData.figureRing;
+      const width = (o) => { const b = new THREE.Box3().setFromObject(o); return b.max.x - b.min.x; };
+      return {
+        discVisible: discs.some((d) => d.visible),
+        discWidthMm: Math.max(...discs.map(width)),
+        ringVisible: !!ring?.visible,
+        ringWidthMm: ring ? width(ring) : null,
+        ringColor: ring ? ring.material.color.getHex() : null,
+        teamColor: chips.TEAM_COLORS[chips.chipDataFor(g).team],
+      };
+    });
+  });
+}
+
+test('under a figure the team disc gives way to a thin team ring; the plain disc is 0.7 m', async ({ page }) => {
+  await boot(page);
+  await setup(page);
+  // the drop-in animation scales the chip for 0.2 s: finish it
+  await page.evaluate(async () => (await import('/src/authoring/chips.js')).updateChipAnimations(1));
+  for (const f of await footprints(page)) {
+    expect(f.discVisible).toBe(true);
+    expect(f.ringVisible).toBe(false);
+    expect(Math.abs(f.discWidthMm - 700)).toBeLessThan(5);
+  }
+
+  await enableFigures(page);
+  await expectFigures(page, true);
+  for (const f of await footprints(page)) {
+    expect(f.discVisible).toBe(false);
+    expect(f.ringVisible).toBe(true);
+    expect(Math.abs(f.ringWidthMm - 600)).toBeLessThan(5);
+    expect(f.ringColor).toBe(f.teamColor);
+  }
+
+  // the hidden disc is still what a click on the floor at the feet hits
+  const at = await page.evaluate(async () => {
+    const THREE = await import('three');
+    const { camera } = await import('/src/scene.js');
+    const { state } = await import('/src/state.js');
+    const { deselectAll } = await import('/src/selection.js');
+    deselectAll();
+    camera.updateMatrixWorld();
+    const g = state.chipGroups[0];
+    const v = new THREE.Vector3(g.position.x + 250, 0, g.position.z).project(camera);
+    return { x: (v.x * 0.5 + 0.5) * window.innerWidth, y: (-v.y * 0.5 + 0.5) * window.innerHeight };
+  });
+  await page.mouse.click(at.x, at.y);
+  expect(await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    return state.selected === state.chipGroups[0];
+  })).toBe(true);
+
+  // a team change recolours the ring
+  await page.evaluate(async () => {
+    const chips = await import('/src/authoring/chips.js');
+    const { state } = await import('/src/state.js');
+    chips.updateChipTeam(state.chipGroups[0].userData.chip.id, 2, false);
+  });
+  const recoloured = (await footprints(page))[0];
+  expect(recoloured.ringColor).toBe(recoloured.teamColor);
+
+  // 2D keeps plain discs
+  await page.evaluate(async () => (await import('/src/authoring/topdown-camera.js')).enterTopDown());
+  for (const f of await footprints(page)) {
+    expect(f.discVisible).toBe(true);
+    expect(f.ringVisible).toBe(false);
+  }
+});
+
 test('top-down hides figures and drops the numbers back onto the chips', async ({ page }) => {
   await boot(page);
   await setup(page);
