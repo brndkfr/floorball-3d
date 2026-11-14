@@ -5,6 +5,7 @@ import { markRenderDirty } from './render-dirty.js';
 import { pickRendererQuality } from './renderer-quality.js';
 import { stageFrustum, readShellInsets } from './ui/stage-frustum.js';
 import { cameraToRig, rigToCamera, dollyBy, screenToFloor, fitRigToRink } from './orbit-math.js';
+import { wheelDeltaPx } from './zoom-math.js';
 
 export const scene = new THREE.Scene();
 
@@ -298,9 +299,9 @@ document.getElementById('viewFromBallBtn').addEventListener('click', () => {
 document.getElementById('resetViewBtn').addEventListener('click', applyDefaultView);
 
 // --- scroll-wheel / pinch zoom: moves the camera toward or away from its
-// target (A-BACK-040); the FOV stays. `wheelDelta` is in wheel deltaY
-// units, negative = closer. With a pointer position the floor point under
-// it stays where it is on screen.
+// target (A-BACK-040); the FOV stays. `wheelDelta` is in wheel pixels
+// (zoom-math.js wheelDeltaPx), negative = closer. With a pointer position
+// the floor point under it stays where it is on screen.
 export function dollyCamera(wheelDelta, clientX = null, clientY = null) {
   const rig = getCameraRig();
   const pivot = clientX === null ? null : screenToFloor(rig, clientX, clientY, cameraView());
@@ -312,7 +313,7 @@ renderer.domElement.addEventListener('wheel', (event) => {
   // own wheel-zoom handler in authoring/topdown-camera.js.
   if (state.activeCamera !== camera) return;
   event.preventDefault();
-  dollyCamera(event.deltaY, event.clientX, event.clientY);
+  dollyCamera(wheelDeltaPx(event, window.innerHeight), event.clientX, event.clientY);
 }, { passive: false });
 
 window.addEventListener('resize', () => {

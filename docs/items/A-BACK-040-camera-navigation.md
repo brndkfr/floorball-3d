@@ -78,8 +78,10 @@ the last 600 ms (estimate), not a per-frame low-pass.
   (`web/src/orbit-math.js`, `test/orbit-math.test.js`).
 - 2026-11-14: step 2 done, see "as built" under the step
   (`test-e2e/camera-orbit.spec.js`).
-- 2026-11-14: step 3 done (fitted default view, FOV 45). Next:
-  step 4 (presets).
+- 2026-11-14: step 3 done (fitted default view, FOV 45).
+- 2026-11-14: step 8 done (zoom about the cursor in 2D, one rate for
+  wheel, touchpad and pinch; `test/zoom-math.test.js`,
+  `test-e2e/zoom.spec.js`). Next: step 4 (presets).
 
 ## Steps
 
@@ -175,6 +177,26 @@ the last 600 ms (estimate), not a per-frame low-pass.
    `orbit-math.js` or next to `ball-pose.js`, test with a two-frame
    pass; a "Follow ball" toggle in the recorder; a frame with its own
    camera keyframe wins over follow.
+8. `[done 2026-11-14]` **Zoom that feels the same everywhere** (added
+   2026-11-14, done before step 4). As built: `zoomTopDownAt(factor,
+   clientX, clientY)` in `topdown-camera.js` serves the 2D wheel and 2D
+   pinch; `dollyBy` takes its rate from `zoomFactor`, so 2D and 3D zoom
+   at the same speed (estimates: 0.0015 per wheel px, 16 px per line,
+   10x for a touchpad pinch). The touch pinch is emulated with
+   synthetic `TouchEvent`s in the spec; a real tablet check is still
+   part of step 6. Problems found in review: the 2D wheel zooms
+   to the window centre, not the cursor; 2D zooms a fixed 15 % per
+   wheel event, so a touchpad (many small events) races; a touchpad
+   pinch (wheel + `ctrlKey`, small deltas) barely moves the 3D camera;
+   touch pinch zooms to the centre and adds a fixed amount per px of
+   finger travel; wheel `deltaMode` lines / pages are read as pixels.
+   Fix: pure `web/src/zoom-math.js` (`wheelDeltaPx`, `zoomFactor`,
+   `pinchWheelDelta`, `zoomOrthoAt`) used by the 2D wheel, the 3D wheel
+   and both pinch paths; 2D zooms about the cursor or the finger
+   midpoint along the camera's own axes (the 2D view can be rotated).
+   Tests first: `test/zoom-math.test.js`, `test-e2e/zoom.spec.js`.
+   Later, separate: eased zoom (~120 ms, instant with reduced motion),
+   `+` / `-` keys, pushing the target forward at the minimum distance.
 
 ## Done when
 

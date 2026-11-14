@@ -3,11 +3,14 @@
 // perspective walk camera. Entering a tool eases the active camera to
 // top-down; exiting restores the perspective camera exactly where it was.
 //
-// Wheel-zoom scales topDownCamera.zoom; middle-mouse or right-drag pans by
-// shifting the camera's x/z. Both reset when you exit the tool.
+// Wheel-zoom scales topDownCamera.zoom about the cursor; middle-mouse or
+// right-drag pans by shifting the camera's x/z. Both reset when you exit
+// the tool.
 
-import { camera, topDownCamera, setActiveCamera, scene, setFlatLighting, isDefaultView, applyDefaultView } from '../scene.js';
+import * as THREE from 'three';
+import { camera, topDownCamera, renderer, setActiveCamera, scene, setFlatLighting, isDefaultView, applyDefaultView } from '../scene.js';
 import { state } from '../state.js';
+import { wheelDeltaPx, zoomFactor, zoomOrthoAt } from '../zoom-math.js';
 
 const MIN_ZOOM = 0.5, MAX_ZOOM = 8;
 // Ball is a real-size 72 mm sphere; at rink scale it reads as a dot from
@@ -103,6 +106,27 @@ export function resetTopDownView() {
   topDownCamera.updateProjectionMatrix();
 }
 
+// Zoom by `factor` about window pixel (clientX, clientY), which stays
+// where it is on screen (A-BACK-040 step 8). Wheel here, pinch in
+// touch-controls.js.
+export function zoomTopDownAt(factor, clientX, clientY) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
+  const ndcY = 1 - ((clientY - rect.top) / rect.height) * 2;
+  topDownCamera.updateMatrixWorld();
+  const right = new THREE.Vector3().setFromMatrixColumn(topDownCamera.matrixWorld, 0);
+  const up = new THREE.Vector3().setFromMatrixColumn(topDownCamera.matrixWorld, 1);
+  const next = zoomOrthoAt({
+    x: topDownCamera.position.x, z: topDownCamera.position.z, zoom: topDownCamera.zoom,
+    left: topDownCamera.left, right: topDownCamera.right, top: topDownCamera.top, bottom: topDownCamera.bottom,
+    rightAxis: { x: right.x, z: right.z }, upAxis: { x: up.x, z: up.z },
+  }, factor, ndcX, ndcY, { min: MIN_ZOOM, max: MAX_ZOOM });
+  topDownCamera.position.x = next.x;
+  topDownCamera.position.z = next.z;
+  topDownCamera.zoom = next.zoom;
+  topDownCamera.updateProjectionMatrix();
+}
+
 // --- wheel zoom + drag pan (only active while in top-down mode) -------
 
 window.addEventListener('wheel', (e) => {
@@ -110,9 +134,7 @@ window.addEventListener('wheel', (e) => {
   // Don't hijack wheel events over UI (dock, timeline, HUD panels).
   if (e.target && e.target !== document.body && e.target.closest?.('#dock, #timeline, #dockOverflow, #dockPalette, #rightPanel')) return;
   e.preventDefault();
-  const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-  topDownCamera.zoom = Math.min(Math.max(topDownCamera.zoom * factor, MIN_ZOOM), MAX_ZOOM);
-  topDownCamera.updateProjectionMatrix();
+  zoomTopDownAt(zoomFactor(wheelDeltaPx(e, window.innerHeight)), e.clientX, e.clientY);
 }, { passive: false });
 
 let panning = false;
