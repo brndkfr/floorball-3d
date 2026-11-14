@@ -86,6 +86,33 @@ up here first.
 9. Polish passing alternatives, then shot verdict + coverage (items to
    be created from the B-BACK-011 results).
 
+### Look and motion track (added 2026-11-14)
+
+Runs beside the list above; it is what players see when the coach
+"plays it back to the team". Each item file is written as small,
+ordered steps with the tests to write first. Steps tagged `[small]`
+can be handed to a smaller model as they are; `[lead]` steps need a
+strong model that can look at screenshots, or the user's eye.
+
+Progress lives in each item file ("Progress" section or `[done]` on a
+step). State on 2026-11-14 (branch `look-and-motion`, uncommitted):
+S-BACK-030 step 0 and A-BACK-040 step 1 done; next is A-BACK-040
+step 2 (wire the orbit gestures).
+
+1. **[S-BACK-030] steps 0-3, 6** Look-shots script, tone mapping,
+   background, blob shadows, white boards. Cheap, biggest change to
+   the first impression. [items/S-BACK-030](items/S-BACK-030-3d-look.md).
+2. **[S-BACK-026] first slice** Detailed goalie to GLB + WebP: about
+   5.5 MB off every boot (see section 5).
+3. **[A-BACK-040]** Orbit camera, presets, fitted default view.
+   [items/A-BACK-040](items/A-BACK-040-camera-navigation.md).
+4. **[A-BACK-041]** Player moves: carry, pass, receive, wrist and slap
+   shot. [items/A-BACK-041-043](items/A-BACK-041-043-floorball-moves.md).
+5. **[S-BACK-030] rest** Floor, figures off the game pieces, shadow
+   map, arena shell.
+6. **[A-BACK-042]**, then **[A-BACK-043]** Posable goalie, then goalie
+   behaviour (043 needs S-BACK-024 first). Same file as 041.
+
 ### Later (parked)
 
 - A-BACK-028 to 030 arena branding,
@@ -133,6 +160,20 @@ own file under [items/](items/).
   shipped 2026-10-28; next the "Next move" button and frame details in
   the right panel.
   [Review, steps and design canvas](items/A-BACK-038-scene-recorder.md).
+- **[A-BACK-040]** [in-progress] 3D camera: orbit rig instead of the
+  first-person walker, wheel dolly instead of FOV zoom, view presets
+  (stand, behind each goal, player eye), touch gestures, follow-ball
+  in playback. [Spec](items/A-BACK-040-camera-navigation.md).
+- **[A-BACK-041]** [open] Player moves from the doc's ball events:
+  carry, pass, receive, wrist / slap shot, defend. Procedural stick
+  tracks on the existing IK (no usable free motion capture exists).
+  [Spec](items/A-BACK-041-043-floorball-moves.md).
+- **[A-BACK-042]** [open] Goalie as a posable kneeling figure with
+  generated gear and a capsule proxy for coverage; replaces both
+  goalie meshes. Same file.
+- **[A-BACK-043]** [open] [blocked-by: A-BACK-042] Goalie behaviour:
+  auto position on the ball line, save reactions timed from the shot.
+  Also needs S-BACK-024. Same file.
 
 ### Mode B - Analyze
 
@@ -163,6 +204,11 @@ own file under [items/](items/).
   2026-10-15 (PRs #13-#15, #17, #18).
   [Findings and order](items/S-BACK-029-audit-2026-10.md). M5 is part
   of S-BACK-024, L4 of S-BACK-023.
+- **[S-BACK-030]** [in-progress] 3D look: the view above the boards is a
+  black void, nothing casts a shadow, floor and boards are flat. Tone
+  mapping, background, shadows, floor, white boards, arena shell,
+  figures off their 1 m discs. Starts with a look-shots script for
+  before / after pictures. [Spec](items/S-BACK-030-3d-look.md).
 
 ## 5. Architecture debt
 
@@ -199,6 +245,16 @@ make cheaper or safer.
     `goalie_02.obj` (0.93 MB), `ball.obj` (0.41 MB),
     `floorball_goal.obj` (0.29 MB). Convert to GLB + meshopt with WebP or
     KTX2 textures (gltf-transform is already a dev dependency).
+    **First slice** `[small]`: `generators/prepare_goalie.mjs`,
+    modelled on `prepare_player_figure.mjs`: move `goalie_02.obj`,
+    `.mtl` and the PNG from `web/assets/` to `generators/vendor/meshy/`
+    (never deployed), read them there and write `web/assets/goalie_02.glb`
+    (meshopt, texture 1024 px WebP, roughness 0.7); `goalie.js` loads
+    it through `GLTFLoader` + `MeshoptDecoder`. Tests first: the GLB
+    is under 600 KB (estimate) and its bounding box matches the OBJ's;
+    lower `dist/assets` in `scripts/check-size.mjs`; rerun the
+    coverage e2e specs (coverage raycasts this mesh). Dropped again
+    when A-BACK-042 replaces the mesh.
   - Mode B: `yolov8n.onnx` 12.9 MB + `yolov8n-pose.onnx` 13.5 MB fp32;
     try fp16 / int8 and measure accuracy. `opencv.js` 13 MB full build;
     a custom build with only the used functions.
@@ -241,11 +297,20 @@ coupling visible.
   k-means + "Flip teams": per-chip override or manual paint?
 - **[A-Q-001]** [open] 3D figures on by default once they look right, or
   always opt-in? Buy the Teen / Regular body (SOURCE tier, $19.99)?
-- **[A-Q-002]** [open] Goalie as a figure? Posable stance presets, but no
-  save animations or gear. Check whether `coverage.js` depends on the
-  current goalie mesh shape before swapping it.
+- **[A-Q-002]** [open] Goalie as a figure? Proposed answer (2026-11-14):
+  yes, with procedural poses and generated gear, see A-BACK-042.
+  `coverage.js` does raycast the goalie mesh, so 042 swaps it for a
+  capsule proxy first. Needs the user's go.
 - **[A-Q-003]** [open] `goalie_02.obj` was made with Meshy AI. If from the
   free plan it may be CC BY; check its terms and credit it in README.
+  Its texture also shows a real goalie-gear brand name on the chest.
+  Both go away with A-BACK-042.
+- **[A-Q-005]** [open] Reference material for the moves in A-BACK-041
+  to 043: can the user supply a few photos or clips per move (carry,
+  pass, wrist shot, slap shot, goalie stance, a save)? Without them
+  every pose number stays an estimate.
+- **[A-Q-006]** [open] Goalie height: adult only, or a U14 setting? It
+  changes what coverage reports (A-BACK-042).
 - **[A-Q-004]** [open] Tablet authoring: coaches prepare on a laptop or
   tablet and use a tablet at the rink, but the UX principle is "desktop
   first". Should touch authoring move ahead of desktop polish?
@@ -271,6 +336,11 @@ coupling visible.
   absolute dates.
 - **Estimates:** numbers without a source are marked as estimates where
   they are defined.
+- **Step tags** in item files: `[small]` = specified tightly enough
+  for a smaller model (files, function names and first tests are
+  given); `[lead]` = needs a strong model that can judge screenshots,
+  or the user. One step = one PR. A model that finds a `[small]` step
+  underspecified stops and asks instead of guessing.
 
 ### Handoff checklist for a new session
 
