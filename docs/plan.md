@@ -102,8 +102,9 @@ Progress lives in each item file ("Progress" section or `[done]` on a
 step). State on 2026-11-14 (branch `look-and-motion`, committed, not
 merged): S-BACK-030 steps 0 to 3 and 6 done, step 8 half done (disc
 0.7 m, team ring under figures); A-BACK-040 steps 1 to 3 done (orbit,
-pan, wheel dolly, fitted default view). Next: S-BACK-030 step 8 second
-half (number sprite size), then A-BACK-040 step 4 (presets). To check
+pan, wheel dolly, fitted default view) and step 8 (zoom about the
+cursor in 2D, touchpad and pinch fixes). Next: S-BACK-030 step 8
+second half (number sprite size), then A-BACK-040 step 4 (presets). To check
 by eye in a real browser: a darker band across the top of the 3D view
 that shows in headless screenshots (see the S-BACK-030 item file).
 
@@ -217,6 +218,10 @@ lines. An item that needs more than ~10 lines gets its own file under
   Measured 2026-11-14: `choreograph.spec.js:39` takes 8 to 55 s on
   unchanged code (limit 30 s), `choreo-tutorial.spec.js:91` fails
   locally; both stall after entering Choreo, so start there.
+  Also 2026-11-14: a 73-test area set with default workers took 11.7
+  min with 13 timeouts; the same 13 with `--workers=1` passed in 1.1
+  min, and CI ran the full suite in 4 min 56 s. Try `workers: 1`
+  locally first.
 - **[S-BACK-031] e2e area sets** [open] One command for the area run
   that CLAUDE.md workflow step 5 asks for when `test:e2e:affected`
   says `FULL RUN`: tag each spec with its areas (`@chips`, `@camera`,

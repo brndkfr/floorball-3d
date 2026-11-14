@@ -16,6 +16,7 @@
 // "view from ball", leaving the 2D view) needs no extra bookkeeping.
 
 import { RINK_L, HALF_W } from './constants.js';
+import { zoomFactor } from './zoom-math.js';
 
 const DEG = Math.PI / 180;
 
@@ -28,7 +29,6 @@ export const ORBIT_LIMITS = Object.freeze({
   targetMargin: 5000,    // how far outside the boards the target may go
 });
 const ORBIT_SENSITIVITY = 0.004;   // rad per px, same feel as the old look-drag
-const DOLLY_RATE = 0.0015;         // per unit of wheel deltaY: 100 -> ~16 %
 const GRAB_REACH = 6;              // grab-pan only floor within this many camera distances of the target
 const BOARD_HEIGHT = 500;
 const FIT_PITCH = { landscape: -40 * DEG, portrait: -55 * DEG };
@@ -123,11 +123,12 @@ export function panKeys(rig, forward, right, stepMm) {
   });
 }
 
-// Wheel: move toward (deltaY < 0) or away from the target. With a `pivot`
-// ({ x, z } on the floor, usually the point under the cursor) that point
-// keeps its place on screen.
+// Wheel: move toward (deltaY < 0) or away from the target, at the same
+// rate as the 2D zoom (zoom-math.js). With a `pivot` ({ x, z } on the
+// floor, usually the point under the cursor) that point keeps its place on
+// screen.
 export function dollyBy(rig, wheelDelta, pivot = null) {
-  const dist = clamp(rig.dist * Math.exp(wheelDelta * DOLLY_RATE), ORBIT_LIMITS.minDist, ORBIT_LIMITS.maxDist);
+  const dist = clamp(rig.dist / zoomFactor(wheelDelta), ORBIT_LIMITS.minDist, ORBIT_LIMITS.maxDist);
   const s = dist / rig.dist;
   const next = { ...rig, dist };
   if (pivot) {
