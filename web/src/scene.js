@@ -4,7 +4,7 @@ import { state } from './state.js';
 import { markRenderDirty } from './render-dirty.js';
 import { pickRendererQuality } from './renderer-quality.js';
 import { stageFrustum, readShellInsets } from './ui/stage-frustum.js';
-import { cameraToRig, rigToCamera, dollyBy, screenToFloor } from './orbit-math.js';
+import { cameraToRig, rigToCamera, dollyBy, screenToFloor, fitRigToRink } from './orbit-math.js';
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1b1b1f);
@@ -16,22 +16,14 @@ scene.fog = new THREE.Fog(0x1b1b1f, 35000, 90000);
 // (see selection.js and controls.js). A plain click, i.e. no drag, still
 // selects objects. The camera itself stays the source of truth: gestures
 // go through getCameraRig() / applyCameraRig() below.
-export const DEFAULT_FOV = 70;
+// The FOV is fixed (the wheel moves the camera instead); 45 degrees is an
+// estimate: narrow enough that the far half of the rink does not shrink
+// away, wide enough for a view from behind a goal.
+export const DEFAULT_FOV = 45;
 export const camera = new THREE.PerspectiveCamera(DEFAULT_FOV, window.innerWidth / window.innerHeight, 50, 200000);
-export const EYE_HEIGHT = 1600; // mm, roughly adult standing eye height
-
-// Elevated establishing shot from the long side of the rink, so the 40 m
-// length lays out horizontally (landscape) and the 20 m width recedes
-// toward the far boards. y=3200 puts the eye slightly above standing
-// height; pitch -0.48 tilts down to take in the crease + centre line.
-export const DEFAULT_CAMERA_POSITION = new THREE.Vector3(18000, 3200, RINK_L / 2);
-export const DEFAULT_YAW = -Math.PI / 2; // facing -X, i.e. looking across the width from the +X long side
-export const DEFAULT_PITCH = -0.48; // ~-27deg, tilts down toward the rink surface
-
-state.camYaw = DEFAULT_YAW;
-state.camPitch = DEFAULT_PITCH;
 camera.rotation.order = 'YXZ';
-camera.position.copy(DEFAULT_CAMERA_POSITION);
+// The default pose (whole rink fitted to the stage) is applied further
+// down by applyDefaultView(), once setCameraLook() exists.
 
 // --- top-down orthographic camera for shape authoring (A2). Positioned high
 // above the rink centre and pointed straight down; up-vector set so goal A
@@ -139,7 +131,6 @@ export function setCameraLook(yaw, pitch) {
   state.camPitch = THREE.MathUtils.clamp(pitch, -1.4, 1.4); // ~-80deg..+80deg, avoids flipping over
   camera.rotation.set(state.camPitch, state.camYaw + Math.PI, 0);
 }
-setCameraLook(state.camYaw, state.camPitch);
 
 // aims setCameraLook() at a world point from a given position, matching the
 // yaw=0-means-+Z convention used throughout (see setCameraLook above)
@@ -171,6 +162,33 @@ export function applyCameraRig(rig) {
 export function cameraView() {
   return { vw: window.innerWidth, vh: window.innerHeight, viewportH: window.innerHeight, fovDeg: camera.fov };
 }
+
+// --- default 3D view (A-BACK-040 step 3): the whole rink fitted into the
+// stage, the window minus the shell insets, like the 2D view. Boot and
+// "Reset view" apply it; a window or inset change re-fits it for as long as
+// the camera still stands where the last fit put it (refitDefaultView), so
+// a view the user moved is never pulled away.
+const lastFit = { position: new THREE.Vector3(), quaternion: new THREE.Quaternion() };
+
+export function applyDefaultView() {
+  camera.fov = DEFAULT_FOV;
+  camera.updateProjectionMatrix();
+  applyCameraRig(fitRigToRink({ ...cameraView(), insets: readShellInsets() }));
+  lastFit.position.copy(camera.position);
+  lastFit.quaternion.copy(camera.quaternion);
+}
+
+export function isDefaultView() {
+  return camera.fov === DEFAULT_FOV
+    && camera.position.distanceTo(lastFit.position) < 1
+    && camera.quaternion.angleTo(lastFit.quaternion) < 1e-4;
+}
+
+export function refitDefaultView() {
+  // In 2D the perspective camera is parked; exitTopDown() fits it again.
+  if (state.activeCamera === camera && isDefaultView()) applyDefaultView();
+}
+applyDefaultView();
 
 // lighting
 const hemiLight = new THREE.HemisphereLight(0xffffff, 0x3a3a40, 1.15);
@@ -243,12 +261,7 @@ document.getElementById('viewFromBallBtn').addEventListener('click', () => {
   lookAtFrom(viewPoint, goalCenter);
 });
 
-document.getElementById('resetViewBtn').addEventListener('click', () => {
-  camera.position.copy(DEFAULT_CAMERA_POSITION);
-  setCameraLook(DEFAULT_YAW, DEFAULT_PITCH);
-  camera.fov = DEFAULT_FOV;
-  camera.updateProjectionMatrix();
-});
+document.getElementById('resetViewBtn').addEventListener('click', applyDefaultView);
 
 // --- scroll-wheel / pinch zoom: moves the camera toward or away from its
 // target (A-BACK-040); the FOV stays. `wheelDelta` is in wheel deltaY
@@ -273,4 +286,5 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   fitTopDownFrustum();
+  refitDefaultView();
 });

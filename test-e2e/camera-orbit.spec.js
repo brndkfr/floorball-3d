@@ -61,6 +61,62 @@ async function drag(page, from, dx, dy, { button = 'left', shift = false } = {})
 
 const EMPTY = { x: 3000, z: 22000 };   // floor with nothing on it
 
+// Screen box of the rink (boards included) and the stage it should sit in:
+// the window minus the shell insets.
+async function rinkOnStage(page) {
+  return page.evaluate(async () => {
+    const THREE = await import('three');
+    const { camera } = await import('/src/scene.js');
+    const { readShellInsets } = await import('/src/ui/stage-frustum.js');
+    const { RINK_L, HALF_W } = await import('/src/constants.js');
+    camera.updateMatrixWorld();
+    const xs = [], ys = [];
+    for (const x of [-HALF_W, HALF_W]) for (const z of [0, RINK_L]) for (const y of [0, 500]) {
+      const v = new THREE.Vector3(x, y, z).project(camera);
+      xs.push((v.x * 0.5 + 0.5) * window.innerWidth);
+      ys.push((-v.y * 0.5 + 0.5) * window.innerHeight);
+    }
+    const i = readShellInsets();
+    return {
+      box: { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) },
+      stage: { x0: i.left, x1: window.innerWidth - i.right, y0: i.top, y1: window.innerHeight - i.bottom },
+      fov: camera.fov,
+    };
+  });
+}
+
+function expectRinkFitsStage({ box, stage }) {
+  expect(box.x0).toBeGreaterThanOrEqual(stage.x0 - 1);
+  expect(box.x1).toBeLessThanOrEqual(stage.x1 + 1);
+  expect(box.y0).toBeGreaterThanOrEqual(stage.y0 - 1);
+  expect(box.y1).toBeLessThanOrEqual(stage.y1 + 1);
+  const fill = Math.max((box.x1 - box.x0) / (stage.x1 - stage.x0), (box.y1 - box.y0) / (stage.y1 - stage.y0));
+  expect(fill).toBeGreaterThan(0.85);
+}
+
+// A-BACK-040 step 3
+test('the default 3D view shows the whole rink, fitted to the stage', async ({ page }) => {
+  await boot(page);
+  const first = await rinkOnStage(page);
+  expect(first.fov).toBe(45);
+  expectRinkFitsStage(first);
+  // an untouched view follows the window
+  await page.setViewportSize({ width: 1000, height: 800 });
+  expectRinkFitsStage(await rinkOnStage(page));
+});
+
+test('a view the user moved is left alone on resize; Reset view fits it again', async ({ page }) => {
+  await boot(page);
+  const from = await screenOf(page, EMPTY.x, EMPTY.z);
+  await drag(page, from, 140, 10);
+  const moved = await readRig(page);
+  await page.setViewportSize({ width: 1000, height: 800 });
+  const after = await readRig(page);
+  for (const k of ['tx', 'tz', 'pitch', 'dist']) expect(Math.abs(after[k] - moved[k])).toBeLessThan(0.5);
+  await page.evaluate(() => document.getElementById('resetViewBtn').click());
+  expectRinkFitsStage(await rinkOnStage(page));
+});
+
 test('left-drag on empty floor turns the camera around its target', async ({ page }) => {
   await boot(page);
   const before = await readRig(page);

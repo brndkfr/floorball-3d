@@ -77,9 +77,9 @@ the last 600 ms (estimate), not a per-frame low-pass.
 - 2026-11-14, branch `look-and-motion`: step 1 done
   (`web/src/orbit-math.js`, `test/orbit-math.test.js`).
 - 2026-11-14: step 2 done, see "as built" under the step
-  (`test-e2e/camera-orbit.spec.js`, 8 scenarios). Next: step 3
-  (fitted default view, FOV 45), which also moves the default orbit
-  target from a point at the near board to the middle of the rink.
+  (`test-e2e/camera-orbit.spec.js`).
+- 2026-11-14: step 3 done (fitted default view, FOV 45). Next:
+  step 4 (presets).
 
 ## Steps
 
@@ -143,7 +143,14 @@ the last 600 ms (estimate), not a per-frame low-pass.
    changes yaw and keeps the target; wheel changes `dist`; a click
    still selects a chip; entering and leaving 2D restores the pose;
    a frame camera recorded before this change plays back the same.
-3. `[small]` **Default view and FOV.** `DEFAULT_*` in `scene.js`
+3. `[done 2026-11-14]` **Default view and FOV.** As built:
+   `applyDefaultView()` in `scene.js` (boot, "Reset view"), FOV 45.
+   `refitDefaultView()` re-fits on resize and when the recorder inset
+   changes, but only while `isDefaultView()` holds (camera still where
+   the last fit put it); `exitTopDown()` fits again when the view was
+   untouched on the way in. `DEFAULT_CAMERA_POSITION` / `_YAW` /
+   `_PITCH` and `EYE_HEIGHT` are gone. The fog did not need a change
+   at the fitted distance. Original text: `DEFAULT_*` in `scene.js`
    replaced by `applyCameraRig(fitRigToRink({ vw, vh, fovDeg, insets:
    readShellInsets() }))` on boot and on resize while the user has not
    moved the camera. `fitRigToRink` may return a distance above

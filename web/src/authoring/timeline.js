@@ -23,7 +23,7 @@ import {
   parseSecondsInput, durationEditable, frameMenuItems,
   layoutTrack, timeToX, xToTime, rulerTicks, durationFromDrag, clampZoom,
 } from './transport-math.js';
-import { fitTopDownFrustum } from '../scene.js';
+import { fitTopDownFrustum, refitDefaultView } from '../scene.js';
 import { onProjectChanged } from './library-dialog.js';
 
 const el = document.getElementById('timeline');
@@ -145,6 +145,7 @@ function syncInset() {
   lastInset = inset;
   document.documentElement.style.setProperty('--recorder-inset', inset + 'px');
   fitTopDownFrustum();
+  refitDefaultView();
 }
 new ResizeObserver(syncInset).observe(el);
 window.addEventListener('resize', syncInset);

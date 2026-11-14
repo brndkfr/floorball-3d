@@ -100,9 +100,10 @@ strong model that can look at screenshots, or the user's eye.
 
 Progress lives in each item file ("Progress" section or `[done]` on a
 step). State on 2026-11-14 (branch `look-and-motion`, committed, not
-merged): S-BACK-030 step 0 and A-BACK-040 steps 1 and 2 done (orbit,
-pan and wheel dolly work in 3D); next is A-BACK-040 step 3 (fitted
-default view), then S-BACK-030 steps 1-3 and 6.
+merged): S-BACK-030 step 0 and A-BACK-040 steps 1 to 3 done (orbit,
+pan, wheel dolly, fitted default view); next is S-BACK-030 steps 8
+(figures off the discs, disc 0.7 m), 3, 1, 2 and 6, then A-BACK-040
+step 4 (presets).
 
 1. **[S-BACK-030] 3D look, steps 0-3, 6** Look-shots script, tone
    mapping, background, blob shadows, white boards. Cheap, biggest
