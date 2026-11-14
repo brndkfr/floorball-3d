@@ -5,8 +5,11 @@ and A-BACK-034 (stance + stick IK), see
 [A-BACK-033-034](A-BACK-033-034-player-kit.md).
 
 Step tags: `[small]` / `[lead]` as in
-[S-BACK-030](S-BACK-030-3d-look.md). Use `pnpm run look -- --at <ms>`
-(S-BACK-030 step 0) to look at any pose.
+[S-BACK-030](S-BACK-030-3d-look.md). Every step is one PR and follows
+the TDD workflow in [CLAUDE.md](../../CLAUDE.md): failing test first,
+then the code, then `pnpm test`, the affected e2e specs, build and
+size check. Use `pnpm run look -- --at <ms>` (S-BACK-030 step 0) to
+look at any pose.
 
 ## Where we are
 

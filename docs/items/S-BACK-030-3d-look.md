@@ -5,7 +5,9 @@ Status: open. Review of 2026-11-14 (screenshots of the 3D view at
 
 Step tags: `[small]` = a smaller model can do it from this text alone.
 `[lead]` = needs a strong model that can look at screenshots, or the
-user's eye. Every step is one PR and follows the CLAUDE.md workflow.
+user's eye. Every step is one PR and follows the TDD workflow in
+[CLAUDE.md](../../CLAUDE.md): failing test first, then the code, then
+`pnpm test`, the affected e2e specs, build and size check.
 
 ## What the 3D view looks like now
 
@@ -41,7 +43,7 @@ user's eye. Every step is one PR and follows the CLAUDE.md workflow.
 
 ## Steps
 
-0. `[done 2026-11-14, branch look-and-motion, uncommitted]`
+0. `[done 2026-11-14, branch look-and-motion]`
    **Look-shots script.** `pnpm run look` (`scripts/look-shots.mjs`)
    opens the app in Playwright Chromium, clicks "New play", spawns six
    chips, switches figures on and saves six views (`default`,

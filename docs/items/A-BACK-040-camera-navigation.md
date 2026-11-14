@@ -6,7 +6,10 @@ mouse button); it does not replace it. Top-down 2D navigation is
 already good and stays as it is.
 
 Step tags: `[small]` / `[lead]` as in
-[S-BACK-030](S-BACK-030-3d-look.md).
+[S-BACK-030](S-BACK-030-3d-look.md). Every step is one PR and follows
+the TDD workflow in [CLAUDE.md](../../CLAUDE.md): failing test first,
+then the code, then `pnpm test`, the affected e2e specs, build and
+size check.
 
 ## What is wrong with 3D navigation now
 
@@ -71,9 +74,8 @@ the last 600 ms (estimate), not a per-frame low-pass.
 
 ## Progress
 
-- 2026-11-14, branch `look-and-motion`, uncommitted: step 1 done
-  (`web/src/orbit-math.js`, `test/orbit-math.test.js`, 15 tests,
-  `pnpm test` 597 / 597). Nothing is wired to the UI yet, so the app
+- 2026-11-14, branch `look-and-motion`: step 1 done
+  (`web/src/orbit-math.js`, `test/orbit-math.test.js`, 15 tests). Nothing is wired to the UI yet, so the app
   behaves as before. Next: step 2.
 
 ## Steps
