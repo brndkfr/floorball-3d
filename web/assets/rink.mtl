@@ -1,6 +1,11 @@
 newmtl Board
-Kd 0.03 0.03 0.035
-Ka 0.01 0.01 0.01
+Kd 0.90 0.90 0.88
+Ka 0.2 0.2 0.2
+Ns 20
+
+newmtl BoardRail
+Kd 0.10 0.10 0.12
+Ka 0.02 0.02 0.02
 Ns 40
 
 newmtl Marking

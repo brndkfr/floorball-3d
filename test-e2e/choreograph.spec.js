@@ -65,9 +65,9 @@ test.describe('A-BACK-018 choreograph pass-arrow preview', () => {
 
     const after = await passArrow(page);
     expect(after?.visible).toBe(true);
-    // Trimmed by the chip display radius (500 mm) at both carrier ends.
-    expect(after.minX).toBeGreaterThan(400);
-    expect(after.maxX).toBeLessThan(5600);
+    // Trimmed by the chip display radius (350 mm) at both carrier ends.
+    expect(after.minX).toBeGreaterThan(300);
+    expect(after.maxX).toBeLessThan(5700);
 
     await page.locator('#timeline [data-tl="choreo"]').click();
     await tick(page);

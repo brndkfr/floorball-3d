@@ -4,34 +4,38 @@ import { state } from './state.js';
 import { markRenderDirty } from './render-dirty.js';
 import { pickRendererQuality } from './renderer-quality.js';
 import { stageFrustum, readShellInsets } from './ui/stage-frustum.js';
+import { cameraToRig, rigToCamera, dollyBy, screenToFloor, fitRigToRink } from './orbit-math.js';
 
 export const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1b1b1f);
-scene.fog = new THREE.Fog(0x1b1b1f, 35000, 90000);
 
-// --- first-person "walk the rink" camera: no OrbitControls. Position is
-// free-walked with WASD/arrows (eye height fixed, floor-plane movement
-// only); look direction is yaw/pitch, turned by holding the left mouse
-// button and dragging (a plain click, i.e. no drag, still selects objects -
-// see selection.js's pointerdown/pointerup handlers).
-export const DEFAULT_FOV = 70;
+// --- hall backdrop for the 3D view (S-BACK-030 steps 1 and 2). All colours
+// and distances are look-based estimates. The 3D view gets a slate backdrop
+// instead of a flat near-black, a hall floor, fog in the backdrop colour so
+// the far end of the floor fades into it without an edge, and filmic tone
+// mapping. The top-down view and photo-lock keep their flat look:
+// setFlatLighting() swaps the backdrop back for 2D, photo-lock clears it
+// itself (photo-overlay/view.js), and setActiveCamera() switches hall floor
+// and tone mapping off for every camera but the perspective one.
+const FLAT_BACKGROUND = new THREE.Color(0x1b1b1f);
+const HALL_BACKGROUND = new THREE.Color(0x2b313d);
+const TONE_EXPOSURE = 1.15;
+scene.background = HALL_BACKGROUND;
+scene.fog = new THREE.Fog(HALL_BACKGROUND.getHex(), 45000, 140000);
+
+// --- 3D camera: an orbit rig (A-BACK-040, orbit-math.js), no OrbitControls.
+// Left-drag turns the camera around the floor point it looks at, right /
+// middle drag and WASD slide that point, the wheel moves closer or away
+// (see selection.js and controls.js). A plain click, i.e. no drag, still
+// selects objects. The camera itself stays the source of truth: gestures
+// go through getCameraRig() / applyCameraRig() below.
+// The FOV is fixed (the wheel moves the camera instead); 45 degrees is an
+// estimate: narrow enough that the far half of the rink does not shrink
+// away, wide enough for a view from behind a goal.
+export const DEFAULT_FOV = 45;
 export const camera = new THREE.PerspectiveCamera(DEFAULT_FOV, window.innerWidth / window.innerHeight, 50, 200000);
-export const EYE_HEIGHT = 1600; // mm, roughly adult standing eye height
-
-// Elevated establishing shot from the long side of the rink, so the 40 m
-// length lays out horizontally (landscape) and the 20 m width recedes
-// toward the far boards. y=3200 puts the eye slightly above standing
-// height; pitch -0.48 tilts down to take in the crease + centre line.
-export const DEFAULT_CAMERA_POSITION = new THREE.Vector3(18000, 3200, RINK_L / 2);
-export const DEFAULT_YAW = -Math.PI / 2; // facing -X, i.e. looking across the width from the +X long side
-export const DEFAULT_PITCH = -0.48; // ~-27deg, tilts down toward the rink surface
-const MIN_FOV = 20, MAX_FOV = 90; // narrower FOV reads as "zoomed in"
-const ZOOM_SENSITIVITY = 0.05; // degrees of FOV per unit of wheel deltaY
-
-state.camYaw = DEFAULT_YAW;
-state.camPitch = DEFAULT_PITCH;
 camera.rotation.order = 'YXZ';
-camera.position.copy(DEFAULT_CAMERA_POSITION);
+// The default pose (whole rink fitted to the stage) is applied further
+// down by applyDefaultView(), once setCameraLook() exists.
 
 // --- top-down orthographic camera for shape authoring (A2). Positioned high
 // above the rink centre and pointed straight down; up-vector set so goal A
@@ -93,6 +97,13 @@ setTopDownRotationSteps(topDownRotationSteps);
 state.activeCamera = camera;
 export function setActiveCamera(cam) {
   state.activeCamera = cam;
+  applyToneMapping();
+}
+// Filmic tone mapping is part of the 3D look only: the 2D diagram and the
+// photo overlay keep their exact colours.
+function applyToneMapping() {
+  renderer.toneMapping = state.activeCamera === camera ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
+  hallFloor.visible = state.activeCamera === camera;
 }
 export function getActiveCamera() {
   return state.activeCamera;
@@ -113,6 +124,7 @@ export const rendererQuality = pickRendererQuality({
   override: qualityOverride,
 });
 export const renderer = new THREE.WebGLRenderer({ antialias: rendererQuality.antialias, alpha: true });
+renderer.toneMappingExposure = TONE_EXPOSURE;
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(rendererQuality.pixelRatio);
 document.body.appendChild(renderer.domElement);
@@ -132,14 +144,13 @@ export const photoCamera = new THREE.PerspectiveCamera(60, window.innerWidth / w
 // "forward" (yaw 0). Three.js cameras default to looking down -Z, so we add
 // a fixed 180deg offset when actually applying rotation.y - that keeps
 // camYaw consistent with the rest of the codebase (and with the forward/
-// right vectors used for WASD walking in controls.js) while still pointing
-// the camera the right way on screen.
+// right vectors in orbit-math.js) while still pointing the camera the
+// right way on screen.
 export function setCameraLook(yaw, pitch) {
   state.camYaw = yaw;
   state.camPitch = THREE.MathUtils.clamp(pitch, -1.4, 1.4); // ~-80deg..+80deg, avoids flipping over
   camera.rotation.set(state.camPitch, state.camYaw + Math.PI, 0);
 }
-setCameraLook(state.camYaw, state.camPitch);
 
 // aims setCameraLook() at a world point from a given position, matching the
 // yaw=0-means-+Z convention used throughout (see setCameraLook above)
@@ -149,6 +160,55 @@ export function lookAtFrom(fromPos, targetPos) {
   const pitch = Math.atan2(dy, Math.hypot(dx, dz));
   setCameraLook(yaw, pitch);
 }
+
+// The orbit rig of the perspective camera as it stands. Read from the
+// camera's own rotation, not state.camYaw / camPitch: playback and
+// exitTopDown() restore the camera through its quaternion and leave those
+// two untouched.
+export function getCameraRig() {
+  return cameraToRig({
+    x: camera.position.x, y: camera.position.y, z: camera.position.z,
+    yaw: camera.rotation.y - Math.PI, pitch: camera.rotation.x,
+  });
+}
+
+export function applyCameraRig(rig) {
+  const c = rigToCamera(rig);
+  camera.position.set(c.x, c.y, c.z);
+  setCameraLook(c.yaw, c.pitch);
+}
+
+// The view the orbit math needs to turn pixels into millimetres.
+export function cameraView() {
+  return { vw: window.innerWidth, vh: window.innerHeight, viewportH: window.innerHeight, fovDeg: camera.fov };
+}
+
+// --- default 3D view (A-BACK-040 step 3): the whole rink fitted into the
+// stage, the window minus the shell insets, like the 2D view. Boot and
+// "Reset view" apply it; a window or inset change re-fits it for as long as
+// the camera still stands where the last fit put it (refitDefaultView), so
+// a view the user moved is never pulled away.
+const lastFit = { position: new THREE.Vector3(), quaternion: new THREE.Quaternion() };
+
+export function applyDefaultView() {
+  camera.fov = DEFAULT_FOV;
+  camera.updateProjectionMatrix();
+  applyCameraRig(fitRigToRink({ ...cameraView(), insets: readShellInsets() }));
+  lastFit.position.copy(camera.position);
+  lastFit.quaternion.copy(camera.quaternion);
+}
+
+export function isDefaultView() {
+  return camera.fov === DEFAULT_FOV
+    && camera.position.distanceTo(lastFit.position) < 1
+    && camera.quaternion.angleTo(lastFit.quaternion) < 1e-4;
+}
+
+export function refitDefaultView() {
+  // In 2D the perspective camera is parked; exitTopDown() fits it again.
+  if (state.activeCamera === camera && isDefaultView()) applyDefaultView();
+}
+applyDefaultView();
 
 // lighting
 const hemiLight = new THREE.HemisphereLight(0xffffff, 0x3a3a40, 1.15);
@@ -171,6 +231,7 @@ export function setFlatLighting(flat) {
   hemiLight.intensity = p.hemi;
   key.intensity = p.key;
   fill.intensity = p.fill;
+  scene.background = flat ? FLAT_BACKGROUND : HALL_BACKGROUND;
 }
 
 // blue floor, sized a bit larger than the rink so it reads as a floor border
@@ -182,6 +243,19 @@ const surroundFloor = new THREE.Mesh(
 surroundFloor.rotation.x = -Math.PI / 2;
 surroundFloor.position.set(0, -5, RINK_L / 2);
 scene.add(surroundFloor);
+// The hall floor beyond that border (S-BACK-030 step 2): a large dark plane
+// so the rink does not float in a void; the fog fades it into the backdrop.
+// 3D view only (applyToneMapping() hides it for the 2D and photo cameras).
+const hallFloor = new THREE.Mesh(
+  new THREE.PlaneGeometry(RINK_W + 500000, RINK_L + 500000),   // past the fog's far end on every side
+  new THREE.MeshStandardMaterial({ color: 0x3a3f4a, roughness: 0.95, metalness: 0.0 })
+);
+hallFloor.rotation.x = -Math.PI / 2;
+hallFloor.position.set(0, -12, RINK_L / 2);
+hallFloor.name = 'hallFloor';
+scene.add(hallFloor);
+applyToneMapping();
+
 // Exposed so photo-overlay/view.js can hide it while photo-locked - the
 // giant opaque plane otherwise blankets the underlying photo instead of
 // showing just the scheme on top of it.
@@ -221,19 +295,16 @@ document.getElementById('viewFromBallBtn').addEventListener('click', () => {
   lookAtFrom(viewPoint, goalCenter);
 });
 
-document.getElementById('resetViewBtn').addEventListener('click', () => {
-  camera.position.copy(DEFAULT_CAMERA_POSITION);
-  setCameraLook(DEFAULT_YAW, DEFAULT_PITCH);
-  camera.fov = DEFAULT_FOV;
-  camera.updateProjectionMatrix();
-});
+document.getElementById('resetViewBtn').addEventListener('click', applyDefaultView);
 
-// --- scroll-wheel zoom: narrows/widens the FOV rather than dollying the
-// camera position, so it works the same whether you're walking, or have
-// something selected, without pushing through walls/objects ---
-export function applyZoomDelta(deltaFov) {
-  camera.fov = THREE.MathUtils.clamp(camera.fov + deltaFov, MIN_FOV, MAX_FOV);
-  camera.updateProjectionMatrix();
+// --- scroll-wheel / pinch zoom: moves the camera toward or away from its
+// target (A-BACK-040); the FOV stays. `wheelDelta` is in wheel deltaY
+// units, negative = closer. With a pointer position the floor point under
+// it stays where it is on screen.
+export function dollyCamera(wheelDelta, clientX = null, clientY = null) {
+  const rig = getCameraRig();
+  const pivot = clientX === null ? null : screenToFloor(rig, clientX, clientY, cameraView());
+  applyCameraRig(dollyBy(rig, wheelDelta, pivot));
 }
 
 renderer.domElement.addEventListener('wheel', (event) => {
@@ -241,7 +312,7 @@ renderer.domElement.addEventListener('wheel', (event) => {
   // own wheel-zoom handler in authoring/topdown-camera.js.
   if (state.activeCamera !== camera) return;
   event.preventDefault();
-  applyZoomDelta(event.deltaY * ZOOM_SENSITIVITY);
+  dollyCamera(event.deltaY, event.clientX, event.clientY);
 }, { passive: false });
 
 window.addEventListener('resize', () => {
@@ -249,4 +320,5 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   fitTopDownFrustum();
+  refitDefaultView();
 });
