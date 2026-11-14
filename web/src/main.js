@@ -6,6 +6,7 @@ import { updateTrajectory } from './trajectory.js';
 import { updateCoverage, updateGoalieLabel } from './coverage.js';
 import { snapshotChanged, copySnapshot } from './dirty-check.js';
 import { consumeRenderDirty } from './render-dirty.js';
+import { tickBlobShadows } from './blob-shadow.js';
 
 // side-effect-only modules: each wires up its own DOM listeners and starts
 // loading its OBJ/MTL assets as soon as it's imported
@@ -71,6 +72,7 @@ function animate() {
   const actorsActive = tickActors();
   const figuresChanged = tickFigures();
   const passChanged = tickPassOverlay();
+  const shadowsChanged = tickBlobShadows();   // after everything that moves an actor
   const ballCenter = getBallWorldCenter(); // computed once, shared by both calls below
   const trajectoryChanged = updateTrajectory(ballCenter);
   updateCoverage(ballCenter);
@@ -91,7 +93,7 @@ function animate() {
   // consumeRenderDirty() must run every frame (it's edge-triggered) - keep
   // it first so `||` short-circuiting never skips clearing it.
   const needsRender = consumeRenderDirty() || pollChanged || chipsActive || markersActive
-    || walksActive || choreoActive || actorsActive || figuresChanged || passChanged || trajectoryChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
+    || walksActive || choreoActive || actorsActive || figuresChanged || passChanged || shadowsChanged || trajectoryChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
   if (needsRender) renderer.render(scene, state.activeCamera);
 }
 animate();

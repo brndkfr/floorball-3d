@@ -100,6 +100,7 @@ RINK_L   = 40000.0   # rink length (long sides)
 RINK_W   = 20000.0   # rink width (short sides)
 HALF_W   = RINK_W / 2
 BOARD_H  = 500.0      # board height
+RAIL_H   = 60.0       # darker band along the top edge (styling, estimate)
 BOARD_R  = 2000.0     # rink corner radius
 LINE_W   = 50.0       # marking line width (upper end of the 4-5 cm spec)
 DOT_D    = 300.0      # face-off dot / centre spot max diameter
@@ -121,8 +122,11 @@ n = len(board_path)
 for i in range(n):
     p0 = board_path[i]
     p1 = board_path[(i + 1) % n]
+    rail_y = BOARD_H - RAIL_H
     add_quad((p0[0], 0.0, p0[2]), (p1[0], 0.0, p1[2]),
-             (p1[0], BOARD_H, p1[2]), (p0[0], BOARD_H, p0[2]), 'Board')
+             (p1[0], rail_y, p1[2]), (p0[0], rail_y, p0[2]), 'Board')
+    add_quad((p0[0], rail_y, p0[2]), (p1[0], rail_y, p1[2]),
+             (p1[0], BOARD_H, p1[2]), (p0[0], BOARD_H, p0[2]), 'BoardRail')
 
 # ------------------------------------------------------------ markings --
 
@@ -160,8 +164,10 @@ obj_path = os.path.join(out_dir, 'rink.obj')
 mtl_path = os.path.join(out_dir, 'rink.mtl')
 
 with open(mtl_path, 'w') as f:
-    # Board colour is a styling choice (the IFF spec does not mandate one).
-    f.write("newmtl Board\nKd 0.03 0.03 0.035\nKa 0.01 0.01 0.01\nNs 40\n\n")
+    # Board colours are a styling choice (the IFF spec does not mandate one):
+    # white boards with a dark top rail, as most rinks have (S-BACK-030).
+    f.write("newmtl Board\nKd 0.90 0.90 0.88\nKa 0.2 0.2 0.2\nNs 20\n\n")
+    f.write("newmtl BoardRail\nKd 0.10 0.10 0.12\nKa 0.02 0.02 0.02\nNs 40\n\n")
     f.write("newmtl Marking\nKd 0.98 0.98 0.98\nKa 0.2 0.2 0.2\nNs 5\n\n")
 
 with open(obj_path, 'w') as f:

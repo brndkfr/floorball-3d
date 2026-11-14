@@ -22,6 +22,7 @@ rinkMtlLoader.load(
   (materials) => {
     materials.preload();
     if (materials.materials.Board) materials.materials.Board.side = THREE.DoubleSide;
+    if (materials.materials.BoardRail) materials.materials.BoardRail.side = THREE.DoubleSide;
     if (materials.materials.Marking) materials.materials.Marking.side = THREE.DoubleSide;
 
     const objLoader = new OBJLoader();

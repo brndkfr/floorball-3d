@@ -260,7 +260,7 @@ and is flagged as such in code comments where it matters most:
   the source asset.
 - The "how close counts as centred" threshold for the shooting-line
   colour / outline, the default camera / ball starting positions, and
-  the 5x runtime chip display scale, are eyeballed for a reasonable
+  the 3.5x runtime chip display scale, are eyeballed for a reasonable
   default - not derived from any reference.
 - The 3D player figures (Layers panel > figures) use Quaternius'
   "Universal Base Characters" (free Standard version, CC0,

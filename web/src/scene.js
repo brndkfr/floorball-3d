@@ -7,8 +7,20 @@ import { stageFrustum, readShellInsets } from './ui/stage-frustum.js';
 import { cameraToRig, rigToCamera, dollyBy, screenToFloor, fitRigToRink } from './orbit-math.js';
 
 export const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1b1b1f);
-scene.fog = new THREE.Fog(0x1b1b1f, 35000, 90000);
+
+// --- hall backdrop for the 3D view (S-BACK-030 steps 1 and 2). All colours
+// and distances are look-based estimates. The 3D view gets a slate backdrop
+// instead of a flat near-black, a hall floor, fog in the backdrop colour so
+// the far end of the floor fades into it without an edge, and filmic tone
+// mapping. The top-down view and photo-lock keep their flat look:
+// setFlatLighting() swaps the backdrop back for 2D, photo-lock clears it
+// itself (photo-overlay/view.js), and setActiveCamera() switches hall floor
+// and tone mapping off for every camera but the perspective one.
+const FLAT_BACKGROUND = new THREE.Color(0x1b1b1f);
+const HALL_BACKGROUND = new THREE.Color(0x2b313d);
+const TONE_EXPOSURE = 1.15;
+scene.background = HALL_BACKGROUND;
+scene.fog = new THREE.Fog(HALL_BACKGROUND.getHex(), 45000, 140000);
 
 // --- 3D camera: an orbit rig (A-BACK-040, orbit-math.js), no OrbitControls.
 // Left-drag turns the camera around the floor point it looks at, right /
@@ -85,6 +97,13 @@ setTopDownRotationSteps(topDownRotationSteps);
 state.activeCamera = camera;
 export function setActiveCamera(cam) {
   state.activeCamera = cam;
+  applyToneMapping();
+}
+// Filmic tone mapping is part of the 3D look only: the 2D diagram and the
+// photo overlay keep their exact colours.
+function applyToneMapping() {
+  renderer.toneMapping = state.activeCamera === camera ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
+  hallFloor.visible = state.activeCamera === camera;
 }
 export function getActiveCamera() {
   return state.activeCamera;
@@ -105,6 +124,7 @@ export const rendererQuality = pickRendererQuality({
   override: qualityOverride,
 });
 export const renderer = new THREE.WebGLRenderer({ antialias: rendererQuality.antialias, alpha: true });
+renderer.toneMappingExposure = TONE_EXPOSURE;
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(rendererQuality.pixelRatio);
 document.body.appendChild(renderer.domElement);
@@ -211,6 +231,7 @@ export function setFlatLighting(flat) {
   hemiLight.intensity = p.hemi;
   key.intensity = p.key;
   fill.intensity = p.fill;
+  scene.background = flat ? FLAT_BACKGROUND : HALL_BACKGROUND;
 }
 
 // blue floor, sized a bit larger than the rink so it reads as a floor border
@@ -222,6 +243,19 @@ const surroundFloor = new THREE.Mesh(
 surroundFloor.rotation.x = -Math.PI / 2;
 surroundFloor.position.set(0, -5, RINK_L / 2);
 scene.add(surroundFloor);
+// The hall floor beyond that border (S-BACK-030 step 2): a large dark plane
+// so the rink does not float in a void; the fog fades it into the backdrop.
+// 3D view only (applyToneMapping() hides it for the 2D and photo cameras).
+const hallFloor = new THREE.Mesh(
+  new THREE.PlaneGeometry(RINK_W + 500000, RINK_L + 500000),   // past the fog's far end on every side
+  new THREE.MeshStandardMaterial({ color: 0x3a3f4a, roughness: 0.95, metalness: 0.0 })
+);
+hallFloor.rotation.x = -Math.PI / 2;
+hallFloor.position.set(0, -12, RINK_L / 2);
+hallFloor.name = 'hallFloor';
+scene.add(hallFloor);
+applyToneMapping();
+
 // Exposed so photo-overlay/view.js can hide it while photo-locked - the
 // giant opaque plane otherwise blankets the underlying photo instead of
 // showing just the scheme on top of it.

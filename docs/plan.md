@@ -100,15 +100,16 @@ strong model that can look at screenshots, or the user's eye.
 
 Progress lives in each item file ("Progress" section or `[done]` on a
 step). State on 2026-11-14 (branch `look-and-motion`, committed, not
-merged): S-BACK-030 step 0 and A-BACK-040 steps 1 to 3 done (orbit,
-pan, wheel dolly, fitted default view); next is S-BACK-030 steps 8
-(figures off the discs, disc 0.7 m), 3, 1, 2 and 6, then A-BACK-040
-step 4 (presets).
+merged): S-BACK-030 steps 0 to 3 and 6 done, step 8 half done (disc
+0.7 m, team ring under figures); A-BACK-040 steps 1 to 3 done (orbit,
+pan, wheel dolly, fitted default view). Next: S-BACK-030 step 8 second
+half (number sprite size), then A-BACK-040 step 4 (presets). To check
+by eye in a real browser: a darker band across the top of the 3D view
+that shows in headless screenshots (see the S-BACK-030 item file).
 
-1. **[S-BACK-030] 3D look, steps 0-3, 6** Look-shots script, tone
-   mapping, background, blob shadows, white boards. Cheap, biggest
-   change to the first impression.
-   [items/S-BACK-030](items/S-BACK-030-3d-look.md).
+1. **[S-BACK-030] 3D look, steps 0-3, 6** [done 2026-11-14]
+   Look-shots script, tone mapping, background, blob shadows, white
+   boards. [items/S-BACK-030](items/S-BACK-030-3d-look.md).
 2. **[S-BACK-026] Download weight, first slice** Detailed goalie to
    GLB + WebP: about 5.5 MB off every boot (see section 5).
 3. **[A-BACK-040] 3D camera navigation** Orbit camera, presets, fitted
@@ -116,8 +117,8 @@ step 4 (presets).
    [items/A-BACK-040](items/A-BACK-040-camera-navigation.md).
 4. **[A-BACK-041] Player moves** Carry, pass, receive, wrist and slap
    shot. [items/A-BACK-041-043](items/A-BACK-041-043-floorball-moves.md).
-5. **[S-BACK-030] 3D look, rest** Floor, figures off the game pieces,
-   shadow map, arena shell.
+5. **[S-BACK-030] 3D look, rest** Floor, number sprite size (rest of
+   step 8), shadow map, arena shell.
 6. **[A-BACK-042] Posable goalie**, then **[A-BACK-043] Goalie
    behaviour** (043 needs S-BACK-024 first). Same file as 041.
 
@@ -213,16 +214,26 @@ lines. An item that needs more than ~10 lines gets its own file under
   runs each: local `trace: 'on-first-retry'`, `workers: 2`, a Defender
   exclusion for `test-results/` and `node_modules/.pnpm/`, then a
   GPU-backed launch (`--use-angle=d3d11`). Keep what measurably helps.
+  Measured 2026-11-14: `choreograph.spec.js:39` takes 8 to 55 s on
+  unchanged code (limit 30 s), `choreo-tutorial.spec.js:91` fails
+  locally; both stall after entering Choreo, so start there.
+- **[S-BACK-031] e2e area sets** [open] One command for the area run
+  that CLAUDE.md workflow step 5 asks for when `test:e2e:affected`
+  says `FULL RUN`: tag each spec with its areas (`@chips`, `@camera`,
+  `@look`, `@playback`, `@photo`, `@timeline`), add
+  `pnpm test:e2e:area <area...>` (always adds `bootstrap` and `a11y`,
+  re-runs timeouts once, serially), and a Node test that fails on a
+  spec without a tag. Done when the step 5 text names the command.
 - **[S-BACK-029] Security and performance audit** [in-progress] Audit
   of 2026-10-07 (4 high, 9 medium, 10 low). H1-H4 and M1 shipped
   2026-10-15 (PRs #13-#15, #17, #18).
   [Findings and order](items/S-BACK-029-audit-2026-10.md). M5 is part
   of S-BACK-024, L4 of S-BACK-023.
-- **[S-BACK-030] 3D look** [in-progress] The view above the boards is a
-  black void, nothing casts a shadow, floor and boards are flat. Tone
-  mapping, background, shadows, floor, white boards, arena shell,
-  figures off their 1 m discs. Starts with a look-shots script for
-  before / after pictures. [Spec](items/S-BACK-030-3d-look.md).
+- **[S-BACK-030] 3D look** [in-progress] Done 2026-11-14: look-shots
+  script, tone mapping, slate hall backdrop, blob shadows, white
+  boards, disc 0.7 m with a team ring under figures. Open: number
+  sprite size, floor texture, real shadow map, arena shell, goalie
+  gloss. [Spec](items/S-BACK-030-3d-look.md).
 
 ## 5. Architecture debt
 
