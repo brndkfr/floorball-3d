@@ -122,6 +122,9 @@ that shows in headless screenshots (see the S-BACK-030 item file).
    step 8), shadow map, arena shell.
 6. **[A-BACK-042] Posable goalie**, then **[A-BACK-043] Goalie
    behaviour** (043 needs S-BACK-024 first). Same file as 041.
+7. **[A-BACK-044] Collapsible panels and Present mode** (added
+   2026-11-15) Room for the rink while editing, nothing but the rink
+   while showing it. [items/A-BACK-044](items/A-BACK-044-panels.md).
 
 ### Later (parked)
 
@@ -190,6 +193,11 @@ lines. An item that needs more than ~10 lines gets its own file under
 - **[A-BACK-043] Goalie behaviour** [blocked-by: A-BACK-042] Auto
   position on the ball line, save reactions timed from the shot.
   Also needs S-BACK-024. Same file.
+- **[A-BACK-044] Collapsible panels and Present mode** [open] Side
+  panel collapses to a 40 px icon strip (`\`), every section and the
+  timeline fold; Present hides everything but a small transport for
+  showing a play to the team. Floating panels are not planned
+  (decision 002). [Spec](items/A-BACK-044-panels.md).
 
 ### Mode B - Analyze
 
