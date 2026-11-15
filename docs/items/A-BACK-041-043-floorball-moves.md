@@ -196,8 +196,13 @@ brand name printed on its chest, and 5.9 MB of boot download).
 
 Steps:
 
-1. `[small]` **Baseline.** Record goal coverage (%) for the current
+1. `[done 2026-11-15]` **Baseline.** Record goal coverage (%) for the current
    detailed goalie at 12 fixed ball positions into a test fixture.
+   As built: `test-e2e/goalie-coverage-baseline.spec.js` +
+   `goalie-coverage-baseline.json` (goal A, goalie at its default spot,
+   `insights.js` `coverageGrid`; 0.5 point tolerance;
+   `RECORD_BASELINE=1` re-records). From 63.8 % (slot 3 m) down to
+   10.6 % (left sharp). The GLB goalie (S-BACK-026) matches it too.
 2. `[lead]` **Proxy coverage.** `web/src/goalie-proxy-math.js`
    (ray / capsule, ray / box) with tests; coverage uses it for the
    current goalie with a hand-fitted kneeling proxy; numbers within

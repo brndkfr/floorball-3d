@@ -1,0 +1,78 @@
+{
+  "note": "A-BACK-042 step 1: % of goal A blocked by the detailed goalie at its default spot; ball on the floor, dz = mm in front of the goal line.",
+  "goalieModel": "detailed",
+  "positions": [
+    {
+      "name": "slot 3 m",
+      "x": 0,
+      "dz": 3000,
+      "pct": 63.8
+    },
+    {
+      "name": "slot 6 m",
+      "x": 0,
+      "dz": 6000,
+      "pct": 55.21
+    },
+    {
+      "name": "slot 9 m",
+      "x": 0,
+      "dz": 9000,
+      "pct": 52.6
+    },
+    {
+      "name": "slot 12 m",
+      "x": 0,
+      "dz": 12000,
+      "pct": 51.04
+    },
+    {
+      "name": "left 6 m, 3 m out",
+      "x": -3000,
+      "dz": 6000,
+      "pct": 52.86
+    },
+    {
+      "name": "right 6 m, 3 m out",
+      "x": 3000,
+      "dz": 6000,
+      "pct": 57.29
+    },
+    {
+      "name": "left 6 m, 6 m out",
+      "x": -6000,
+      "dz": 6000,
+      "pct": 43.36
+    },
+    {
+      "name": "right 6 m, 6 m out",
+      "x": 6000,
+      "dz": 6000,
+      "pct": 52.08
+    },
+    {
+      "name": "left close",
+      "x": -1500,
+      "dz": 2500,
+      "pct": 54.04
+    },
+    {
+      "name": "right close",
+      "x": 1500,
+      "dz": 2500,
+      "pct": 61.85
+    },
+    {
+      "name": "left sharp",
+      "x": -4000,
+      "dz": 1000,
+      "pct": 10.55
+    },
+    {
+      "name": "right sharp",
+      "x": 4000,
+      "dz": 1000,
+      "pct": 11.33
+    }
+  ]
+}
