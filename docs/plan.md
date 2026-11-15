@@ -127,6 +127,11 @@ that shows in headless screenshots (see the S-BACK-030 item file).
 7. **[A-BACK-044] Collapsible panels and Present mode** (added
    2026-11-15) Room for the rink while editing, nothing but the rink
    while showing it. [items/A-BACK-044](items/A-BACK-044-panels.md).
+8. **[A-BACK-045] Shot overlays in the ball's Inspector** (added
+   2026-11-15) Lines, shooting line and coverage work again (auto
+   target), then move from View into the ball's Inspector with a
+   verdict card and a verdict chip on the rink.
+   [items/A-BACK-045](items/A-BACK-045-shot-panel.md).
 
 ### Later (parked)
 
@@ -200,6 +205,10 @@ lines. An item that needs more than ~10 lines gets its own file under
   timeline fold; Present hides everything but a small transport for
   showing a play to the team. Floating panels are not planned
   (decision 002). [Spec](items/A-BACK-044-panels.md).
+- **[A-BACK-045] Shot overlays in the ball's Inspector** [in-progress]
+  Auto target (goal nearer the ball), controls in the match ball's
+  Inspector (draft variant B), verdict chip on the rink, lines in 2D,
+  goalie glow follows the shooting line. [Spec](items/A-BACK-045-shot-panel.md).
 
 ### Mode B - Analyze
 

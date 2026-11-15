@@ -54,6 +54,24 @@ test('a fresh page shows no shot overlay until one is switched on', async ({ pag
   expect(await page.locator('#coverageCheckbox').isChecked()).toBe(false);
 });
 
+test('a fresh page selects nothing, so the target follows the ball to the far end', async ({ page }) => {
+  // activateGoalieModel() once read `undefined === undefined` as "the goalie
+  // was selected" and selected the home goalie on load, which also pinned
+  // the shot target to goal A.
+  await boot(page);
+  await page.locator('#trajectoryCheckbox').check();
+  const sel = await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    return { selected: !!state.selected, picked: !!state.targetGoal };
+  });
+  expect(sel).toEqual({ selected: false, picked: false });
+  await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    state.ballGroup.position.set(0, 0, 32000);   // no reset of the pick here
+  });
+  expect((await overlays(page)).goal).toBe('B');
+});
+
 test('ticking the lines shows them at once, aimed at the goal nearer the ball', async ({ page }) => {
   await boot(page);
   await page.locator('#trajectoryCheckbox').check();
