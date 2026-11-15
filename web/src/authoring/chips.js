@@ -12,7 +12,7 @@ import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { CACHE_BUST } from '../constants.js';
 import { state } from '../state.js';
-import { scene } from '../scene.js';
+import { scene, camera } from '../scene.js';
 import { expectLoad, loaded, failed } from '../status.js';
 import { TEAM_HOME, TEAM_AWAY } from '../tokens.js';
 import { prefersReducedMotion } from '../reduced-motion.js';
@@ -23,6 +23,7 @@ import { reorderAtSlots } from './reorder.js';
 import { nextAvailableNumber } from './numbering.js';
 import { markRenderDirty } from '../render-dirty.js';
 import { setHandInFrames } from './stick-pose.js';
+import { spriteScaleFor } from './chip-sprite-math.js';
 
 export const CHIP_HEIGHT = 20;   // matches generate_player_chip.py
 export const CHIP_RADIUS = 100;  // matches generate_player_chip.py
@@ -196,6 +197,34 @@ function refreshChipSprites(group, player) {
     }
   }
   group.userData.sprites = sprites;
+}
+
+// Per-frame on-screen size clamp (S-BACK-030 step 8): in the 3D view each
+// chip sprite keeps chip-sprite-math.js's SPRITE_PX, so a number neither
+// balloons next to the camera nor shrinks to a dot across the rink; the 2D
+// view keeps the size the sprite was made with. Returns true when a scale
+// changed (main.js then renders this frame - S-BACK-011).
+const spriteDepth = new THREE.Vector3();
+export function tickChipSprites() {
+  const perspective = state.activeCamera === camera;
+  if (perspective) camera.updateMatrixWorld();
+  const view = { fovDeg: camera.fov, viewportH: window.innerHeight };
+  let changed = false;
+  for (const group of state.chipGroups) {
+    for (const sprite of group.userData.sprites || []) {
+      const base = (sprite.userData.baseScale ??= { x: sprite.scale.x, y: sprite.scale.y });
+      let k = 1;
+      if (perspective) {
+        sprite.getWorldPosition(spriteDepth).applyMatrix4(camera.matrixWorldInverse);
+        k = spriteScaleFor(base.y * group.scale.y, -spriteDepth.z, view);
+      }
+      if (Math.abs(sprite.scale.y - base.y * k) > 1e-6) {
+        sprite.scale.set(base.x * k, base.y * k, 1);
+        changed = true;
+      }
+    }
+  }
+  return changed;
 }
 
 // Toggle from the Layers panel: re-render every chip's sprite so labels

@@ -41,6 +41,7 @@ export { tickChoreo } from './choreograph.js';
 export { tickPassOverlay } from './pass-overlay.js';
 export { tickActors } from './actors.js';
 export { tickFigures } from './figures.js';
+export { tickChipSprites } from './chips.js';
 
 migrateLegacyStorage();
 

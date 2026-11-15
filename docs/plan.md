@@ -100,11 +100,11 @@ strong model that can look at screenshots, or the user's eye.
 
 Progress lives in each item file ("Progress" section or `[done]` on a
 step). State on 2026-11-14 (branch `look-and-motion`, committed, not
-merged): S-BACK-030 steps 0 to 3 and 6 done, step 8 half done (disc
-0.7 m, team ring under figures); A-BACK-040 steps 1 to 3 done (orbit,
-pan, wheel dolly, fitted default view) and step 8 (zoom about the
-cursor in 2D, touchpad and pinch fixes). Next: S-BACK-030 step 8
-second half (number sprite size), then A-BACK-040 step 4 (presets). To check
+merged): S-BACK-030 steps 0 to 3, 6 and 8 done (disc 0.7 m, team
+ring under figures, number sprite size clamp 2026-11-15); A-BACK-040
+steps 1 to 3 done (orbit, pan, wheel dolly, fitted default view) and
+step 8 (zoom about the cursor in 2D, touchpad and pinch fixes). Next:
+A-BACK-040 step 4 (presets), then step 5 (focus). To check
 by eye in a real browser: a darker band across the top of the 3D view
 that shows in headless screenshots (see the S-BACK-030 item file).
 
@@ -118,8 +118,7 @@ that shows in headless screenshots (see the S-BACK-030 item file).
    [items/A-BACK-040](items/A-BACK-040-camera-navigation.md).
 4. **[A-BACK-041] Player moves** Carry, pass, receive, wrist and slap
    shot. [items/A-BACK-041-043](items/A-BACK-041-043-floorball-moves.md).
-5. **[S-BACK-030] 3D look, rest** Floor, number sprite size (rest of
-   step 8), shadow map, arena shell.
+5. **[S-BACK-030] 3D look, rest** Floor, shadow map, arena shell.
 6. **[A-BACK-042] Posable goalie**, then **[A-BACK-043] Goalie
    behaviour** (043 needs S-BACK-024 first). Same file as 041.
 7. **[A-BACK-044] Collapsible panels and Present mode** (added

@@ -15,7 +15,7 @@ import './goalie.js';
 import './selection.js';
 import './touch-controls.js';
 import './help.js';
-import { updateChipAnimations, tickChoreo, tickActors, tickPassOverlay, tickFigures } from './authoring/index.js';
+import { updateChipAnimations, tickChoreo, tickActors, tickPassOverlay, tickFigures, tickChipSprites } from './authoring/index.js';
 import { updateDrawPreview } from './authoring/draw-tool.js';
 import { tickPlayback } from './authoring/playback.js';
 import { updateMoveMarkers } from './authoring/move-marker.js';
@@ -71,6 +71,7 @@ function animate() {
   const choreoActive = tickChoreo();
   const actorsActive = tickActors();
   const figuresChanged = tickFigures();
+  const spritesChanged = tickChipSprites();   // after tickFigures: the lift changes the depth
   const passChanged = tickPassOverlay();
   const shadowsChanged = tickBlobShadows();   // after everything that moves an actor
   const ballCenter = getBallWorldCenter(); // computed once, shared by both calls below
@@ -93,7 +94,7 @@ function animate() {
   // consumeRenderDirty() must run every frame (it's edge-triggered) - keep
   // it first so `||` short-circuiting never skips clearing it.
   const needsRender = consumeRenderDirty() || pollChanged || chipsActive || markersActive
-    || walksActive || choreoActive || actorsActive || figuresChanged || passChanged || shadowsChanged || trajectoryChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
+    || walksActive || choreoActive || actorsActive || figuresChanged || spritesChanged || passChanged || shadowsChanged || trajectoryChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
   if (needsRender) renderer.render(scene, state.activeCamera);
 }
 animate();

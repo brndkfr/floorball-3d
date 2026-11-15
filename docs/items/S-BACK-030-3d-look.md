@@ -124,7 +124,14 @@ user's eye. Every step is one PR and follows the TDD workflow in
    View panel, hidden in top-down and photo-lock. Coordinate with
    A-BACK-028 to 030 (board slots, floor logo): the arena must not
    occupy the board faces or the floor area those items use.
-8. `[half done 2026-11-14]` **Figures off the game pieces.** Done:
+8. `[done 2026-11-15]` **Figures off the game pieces.** Sprite clamp
+   as built (2026-11-15): `web/src/authoring/chip-sprite-math.js`
+   `spriteScaleFor(worldMm, distanceMm, { fovDeg, viewportH })` keeps a
+   chip sprite between 18 and 40 px high on screen (`SPRITE_PX`,
+   estimates); `chips.js` `tickChipSprites()` applies it every frame in
+   the 3D view (after `tickFigures`, whose lift changes the depth) and
+   restores the made size in 2D. Tests: `test/chip-sprite-math.test.js`,
+   `test-e2e/chip-sprite.spec.js`. Done 2026-11-14:
    `CHIP_DISPLAY_SCALE` 5 to 3.5, so the disc is 0.7 m everywhere (2D
    too; user decision); with figures on, `figures.js` `setFootprint()`
    hides the disc meshes and shows a team-coloured ring (radius
@@ -144,7 +151,7 @@ user's eye. Every step is one PR and follows the TDD workflow in
    `materials.preload()`: `specular` to black-ish and `shininess` low
    on the detailed goalie's material. Skip if A-BACK-042 lands first.
 
-Order of what is left: 8 (sprite clamp), 5, 4, 7, 9.
+Order of what is left: 5, 4, 7, 9.
 
 ## Open points from the first round
 
