@@ -45,6 +45,15 @@ const placeBall = (page, z) => page.evaluate(async (z) => {
   state.ballGroup.updateMatrixWorld(true);
 }, z);
 
+test('a fresh page shows no shot overlay until one is switched on', async ({ page }) => {
+  await boot(page);
+  await placeBall(page, 9000);
+  const o = await overlays(page);
+  expect(o.linesVisible).toBe(false);
+  expect(o.coverage).toBe('-');
+  expect(await page.locator('#coverageCheckbox').isChecked()).toBe(false);
+});
+
 test('ticking the lines shows them at once, aimed at the goal nearer the ball', async ({ page }) => {
   await boot(page);
   await page.locator('#trajectoryCheckbox').check();
