@@ -40,6 +40,9 @@ export function clampAim({ aimX, aimY } = {}) {
   return { aimX: clamp(x, -(MOUTH_HALF_W - BALL_RADIUS), MOUTH_HALF_W - BALL_RADIUS), aimY: clamp(y, BALL_RADIUS, MOUTH_H - BALL_RADIUS) };
 }
 
+// The goal whose goal line is closer to z ("From the ball" with no targeted goal).
+export const nearestGoal = (z) => (Math.abs(z - GOAL_Z.A) <= Math.abs(z - GOAL_Z.B) ? 'A' : 'B');
+
 const restZ = (goal) => (goal === 'A' ? GOAL_Z.A - SHOT_REST_DEPTH : GOAL_Z.B + SHOT_REST_DEPTH);
 
 export function makeShot(goal, aim) {

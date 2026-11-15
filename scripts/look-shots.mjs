@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { localBrowserChannel } from './e2e-browser.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PORT = Number(process.env.PORT) || 8000;
@@ -56,7 +57,11 @@ if (!(await serverUp())) {
   for (let i = 0; i < 50 && !(await serverUp()); i++) await new Promise((r) => setTimeout(r, 100));
 }
 
-const browser = await chromium.launch();
+// Same browser as the local e2e run (Edge on Windows, S-BACK-022).
+const channel = localBrowserChannel({
+  ci: !!process.env.CI, platform: process.platform, env: process.env, exists: (p) => fs.existsSync(p),
+});
+const browser = await chromium.launch({ channel });
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const errors = [];

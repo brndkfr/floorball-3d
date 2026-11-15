@@ -171,9 +171,10 @@ python generate_player_chip.py      # player_chip.obj/.mtl (authoring tool)
 python generate_stick.py            # floorball_stick.obj/.mtl (--blade/--shaft/--grip colours)
 ```
 
-Each writes directly into `../web/assets/`. The detailed goalie model
-(`goalie_02.*`) is a user-supplied asset with no generator - it's a
-static file under `web/assets/`.
+Each writes directly into `../web/assets/`. The detailed goalie model is
+a user-supplied Meshy AI export kept in `generators/vendor/meshy/` (never
+deployed); `node generators/prepare_goalie.mjs` turns it into
+`web/assets/goalie_02.glb` (meshopt, 1024 px WebP texture).
 
 ## Project structure
 

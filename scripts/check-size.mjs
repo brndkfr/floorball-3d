@@ -14,7 +14,7 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const BUDGETS_MB = {
   dist: 70,
-  'dist/assets': 8,
+  'dist/assets': 3,            // 1.81 MB after the goalie became a GLB (S-BACK-026, 2026-11-15)
   // Raised from 0.8 on 2026-09-24 (was at 0.78 before A-BACK-022 shots) and
   // from 1.0 on 2026-11-15 (0.99 after the camera work, A-BACK-040; the
   // largest files are source, photo-overlay.js 94 KB, app.css 56 KB, not

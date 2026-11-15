@@ -6,6 +6,7 @@ import { pickRendererQuality } from './renderer-quality.js';
 import { stageFrustum, readShellInsets } from './ui/stage-frustum.js';
 import { cameraToRig, rigToCamera, dollyBy, screenToFloor, fitRigToRink } from './orbit-math.js';
 import { wheelDeltaPx } from './zoom-math.js';
+import { nearestGoal } from './authoring/ball-pose.js';
 
 export const scene = new THREE.Scene();
 
@@ -290,12 +291,16 @@ gridCheckbox.addEventListener('change', () => { sceneGrid.visible = gridCheckbox
 const coveragePctEl = document.getElementById('coveragePct');
 
 document.getElementById('viewFromBallBtn').addEventListener('click', () => {
-  if (!state.ballGroup || !state.targetGoal) {
-    coveragePctEl.textContent = 'select/target a goal and place the ball first';
+  if (!state.ballGroup) {
+    coveragePctEl.textContent = 'place the ball first';
     return;
   }
   const ballCenter = new THREE.Box3().setFromObject(state.ballGroup).getCenter(new THREE.Vector3());
-  const goalCenter = state.targetGoal.localToWorld(new THREE.Vector3(0, 575, 0));
+  // No goal clicked yet: look at the nearer one (goalInstances is [A, B]).
+  const goal = state.targetGoal
+    ?? state.goalInstances?.[nearestGoal(state.ballGroup.position.z) === 'B' ? 1 : 0];
+  if (!goal) return;
+  const goalCenter = goal.localToWorld(new THREE.Vector3(0, 575, 0));
 
   // Pull back slightly from the ball, away from the goal, instead of sitting
   // exactly on top of it. The trajectory lines start at the ball's centre -

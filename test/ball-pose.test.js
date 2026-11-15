@@ -360,3 +360,13 @@ test('goaliePoseAt: missing fb for that letter holds fa\'s pose steady', () => {
   assert.deepEqual(goaliePoseAt(fa, fb, 'B', 0.7), { x: 200, z: 500, angle: 1 });
 });
 
+
+// "From the ball" with no targeted goal looks at the nearer goal.
+test('nearestGoal: the goal whose line is closer to z', async () => {
+  const { nearestGoal } = await import('../web/src/authoring/ball-pose.js');
+  const mid = (GOAL_Z.A + GOAL_Z.B) / 2;
+  assert.equal(nearestGoal(5300), 'A');
+  assert.equal(nearestGoal(GOAL_Z.B - 100), 'B');
+  assert.equal(nearestGoal(mid - 1), 'A');
+  assert.equal(nearestGoal(mid + 1), 'B');
+});

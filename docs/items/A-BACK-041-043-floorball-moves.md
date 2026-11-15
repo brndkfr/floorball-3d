@@ -104,7 +104,16 @@ motion), shot block on one knee, face-off stance, drag move.
 
 ### Steps
 
-1. `[lead]` **Pose as a parameter (no visual change).**
+1. `[done 2026-11-15]` **Pose as a parameter (no visual change).**
+   As built: `DEFAULT_POSE` (frozen, taken from the old fixed
+   placement), `stickTransform(pose, hand)` -> position, yaw, tilt,
+   elevation, roll, mirror, dir; tilt is solved exactly so the shaft
+   passes through `top` although the asset pivots on the blade point;
+   `gripPoints` / `bottomGripWithin` / `placeStick` /
+   `applyStanceAndStick` / `stickResiduals` take an optional pose; roll
+   is returned but not applied yet (step 3). `stickPlacement()` stays
+   as the reference the tests compare with. Checked: `pnpm run look`
+   before / after pixel-identical in all six views. Original text:
    `stick-pose.js`: `DEFAULT_POSE` in the data model above and
    `stickTransform(pose, hand)` -> position, yaw, tilt, mirror.
    `figure-stick.js`: `applyStanceAndStick(fig, stick, hand, pose =
@@ -113,7 +122,13 @@ motion), shot block on one knee, face-off stance, drag move.
    `stickPlacement(h)` within 1 mm / 0.1 deg for both hands; the
    existing `test-e2e/player-stick.spec.js` residuals stay green
    untouched.
-2. `[lead]` **Events from the doc.** New three-free
+2. `[done 2026-11-15]` **Events from the doc.** As built:
+   `actionsFor(frames, id)` returns `{ actions, carryIntervals }`;
+   intervals are `{ fromMs, toMs }`, a carrier in the last frame keeps
+   the ball to `Infinity`; a receive's `dirYaw` faces where the ball
+   came from; a frame without the main ball keeps the previous one's
+   (as `ballPoseAt`). Tests: `test/figure-actions.test.js`. Original
+   text: New three-free
    `web/src/authoring/figure-actions.js`:
    `actionsFor(frames, id)` -> sorted list of
    `{ kind: 'pass' | 'receive' | 'shot', tMs, dirYaw, speedMps, aim?,

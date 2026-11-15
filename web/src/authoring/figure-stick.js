@@ -11,8 +11,7 @@
 
 import * as THREE from 'three';
 import {
-  stickPlacement, gripPoints, bottomGripWithin, twoBoneElbow,
-  PELVIS_DROP_MM, SPINE_LEAN_DEG, SHOULDER_TWIST_DEG,
+  stickTransform, gripPoints, bottomGripWithin, twoBoneElbow, DEFAULT_POSE,
 } from './stick-pose.js';
 
 const v = () => new THREE.Vector3();
@@ -58,12 +57,14 @@ function figToWorld(fig, p, out) {
   return fig.localToWorld(out.set(p.x / 1000, p.y / 1000, p.z / 1000));
 }
 
-// Places the stick (a child of the figure) for `hand` and returns nothing;
-// call before the arms are solved.
-export function placeStick(stick, hand) {
-  const p = stickPlacement(hand);
-  stick.position.set(p.position.x / 1000, 0, p.position.z / 1000);
-  stick.rotation.set(0, p.yaw, 0);
+// Places the stick (a child of the figure) for `hand` and `pose`; call
+// before the arms are solved. Euler XYZ applies the tilt about the stick's
+// own Z first, then the yaw (stick-pose.js stickTransform). The roll is not
+// applied yet (A-BACK-041 step 3).
+export function placeStick(stick, hand, pose = DEFAULT_POSE) {
+  const p = stickTransform(pose, hand);
+  stick.position.set(p.position.x / 1000, p.position.y / 1000, p.position.z / 1000);
+  stick.rotation.set(0, p.yaw, p.tilt);
   stick.scale.set(0.001, 0.001, p.mirror ? -0.001 : 0.001);
 }
 
@@ -113,7 +114,9 @@ function saveClipPose(b) {
   }
 }
 
-export function applyStanceAndStick(fig, stick, hand) {
+// `pose`: stick-pose.js DEFAULT_POSE shape (drop, lean, twist, shift, blade,
+// top), written for a left-handed player; x is mirrored for 'R'.
+export function applyStanceAndStick(fig, stick, hand, pose = DEFAULT_POSE) {
   const b = bones(fig);
   saveClipPose(b);
   fig.updateMatrixWorld(true);
@@ -129,9 +132,11 @@ export function applyStanceAndStick(fig, stick, hand) {
     b['foot_' + s].getWorldQuaternion(footSave[s].q);
   }
 
-  // 2. Lower the pelvis.
+  // 2. Lower the pelvis, and shift it (weight transfer; x = player's left).
   worldPos(b.pelvis, _t);
-  _t.y -= PELVIS_DROP_MM * mmToWorld;
+  _t.y -= pose.drop * mmToWorld;
+  const shiftX = (hand === 'R' ? -1 : 1) * (pose.shift?.x || 0), shiftZ = pose.shift?.z || 0;
+  _t.addScaledVector(_side, shiftX * mmToWorld).addScaledVector(_fwd, shiftZ * mmToWorld);
   b.pelvis.parent.worldToLocal(_t);
   b.pelvis.position.copy(_t);
   b.pelvis.updateMatrixWorld(true);
@@ -153,13 +158,13 @@ export function applyStanceAndStick(fig, stick, hand) {
 
   // 4. Lean the spine forward about the figure's left axis. A positive
   //    rotation about +X(left) tips +Y toward +Z (forward).
-  _q.setFromAxisAngle(_side, SPINE_LEAN_DEG * Math.PI / 180);
+  _q.setFromAxisAngle(_side, pose.lean * Math.PI / 180);
   rotateBoneWorld(b.spine, _q);
 
   // 4b. Turn the torso about the vertical so the shoulder line (left ->
   //     right) sits at a fixed angle: bottom-hand shoulder forward.
-  const t = SHOULDER_TWIST_DEG * Math.PI / 180;
-  const lowLeft = gripPoints(hand).bottomHand === 'l';
+  const t = pose.twist * Math.PI / 180;
+  const lowLeft = gripPoints(hand, pose).bottomHand === 'l';
   worldPos(b.upperarm_r, _a).sub(worldPos(b.upperarm_l, _b)).setY(0).normalize();
   // Right = -left; the left shoulder ahead means the line points back.
   _e.copy(_side).multiplyScalar(-Math.cos(t)).addScaledVector(_fwd, lowLeft ? -Math.sin(t) : Math.sin(t));
@@ -168,16 +173,16 @@ export function applyStanceAndStick(fig, stick, hand) {
   rotateBoneWorld(b.spine, _q);
 
   // 5. Stick, then both arms onto their grips; elbows bend down, back and out.
-  placeStick(stick, hand);
+  placeStick(stick, hand, pose);
   stick.updateMatrixWorld(true);
-  const g = gripPoints(hand);
+  const g = gripPoints(hand, pose);
   for (const [grip, s] of [[g.top, g.topHand], [null, g.bottomHand]]) {
     const upper = b['upperarm_' + s], lower = b['lowerarm_' + s], palm = b['hand_' + s];
     const shoulder = worldPos(upper, _a);
     const lenA = worldPos(lower, _b).distanceTo(shoulder);
     const lenB = worldPos(palm, _c).distanceTo(_b);
     // Bottom hand: lowest shaft point this arm reaches (stick-pose.js).
-    const target = figToWorld(fig, grip ?? bottomGripWithin(hand, worldToFig(fig, shoulder), (lenA + lenB) / mmToWorld * REACH_MARGIN), _t);
+    const target = figToWorld(fig, grip ?? bottomGripWithin(hand, worldToFig(fig, shoulder), (lenA + lenB) / mmToWorld * REACH_MARGIN, pose), _t);
     // Elbow hint: back and out, a little down. A mostly-down hint is nearly
     // parallel to an arm reaching down and barely steers the bend (gave a
     // raised "chicken wing" elbow).
@@ -192,10 +197,10 @@ export function applyStanceAndStick(fig, stick, hand) {
 // For e2e checks (mm): top hand to its grip, bottom hand to the shaft
 // between the planned bottom grip and the top grip, the hand spacing along
 // the shaft, and the blade height above the floor.
-export function stickResiduals(fig, stick, hand) {
+export function stickResiduals(fig, stick, hand, pose = DEFAULT_POSE) {
   const b = bones(fig);
   fig.updateMatrixWorld(true);
-  const g = gripPoints(hand);
+  const g = gripPoints(hand, pose);
   const top = worldToFig(fig, worldPos(b['hand_' + g.topHand], _a));
   const low = worldToFig(fig, worldPos(b['hand_' + g.bottomHand], _a));
   const d = (p, q) => Math.hypot(p.x - q.x, p.y - q.y, p.z - q.z);

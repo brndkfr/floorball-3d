@@ -113,8 +113,9 @@ that shows in headless screenshots (see the S-BACK-030 item file).
 1. **[S-BACK-030] 3D look, steps 0-3, 6** [done 2026-11-14]
    Look-shots script, tone mapping, background, blob shadows, white
    boards. [items/S-BACK-030](items/S-BACK-030-3d-look.md).
-2. **[S-BACK-026] Download weight, first slice** Detailed goalie to
-   GLB + WebP: about 5.5 MB off every boot (see section 5).
+2. **[S-BACK-026] Download weight, first slice** [done 2026-11-15]
+   Detailed goalie to GLB + WebP: 189 KB instead of ~5.9 MB on every
+   boot, `dist/assets` 1.81 MB (see section 5).
 3. **[A-BACK-040] 3D camera navigation** Orbit camera, presets, fitted
    default view.
    [items/A-BACK-040](items/A-BACK-040-camera-navigation.md).
@@ -285,7 +286,11 @@ make cheaper or safer.
     `goalie_02.obj` (0.93 MB), `ball.obj` (0.41 MB),
     `floorball_goal.obj` (0.29 MB). Convert to GLB + meshopt with WebP or
     KTX2 textures (gltf-transform is already a dev dependency).
-    **First slice** `[small]`: `generators/prepare_goalie.mjs`,
+    **First slice** `[done 2026-11-15]`, as built: goalie_02.glb is
+    189 KB (texture 76 KB WebP), PBR roughness 0.7 instead of the MTL's
+    Phong gloss (matte; the helmet lost its shine too); OBJ parse in
+    `generators/obj-mesh.mjs`; tests `test/obj-mesh.test.js`,
+    `test/goalie-asset.test.js`. Original text: `generators/prepare_goalie.mjs`,
     modelled on `prepare_player_figure.mjs`: move `goalie_02.obj`,
     `.mtl` and the PNG from `web/assets/` to `generators/vendor/meshy/`
     (never deployed), read them there and write `web/assets/goalie_02.glb`
