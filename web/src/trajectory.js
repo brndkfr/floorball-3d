@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GOAL_MOUTH_CORNERS_LOCAL, GOAL_CENTER_LOCAL } from './constants.js';
-import { state, getBallWorldCenter, goalieForGoal, goalLetterForGoal } from './state.js';
+import { state, getBallWorldCenter, goalieForGoal, goalLetterForGoal, shotGoal } from './state.js';
 import { scene } from './scene.js';
 import { selectObject } from './selection.js';
 import { shotVerdict, shotLineXAtZ } from './insights.js';
@@ -68,7 +68,7 @@ const SHOT_LINE_COLOR_BY_KEY = {
 };
 
 function computeShotLineColor(ballCenter, goalCenter) {
-  const goalie = goalieForGoal(state.targetGoal);
+  const goalie = goalieForGoal(shotGoal());
   const goalieMesh = goalie && goalie.visible ? goalie : null;
   const { lineColor } = shotVerdict({ ballWorld: ballCenter, goalCenterWorld: goalCenter, goalieMesh });
   return SHOT_LINE_COLOR_BY_KEY[lineColor];
@@ -93,7 +93,7 @@ const trajectoryGate = createTrajectoryGate();
 
 // Returns true when the lines changed this frame (main.js renders then).
 export function updateTrajectory(ballCenter) {
-  if (!trajectoryCheckbox.checked || !ballCenter || !state.targetGoal) {
+  if (!trajectoryCheckbox.checked || !ballCenter || !shotGoal()) {
     const wasVisible = trajectoryLines.visible;
     trajectoryLines.visible = false;
     shootingLine.visible = false;
@@ -104,8 +104,8 @@ export function updateTrajectory(ballCenter) {
   }
   const changed = trajectoryGate.changed({
     ball: ballCenter,
-    goal: state.targetGoal,
-    goalie: goalieForGoal(state.targetGoal),
+    goal: shotGoal(),
+    goalie: goalieForGoal(shotGoal()),
     goalieKey: state.activeGoalieKey,
     outline: goalieOutlineCheckbox.checked,
   });
@@ -113,19 +113,19 @@ export function updateTrajectory(ballCenter) {
   // Raycasting and localToWorld read the cached matrixWorld, which is only
   // refreshed on render. Ungated, a stale frame fixed itself one frame later;
   // gated, it would stick until the next input change.
-  state.targetGoal.updateMatrixWorld(true);
-  goalieForGoal(state.targetGoal)?.updateMatrixWorld(true);
+  shotGoal().updateMatrixWorld(true);
+  goalieForGoal(shotGoal())?.updateMatrixWorld(true);
   const positions = trajectoryGeometry.attributes.position.array;
   let idx = 0;
   for (const corner of GOAL_MOUTH_CORNERS_LOCAL) {
-    const worldCorner = state.targetGoal.localToWorld(trajectoryScratchCorner.copy(corner));
+    const worldCorner = shotGoal().localToWorld(trajectoryScratchCorner.copy(corner));
     positions[idx++] = ballCenter.x; positions[idx++] = ballCenter.y; positions[idx++] = ballCenter.z;
     positions[idx++] = worldCorner.x; positions[idx++] = worldCorner.y; positions[idx++] = worldCorner.z;
   }
   trajectoryGeometry.attributes.position.needsUpdate = true;
   trajectoryLines.visible = true;
 
-  const goalCenter = state.targetGoal.localToWorld(shootingLineScratchCenter.copy(GOAL_CENTER_LOCAL));
+  const goalCenter = shotGoal().localToWorld(shootingLineScratchCenter.copy(GOAL_CENTER_LOCAL));
   const shootingPositions = shootingLineGeometry.attributes.position.array;
   shootingPositions[0] = ballCenter.x; shootingPositions[1] = ballCenter.y; shootingPositions[2] = ballCenter.z;
   shootingPositions[3] = goalCenter.x; shootingPositions[4] = goalCenter.y; shootingPositions[5] = goalCenter.z;
@@ -136,8 +136,8 @@ export function updateTrajectory(ballCenter) {
   shootingLine.visible = true;
 
   const showOutline = goalieOutlineCheckbox.checked && shotColor !== SHOT_OPEN_COLOR;
-  const targetLetter = goalLetterForGoal(state.targetGoal);
-  const targetGoalie = goalieForGoal(state.targetGoal);
+  const targetLetter = goalLetterForGoal(shotGoal());
+  const targetGoalie = goalieForGoal(shotGoal());
   setGoalieOutlineVisible(showOutline && !!(targetGoalie && targetGoalie.visible), shotColor, targetLetter);
   setGoalieOutlineVisible(false, null, targetLetter === 'A' ? 'B' : 'A');
   return true;
@@ -150,12 +150,12 @@ export function updateTrajectory(ballCenter) {
 const coveragePctEl = document.getElementById('coveragePct');
 document.getElementById('alignGoalieBtn').addEventListener('click', () => {
   const ballCenter = getBallWorldCenter();
-  const goalie = goalieForGoal(state.targetGoal);
-  if (!ballCenter || !state.targetGoal || !goalie || !goalie.visible) {
-    coveragePctEl.textContent = 'need a ball, a targeted goal, and a visible goalie first';
+  const goalie = goalieForGoal(shotGoal());
+  if (!ballCenter || !shotGoal() || !goalie || !goalie.visible) {
+    coveragePctEl.textContent = 'need a ball and a visible goalie first';
     return;
   }
-  const goalCenter = state.targetGoal.localToWorld(GOAL_CENTER_LOCAL.clone());
+  const goalCenter = shotGoal().localToWorld(GOAL_CENTER_LOCAL.clone());
   goalie.position.x = shotLineXAtZ(ballCenter, goalCenter, goalie.position.z);
   if (state.selected === goalie) selectObject(goalie); // keep the ring following if it's selected
 });

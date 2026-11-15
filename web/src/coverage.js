@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { state, goalieForGoal } from './state.js';
+import { state, goalieForGoal, shotGoal } from './state.js';
 import { camera } from './scene.js';
 import { coverageGrid } from './insights.js';
 import { VECTOR_COVERAGE_BLOCKED, VECTOR_COVERAGE_OPEN } from './tokens.js';
@@ -68,12 +68,12 @@ const lastCoverageState = {
 };
 
 function coverageInputsChanged(ballCenter) {
-  const goalieGroup = goalieForGoal(state.targetGoal);
+  const goalieGroup = goalieForGoal(shotGoal());
   const next = {
     ballX: ballCenter ? ballCenter.x : NaN,
     ballY: ballCenter ? ballCenter.y : NaN,
     ballZ: ballCenter ? ballCenter.z : NaN,
-    targetGoal: state.targetGoal,
+    targetGoal: shotGoal(),
     goalieRef: goalieGroup,
     goalieX: goalieGroup ? goalieGroup.position.x : NaN,
     goalieY: goalieGroup ? goalieGroup.position.y : NaN,
@@ -87,20 +87,20 @@ function coverageInputsChanged(ballCenter) {
 }
 
 export function updateCoverage(ballCenter) {
-  if (!coverageCheckbox.checked || !state.targetGoal) {
+  if (!coverageCheckbox.checked || !shotGoal()) {
     coverageMesh.visible = false;
     coveragePctEl.textContent = '-';
     state.currentCoveragePct = null;
     return;
   }
-  if (coverageMesh.parent !== state.targetGoal) state.targetGoal.add(coverageMesh);
+  if (coverageMesh.parent !== shotGoal()) shotGoal().add(coverageMesh);
   coverageMesh.visible = true;
 
   if (!coverageInputsChanged(ballCenter)) return; // nothing moved - reuse the colors/percentage from last pass
 
-  const goalie = goalieForGoal(state.targetGoal);
+  const goalie = goalieForGoal(shotGoal());
   const goalieMesh = goalie && goalie.visible ? goalie : null;
-  const { blockedAt, pctBlocked } = coverageGrid({ ballWorld: ballCenter, targetGoalGroup: state.targetGoal, goalieMesh });
+  const { blockedAt, pctBlocked } = coverageGrid({ ballWorld: ballCenter, targetGoalGroup: shotGoal(), goalieMesh });
   const blockedColor = new THREE.Color(VECTOR_COVERAGE_BLOCKED.hex);
   const openColor = new THREE.Color(VECTOR_COVERAGE_OPEN.hex);
   for (let i = 0; i < COVERAGE_VERTEX_COUNT; i++) {
@@ -119,7 +119,7 @@ const goalieLabelEl = document.getElementById('goalieLabel');
 const labelProjection = new THREE.Vector3();
 
 export function updateGoalieLabel() {
-  const goalie = goalieForGoal(state.targetGoal);
+  const goalie = goalieForGoal(shotGoal());
   if (!goalie || !goalie.visible || state.currentCoveragePct === null) {
     goalieLabelEl.style.display = 'none';
     return;

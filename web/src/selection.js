@@ -17,6 +17,7 @@ import { startWalk, setWalkTickCallback } from './authoring/walk-tween.js';
 import { isTopDown } from './authoring/topdown-camera.js';
 import { disposeObject } from './dispose.js';
 import { goalName } from './end-names.js';
+import { goalLetterForPick } from './shot-target.js';
 
 // --- coordinate readout: hover to preview, click to pin a coordinate ---
 const coordXEl = document.getElementById('coordX');
@@ -179,6 +180,10 @@ setWalkTickCallback(applySelectionVisuals);
 // Replace the selection with exactly `obj` (or clear it when null).
 export function selectObject(obj) {
   if (!obj) return deselectAll();
+  // A goal or its goalie, from the canvas or the Layers panel, aims the
+  // shot overlays there (shot-target.js).
+  const letter = goalLetterForPick(obj, state.goalInstances, state.goalies);
+  if (letter) commitTargetGoal(state.goalInstances[letter === 'B' ? 1 : 0]);
   state.selectedSet = [obj];
   state.selected = obj;
   applySelectionVisuals();
