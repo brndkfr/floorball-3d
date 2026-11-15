@@ -141,16 +141,19 @@ the J+S / swiss unihockey module "Goalies - Positionierung". Draft:
 <https://claude.ai/artifact/MWo96HehmtLYkQJM8yimvw>.
 [items/A-BACK-046-051](items/A-BACK-046-051-goalie-module.md).
 
-1. **[A-BACK-048] Goalie zone layer** Five zones in front of the
+1. **[A-BACK-052] Goalie content in English and German** String
+   tables and a language switch; every later step adds its text in
+   both languages.
+2. **[A-BACK-048] Goalie zone layer** Five zones in front of the
    defending goal, the ball's zone highlighted, a zone card.
-2. **[A-BACK-046] KATA readout** Goalie selected: placement, depth,
+3. **[A-BACK-046] KATA readout** Goalie selected: placement, depth,
    axis and coverage against the zone's targets; Shot / Pass.
-3. **[A-BACK-047] Shooter's-eye inset** The "angle tape", live.
-4. **[A-BACK-035] Frame notes** (moved up from "Later": the lessons
+4. **[A-BACK-047] Shooter's-eye inset** The "angle tape", live.
+5. **[A-BACK-035] Frame notes** (moved up from "Later": the lessons
    need captions).
-5. **[A-BACK-049] Goalie lessons** Five animated plays in the Library.
-6. **[A-BACK-050] "Place the goalie" exercises**
-7. **[A-BACK-051] Ideal goalie** Ghost from the zone rules; merges
+6. **[A-BACK-049] Goalie lessons** Five animated plays in the Library.
+7. **[A-BACK-050] "Place the goalie" exercises**
+8. **[A-BACK-051] Ideal goalie** Ghost from the zone rules; merges
    into A-BACK-043 and needs A-BACK-042 for the body.
 
 ### Later (parked)
@@ -230,6 +233,10 @@ lines. An item that needs more than ~10 lines gets its own file under
   Auto target (goal nearer the ball), controls in the match ball's
   Inspector (draft variant B), verdict chip on the rink, lines in 2D,
   goalie glow follows the shooting line. [Spec](items/A-BACK-045-shot-panel.md).
+- **[A-BACK-052] Goalie content in English and German** [open] Zone
+  cards, KATA rows and hints, verdict chip, lesson captions and
+  exercise texts switch between English and German; more languages
+  later. [Spec](items/A-BACK-046-051-goalie-module.md).
 - **[A-BACK-046] KATA readout** [open] Goalie selected: placement off
   the shooting line, depth, axis and coverage against targets per zone
   and expected action (shot / pass, read from the play's next ball

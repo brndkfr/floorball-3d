@@ -1,4 +1,4 @@
-# A-BACK-046 to 051 - Goalie module: positioning with KATA and the zone model
+# A-BACK-046 to 052 - Goalie module: positioning with KATA and the zone model
 
 Status: open. Added 2026-11-15. Clickable draft (goalie lens, lesson
 player, exercise): <https://claude.ai/artifact/MWo96HehmtLYkQJM8yimvw>.
@@ -64,6 +64,30 @@ word for word needs their permission (A-Q-007).
   be read from a play instead of set by hand.
 
 ## Items
+
+### A-BACK-052 - Goalie content in English and German `[small]` (first: every later step writes its text through it)
+
+The app has no translations yet (`index.html` is `lang="en"`), so this
+starts small and only covers the goalie module:
+- Pure `web/src/goalie-i18n.js`: `GOALIE_TEXT = { en: {...}, de:
+  {...} }` and `goalieText(key, lang, vars)`; a missing key falls back
+  to English. Zone names and cards, KATA rows and hint sentences, the
+  verdict words, lesson titles, exercise texts.
+- Language switch in the goalie lens (EN / DE), remembered per browser
+  (localStorage, like the shot overlays). The first default comes from
+  the browser language (`de*` -> German, else English).
+- KATA keeps its German letters in both languages: English shows
+  "Body (Körper)", "Placement (Ausrichtung)", "Depth (Tiefe)", "Axis
+  (Achse)", so the acronym still reads.
+- Lesson docs (A-BACK-049) store captions per language (`{ en, de }`);
+  user-written frame notes (A-BACK-035) stay one language.
+- Our own wording in both languages (A-Q-007); German uses the
+  module's terms (Schusslinie, Verschiebungsvorbereitung) so coaches
+  recognise them.
+Tests first: every key exists in `en` and `de` with the same
+placeholders; fallback to English; browser-language default. e2e: the
+switch changes the zone card and the KATA rows, and the choice
+survives a reload.
 
 ### A-BACK-048 - Goalie zone layer `[small]` (first: everything else reads the zone)
 
@@ -145,7 +169,7 @@ Körper part (pose per zone / action).
 
 ## Order
 
-048 -> 046 -> 047 -> (A-BACK-035 frame notes) -> 049 -> 050 -> 051.
+052 -> 048 -> 046 -> 047 -> (A-BACK-035 frame notes) -> 049 -> 050 -> 051.
 Körper (body) follows A-BACK-042 steps 3 to 5; 051 merges into
 A-BACK-043.
 
@@ -163,6 +187,8 @@ A-BACK-043.
 - Shooter's view: inset, everywhere (Plan, lesson Present, exercise
   check); no split screen. Comparison draft:
   <https://claude.ai/artifact/2fFwsx6PRpK4urhBBSMu1v>.
+- Languages: the goalie content switches between English and German,
+  more later (A-BACK-052, added 2026-11-15).
 - Zone layer: switched on when the goalie lens opens, but it is a
   regular entry in the Layers panel, so the user can switch it off
   (A-BACK-048).
