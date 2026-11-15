@@ -4,6 +4,7 @@ import { camera } from './scene.js';
 import { coverageGrid } from './insights.js';
 import { VECTOR_COVERAGE_BLOCKED, VECTOR_COVERAGE_OPEN } from './tokens.js';
 import { snapshotChanged, copySnapshot } from './dirty-check.js';
+import './shot-view-state.js';   // loads state.shotView (A-BACK-045: switched from the ball's Inspector)
 
 // --- goal coverage: what fraction of the goal mouth does the goalie block? ---
 // Samples a grid of points across the goal opening; for each, casts a ray
@@ -11,8 +12,6 @@ import { snapshotChanged, copySnapshot } from './dirty-check.js';
 // the way. Red = open lane to the goal, green = covered. The percentage
 // readout is the actual answer to "how much is covered" - the coloring is
 // just there so you can see *where*.
-const coverageCheckbox = document.getElementById('coverageCheckbox');
-const coveragePctEl = document.getElementById('coveragePct');
 const COVERAGE_COLS = 16, COVERAGE_ROWS = 12; // sample grid resolution across the goal mouth
 const CELL_W = 1600 / COVERAGE_COLS, CELL_H = 1150 / COVERAGE_ROWS;
 
@@ -87,9 +86,8 @@ function coverageInputsChanged(ballCenter) {
 }
 
 export function updateCoverage(ballCenter) {
-  if (!coverageCheckbox.checked || !shotGoal()) {
+  if (!state.shotView.coverage || !shotGoal()) {
     coverageMesh.visible = false;
-    coveragePctEl.textContent = '-';
     state.currentCoveragePct = null;
     return;
   }
@@ -110,7 +108,6 @@ export function updateCoverage(ballCenter) {
   coverageGeometry.attributes.color.needsUpdate = true;
 
   state.currentCoveragePct = Math.round(pctBlocked);
-  coveragePctEl.textContent = `${state.currentCoveragePct}% blocked`;
 }
 
 // Floating label above the goalie's head showing the same percentage, so you

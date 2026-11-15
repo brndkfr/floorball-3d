@@ -46,7 +46,17 @@ the TDD workflow in [CLAUDE.md](../../CLAUDE.md).
    `toggleShotView(view, key)`, `outlineShown(view)` (= `shotLine`),
    `anyShotOverlay(view)` (the chip shows then). Storage key
    `floorball3d.shotView`. Test: `test/shot-view.test.js`.
-3. `[small]` **Shot section in the ball's Inspector; View rows go.**
+3. `[done 2026-11-15]` **Shot section in the ball's Inspector; View rows go.**
+   As built: `authoring/shot-section.js` (target radios with
+   `endName()`, a note on what Auto aims at, verdict card from
+   `state.shotReadout`, chips Lines / Shooting line / Coverage, Align
+   goalie, From the ball); `shot-view-state.js` loads / saves
+   `state.shotView`; trajectory.js draws corner lines and shooting line
+   separately, the glow follows the shooting line; `alignGoalie()` and
+   `viewFromBall()` exported; `#coveragePct` gone (the card shows the %);
+   View keeps a hint and Reset view. Tests:
+   `test-e2e/shot-panel.spec.js`; shot-target and trajectory specs moved
+   to the state. Original text:
    `authoring/shot-section.js` builds it: target segmented control
    (Auto / Home / Away, `role="radiogroup"`), verdict card (title +
    % blocked, live through a `shotReadoutChanged` event), three

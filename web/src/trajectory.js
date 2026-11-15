@@ -6,9 +6,10 @@ import { selectObject } from './selection.js';
 import { shotVerdict, shotLineXAtZ } from './insights.js';
 import { VECTOR_TRAJECTORY, SHOT_LINE_TOKENS } from './tokens.js';
 import { createTrajectoryGate } from './trajectory-gate.js';
+import { outlineShown } from './shot-view.js';
+import './shot-view-state.js';   // loads state.shotView
 
 // --- ball-to-goal trajectory lines ---
-const trajectoryCheckbox = document.getElementById('trajectoryCheckbox');
 
 const trajectoryGeometry = new THREE.BufferGeometry();
 trajectoryGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(GOAL_MOUTH_CORNERS_LOCAL.length * 2 * 3), 3));
@@ -76,7 +77,6 @@ function computeShotLineColor(ballCenter, goalCenter) {
 
 const trajectoryScratchCorner = new THREE.Vector3();
 const shootingLineScratchCenter = new THREE.Vector3();
-const goalieOutlineCheckbox = document.getElementById('goalieOutlineCheckbox');
 
 function setGoalieOutlineVisible(visible, color, letter) {
   const outlines = state.goalieOutlinesByModel[state.activeGoalieKey]?.[letter];
@@ -93,8 +93,11 @@ const trajectoryGate = createTrajectoryGate();
 
 // Returns true when the lines changed this frame (main.js renders then).
 export function updateTrajectory(ballCenter) {
-  if (!trajectoryCheckbox.checked || !ballCenter || !shotGoal()) {
-    const wasVisible = trajectoryLines.visible;
+  // A-BACK-045: corner lines and shooting line switch separately (Inspector's
+  // Shot section); the goalie glow comes with the shooting line.
+  const view = state.shotView;
+  if (!(view.lines || view.shotLine) || !ballCenter || !shotGoal()) {
+    const wasVisible = trajectoryLines.visible || shootingLine.visible;
     trajectoryLines.visible = false;
     shootingLine.visible = false;
     setGoalieOutlineVisible(false, null, 'A');
@@ -107,7 +110,7 @@ export function updateTrajectory(ballCenter) {
     goal: shotGoal(),
     goalie: goalieForGoal(shotGoal()),
     goalieKey: state.activeGoalieKey,
-    outline: goalieOutlineCheckbox.checked,
+    outline: `${view.lines}|${view.shotLine}`,
   });
   if (!changed) return false;
   // Raycasting and localToWorld read the cached matrixWorld, which is only
@@ -123,7 +126,7 @@ export function updateTrajectory(ballCenter) {
     positions[idx++] = worldCorner.x; positions[idx++] = worldCorner.y; positions[idx++] = worldCorner.z;
   }
   trajectoryGeometry.attributes.position.needsUpdate = true;
-  trajectoryLines.visible = true;
+  trajectoryLines.visible = view.lines;
 
   const goalCenter = shotGoal().localToWorld(shootingLineScratchCenter.copy(GOAL_CENTER_LOCAL));
   const shootingPositions = shootingLineGeometry.attributes.position.array;
@@ -133,9 +136,9 @@ export function updateTrajectory(ballCenter) {
   shootingLine.computeLineDistances(); // required for LineDashedMaterial - recomputes the dash pattern from the new endpoints
   const shotColor = computeShotLineColor(ballCenter, goalCenter);
   shootingLine.material.color.copy(shotColor);
-  shootingLine.visible = true;
+  shootingLine.visible = view.shotLine;
 
-  const showOutline = goalieOutlineCheckbox.checked && shotColor !== SHOT_OPEN_COLOR;
+  const showOutline = outlineShown(view) && shotColor !== SHOT_OPEN_COLOR;
   const targetLetter = goalLetterForGoal(shotGoal());
   const targetGoalie = goalieForGoal(shotGoal());
   setGoalieOutlineVisible(showOutline && !!(targetGoalie && targetGoalie.visible), shotColor, targetLetter);
@@ -147,15 +150,13 @@ export function updateTrajectory(ballCenter) {
 // depth (Z) it's currently standing - the same target the shooting-line
 // colour check uses, so this reliably turns the line green rather than
 // leaving it to imprecise arrow-key nudging.
-const coveragePctEl = document.getElementById('coveragePct');
-document.getElementById('alignGoalieBtn').addEventListener('click', () => {
+// Returns false when there is no ball or no visible goalie.
+export function alignGoalie() {
   const ballCenter = getBallWorldCenter();
   const goalie = goalieForGoal(shotGoal());
-  if (!ballCenter || !shotGoal() || !goalie || !goalie.visible) {
-    coveragePctEl.textContent = 'need a ball and a visible goalie first';
-    return;
-  }
+  if (!ballCenter || !shotGoal() || !goalie || !goalie.visible) return false;
   const goalCenter = shotGoal().localToWorld(GOAL_CENTER_LOCAL.clone());
   goalie.position.x = shotLineXAtZ(ballCenter, goalCenter, goalie.position.z);
   if (state.selected === goalie) selectObject(goalie); // keep the ring following if it's selected
-});
+  return true;
+}

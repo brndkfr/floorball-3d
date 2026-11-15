@@ -5,7 +5,7 @@
 // 3D first. "Stand" ends in applyDefaultView(), so the view counts as the
 // default again and follows window resizes. A click or wheel on the stage
 // stops a running blend where it is.
-import { camera, renderer, defaultRig, applyDefaultView, setCameraLook } from '../scene.js';
+import { camera, renderer, defaultRig, applyDefaultView, setCameraLook, viewFromBall } from '../scene.js';
 import { state } from '../state.js';
 import { PRESETS, presetPose, presetForKey, lerpPose, easeInOut } from '../camera-presets.js';
 import { isTopDown, exitTopDown } from '../authoring/topdown-camera.js';
@@ -104,7 +104,7 @@ menu.addEventListener('click', (e) => {
   if (b.dataset.preset) goToPreset(b.dataset.preset);
   else if (b.dataset.action === 'view-from-ball') {
     if (isTopDown()) exitTopDown();
-    document.getElementById('viewFromBallBtn').click();
+    viewFromBall();
   }
 });
 
