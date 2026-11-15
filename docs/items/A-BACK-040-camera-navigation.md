@@ -210,7 +210,7 @@ the last 600 ms (estimate), not a per-frame low-pass.
    distance from the camera each time, so an orbit drag still works
    while following; a scrub snapshots the camera so Stop restores it.
    "Follow" button next to Loop in the recorder, `state.followBall`,
-   remembered per browser (`fb.followBall`), not in the doc. Tests:
+   remembered per browser (`floorball3d.followBall`), not in the doc. Tests:
    `test/follow-ball.test.js`, `test-e2e/follow-ball.spec.js`.
    Original text: `followTargetAt(frames, elapsedMs)` in
    `orbit-math.js` or next to `ball-pose.js`, test with a two-frame

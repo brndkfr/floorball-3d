@@ -404,7 +404,7 @@ btnLoop.addEventListener('click', toggleLoop);
 
 // Follow ball (A-BACK-040 step 7, playback.js applyFollow): a view setting,
 // remembered per browser, not part of the doc.
-const FOLLOW_KEY = 'fb.followBall';
+const FOLLOW_KEY = 'floorball3d.followBall';
 try { state.followBall = localStorage.getItem(FOLLOW_KEY) === '1'; } catch { /* storage blocked: default off */ }
 btnFollow.addEventListener('click', () => {
   state.followBall = !state.followBall;
