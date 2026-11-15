@@ -99,8 +99,8 @@ can be handed to a smaller model as they are; `[lead]` steps need a
 strong model that can look at screenshots, or the user's eye.
 
 Progress lives in each item file ("Progress" section or `[done]` on a
-step). State on 2026-11-14 (branch `look-and-motion`, committed, not
-merged): S-BACK-030 steps 0 to 3, 6 and 8 done (disc 0.7 m, team
+step). State on 2026-11-15 (steps up to 2026-11-14 merged in #35; the
+rest on branch `camera-and-panels`): S-BACK-030 steps 0 to 3, 6 and 8 done (disc 0.7 m, team
 ring under figures, number sprite size clamp 2026-11-15); A-BACK-040
 steps 1 to 5, 7 and 8 done (orbit, pan, wheel dolly, fitted default
 view; presets, focus and follow ball 2026-11-15; zoom about the cursor
