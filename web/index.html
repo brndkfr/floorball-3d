@@ -87,7 +87,6 @@
       <label class="lp-marquee-toggle" title="Show 3D player figures on the chips (3D view only; top-down keeps chips)">
         <input type="checkbox" id="figuresVisibleToggle"> figures
       </label>
-      <button class="lp-toggle" title="Collapse/expand" aria-label="Collapse layers panel">&minus;</button>
     </div>
     <div class="lp-body"></div>
   </section>
@@ -131,10 +130,9 @@
       </div>
     </div>
   </section>
-  <div id="coords" class="hud-panel rp-section collapsed" data-view="plan">
+  <div id="coords" class="hud-panel rp-section" data-view="plan">
     <div class="hud-header">
       <span class="hud-title">Coordinates</span>
-      <button class="hud-toggle" data-panel="coords" title="Collapse/expand" aria-label="Expand coordinates panel">+</button>
     </div>
     <div class="hud-body">
       <span class="label">x:</span> <span id="coordX">-</span> mm<br>
@@ -197,6 +195,7 @@
     <button data-tl="add" class="tl-add" title="Add frame (copy of current)" aria-label="Add frame">+ frame</button>
     <button data-tl="choreo" class="tl-choreo" title="Choreograph the next frame&#10;&#10;1. Click Choreo. A draft frame is added; each chip gets a cyan ghost ring at its starting position.&#10;2. Drag chips (or right-click move-command) to where they should end up. Arrows appear from ghost to chip.&#10;3. Commit keeps the new frame · Cancel (or Esc) discards it.&#10;&#10;See ? for the full guide.">Choreo</button>
     <button data-action="tutorial" class="tl-learn" title="Guided play: learn Choreo step by step">Learn</button>
+    <button type="button" data-action="fold-timeline" class="tl-fold" aria-expanded="true" aria-label="Fold the recorder" title="Fold the recorder to its transport bar"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button>
   </div>
   <div class="tl-strip">
     <div class="tl-ruler" role="slider" tabindex="0" aria-label="Playback position" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" title="Click or drag to move the playhead; arrows, Home and End when focused"></div>

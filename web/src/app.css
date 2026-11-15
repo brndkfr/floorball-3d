@@ -24,13 +24,6 @@
     font-size:13px; color:var(--hud-accent); text-transform:uppercase;
     letter-spacing:0.08em; white-space:nowrap;
   }
-  .hud-toggle {
-    flex:none; width:20px; height:20px; display:flex; align-items:center; justify-content:center;
-    cursor:pointer; background:color-mix(in srgb, var(--fb-text-1) 7%, transparent); color:var(--hud-accent);
-    border:1px solid var(--hud-accent-dim); font-family:var(--hud-font); font-size:13px;
-    line-height:1; user-select:none;
-  }
-  .hud-toggle:hover { background:var(--fb-line); }
   .hud-panel .hud-body { margin-top:8px; }
   .hud-panel.collapsed .hud-body { display:none; }
 
@@ -708,6 +701,26 @@
     #panelStrip button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:-2px; }
     body[data-mode="analyze"] #appTopbar [data-action="toggle-panel"] { display:none; }
   }
+  /* A-BACK-044 step 3: one fold control per panel section (added by
+     ui/panels.js to each section's header, its first child); a folded
+     section keeps only that header. The recorder folds to its bar. */
+  #rightPanel .rp-fold {
+    margin-left:auto; flex:none; width:22px; height:22px; display:grid; place-items:center; cursor:pointer;
+    border:none; border-radius:var(--fb-radius-1); background:transparent; color:var(--fb-text-3);
+  }
+  #rightPanel .rp-fold:hover { background:var(--fb-surf-3); color:var(--fb-text-1); }
+  #rightPanel .rp-fold:focus-visible { outline:2px solid var(--fb-brand); outline-offset:-2px; }
+  #rightPanel .folded .rp-fold svg, #timeline.folded .tl-fold svg { transform:rotate(-90deg); }
+  #rightPanel .folded > :not(:first-child) { display:none; }
+  #rightPanel .folded > :first-child { margin-bottom:0; }
+  #layersPanel.folded { min-height:0; }
+  #timeline.folded .tl-strip { display:none; }
+  #timeline .tl-fold {
+    width:36px; height:36px; flex:none; display:grid; place-items:center; cursor:pointer;
+    border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1); background:transparent; color:var(--fb-text-2);
+  }
+  #timeline .tl-fold:hover { color:var(--fb-text-1); border-color:var(--fb-text-3); }
+  #timeline .tl-fold:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
   /* Design canvas breakpoint: below 1200 px the side panels are drawers over
      the stage instead of columns, and the stage keeps its width. Closed means
      display:none, not an off-screen transform: mobile browsers widen the
@@ -796,12 +809,6 @@
   /* --- Layers panel: outline of everything in the current frame. */
   #layersPanel { display:flex; flex-direction:column; min-height:120px; }
   #layersPanel .lp-title { flex:1; }
-  #layersPanel .lp-toggle {
-    background:transparent; border:none; color:var(--hud-accent);
-    cursor:pointer; font-size:14px; line-height:1; padding:0 4px;
-  }
-  #layersPanel .lp-toggle:hover { color:#fff; }
-  #layersPanel.collapsed .lp-body { display:none; }
   #layersPanel .lp-body { overflow-y:auto; padding-right:2px; }
   #layersPanel .lp-empty { opacity:0.7; font-size:11px; line-height:1.5; }
   #layersPanel .lp-section { margin-bottom:6px; }

@@ -77,3 +77,64 @@ test('a strip icon opens the panel at that section; the state survives a reload;
   await page.keyboard.press('Backslash');
   await expect(page.locator('#rightPanel')).toBeVisible();
 });
+
+// Step 3: every section folds with the same control; so does the recorder.
+const fold = (page, id) => page.locator(`#${id} .rp-fold`);
+
+test('each panel section folds with one control; the fold survives a reload', async ({ page }) => {
+  await boot(page);
+  for (const id of ['inspector', 'layersPanel', 'viewPanel', 'coords']) await expect(fold(page, id)).toHaveCount(1);
+  await expect(page.locator('#rightPanel .lp-toggle, #rightPanel .hud-toggle')).toHaveCount(0);
+  // Coordinates starts folded, the rest open
+  await expect(fold(page, 'coords')).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#coordX')).toBeHidden();
+  await expect(fold(page, 'viewPanel')).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#rinkCheckbox')).toBeVisible();
+
+  await fold(page, 'viewPanel').click();
+  await expect(fold(page, 'viewPanel')).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#rinkCheckbox')).toBeHidden();
+  await fold(page, 'coords').click();
+  await expect(page.locator('#coordX')).toBeVisible();
+
+  await page.reload({ waitUntil: 'load' });
+  await waitForAssets(page);
+  await expect(page.locator('#rinkCheckbox')).toBeHidden();
+  await expect(page.locator('#coordX')).toBeVisible();
+  // a strip icon unfolds its section
+  await toggle(page).click();
+  await page.locator('#panelStrip [data-open="viewPanel"]').click();
+  await expect(page.locator('#rinkCheckbox')).toBeVisible();
+});
+
+// At 1440 x 900 the 2D fit is width-bound, so the rink does not grow; the
+// stage gets taller and the rink re-centres in it.
+test('the recorder folds to its transport bar and the 2D stage gets the room', async ({ page }) => {
+  await boot(page);
+  const stage = () => page.evaluate(async () => {
+    const THREE = await import('three');
+    const { state } = await import('/src/state.js');
+    const { RINK_L } = await import('/src/constants.js');
+    const { readShellInsets } = await import('/src/ui/stage-frustum.js');
+    const td = await import('/src/authoring/topdown-camera.js');
+    if (!td.isTopDown()) td.enterTopDown();
+    const cam = state.activeCamera;
+    cam.updateMatrixWorld();
+    const centreY = (1 - new THREE.Vector3(0, 0, RINK_L / 2).project(cam).y) / 2 * innerHeight;
+    return { bottom: readShellInsets().bottom, centreY };
+  });
+  const btn = page.locator('#timeline [data-action="fold-timeline"]');
+  await expect(btn).toHaveAttribute('aria-expanded', 'true');
+  const before = await stage();
+  await btn.click();
+  await expect(btn).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#timeline .tl-strip')).toBeHidden();
+  await expect(page.locator('#timeline [data-tl="play"]')).toBeVisible();
+  await expect.poll(async () => (await stage()).bottom).toBeLessThan(before.bottom - 40);
+  expect((await stage()).centreY).toBeGreaterThan(before.centreY + 20);
+  await page.reload({ waitUntil: 'load' });
+  await waitForAssets(page);
+  await expect(page.locator('#timeline .tl-strip')).toBeHidden();
+  await page.locator('#timeline [data-action="fold-timeline"]').click();
+  await expect(page.locator('#timeline .tl-strip')).toBeVisible();
+});

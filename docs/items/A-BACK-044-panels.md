@@ -1,6 +1,6 @@
 # A-BACK-044 - Collapsible panels and Present mode
 
-Status: in progress (steps 1 and 2 done 2026-11-15). Drafted
+Status: in progress (steps 1 to 3 done 2026-11-15). Drafted
 2026-11-14, agreed 2026-11-15 (options A and C of
 the clickable draft:
 <https://claude.ai/artifact/9tRBKZfgafPBVFjEapqkPh>). Keeps
@@ -98,7 +98,16 @@ Inspector, and only after living with A and C.
    `refitDefaultView()`; show the top bar's panel button at >= 1200 px
    too; state in `localStorage` with try / catch. Keep the drawer
    behaviour below 1200 px unchanged (`phone.spec.js` must stay green).
-3. `[small]` **Fold every section and the timeline.** One fold control
+3. `[done 2026-11-15]` **Fold every section and the timeline.** As
+   built: `ui/panels.js` adds one `.rp-fold` button to each section's
+   header (its first child) and `#timeline [data-action="fold-timeline"]`
+   folds the recorder (`#timeline.folded` hides `.tl-strip`;
+   `syncInset()` re-fits). The Layers `.lp-toggle` (and its
+   `floorball3d.layersPanel.collapsed` key, read once to migrate) and
+   the Coordinates `.hud-toggle` with `hud.js` are gone. Note: at
+   1440 x 900 the 2D fit is width-bound, so folding the recorder gives
+   the stage height and re-centres the rink rather than enlarging it.
+   Original text: One fold control
    per section header, replacing `.lp-toggle` and the Coordinates
    `.hud-toggle` (`hud.js`); fold state remembered. Timeline: a fold
    button in `.tl-bar` hides `.tl-strip`; `syncInset()` already re-fits.

@@ -1,4 +1,3 @@
-import { initHud } from './hud.js';
 import { scene, renderer } from './scene.js';
 import { state, getBallWorldCenter } from './state.js';
 import { handleKeyboardMovement, clock } from './controls.js';
@@ -22,8 +21,6 @@ import { tickPlayback } from './authoring/playback.js';
 import { updateMoveMarkers } from './authoring/move-marker.js';
 import { updateWalks } from './authoring/walk-tween.js';
 import { updateFloorLabelOrientations } from './authoring/shapes.js';
-
-initHud();
 
 // S-BACK-011: skip the WebGL render call on a frame where nothing visible
 // changed. Cheap per-frame updates (chip animations, playback, trajectory/
