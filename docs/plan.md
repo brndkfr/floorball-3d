@@ -403,15 +403,12 @@ coupling visible.
   every pose number stays an estimate.
 - **[A-Q-006] Goalie height** [open] Adult only, or a U14 setting? It
   changes what coverage reports (A-BACK-042).
-- **[A-Q-007] Goalie module content** [open] The J+S / swiss unihockey
-  module's text and images are theirs. Default: our own words, a link
-  to the module, no copied images. Ask them for permission to quote
-  the zone cards, or for a cooperation?
-- **[A-Q-008] Where the goalie module lives** [open] A "goalie lens" in
-  Plan (goalie selected) plus lessons in the Library (default), or its
-  own rail entry? Decide after the draft.
-- **[A-Q-009] Expected action** [open] Read shot / pass from the play's
-  next ball event (default), set it by hand per frame, or both?
+- **[A-Q-007] Goalie module content** [decided 2026-11-15] Our own
+  words, a link to the module, no copied images.
+- **[A-Q-008] Where the goalie module lives** [decided 2026-11-15] A
+  goalie lens in Plan (goalie selected) plus lessons in the Library.
+- **[A-Q-009] Expected action** [decided 2026-11-15] Read from the
+  play's next ball event, with a manual Shot / Pass override.
 - **[A-Q-004] Tablet authoring** [open] Coaches prepare on a laptop or
   tablet and use a tablet at the rink, but the UX principle is "desktop
   first". Should touch authoring move ahead of desktop polish?

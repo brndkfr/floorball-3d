@@ -75,7 +75,9 @@ board): passing-first z < 4 m; danger z < 16 m; slot a trapezoid from
 3.8 m to 10.9 m, half-width 2.4 m widening to 3.75 m; attention 16 to
 26.6 m; awareness beyond. Mirrored for goal B.
 Layer: floor overlay in front of the defending goal, the ball's zone
-highlighted, a zone card (our wording). Tests first: zone of sample
+highlighted, a zone card (our wording). A regular entry in the Layers
+panel; the goalie lens switches it on, the user can switch it off.
+Tests first: zone of sample
 points for both ends; mirror symmetry. e2e: layer toggles, the card
 follows the ball.
 
@@ -104,8 +106,9 @@ every pure function; e2e for the section.
 
 ### A-BACK-047 - Shooter's-eye inset ("Winkelband") `[lead]`
 
-A small second view rendered from the ball toward the targeted goal
-(second camera, scissor viewport or a small canvas), shown with the
+A small inset (decided 2026-11-15, no split screen) rendered from the
+ball toward the targeted goal (second camera, scissor viewport or a
+small canvas) in a corner of the stage, shown with the
 goalie lens; updates while the goalie or the ball moves; hidden in
 Present unless switched on. Watch frame time (second render only on
 change, as S-BACK-011). Look check by eye. e2e: inset visible, its
@@ -146,11 +149,22 @@ Körper part (pose per zone / action).
 Körper (body) follows A-BACK-042 steps 3 to 5; 051 merges into
 A-BACK-043.
 
-## Open questions
+## Decisions (2026-11-15)
 
-- A-Q-007 content rights, A-Q-008 where the module lives, A-Q-009
-  expected action (see plan section 6). A-Q-006 (goalie height) matters
-  more now: a U14 goalie covers less.
-- From the draft: gauges for all four dimensions or only the one that
-  is off? Inset or split screen? Zone layer on by default with the
-  goalie lens?
+- A-Q-007 content rights: default. Our own words, a link to the module,
+  no copied images.
+- A-Q-008 where it lives: default. A goalie lens in Plan (goalie
+  selected) plus a "Lessons" shelf in the Library.
+- A-Q-009 expected action: default. Read from the play's next ball
+  event, with a manual Shot / Pass override.
+- Gauges: the goalie's Inspector always lists all four KATA rows; the
+  worst dimension that is off is tinted and carries the one hint
+  sentence; the chip on the rink names only that dimension.
+- Shooter's view: inset, everywhere (Plan, lesson Present, exercise
+  check); no split screen. Comparison draft:
+  <https://claude.ai/artifact/2fFwsx6PRpK4urhBBSMu1v>.
+- Zone layer: switched on when the goalie lens opens, but it is a
+  regular entry in the Layers panel, so the user can switch it off
+  (A-BACK-048).
+
+A-Q-006 (goalie height) matters more now: a U14 goalie covers less.
