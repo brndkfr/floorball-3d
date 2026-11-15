@@ -65,8 +65,9 @@ aside.
    (needs a clean `web/` + `test-e2e/`). It also lists changed code
    no e2e test executes - add a spec when that code is UI-facing.
    **When it prints `FULL RUN` on a feature branch, do not run the
-   whole suite locally** (7+ minutes, with load timeouts that are not
-   real failures, S-BACK-022). Run an area set instead: the specs you
+   whole suite locally** (2.3 min for 173 tests with Edge since
+   S-BACK-022, 7+ min with load timeouts before it; an area set is
+   still faster). Run an area set instead: the specs you
    added or edited, `bootstrap.spec.js`, `a11y.spec.js`, and every
    spec that exercises the touched area (grep `test-e2e/` for the
    changed export, constant or DOM id; S-BACK-031 will make this one
@@ -283,7 +284,10 @@ aside.
   dialog opens, the overflow menu wiring hits the right handler, or the
   bootstrap ordering works when the DOM is real. Run `pnpm test:e2e:affected`
   locally (see workflow step 5; `pnpm test:e2e` for everything)
-  (Playwright + Chromium, config in `playwright.config.js`, specs in
+  (Playwright + Chromium; locally on Windows that is Edge, native and
+  GPU-backed, while CI keeps the bundled Chromium - see
+  `scripts/e2e-browser.mjs`, `PW_CHANNEL=chromium` forces the bundled
+  one; config in `playwright.config.js`, specs in
   `test-e2e/*.spec.js`; specs import `test` / `expect` from
   `./fixtures.js`, not `@playwright/test`, so coverage recording
   works). Playwright's `webServer` auto-starts

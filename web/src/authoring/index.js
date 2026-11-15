@@ -28,6 +28,9 @@ import './save-status-ui.js'; // side-effect: wires up the save-status badge + b
 import './dock.js';       // side-effect: wires up the DOM
 import './tool-palette.js'; // side-effect: wires up the left tool palette
 import '../ui/topbar.js';  // side-effect: Broadcast top bar (crumb, 2D/3D, Export)
+import '../ui/camera-menu.js';  // side-effect: top bar Views menu + Shift+1..6 (A-BACK-040 step 4)
+import '../ui/panels.js';  // side-effect: right panel strip / drawer toggle (A-BACK-044)
+import '../ui/present.js';  // side-effect: top bar Present + #presentBar (A-BACK-044 step 4)
 import '../ui/photo-sheet.js';  // side-effect: phone Analyze bottom-sheet grab
 import './inspector.js';    // side-effect: wires up the right inspector panel
 import './chip-popover.js'; // side-effect: wires up the chip-anchored popover
@@ -41,6 +44,7 @@ export { tickChoreo } from './choreograph.js';
 export { tickPassOverlay } from './pass-overlay.js';
 export { tickActors } from './actors.js';
 export { tickFigures } from './figures.js';
+export { tickChipSprites } from './chips.js';
 
 migrateLegacyStorage();
 

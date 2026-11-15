@@ -1,4 +1,3 @@
-import { initHud } from './hud.js';
 import { scene, renderer } from './scene.js';
 import { state, getBallWorldCenter } from './state.js';
 import { handleKeyboardMovement, clock } from './controls.js';
@@ -7,6 +6,7 @@ import { updateCoverage, updateGoalieLabel } from './coverage.js';
 import { snapshotChanged, copySnapshot } from './dirty-check.js';
 import { consumeRenderDirty } from './render-dirty.js';
 import { tickBlobShadows } from './blob-shadow.js';
+import { tickCameraTween } from './ui/camera-menu.js';
 
 // side-effect-only modules: each wires up its own DOM listeners and starts
 // loading its OBJ/MTL assets as soon as it's imported
@@ -15,14 +15,12 @@ import './goalie.js';
 import './selection.js';
 import './touch-controls.js';
 import './help.js';
-import { updateChipAnimations, tickChoreo, tickActors, tickPassOverlay, tickFigures } from './authoring/index.js';
+import { updateChipAnimations, tickChoreo, tickActors, tickPassOverlay, tickFigures, tickChipSprites } from './authoring/index.js';
 import { updateDrawPreview } from './authoring/draw-tool.js';
 import { tickPlayback } from './authoring/playback.js';
 import { updateMoveMarkers } from './authoring/move-marker.js';
 import { updateWalks } from './authoring/walk-tween.js';
 import { updateFloorLabelOrientations } from './authoring/shapes.js';
-
-initHud();
 
 // S-BACK-011: skip the WebGL render call on a frame where nothing visible
 // changed. Cheap per-frame updates (chip animations, playback, trajectory/
@@ -63,6 +61,7 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
   handleKeyboardMovement(dt);
+  const presetActive = tickCameraTween(dt * 1000);
   const chipsActive = updateChipAnimations(dt);
   const markersActive = updateMoveMarkers(dt);
   const walksActive = updateWalks(dt);
@@ -71,6 +70,7 @@ function animate() {
   const choreoActive = tickChoreo();
   const actorsActive = tickActors();
   const figuresChanged = tickFigures();
+  const spritesChanged = tickChipSprites();   // after tickFigures: the lift changes the depth
   const passChanged = tickPassOverlay();
   const shadowsChanged = tickBlobShadows();   // after everything that moves an actor
   const ballCenter = getBallWorldCenter(); // computed once, shared by both calls below
@@ -92,8 +92,8 @@ function animate() {
 
   // consumeRenderDirty() must run every frame (it's edge-triggered) - keep
   // it first so `||` short-circuiting never skips clearing it.
-  const needsRender = consumeRenderDirty() || pollChanged || chipsActive || markersActive
-    || walksActive || choreoActive || actorsActive || figuresChanged || passChanged || shadowsChanged || trajectoryChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
+  const needsRender = consumeRenderDirty() || pollChanged || presetActive || chipsActive || markersActive
+    || walksActive || choreoActive || actorsActive || figuresChanged || spritesChanged || passChanged || shadowsChanged || trajectoryChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
   if (needsRender) renderer.render(scene, state.activeCamera);
 }
 animate();

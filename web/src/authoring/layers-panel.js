@@ -27,17 +27,10 @@ const root = document.getElementById('layersPanel');
 if (!root) throw new Error('layersPanel element missing from index.html');
 {
   const body = root.querySelector('.lp-body');
-  const collapseBtn = root.querySelector('.lp-toggle');
-  const STORAGE_KEY = 'floorball3d.layersPanel.collapsed';
   const SECTION_KEY = 'floorball3d.layersPanel.sections';
+  // Folding the whole panel is ui/panels.js (A-BACK-044), like every section.
 
   let sectionCollapsed = readSectionState();
-
-  if (localStorage.getItem(STORAGE_KEY) === '1') root.classList.add('collapsed');
-  collapseBtn.addEventListener('click', () => {
-    root.classList.toggle('collapsed');
-    localStorage.setItem(STORAGE_KEY, root.classList.contains('collapsed') ? '1' : '0');
-  });
 
   // Marquee-scope toggle: whether a box-select drag also grabs shapes, not
   // just chips. On by default (select-everything is the common case); uncheck

@@ -2,6 +2,8 @@ import { renderer, dollyCamera, topDownCamera } from './scene.js';
 import { keysPressed, cycleSelection } from './controls.js';
 import { deselectAll } from './selection.js';
 import { state } from './state.js';
+import { pinchWheelDelta, zoomFactor } from './zoom-math.js';
+import { zoomTopDownAt } from './authoring/topdown-camera.js';
 
 // On-screen controls for touch devices (see the `@media (pointer: coarse)`
 // rule in index.html) - there's no keyboard on a phone/tablet, so WASD/
@@ -30,8 +32,8 @@ document.getElementById('tcCycle').addEventListener('click', () => cycleSelectio
 document.getElementById('tcDeselect').addEventListener('click', () => deselectAll());
 
 // --- pinch-to-zoom: two-finger gesture on the canvas, alongside the
-// existing scroll-wheel zoom (both drive the same dollyCamera helper) ---
-const PINCH_SENSITIVITY = 4; // wheel units per px of pinch-distance change (estimate)
+// scroll-wheel zoom and at the same rate (zoom-math.js): fingers twice as
+// far apart, things twice as big, about the point between the fingers ---
 let pinchStartDist = null;
 
 function touchDistance(touches) {
@@ -48,14 +50,13 @@ renderer.domElement.addEventListener('touchmove', (event) => {
   if (event.touches.length !== 2 || pinchStartDist === null) return;
   event.preventDefault();
   const dist = touchDistance(event.touches);
-  const delta = dist - pinchStartDist;
+  const delta = pinchWheelDelta(pinchStartDist, dist);
+  const midX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
+  const midY = (event.touches[0].clientY + event.touches[1].clientY) / 2;
   if (state.activeCamera === topDownCamera) {
-    // In 2D, pinch scales the orthographic zoom directly.
-    const factor = 1 + delta * 0.005;
-    topDownCamera.zoom = Math.min(Math.max(topDownCamera.zoom * factor, 0.5), 8);
-    topDownCamera.updateProjectionMatrix();
+    zoomTopDownAt(zoomFactor(delta), midX, midY);
   } else {
-    dollyCamera(-delta * PINCH_SENSITIVITY);
+    dollyCamera(delta, midX, midY);
   }
   pinchStartDist = dist;
 }, { passive: false });

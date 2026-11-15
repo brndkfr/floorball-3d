@@ -16,6 +16,7 @@
 // "view from ball", leaving the 2D view) needs no extra bookkeeping.
 
 import { RINK_L, HALF_W } from './constants.js';
+import { zoomFactor } from './zoom-math.js';
 
 const DEG = Math.PI / 180;
 
@@ -28,7 +29,6 @@ export const ORBIT_LIMITS = Object.freeze({
   targetMargin: 5000,    // how far outside the boards the target may go
 });
 const ORBIT_SENSITIVITY = 0.004;   // rad per px, same feel as the old look-drag
-const DOLLY_RATE = 0.0015;         // per unit of wheel deltaY: 100 -> ~16 %
 const GRAB_REACH = 6;              // grab-pan only floor within this many camera distances of the target
 const BOARD_HEIGHT = 500;
 const FIT_PITCH = { landscape: -40 * DEG, portrait: -55 * DEG };
@@ -123,11 +123,12 @@ export function panKeys(rig, forward, right, stepMm) {
   });
 }
 
-// Wheel: move toward (deltaY < 0) or away from the target. With a `pivot`
-// ({ x, z } on the floor, usually the point under the cursor) that point
-// keeps its place on screen.
+// Wheel: move toward (deltaY < 0) or away from the target, at the same
+// rate as the 2D zoom (zoom-math.js). With a `pivot` ({ x, z } on the
+// floor, usually the point under the cursor) that point keeps its place on
+// screen.
 export function dollyBy(rig, wheelDelta, pivot = null) {
-  const dist = clamp(rig.dist * Math.exp(wheelDelta * DOLLY_RATE), ORBIT_LIMITS.minDist, ORBIT_LIMITS.maxDist);
+  const dist = clamp(rig.dist / zoomFactor(wheelDelta), ORBIT_LIMITS.minDist, ORBIT_LIMITS.maxDist);
   const s = dist / rig.dist;
   const next = { ...rig, dist };
   if (pivot) {
@@ -135,6 +136,42 @@ export function dollyBy(rig, wheelDelta, pivot = null) {
     next.tz = pivot.z + (rig.tz - pivot.z) * s;
   }
   return clampRig(next);
+}
+
+// Double-click (A-BACK-040 step 5): turn around this floor point from now
+// on. Look direction and distance stay.
+export function focusRigOn(rig, point) {
+  return clampRig({ ...rig, tx: point.x, tz: point.z });
+}
+
+// F (A-BACK-040 step 5): look at the middle of `points` ({ x, z } on the
+// floor) from the current direction, just far enough that each point's
+// feet and head (FRAME.height) sit inside the view with a margin. null
+// when there is nothing to frame. Estimates: a figure is 1.8 m tall, 4.5 m
+// is the closest a framing goes, 10 % of the view stays free on each side.
+const FRAME = { height: 1800, minDist: 4500, margin: 0.1 };
+export function frameRig(rig, points, { vw, vh, fovDeg }) {
+  if (!points.length) return null;
+  const xs = points.map((p) => p.x), zs = points.map((p) => p.z);
+  const base = clampRig({
+    ...rig,
+    tx: (Math.min(...xs) + Math.max(...xs)) / 2,
+    tz: (Math.min(...zs) + Math.max(...zs)) / 2,
+  });
+  const view = { vw, vh, fovDeg };
+  const mx = vw * FRAME.margin, my = vh * FRAME.margin;
+  const fits = (dist) => points.every((p) => [0, FRAME.height].every((y) => {
+    const s = projectToScreen({ ...base, dist }, { x: p.x, y, z: p.z }, view);
+    return !s.behind && s.x >= mx && s.x <= vw - mx && s.y >= my && s.y <= vh - my;
+  }));
+  let lo = FRAME.minDist, hi = ORBIT_LIMITS.maxDist;
+  if (fits(lo)) return { ...base, dist: lo };
+  if (!fits(hi)) return { ...base, dist: hi };
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (fits(mid)) hi = mid; else lo = mid;
+  }
+  return { ...base, dist: hi };
 }
 
 // Blend for preset tweens; yaw takes the short way round.

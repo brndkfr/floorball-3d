@@ -5,6 +5,7 @@ import { markRenderDirty } from './render-dirty.js';
 import { pickRendererQuality } from './renderer-quality.js';
 import { stageFrustum, readShellInsets } from './ui/stage-frustum.js';
 import { cameraToRig, rigToCamera, dollyBy, screenToFloor, fitRigToRink } from './orbit-math.js';
+import { wheelDeltaPx } from './zoom-math.js';
 
 export const scene = new THREE.Scene();
 
@@ -190,10 +191,16 @@ export function cameraView() {
 // a view the user moved is never pulled away.
 const lastFit = { position: new THREE.Vector3(), quaternion: new THREE.Quaternion() };
 
+// The fitted default rig for the current window and shell (camera presets'
+// "Stand" blends to it).
+export function defaultRig() {
+  return fitRigToRink({ ...cameraView(), fovDeg: DEFAULT_FOV, insets: readShellInsets() });
+}
+
 export function applyDefaultView() {
   camera.fov = DEFAULT_FOV;
   camera.updateProjectionMatrix();
-  applyCameraRig(fitRigToRink({ ...cameraView(), insets: readShellInsets() }));
+  applyCameraRig(defaultRig());
   lastFit.position.copy(camera.position);
   lastFit.quaternion.copy(camera.quaternion);
 }
@@ -242,6 +249,13 @@ const surroundFloor = new THREE.Mesh(
 );
 surroundFloor.rotation.x = -Math.PI / 2;
 surroundFloor.position.set(0, -5, RINK_L / 2);
+surroundFloor.name = 'surroundFloor';
+// The floors under the rink are drawn first and write no depth, so the rink
+// floor always covers them. As depth-tested planes 5 and 12 mm apart they
+// won the depth test on a real GPU at some distances (Edge / D3D11: the rink
+// went dark at 37 and 60 m, fine at 34 and 46 m; look-3d.spec.js).
+surroundFloor.material.depthWrite = false;
+surroundFloor.renderOrder = -1;
 scene.add(surroundFloor);
 // The hall floor beyond that border (S-BACK-030 step 2): a large dark plane
 // so the rink does not float in a void; the fog fades it into the backdrop.
@@ -253,6 +267,8 @@ const hallFloor = new THREE.Mesh(
 hallFloor.rotation.x = -Math.PI / 2;
 hallFloor.position.set(0, -12, RINK_L / 2);
 hallFloor.name = 'hallFloor';
+hallFloor.material.depthWrite = false;   // under everything, see surroundFloor
+hallFloor.renderOrder = -2;
 scene.add(hallFloor);
 applyToneMapping();
 
@@ -298,9 +314,9 @@ document.getElementById('viewFromBallBtn').addEventListener('click', () => {
 document.getElementById('resetViewBtn').addEventListener('click', applyDefaultView);
 
 // --- scroll-wheel / pinch zoom: moves the camera toward or away from its
-// target (A-BACK-040); the FOV stays. `wheelDelta` is in wheel deltaY
-// units, negative = closer. With a pointer position the floor point under
-// it stays where it is on screen.
+// target (A-BACK-040); the FOV stays. `wheelDelta` is in wheel pixels
+// (zoom-math.js wheelDeltaPx), negative = closer. With a pointer position
+// the floor point under it stays where it is on screen.
 export function dollyCamera(wheelDelta, clientX = null, clientY = null) {
   const rig = getCameraRig();
   const pivot = clientX === null ? null : screenToFloor(rig, clientX, clientY, cameraView());
@@ -312,7 +328,7 @@ renderer.domElement.addEventListener('wheel', (event) => {
   // own wheel-zoom handler in authoring/topdown-camera.js.
   if (state.activeCamera !== camera) return;
   event.preventDefault();
-  dollyCamera(event.deltaY, event.clientX, event.clientY);
+  dollyCamera(wheelDeltaPx(event, window.innerHeight), event.clientX, event.clientY);
 }, { passive: false });
 
 window.addEventListener('resize', () => {

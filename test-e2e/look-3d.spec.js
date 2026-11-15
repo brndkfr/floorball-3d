@@ -58,6 +58,45 @@ test('boards are white with a dark top rail', async ({ page }) => {
   expect(luma(rail)).toBeLessThan(80);
 });
 
+// The hall floor (one huge plane 12 mm under the rink) won the depth test
+// on a real GPU at some camera distances (Edge, D3D11: the rink went dark
+// at 37 m and 84 m, not at 34 m or 46 m; the software renderer CI uses
+// never showed it). The floors under the rink are now drawn first and
+// write no depth, so the rink always covers them.
+test('the rink floor stays blue at every camera distance; the floors below never cover it', async ({ page }) => {
+  await boot(page);
+  const res = await page.evaluate(async () => {
+    const THREE = await import('three');
+    const { renderer, scene, camera, getCameraRig, applyCameraRig } = await import('/src/scene.js');
+    const { RINK_L } = await import('/src/constants.js');
+    const td = await import('/src/authoring/topdown-camera.js');
+    if (td.isTopDown()) td.exitTopDown();
+    document.getElementById('resetViewBtn').click();
+    const base = getCameraRig();
+    const gl = renderer.getContext();
+    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+    const out = [];
+    for (const dist of [30000, 34000, 37260, 41000, 45895, 60000, 83625]) {
+      applyCameraRig({ ...base, tx: 0, tz: RINK_L / 2, dist });
+      camera.updateMatrixWorld();
+      const v = new THREE.Vector3(3000, 0, RINK_L / 2 + 4000).project(camera);
+      renderer.render(scene, camera);
+      const px = new Uint8Array(4);
+      gl.readPixels(Math.round((v.x + 1) / 2 * size.x), Math.round((v.y + 1) / 2 * size.y), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      out.push({ dist, r: px[0], g: px[1], b: px[2] });
+    }
+    const floors = ['hallFloor', 'surroundFloor'].map((n) => scene.getObjectByName(n))
+      .map((m) => m && { depthWrite: m.material.depthWrite, renderOrder: m.renderOrder });
+    return { out, floors };
+  });
+  // blue rink, fog allowed far away: blue clearly above red
+  for (const p of res.out) expect(p.b, `dist ${p.dist}: ${p.r},${p.g},${p.b}`).toBeGreaterThan(p.r + 40);
+  for (const f of res.floors) {
+    expect(f?.depthWrite).toBe(false);
+    expect(f?.renderOrder).toBeLessThan(0);
+  }
+});
+
 test('photo-lock still clears the background and switches tone mapping off', async ({ page }) => {
   await boot(page);
   const locked = await page.evaluate(async () => {

@@ -4,7 +4,15 @@
 // covering Firefox/WebKit would require different workarounds and is not
 // worth it for this deploy target (GitHub Pages, evergreen users).
 
+import fs from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
+import { localBrowserChannel } from './scripts/e2e-browser.mjs';
+
+// Locally on Windows: Edge (native, GPU) instead of the x64 software-GL
+// Chromium, see scripts/e2e-browser.mjs (S-BACK-022). CI: bundled Chromium.
+const channel = localBrowserChannel({
+  ci: !!process.env.CI, platform: process.platform, env: process.env, exists: (p) => fs.existsSync(p),
+});
 
 export default defineConfig({
   testDir: './test-e2e',
@@ -21,7 +29,7 @@ export default defineConfig({
     // they reload after seeding localStorage.
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], channel } },
   ],
   webServer: {
     command: 'node scripts/serve-static.mjs',

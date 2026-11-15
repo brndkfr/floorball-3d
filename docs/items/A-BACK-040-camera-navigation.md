@@ -78,8 +78,15 @@ the last 600 ms (estimate), not a per-frame low-pass.
   (`web/src/orbit-math.js`, `test/orbit-math.test.js`).
 - 2026-11-14: step 2 done, see "as built" under the step
   (`test-e2e/camera-orbit.spec.js`).
-- 2026-11-14: step 3 done (fitted default view, FOV 45). Next:
-  step 4 (presets).
+- 2026-11-14: step 3 done (fitted default view, FOV 45).
+- 2026-11-14: step 8 done (zoom about the cursor in 2D, one rate for
+  wheel, touchpad and pinch; `test/zoom-math.test.js`,
+  `test-e2e/zoom.spec.js`).
+- 2026-11-15: step 4 done (presets: Views menu and Shift+1..6).
+- 2026-11-15: step 5 done (F frames the selection, double-click
+  re-targets).
+- 2026-11-15: step 7 done (Follow ball in the recorder). Left: step 6
+  (touch), which needs a real tablet check by the user.
 
 ## Steps
 
@@ -157,7 +164,21 @@ the last 600 ms (estimate), not a per-frame low-pass.
    `ORBIT_LIMITS.maxDist` on narrow stages; check the fog (far 90 000)
    does not hide the rink there, see S-BACK-030 step 2. Update the specs that assert the old
    default pose.
-4. `[small]` **Presets.** Pure table `web/src/camera-presets.js`
+4. `[done 2026-11-15]` **Presets.** As built: presets are camera poses
+   `{ x, y, z, yaw, pitch }`, not rigs ("Player eye" and "From the
+   ball" are not orbit poses); `presetPose(id, { fit, chip })`,
+   `presetForKey` (reads `code`, so Shift+digit works on any layout),
+   `lerpPose`, `easeInOut` in `web/src/camera-presets.js`. Menu
+   "Views" in the top bar (`web/src/ui/camera-menu.js`, own module next
+   to `topbar.js`), 400 ms blend in `animate()` via `tickCameraTween`,
+   instant with reduced motion, stopped by a click or wheel on the
+   stage; a preset chosen in 2D switches to 3D; "Stand" ends in
+   `applyDefaultView()`; "Player eye" is disabled without a selected
+   chip; "From the ball" in the menu reuses the View panel button, which
+   stays for now. Distances and heights are estimates checked in
+   screenshots (bench side 4 m up, 2.5 m outside the board). Tests:
+   `test/camera-presets.test.js`, `test-e2e/camera-presets.spec.js`.
+   Original text: Pure table `web/src/camera-presets.js`
    (`presetRig(name, { selectedChip, ball, targetGoal })`) with a
    test per preset (camera is outside the boards for the goal views,
    looks at the goal mouth, and so on). Menu in the top bar
@@ -165,16 +186,56 @@ the last 600 ms (estimate), not a per-frame low-pass.
    (CLAUDE.md, DOM-owning modules). Tween via `lerpRig` in the
    `animate()` loop; report "active" so the render gate draws.
    e2e: choosing a preset moves the camera; `Shift+2` does the same.
-5. `[small]` **Focus.** Double-click and `F` in 3D (`F` already
-   resets the 2D view in `controls.js`; keep that).
+5. `[done 2026-11-15]` **Focus.** Double-click and `F` in 3D (`F` already
+   resets the 2D view in `controls.js`; keep that). As built:
+   `orbit-math.js` `focusRigOn` (double-click: the target moves, look
+   and distance stay) and `frameRig` (F: the selection's centre from the
+   current direction, closest distance where every selected object's
+   feet and head sit inside the view with 10 % margin, at least 4.5 m;
+   estimates); `web/src/camera-focus.js` wires both and blends through
+   `camera-menu.js` `blendCameraTo`. F with nothing selected goes to
+   Stand. A double-click within 60 px of a selected object focuses the
+   object, else the floor under the cursor; ignored while a tool is
+   active (zone / curved arrow use double-click to finish). Tests in
+   `test/orbit-math.test.js`, `test-e2e/camera-focus.spec.js`.
 6. `[lead]` **Touch.** One finger orbits, two fingers pan and pinch,
    in 3D; remove the D-pad buttons from the 3D view (keep Q / E
    rotate, cycle and deselect). Needs a real tablet check by the
    user: Playwright touch emulation is not enough.
-7. `[small]` **Follow ball.** `followTargetAt(frames, elapsedMs)` in
+7. `[done 2026-11-15]` **Follow ball.** As built: `web/src/authoring/
+   follow-ball.js` `ballAtTime` / `followTargetAt` (mean of 13 samples
+   over the last 600 ms, window cut at 0); `playback.js` `applyFollow`
+   runs where no camera keyframe applied (`applyCamera` now returns
+   whether it did), replaces only the target and reads direction and
+   distance from the camera each time, so an orbit drag still works
+   while following; a scrub snapshots the camera so Stop restores it.
+   "Follow" button next to Loop in the recorder, `state.followBall`,
+   remembered per browser (`floorball3d.followBall`), not in the doc. Tests:
+   `test/follow-ball.test.js`, `test-e2e/follow-ball.spec.js`.
+   Original text: `followTargetAt(frames, elapsedMs)` in
    `orbit-math.js` or next to `ball-pose.js`, test with a two-frame
    pass; a "Follow ball" toggle in the recorder; a frame with its own
    camera keyframe wins over follow.
+8. `[done 2026-11-14]` **Zoom that feels the same everywhere** (added
+   2026-11-14, done before step 4). As built: `zoomTopDownAt(factor,
+   clientX, clientY)` in `topdown-camera.js` serves the 2D wheel and 2D
+   pinch; `dollyBy` takes its rate from `zoomFactor`, so 2D and 3D zoom
+   at the same speed (estimates: 0.0015 per wheel px, 16 px per line,
+   10x for a touchpad pinch). The touch pinch is emulated with
+   synthetic `TouchEvent`s in the spec; a real tablet check is still
+   part of step 6. Problems found in review: the 2D wheel zooms
+   to the window centre, not the cursor; 2D zooms a fixed 15 % per
+   wheel event, so a touchpad (many small events) races; a touchpad
+   pinch (wheel + `ctrlKey`, small deltas) barely moves the 3D camera;
+   touch pinch zooms to the centre and adds a fixed amount per px of
+   finger travel; wheel `deltaMode` lines / pages are read as pixels.
+   Fix: pure `web/src/zoom-math.js` (`wheelDeltaPx`, `zoomFactor`,
+   `pinchWheelDelta`, `zoomOrthoAt`) used by the 2D wheel, the 3D wheel
+   and both pinch paths; 2D zooms about the cursor or the finger
+   midpoint along the camera's own axes (the 2D view can be rotated).
+   Tests first: `test/zoom-math.test.js`, `test-e2e/zoom.spec.js`.
+   Later, separate: eased zoom (~120 ms, instant with reduced motion),
+   `+` / `-` keys, pushing the target forward at the minimum distance.
 
 ## Done when
 

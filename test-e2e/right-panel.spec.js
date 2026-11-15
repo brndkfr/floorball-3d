@@ -66,10 +66,13 @@ test.describe('below 1200 px', () => {
   });
 });
 
-test('at 1200 px and wider the panel is docked and the toggle is hidden', async ({ page }) => {
+// A-BACK-044: at 1200 px and wider the toggle collapses the docked panel to
+// an icon strip instead of opening a drawer (panels.spec.js).
+test('at 1200 px and wider the panel is docked and the toggle shows it as open', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/', { waitUntil: 'load' });
-  await expect(page.locator('#appTopbar [data-action="toggle-panel"]')).toBeHidden();
+  await expect(page.locator('#rightPanel')).toBeVisible();
+  await expect(page.locator('#appTopbar [data-action="toggle-panel"]')).toHaveAttribute('aria-expanded', 'true');
 });
 
 // The 2D fit used the whole window, so the docked panel covered the right

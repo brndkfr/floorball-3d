@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { state } from '../state.js';
 import { ensureDoc } from './doc.js';
 import { getFrames } from './frames.js';
-import { camera, topDownCamera, renderer, getActiveCamera } from '../scene.js';
+import { camera, topDownCamera, renderer, getActiveCamera, getCameraRig, applyCameraRig } from '../scene.js';
 import { normalizeSpeed } from './transport-math.js';
 
 const playback = {
@@ -68,13 +68,17 @@ export function play() {
   // Snapshot the perspective camera so stop() can put it back where the
   // user left it. Only the perspective cam gets keyframed (top-down is
   // the flat authoring surface); its pose is left alone.
+  saveCamera();
+  playback.playing = true;
+  window.dispatchEvent(new Event('playbackChanged'));
+}
+
+function saveCamera() {
   playback.savedCamera = {
     position: camera.position.clone(),
     quaternion: camera.quaternion.clone(),
     fov: camera.fov,
   };
-  playback.playing = true;
-  window.dispatchEvent(new Event('playbackChanged'));
 }
 
 export function pause() {
@@ -169,6 +173,7 @@ function lerp(a, b, t) { return a + (b - a) * t; }
 // three.js graph.
 import { bezierPos, segmentControls, lerpAngle } from './bezier.js';
 import { ballPoseAt } from './ball-pose.js';
+import { followTargetAt } from './follow-ball.js';
 import { applyActorsFromScheme } from './actors.js';
 
 function applyPose(elapsed) {
@@ -211,8 +216,22 @@ function applyPose(elapsed) {
     }
   }
 
-  applyCamera(elapsed);
+  if (!applyCamera(elapsed)) applyFollow(elapsed);
   for (const fn of poseListeners) fn(elapsed);
+}
+
+// Follow ball (A-BACK-040 step 7): where no camera keyframe applies, the
+// perspective camera turns around the ball (follow-ball.js, a function of
+// the frames and the time, so the export matches). Direction and distance
+// are read from the camera each time, so an orbit drag still works while
+// following. A scrub (seekTo without play) snapshots the camera first, so
+// stop() puts it back.
+function applyFollow(elapsed) {
+  if (!state.followBall || state.activeCamera !== camera) return;
+  const target = followTargetAt(getFrames(), elapsed);
+  if (!target) return;
+  if (!playback.savedCamera) saveCamera();
+  applyCameraRig({ ...getCameraRig(), tx: target.x, tz: target.z });
 }
 
 // Camera keyframes only affect the perspective camera. Frames that have
@@ -222,8 +241,9 @@ function applyPose(elapsed) {
 // camera alone (so a partial-flight authoring is intuitive).
 const _qA = new THREE.Quaternion();
 const _qB = new THREE.Quaternion();
+// Returns true when a keyframe set the camera.
 function applyCamera(elapsed) {
-  if (state.activeCamera !== camera) return;
+  if (state.activeCamera !== camera) return false;
   const frames = getFrames();
   // Precompute each frame's start time (cheap; small N).
   let acc = 0;
@@ -235,13 +255,13 @@ function applyCamera(elapsed) {
     if (times[i] <= elapsed) prev = i;
     if (times[i] >= elapsed && next === -1) next = i;
   }
-  if (prev < 0 && next < 0) return;
+  if (prev < 0 && next < 0) return false;
   const kf = frames[prev >= 0 ? prev : next].camera;
   if (prev < 0 || next < 0 || prev === next) {
     camera.position.set(kf.position[0], kf.position[1], kf.position[2]);
     camera.quaternion.set(kf.quaternion[0], kf.quaternion[1], kf.quaternion[2], kf.quaternion[3]);
     if (kf.fov) { camera.fov = kf.fov; camera.updateProjectionMatrix(); }
-    return;
+    return true;
   }
   const a = frames[prev].camera, b = frames[next].camera;
   const span = times[next] - times[prev];
@@ -255,6 +275,7 @@ function applyCamera(elapsed) {
   _qB.set(b.quaternion[0], b.quaternion[1], b.quaternion[2], b.quaternion[3]);
   camera.quaternion.slerpQuaternions(_qA, _qB, t);
   if (a.fov && b.fov) { camera.fov = lerp(a.fov, b.fov, t); camera.updateProjectionMatrix(); }
+  return true;
 }
 
 function restoreEditFrame() {

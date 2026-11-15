@@ -10,6 +10,7 @@ import { removeCone } from './authoring/cones.js';
 import { removeBall } from './authoring/balls.js';
 import { removeGoal, updateGoal } from './authoring/goals.js';
 import { isTopDown, resetTopDownView } from './authoring/topdown-camera.js';
+import { focusSelection } from './camera-focus.js';
 import { isChoreoActive, cancelChoreo } from './authoring/choreograph.js';
 
 const targetGoalLabelEl = document.getElementById('targetGoalLabel');
@@ -154,8 +155,9 @@ window.addEventListener('keydown', (event) => {
     cycleSelection(event.shiftKey ? -1 : 1);
     return;
   }
-  if ((event.key === 'f' || event.key === 'F') && !event.ctrlKey && !event.metaKey && isTopDown()) {
-    resetTopDownView();
+  if ((event.key === 'f' || event.key === 'F') && !event.ctrlKey && !event.metaKey) {
+    if (isTopDown()) resetTopDownView();
+    else focusSelection();   // A-BACK-040 step 5
     event.preventDefault();
     return;
   }

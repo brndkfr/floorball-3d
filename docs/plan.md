@@ -99,11 +99,14 @@ can be handed to a smaller model as they are; `[lead]` steps need a
 strong model that can look at screenshots, or the user's eye.
 
 Progress lives in each item file ("Progress" section or `[done]` on a
-step). State on 2026-11-14 (branch `look-and-motion`, committed, not
-merged): S-BACK-030 steps 0 to 3 and 6 done, step 8 half done (disc
-0.7 m, team ring under figures); A-BACK-040 steps 1 to 3 done (orbit,
-pan, wheel dolly, fitted default view). Next: S-BACK-030 step 8 second
-half (number sprite size), then A-BACK-040 step 4 (presets). To check
+step). State on 2026-11-15 (steps up to 2026-11-14 merged in #35; the
+rest on branch `camera-and-panels`): S-BACK-030 steps 0 to 3, 6 and 8 done (disc 0.7 m, team
+ring under figures, number sprite size clamp 2026-11-15); A-BACK-040
+steps 1 to 5, 7 and 8 done (orbit, pan, wheel dolly, fitted default
+view; presets, focus and follow ball 2026-11-15; zoom about the cursor
+in 2D, touchpad and pinch fixes); left there: step 6 (touch, needs a
+tablet). A-BACK-044 steps 1 to 4 done 2026-11-15 (panel strip, folds,
+Present); step 5 is the user's look. To check
 by eye in a real browser: a darker band across the top of the 3D view
 that shows in headless screenshots (see the S-BACK-030 item file).
 
@@ -117,10 +120,12 @@ that shows in headless screenshots (see the S-BACK-030 item file).
    [items/A-BACK-040](items/A-BACK-040-camera-navigation.md).
 4. **[A-BACK-041] Player moves** Carry, pass, receive, wrist and slap
    shot. [items/A-BACK-041-043](items/A-BACK-041-043-floorball-moves.md).
-5. **[S-BACK-030] 3D look, rest** Floor, number sprite size (rest of
-   step 8), shadow map, arena shell.
+5. **[S-BACK-030] 3D look, rest** Floor, shadow map, arena shell.
 6. **[A-BACK-042] Posable goalie**, then **[A-BACK-043] Goalie
    behaviour** (043 needs S-BACK-024 first). Same file as 041.
+7. **[A-BACK-044] Collapsible panels and Present mode** (added
+   2026-11-15) Room for the rink while editing, nothing but the rink
+   while showing it. [items/A-BACK-044](items/A-BACK-044-panels.md).
 
 ### Later (parked)
 
@@ -189,6 +194,11 @@ lines. An item that needs more than ~10 lines gets its own file under
 - **[A-BACK-043] Goalie behaviour** [blocked-by: A-BACK-042] Auto
   position on the ball line, save reactions timed from the shot.
   Also needs S-BACK-024. Same file.
+- **[A-BACK-044] Collapsible panels and Present mode** [in-progress] Side
+  panel collapses to a 40 px icon strip (`\`), every section and the
+  timeline fold; Present hides everything but a small transport for
+  showing a play to the team. Floating panels are not planned
+  (decision 002). [Spec](items/A-BACK-044-panels.md).
 
 ### Mode B - Analyze
 
@@ -208,15 +218,20 @@ lines. An item that needs more than ~10 lines gets its own file under
 
 ### Shared / infrastructure
 
-- **[S-BACK-022] Slow local e2e runs** [open] Slow and noisy (2.2 to
-  17.5 min for the same 80 tests; headless Chromium stalls before app
-  code runs; CI unaffected). Try one change at a time, three timed full
-  runs each: local `trace: 'on-first-retry'`, `workers: 2`, a Defender
-  exclusion for `test-results/` and `node_modules/.pnpm/`, then a
-  GPU-backed launch (`--use-angle=d3d11`). Keep what measurably helps.
-  Measured 2026-11-14: `choreograph.spec.js:39` takes 8 to 55 s on
-  unchanged code (limit 30 s), `choreo-tutorial.spec.js:91` fails
-  locally; both stall after entering Choreo, so start there.
+- **[S-BACK-022] Slow local e2e runs** [done 2026-11-15] Cause: this
+  machine is ARM64 (Snapdragon X); Node and the bundled Playwright
+  Chromium (`chrome-win64`) are x64 and run under emulation, and
+  headless WebGL ran on SwiftShader (software). Fix: locally on Windows
+  the suite uses Edge (native ARM64, Adreno GPU via D3D11) through
+  `scripts/e2e-browser.mjs`; CI keeps the bundled Chromium.
+  `PW_CHANNEL=chromium` forces the old browser. Measured on 58 tests
+  (camera-orbit, zoom, choreograph, timeline, bootstrap,
+  choreo-tutorial): bundled, 3 workers 253 s with 5 timeouts; bundled,
+  1 worker 210 s; Edge, 3 workers 56 s; Edge, 6 workers 51 s. Full
+  suite with Edge: 2.3 min on mains power, 7.4 min with 2 load
+  timeouts on battery (Windows throttles the CPU); both timeouts passed
+  alone. Open, optional: a native ARM64 Node (the runner and static
+  server are still emulated).
 - **[S-BACK-031] e2e area sets** [open] One command for the area run
   that CLAUDE.md workflow step 5 asks for when `test:e2e:affected`
   says `FULL RUN`: tag each spec with its areas (`@chips`, `@camera`,
