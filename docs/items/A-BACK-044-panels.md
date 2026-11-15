@@ -1,6 +1,7 @@
 # A-BACK-044 - Collapsible panels and Present mode
 
-Status: open. Drafted 2026-11-14, agreed 2026-11-15 (options A and C of
+Status: in progress (steps 1 and 2 done 2026-11-15). Drafted
+2026-11-14, agreed 2026-11-15 (options A and C of
 the clickable draft:
 <https://claude.ai/artifact/9tRBKZfgafPBVFjEapqkPh>). Keeps
 [decisions/002](../decisions/002-broadcast-direction.md): the panel
@@ -67,14 +68,27 @@ Inspector, and only after living with A and C.
 
 ## Steps
 
-1. `[small]` **Panel state math, no UI change.** Pure
+1. `[done 2026-11-15]` **Panel state math, no UI change.** As built:
+   `parsePanelState`, `togglePanel`, `toggleFold`, `toggleTimeline`,
+   `openAt`, `SECTIONS`, `PRESENT_HIDES`, `PANEL_STRIP_PX`; the
+   inset itself stays in CSS (`html.panel-strip { --right-panel:
+   40px }`), which `readShellInsets()` already reads. Original text: Pure
    `web/src/ui/panel-layout.js`: `panelInsets({ panel, width })` ->
    `{ right }` (320 open, 40 strip, 0 below 1200 px),
    `parsePanelState(stored)` (bad or missing -> defaults, as
    `palette-position.js` `parseStoredPos` does) and
    `presentHides` (the list of shell roots Present hides). Node test
    `test/panel-layout.test.js` first.
-2. `[small]` **Collapse the side panel to an icon strip.** e2e first,
+2. `[done 2026-11-15]` **Collapse the side panel to an icon strip.** As
+   built: `web/src/ui/panels.js` owns the top bar panel button (moved
+   out of `topbar.js`): drawer below 1200 px as before, strip at >=
+   1200 px, hidden in Analyze there; `#panelStrip` in `index.html`;
+   state in `localStorage` `floorball3d.panels`; the re-fit is a direct
+   `fitTopDownFrustum()` + `refitDefaultView()` after each change, no
+   observer needed. `right-panel.spec.js` now expects the button at
+   >= 1200 px. Tests: `test-e2e/panels.spec.js`. Found on the way: the
+   hall floor covering the rink on a real GPU, fixed separately
+   (S-BACK-030). Original text: e2e first,
    `test-e2e/panels.spec.js`: at 1440 x 900 the panel button collapses
    the panel; the 2D rink box gets wider; the untouched 3D default view
    re-fits; a strip icon opens the panel at that section; a reload

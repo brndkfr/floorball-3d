@@ -35,13 +35,7 @@ for (const b of modeButtons) {
   });
 }
 
-// Below 1200 px the right panel is a drawer (app.css); this opens / closes it.
-const panelToggle = bar.querySelector('[data-action="toggle-panel"]');
-if (!panelToggle) throw new Error('topbar.js: panel toggle missing from index.html');
-panelToggle.addEventListener('click', () => {
-  const open = document.body.classList.toggle('right-panel-open');
-  panelToggle.setAttribute('aria-expanded', String(open));
-});
+// The panel toggle (drawer below 1200 px, icon strip above) is ui/panels.js.
 
 exportBtn.addEventListener('click', async () => {
   (await import('../authoring/export-dialog.js')).openExportDialog();

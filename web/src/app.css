@@ -686,8 +686,28 @@
     user-select:none; scrollbar-width:thin;
   }
   #rightPanel .rp-section { padding:16px; border-bottom:1px solid var(--fb-line); }
-  #appTopbar [data-action="toggle-panel"] { display:none; }
   .shell-icon { padding:0 9px; }
+  /* A-BACK-044: at >= 1200 px the top bar button (or "\") collapses the
+     panel to a 40 px strip of section icons (ui/panels.js sets
+     html.panel-strip; 40 = panel-layout.js PANEL_STRIP_PX). Analyze has its
+     own docked photo panel, so the button is Plan-only there. */
+  #panelStrip { display:none; }
+  @media (min-width: 1200px) {
+    html.panel-strip { --right-panel: 40px; }
+    html.panel-strip #rightPanel { display:none; }
+    html.panel-strip #panelStrip {
+      position:fixed; top:var(--shell-topbar); right:0; bottom:0; width:var(--right-panel); z-index:26;
+      box-sizing:border-box; display:flex; flex-direction:column; align-items:center; gap:6px; padding-top:10px;
+      background:var(--fb-surf-1); border-left:1px solid var(--fb-line);
+    }
+    #panelStrip button {
+      width:32px; height:32px; display:grid; place-items:center; cursor:pointer;
+      border:none; border-radius:var(--fb-radius-1); background:transparent; color:var(--fb-text-2);
+    }
+    #panelStrip button:hover { background:var(--fb-surf-3); color:var(--fb-text-1); }
+    #panelStrip button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:-2px; }
+    body[data-mode="analyze"] #appTopbar [data-action="toggle-panel"] { display:none; }
+  }
   /* Design canvas breakpoint: below 1200 px the side panels are drawers over
      the stage instead of columns, and the stage keeps its width. Closed means
      display:none, not an off-screen transform: mobile browsers widen the
@@ -699,7 +719,6 @@
     body.right-panel-open #rightPanel { display:flex; }
     #photoPanel { display:none; }
     body.right-panel-open #photoPanel { display:block; }
-    #appTopbar [data-action="toggle-panel"] { display:inline-flex; }
   }
   #rightPanel .rp-head, #inspector .ins-title, #layersPanel .lp-head {
     display:flex; align-items:center; gap:8px; margin-bottom:12px;

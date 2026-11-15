@@ -193,7 +193,7 @@ lines. An item that needs more than ~10 lines gets its own file under
 - **[A-BACK-043] Goalie behaviour** [blocked-by: A-BACK-042] Auto
   position on the ball line, save reactions timed from the shot.
   Also needs S-BACK-024. Same file.
-- **[A-BACK-044] Collapsible panels and Present mode** [open] Side
+- **[A-BACK-044] Collapsible panels and Present mode** [in-progress] Side
   panel collapses to a 40 px icon strip (`\`), every section and the
   timeline fold; Present hides everything but a small transport for
   showing a play to the team. Floating panels are not planned
