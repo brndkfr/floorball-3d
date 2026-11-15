@@ -58,10 +58,14 @@ the TDD workflow in [CLAUDE.md](../../CLAUDE.md).
    Reset view stays in View. e2e first: select the ball, switch the
    lines on, pick Away, the overlays follow; select a chip, the
    overlays stay; reload keeps the toggles; a11y spec stays green.
-4. `[small]` **Verdict readout, pure + gated.** `shotReadout(...)` ->
-   `{ goal, key, pctBlocked }` from `shotVerdict` and `coverageGrid`
-   (proxy, cheap), recomputed only when the trajectory gate's inputs
-   change; the Inspector card and the chip read it.
+4. `[done 2026-11-15]` **Verdict readout, gated** (built before step 3,
+   which needs it). `shot-readout.js`: `shotReadout({ ballWorld, goal,
+   goalie })` -> `{ goal, key, pctBlocked }`; `updateShotReadout()` in
+   main.js's loop keeps `state.shotReadout` and fires
+   `shotReadoutChanged`, only when the trajectory gate's inputs move.
+   `insights.js` `shotVerdict` now tests the goalie's proxy too, so the
+   verdict and the % agree. Tests: `test/shot-readout.test.js`,
+   `shot-target.spec.js`.
 5. `[small]` **Verdict chip on the rink.** Replaces the old
    `#goalieLabel` ("NN% blocked" over the goalie): dot + verdict +
    %, placed by the targeted goal, shown while any shot overlay is on,

@@ -112,3 +112,32 @@ test('picking a goal or a goalie in the Layers panel aims the overlays there', a
   await page.locator('#layersPanel, [data-section="layers"], #rightPanel').getByText('Away', { exact: true }).first().click();
   expect((await overlays(page)).goal).toBe('B');
 });
+
+// A-BACK-045 step 4: state.shotReadout (verdict + % blocked) follows the
+// ball and the goalie, for the Inspector card and the rink chip.
+test('the shot readout follows the goalie: squared up, then open when it steps aside', async ({ page }) => {
+  await boot(page);
+  await placeBall(page, 9500);   // straight in front of goal A
+  // rAF can stall in a background tab: run the loop's update directly.
+  const goalieAt = (x) => page.evaluate(async (x) => {
+    const { state } = await import('/src/state.js');
+    const { updateShotReadout } = await import('/src/shot-readout.js');
+    let events = 0;
+    const count = () => { events++; };
+    window.addEventListener('shotReadoutChanged', count);
+    state.goalies.A.position.x = x;
+    updateShotReadout();
+    window.removeEventListener('shotReadoutChanged', count);
+    return { ...state.shotReadout, events };
+  }, x);
+  // 1 mm, not 0: the goalie starts at 0, and the app loop may already have
+  // computed that pose, so only a real change is sure to fire one event.
+  const centred = await goalieAt(1);
+  expect(centred.goal).toBe('A');
+  expect(centred.key).toBe('blocked-centred');
+  expect(centred.pctBlocked).toBeGreaterThan(30);
+  expect(centred.events).toBe(1);
+  const open = await goalieAt(2500);
+  expect(open.key).toBe('open');
+  expect(open.pctBlocked).toBeLessThan(1);
+});
