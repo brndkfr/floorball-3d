@@ -45,7 +45,20 @@ export function shotVerdict({ ballWorld, goalCenterWorld, goalieMesh, path }) {
   if (goalieMesh && goalieMesh.visible !== false) {
     const pts = path || [ballWorld, goalCenterWorld];
     let hit = false;
-    for (let i = 1; i < pts.length && !hit; i++) {
+    // A goalie with a proxy (A-BACK-042) is tested against it, like coverage,
+    // so the verdict and the % blocked agree.
+    const proxy = goalieMesh.userData?.proxy;
+    if (proxy) {
+      proxyInverse.copy(goalieMesh.matrixWorld).invert();
+      for (let i = 1; i < pts.length && !hit; i++) {
+        proxyOrigin.set(pts[i - 1].x, pts[i - 1].y, pts[i - 1].z).applyMatrix4(proxyInverse);
+        proxyEnd.set(pts[i].x, pts[i].y, pts[i].z).applyMatrix4(proxyInverse).sub(proxyOrigin);
+        const len = proxyEnd.length();
+        if (len < 1) continue;
+        hit = rayHitsProxy(proxyOrigin, proxyEnd.divideScalar(len), i === pts.length - 1 ? len - 1 : len, proxy);
+      }
+    }
+    for (let i = 1; i < pts.length && !hit && !proxy; i++) {
       const seg = shotDirScratch.set(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y, pts[i].z - pts[i - 1].z);
       const len = seg.length();
       if (len < 1) continue;
