@@ -76,18 +76,84 @@ export function stickPlacement(hand) {
   return { position, yaw: Math.atan2(-dir.z, dir.x), dir, mirror: hand === 'R' };
 }
 
-// Point at distance `s` along the shaft axis (from its floor point).
-function alongShaft(p, s) {
-  const lie = STICK_LIE_DEG * Math.PI / 180;
-  const h = STICK_AXIS_FLOOR_X + Math.cos(lie) * s;
-  return { x: p.position.x + p.dir.x * h, y: Math.sin(lie) * s, z: p.position.z + p.dir.z * h };
+const LIE = STICK_LIE_DEG * Math.PI / 180;
+
+// Point at distance `s` along the shaft axis (from its floor point) of the
+// original fixed placement.
+function alongPlacement(p, s) {
+  const h = STICK_AXIS_FLOOR_X + Math.cos(LIE) * s;
+  return { x: p.position.x + p.dir.x * h, y: Math.sin(LIE) * s, z: p.position.z + p.dir.z * h };
 }
 
 const TOP_S = STICK_LENGTH_MM - TOP_GRIP_FROM_END_MM;
 
+// --- the pose (A-BACK-041 step 1) ---------------------------------------
+// One stance + stick pose, in figure-local mm for a LEFT-handed player
+// (blade on the left, +X); stickTransform() mirrors x for 'R'.
+//   blade  blade floor-contact point (the stick asset's origin)
+//   top    top-hand grip point; the shaft runs from the blade toward it
+//   roll   deg, blade face open / closed (not applied before step 3)
+//   twist  deg, bottom-hand shoulder ahead of square
+//   lean   deg, spine forward lean
+//   drop   mm, pelvis drop
+//   shift  mm, pelvis shift (weight transfer), x = the player's left
+// DEFAULT_POSE is the ready stance of A-BACK-034, taken from the original
+// fixed placement, so applying it changes nothing.
+export const DEFAULT_POSE = Object.freeze({
+  blade: Object.freeze({ ...stickPlacement('L').position }),
+  top: Object.freeze(alongPlacement(stickPlacement('L'), TOP_S)),
+  roll: 0,
+  twist: SHOULDER_TWIST_DEG,
+  lean: SPINE_LEAN_DEG,
+  drop: PELVIS_DROP_MM,
+  shift: Object.freeze({ x: 0, z: 0 }),
+});
+
+// Where the stick object goes for `pose`: `position` (blade contact point),
+// `yaw` about +Y as in stickPlacement(), `tilt` (rad) about the stick's own
+// Z after the yaw (positive raises the shaft above its STICK_LIE_DEG), the
+// shaft's `elevation` (lie + tilt), `roll` (rad), `mirror`, and `dir` (unit
+// floor direction blade -> shaft).
+//
+// The blade point, the shaft's floor point and the top grip's floor
+// projection share one horizontal line, so the yaw is the direction of
+// top - blade. Tilting about the blade point also lifts the shaft's floor
+// point (it is STICK_AXIS_FLOOR_X along the asset's +X), so the shaft line
+// through `top` needs, with phi = lie + tilt and (h, r) = top - blade in
+// the shaft's vertical plane: h sin(phi) - r cos(phi) = AXIS_X sin(lie).
+export function stickTransform(pose, hand) {
+  const m = hand === 'R' ? -1 : 1;
+  const position = { x: m * pose.blade.x, y: pose.blade.y, z: pose.blade.z };
+  const top = { x: m * pose.top.x, y: pose.top.y, z: pose.top.z };
+  const hx = top.x - position.x, hz = top.z - position.z;
+  const h = Math.hypot(hx, hz);
+  const dir = { x: hx / h, z: hz / h };
+  const r = top.y - position.y;
+  const reach = Math.hypot(h, r);
+  const elevation = Math.atan2(r, h) + Math.asin(Math.min(1, STICK_AXIS_FLOOR_X * Math.sin(LIE) / reach));
+  return {
+    position, dir, elevation,
+    yaw: Math.atan2(-dir.z, dir.x),
+    tilt: elevation - LIE,
+    roll: (pose.roll || 0) * Math.PI / 180,
+    mirror: hand === 'R',
+  };
+}
+
+// Point at distance `s` along the shaft axis of a stickTransform() result,
+// measured from the shaft's (tilted) floor point.
+function alongShaft(t, s) {
+  const h = STICK_AXIS_FLOOR_X * Math.cos(t.tilt) + Math.cos(t.elevation) * s;
+  return {
+    x: t.position.x + t.dir.x * h,
+    y: t.position.y + STICK_AXIS_FLOOR_X * Math.sin(t.tilt) + Math.sin(t.elevation) * s,
+    z: t.position.z + t.dir.z * h,
+  };
+}
+
 // Grip targets (figure-local mm) and which hand ('l' / 'r') holds each.
-export function gripPoints(hand) {
-  const p = stickPlacement(hand);
+export function gripPoints(hand, pose = DEFAULT_POSE) {
+  const p = stickTransform(pose, hand);
   return {
     top: alongShaft(p, TOP_S),
     bottom: alongShaft(p, TOP_S - HAND_SPACING_MM),
@@ -102,8 +168,8 @@ export function gripPoints(hand) {
 // `reach` of `shoulder` (figure-local mm), but no closer than
 // MIN_HAND_SPACING_MM to the top grip.
 export const MIN_HAND_SPACING_MM = 100;
-export function bottomGripWithin(hand, shoulder, reach) {
-  const p = stickPlacement(hand);
+export function bottomGripWithin(hand, shoulder, reach, pose = DEFAULT_POSE) {
+  const p = stickTransform(pose, hand);
   const lo = TOP_S - HAND_SPACING_MM, hi = TOP_S - MIN_HAND_SPACING_MM;
   const inReach = (s) => norm(sub(alongShaft(p, s), shoulder)) <= reach;
   if (inReach(lo)) return alongShaft(p, lo);
