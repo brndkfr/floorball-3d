@@ -143,3 +143,57 @@ test('bottomGripWithin stops MIN_HAND_SPACING_MM below the top grip', () => {
   const along = dist(top, g);
   assert.ok(Math.abs(along - MIN_HAND_SPACING_MM) < 1e-6, `spacing ${along}`);
 });
+
+// A-BACK-041 step 1: the stance and stick as one pose parameter. DEFAULT_POSE
+// is today's fixed placement; stickTransform() must give it back.
+test('DEFAULT_POSE carries the stance constants and today\'s blade and top grip', async () => {
+  const { DEFAULT_POSE, PELVIS_DROP_MM, SPINE_LEAN_DEG, SHOULDER_TWIST_DEG } = await import('../web/src/authoring/stick-pose.js');
+  assert.equal(DEFAULT_POSE.drop, PELVIS_DROP_MM);
+  assert.equal(DEFAULT_POSE.lean, SPINE_LEAN_DEG);
+  assert.equal(DEFAULT_POSE.twist, SHOULDER_TWIST_DEG);
+  assert.deepEqual(DEFAULT_POSE.shift, { x: 0, z: 0 });
+  assert.equal(DEFAULT_POSE.roll, 0);
+  assert.ok(near(DEFAULT_POSE.blade, stickPlacement('L').position));
+  assert.ok(near(DEFAULT_POSE.top, gripPoints('L').top));
+  assert.ok(Object.isFrozen(DEFAULT_POSE));
+});
+
+test('stickTransform(DEFAULT_POSE) is today\'s stickPlacement, both hands (1 mm / 0.1 deg)', async () => {
+  const { DEFAULT_POSE, stickTransform } = await import('../web/src/authoring/stick-pose.js');
+  for (const hand of ['L', 'R']) {
+    const t = stickTransform(DEFAULT_POSE, hand);
+    const p = stickPlacement(hand);
+    assert.ok(dist(t.position, p.position) < 1, `${hand} position`);
+    assert.ok(Math.abs(t.yaw - p.yaw) * 180 / Math.PI < 0.1, `${hand} yaw ${t.yaw} vs ${p.yaw}`);
+    assert.ok(Math.abs(t.tilt) * 180 / Math.PI < 0.1, `${hand} tilt ${t.tilt}`);
+    assert.equal(t.roll, 0);
+    assert.equal(t.mirror, p.mirror);
+  }
+});
+
+test('gripPoints and bottomGripWithin with DEFAULT_POSE are unchanged', async () => {
+  const { DEFAULT_POSE } = await import('../web/src/authoring/stick-pose.js');
+  for (const hand of ['L', 'R']) {
+    const a = gripPoints(hand), b = gripPoints(hand, DEFAULT_POSE);
+    assert.ok(dist(a.top, b.top) < 1 && dist(a.bottom, b.bottom) < 1, hand);
+    const shoulder = { x: 0, y: 1300, z: 0 };
+    assert.ok(dist(bottomGripWithin(hand, shoulder, 600), bottomGripWithin(hand, shoulder, 600, DEFAULT_POSE)) < 1, hand);
+  }
+});
+
+test('a raised top grip tilts the shaft up, and the shaft still passes through it', async () => {
+  const { DEFAULT_POSE, stickTransform } = await import('../web/src/authoring/stick-pose.js');
+  const pose = { ...DEFAULT_POSE, top: { ...DEFAULT_POSE.top, y: DEFAULT_POSE.top.y + 150 } };
+  for (const hand of ['L', 'R']) {
+    const t = stickTransform(pose, hand);
+    assert.ok(t.tilt > 0, `${hand} tilt ${t.tilt}`);
+    const g = gripPoints(hand, pose);
+    const m = hand === 'R' ? -1 : 1;
+    const want = { ...pose.top, x: m * pose.top.x };
+    // top and bottom grips and the wanted top point are collinear
+    const u = { x: g.top.x - g.bottom.x, y: g.top.y - g.bottom.y, z: g.top.z - g.bottom.z };
+    const w = { x: want.x - g.bottom.x, y: want.y - g.bottom.y, z: want.z - g.bottom.z };
+    const cross = Math.hypot(u.y * w.z - u.z * w.y, u.z * w.x - u.x * w.z, u.x * w.y - u.y * w.x) / Math.hypot(u.x, u.y, u.z);
+    assert.ok(cross < 1, `${hand}: shaft misses the top point by ${cross} mm`);
+  }
+});

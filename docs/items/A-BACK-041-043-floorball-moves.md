@@ -104,7 +104,16 @@ motion), shot block on one knee, face-off stance, drag move.
 
 ### Steps
 
-1. `[lead]` **Pose as a parameter (no visual change).**
+1. `[done 2026-11-15]` **Pose as a parameter (no visual change).**
+   As built: `DEFAULT_POSE` (frozen, taken from the old fixed
+   placement), `stickTransform(pose, hand)` -> position, yaw, tilt,
+   elevation, roll, mirror, dir; tilt is solved exactly so the shaft
+   passes through `top` although the asset pivots on the blade point;
+   `gripPoints` / `bottomGripWithin` / `placeStick` /
+   `applyStanceAndStick` / `stickResiduals` take an optional pose; roll
+   is returned but not applied yet (step 3). `stickPlacement()` stays
+   as the reference the tests compare with. Checked: `pnpm run look`
+   before / after pixel-identical in all six views. Original text:
    `stick-pose.js`: `DEFAULT_POSE` in the data model above and
    `stickTransform(pose, hand)` -> position, yaw, tilt, mirror.
    `figure-stick.js`: `applyStanceAndStick(fig, stick, hand, pose =
