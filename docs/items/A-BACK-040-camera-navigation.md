@@ -81,7 +81,9 @@ the last 600 ms (estimate), not a per-frame low-pass.
 - 2026-11-14: step 3 done (fitted default view, FOV 45).
 - 2026-11-14: step 8 done (zoom about the cursor in 2D, one rate for
   wheel, touchpad and pinch; `test/zoom-math.test.js`,
-  `test-e2e/zoom.spec.js`). Next: step 4 (presets).
+  `test-e2e/zoom.spec.js`).
+- 2026-11-15: step 4 done (presets: Views menu and Shift+1..6). Next:
+  step 5 (focus).
 
 ## Steps
 
@@ -159,7 +161,21 @@ the last 600 ms (estimate), not a per-frame low-pass.
    `ORBIT_LIMITS.maxDist` on narrow stages; check the fog (far 90 000)
    does not hide the rink there, see S-BACK-030 step 2. Update the specs that assert the old
    default pose.
-4. `[small]` **Presets.** Pure table `web/src/camera-presets.js`
+4. `[done 2026-11-15]` **Presets.** As built: presets are camera poses
+   `{ x, y, z, yaw, pitch }`, not rigs ("Player eye" and "From the
+   ball" are not orbit poses); `presetPose(id, { fit, chip })`,
+   `presetForKey` (reads `code`, so Shift+digit works on any layout),
+   `lerpPose`, `easeInOut` in `web/src/camera-presets.js`. Menu
+   "Views" in the top bar (`web/src/ui/camera-menu.js`, own module next
+   to `topbar.js`), 400 ms blend in `animate()` via `tickCameraTween`,
+   instant with reduced motion, stopped by a click or wheel on the
+   stage; a preset chosen in 2D switches to 3D; "Stand" ends in
+   `applyDefaultView()`; "Player eye" is disabled without a selected
+   chip; "From the ball" in the menu reuses the View panel button, which
+   stays for now. Distances and heights are estimates checked in
+   screenshots (bench side 4 m up, 2.5 m outside the board). Tests:
+   `test/camera-presets.test.js`, `test-e2e/camera-presets.spec.js`.
+   Original text: Pure table `web/src/camera-presets.js`
    (`presetRig(name, { selectedChip, ball, targetGoal })`) with a
    test per preset (camera is outside the boards for the goal views,
    looks at the goal mouth, and so on). Menu in the top bar

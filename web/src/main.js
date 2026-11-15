@@ -7,6 +7,7 @@ import { updateCoverage, updateGoalieLabel } from './coverage.js';
 import { snapshotChanged, copySnapshot } from './dirty-check.js';
 import { consumeRenderDirty } from './render-dirty.js';
 import { tickBlobShadows } from './blob-shadow.js';
+import { tickCameraTween } from './ui/camera-menu.js';
 
 // side-effect-only modules: each wires up its own DOM listeners and starts
 // loading its OBJ/MTL assets as soon as it's imported
@@ -63,6 +64,7 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
   handleKeyboardMovement(dt);
+  const presetActive = tickCameraTween(dt * 1000);
   const chipsActive = updateChipAnimations(dt);
   const markersActive = updateMoveMarkers(dt);
   const walksActive = updateWalks(dt);
@@ -93,7 +95,7 @@ function animate() {
 
   // consumeRenderDirty() must run every frame (it's edge-triggered) - keep
   // it first so `||` short-circuiting never skips clearing it.
-  const needsRender = consumeRenderDirty() || pollChanged || chipsActive || markersActive
+  const needsRender = consumeRenderDirty() || pollChanged || presetActive || chipsActive || markersActive
     || walksActive || choreoActive || actorsActive || figuresChanged || spritesChanged || passChanged || shadowsChanged || trajectoryChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
   if (needsRender) renderer.render(scene, state.activeCamera);
 }

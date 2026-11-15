@@ -102,9 +102,9 @@ Progress lives in each item file ("Progress" section or `[done]` on a
 step). State on 2026-11-14 (branch `look-and-motion`, committed, not
 merged): S-BACK-030 steps 0 to 3, 6 and 8 done (disc 0.7 m, team
 ring under figures, number sprite size clamp 2026-11-15); A-BACK-040
-steps 1 to 3 done (orbit, pan, wheel dolly, fitted default view) and
-step 8 (zoom about the cursor in 2D, touchpad and pinch fixes). Next:
-A-BACK-040 step 4 (presets), then step 5 (focus). To check
+steps 1 to 4 done (orbit, pan, wheel dolly, fitted default view,
+presets 2026-11-15) and step 8 (zoom about the cursor in 2D, touchpad
+and pinch fixes). Next: A-BACK-040 step 5 (focus). To check
 by eye in a real browser: a darker band across the top of the 3D view
 that shows in headless screenshots (see the S-BACK-030 item file).
 

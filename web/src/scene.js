@@ -191,10 +191,16 @@ export function cameraView() {
 // a view the user moved is never pulled away.
 const lastFit = { position: new THREE.Vector3(), quaternion: new THREE.Quaternion() };
 
+// The fitted default rig for the current window and shell (camera presets'
+// "Stand" blends to it).
+export function defaultRig() {
+  return fitRigToRink({ ...cameraView(), fovDeg: DEFAULT_FOV, insets: readShellInsets() });
+}
+
 export function applyDefaultView() {
   camera.fov = DEFAULT_FOV;
   camera.updateProjectionMatrix();
-  applyCameraRig(fitRigToRink({ ...cameraView(), insets: readShellInsets() }));
+  applyCameraRig(defaultRig());
   lastFit.position.copy(camera.position);
   lastFit.quaternion.copy(camera.quaternion);
 }

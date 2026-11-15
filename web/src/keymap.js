@@ -32,6 +32,7 @@ export const KEY_SECTIONS = [
       ['right-drag / middle-drag', 'pan (Shift + left-drag does the same)'],
       ['scroll', 'move closer / away, toward the point under the cursor'],
       ['WASD / arrows', 'pan camera (never moves the selected item)'],
+      ['Views / Shift+1-6', 'camera presets: stand, behind goal A / B, corner, bench side, player eye (selected chip)'],
     ],
   },
   {

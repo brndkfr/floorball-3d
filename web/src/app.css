@@ -567,6 +567,23 @@
   }
   .shell-seg button[aria-pressed="true"] { background:var(--fb-surf-3); color:var(--fb-text-1); }
   .shell-seg button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:-2px; }
+  /* Camera views menu (A-BACK-040 step 4), under its top bar button. */
+  .shell-menu { position:relative; display:inline-flex; }
+  #cameraPresetMenu {
+    position:absolute; top:calc(100% + 6px); right:0; z-index:40; min-width:210px;
+    display:flex; flex-direction:column; padding:4px 0;
+    background:var(--fb-surf-1); border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1);
+  }
+  #cameraPresetMenu[hidden] { display:none; }
+  #cameraPresetMenu button {
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:8px 14px; border:none; background:transparent; color:var(--fb-text-1);
+    font:500 12px/1.2 var(--fb-font); text-align:left; cursor:pointer;
+  }
+  #cameraPresetMenu button:hover, #cameraPresetMenu button:focus-visible { background:var(--fb-brand-quiet); outline:none; }
+  #cameraPresetMenu button:disabled { color:var(--fb-text-3); cursor:default; background:transparent; }
+  #cameraPresetMenu kbd { font:400 10px/1 var(--fb-mono); color:var(--fb-text-3); }
+  #cameraPresetMenu hr { border:none; height:1px; background:var(--fb-line); margin:4px 0; width:100%; }
   #appRail {
     position:fixed; left:0; top:0; bottom:0; width:var(--shell-rail); z-index:30;
     box-sizing:border-box; display:flex; flex-direction:column; align-items:stretch; gap:2px;
