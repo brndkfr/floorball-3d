@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { CACHE_BUST, GOAL_LINE_FROM_BOARD, RINK_L } from './constants.js';
 import { state } from './state.js';
 import { scene, renderer } from './scene.js';
@@ -53,6 +55,27 @@ function loadGoalieModel(mtlUrl, objUrl, onReady) {
     },
     undefined,
     (err) => failed(mtlUrl, err)
+  );
+}
+
+// The detailed goalie ships as a meshopt GLB with a WebP texture
+// (generators/prepare_goalie.mjs, S-BACK-026). Same anisotropy fix as above.
+function loadGoalieGlb(url, onReady) {
+  expectLoad(url);
+  const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
+  loader.load(
+    url + CACHE_BUST,
+    (gltf) => {
+      const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+      gltf.scene.traverse((child) => {
+        if (child.isMesh && child.material.map) child.material.map.anisotropy = maxAnisotropy;
+      });
+      onReady(gltf.scene);
+      loaded(url);
+    },
+    undefined,
+    (err) => failed(url, err)
   );
 }
 
@@ -142,7 +165,8 @@ loadGoalieModel('assets/goalie.mtl', 'assets/goalie.obj', (object) => {
   if (!state.goalies.A) activateGoalieModel('blocky');
 });
 
-// model 2: user-supplied detailed/textured model (goalie_02.*). Its raw
+// model 2: user-supplied detailed/textured model (goalie_02.glb, made from
+// the Meshy export in generators/vendor/meshy/). Its raw
 // export is normalised to roughly a [-1,1] unit bounding box (Y-span = 2.0),
 // centred vertically on its own origin rather than floor-anchored -
 // GOALIE_02_SCALE and the Y shift below convert that into our mm-scale,
@@ -157,7 +181,7 @@ loadGoalieModel('assets/goalie.mtl', 'assets/goalie.obj', (object) => {
 // anthropometry -> 1800 * 0.755 = ~1359mm. The model's raw Y-span is 2.0
 // units, so scale = 1359 / 2.0 = ~680mm per unit.
 const GOALIE_02_SCALE = 680; // -> ~1360mm kneeling height (180cm standing male, butterfly stance)
-loadGoalieModel('assets/goalie_02.mtl', 'assets/goalie_02.obj', (object) => {
+loadGoalieGlb('assets/goalie_02.glb', (object) => {
   object.scale.setScalar(GOALIE_02_SCALE);
   object.position.y = GOALIE_02_SCALE; // shifts local y=-1 (bottom, pre-scale) up to y=0
   const wrapper = new THREE.Group();
