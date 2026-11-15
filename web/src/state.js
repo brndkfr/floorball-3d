@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BALL_RADIUS } from './constants.js';
+import { shotGoalLetter } from './shot-target.js';
 
 // Single shared mutable object for everything that gets reassigned across
 // module boundaries (ballGroup, selected, targetGoal, camera look angles,
@@ -85,4 +86,13 @@ export function goalLetterForGoal(goalGroup) {
 // behaviour of "the" goalie.
 export function goalieForGoal(goalGroup) {
   return state.goalies[goalLetterForGoal(goalGroup)];
+}
+
+// The goal the shot overlays aim at: state.targetGoal (the user's pick,
+// null = automatic) or the goal nearer the ball (shot-target.js).
+export function shotGoal() {
+  if (!state.goalInstances?.length) return null;
+  const picked = state.targetGoal ? goalLetterForGoal(state.targetGoal) : null;
+  const letter = shotGoalLetter(picked, state.ballGroup?.position.z);
+  return state.goalInstances[letter === 'B' ? 1 : 0] ?? null;
 }

@@ -136,8 +136,10 @@ export function activateGoalieModel(key) {
   const nextModels = state.goalieModels[key];
   if (!nextModels?.A || nextModels.A === state.goalies.A) return;
   const prevA = state.goalies.A, prevB = state.goalies.B;
-  const wasSelectedA = state.selected === prevA;
-  const wasSelectedB = state.selected === prevB;
+  // !!prev: on the first load prev and state.selected are both undefined,
+  // which used to count as "selected" and selected the home goalie on boot.
+  const wasSelectedA = !!prevA && state.selected === prevA;
+  const wasSelectedB = !!prevB && state.selected === prevB;
   if (prevA) { nextModels.A.position.copy(prevA.position); nextModels.A.rotation.copy(prevA.rotation); prevA.visible = false; }
   if (prevB) { nextModels.B.position.copy(prevB.position); nextModels.B.rotation.copy(prevB.rotation); prevB.visible = false; }
   state.goalies.A = nextModels.A;

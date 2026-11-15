@@ -1,12 +1,11 @@
 import * as THREE from 'three';
 import { RINK_L, RINK_W, HALF_W } from './constants.js';
-import { state } from './state.js';
+import { state, shotGoal } from './state.js';
 import { markRenderDirty } from './render-dirty.js';
 import { pickRendererQuality } from './renderer-quality.js';
 import { stageFrustum, readShellInsets } from './ui/stage-frustum.js';
 import { cameraToRig, rigToCamera, dollyBy, screenToFloor, fitRigToRink } from './orbit-math.js';
 import { wheelDeltaPx } from './zoom-math.js';
-import { nearestGoal } from './authoring/ball-pose.js';
 
 export const scene = new THREE.Scene();
 
@@ -296,9 +295,8 @@ document.getElementById('viewFromBallBtn').addEventListener('click', () => {
     return;
   }
   const ballCenter = new THREE.Box3().setFromObject(state.ballGroup).getCenter(new THREE.Vector3());
-  // No goal clicked yet: look at the nearer one (goalInstances is [A, B]).
-  const goal = state.targetGoal
-    ?? state.goalInstances?.[nearestGoal(state.ballGroup.position.z) === 'B' ? 1 : 0];
+  // The picked goal, else the nearer one (shot-target.js).
+  const goal = shotGoal();
   if (!goal) return;
   const goalCenter = goal.localToWorld(new THREE.Vector3(0, 575, 0));
 
