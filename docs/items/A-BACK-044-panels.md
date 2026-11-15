@@ -1,6 +1,7 @@
 # A-BACK-044 - Collapsible panels and Present mode
 
-Status: in progress (steps 1 to 3 done 2026-11-15). Drafted
+Status: in progress (steps 1 to 4 done 2026-11-15; step 5 is the
+user's look, on the screen used for team talks). Drafted
 2026-11-14, agreed 2026-11-15 (options A and C of
 the clickable draft:
 <https://claude.ai/artifact/9tRBKZfgafPBVFjEapqkPh>). Keeps
@@ -113,7 +114,15 @@ Inspector, and only after living with A and C.
    button in `.tl-bar` hides `.tl-strip`; `syncInset()` already re-fits.
    e2e: fold View and the timeline, reload, both still folded; the 2D
    rink box gets taller when the timeline folds.
-4. `[small]` **Present mode.** e2e first: Present hides every shell
+4. `[done 2026-11-15]` **Present mode.** As built: `web/src/ui/
+   present.js`; `html.presenting` hides `PRESENT_HIDES` (also the strip,
+   chip popover, crosshair, save and status lines) with `!important`
+   and zeroes the shell insets in `app.css`; `#presentBar` holds play /
+   pause, time and Exit; entering clears the tool and the selection,
+   stops and plays from frame 1; Esc (capture phase, before deselect)
+   or Exit stops playback, removes the class and restores the camera
+   (re-fit if it was the default view); focus moves to the bar's play
+   button and back to Present. Original text: e2e first: Present hides every shell
    root in `presentHides`, the stage is the full window (3D default
    view fits it), playback runs (drive it with `seekTo`, rAF is paused
    in Playwright), `Esc` restores panel, fold and timeline state and

@@ -35,6 +35,8 @@ export const KEY_SECTIONS = [
       ['Views / Shift+1-6', 'camera presets: stand, behind goal A / B, corner, bench side, player eye (selected chip)'],
       ['F', 'frame the selection (nothing selected: the default view)'],
       ['double-click', 'turn around that spot or object from now on'],
+      ['Present', 'top bar: only the rink and a small player, from frame 1 (Esc leaves)'],
+      ['\\', 'collapse / show the side panel (1200 px and wider)'],
     ],
   },
   {

@@ -138,3 +138,66 @@ test('the recorder folds to its transport bar and the 2D stage gets the room', a
   await page.locator('#timeline [data-action="fold-timeline"]').click();
   await expect(page.locator('#timeline .tl-strip')).toBeVisible();
 });
+
+// Step 4: Present hides everything but the stage and a small transport,
+// plays from frame 1, and Esc restores the exact layout and camera.
+test('Present shows only the stage and a small transport; Esc restores layout and camera', async ({ page }) => {
+  await boot(page);
+  // a two-frame play, the panel as a strip and the recorder folded beforehand
+  await page.evaluate(async () => {
+    const { duplicateFrame } = await import('/src/authoring/frames.js');
+    duplicateFrame(0, 1);
+  });
+  await toggle(page).click();
+  await page.locator('#timeline [data-action="fold-timeline"]').click();
+  const camBefore = await page.evaluate(async () => (await import('/src/scene.js')).getCameraRig());
+
+  const present = page.locator('#appTopbar [data-action="present"]');
+  await present.click();
+  const during = await page.evaluate(async () => {
+    const { PRESENT_HIDES } = await import('/src/ui/panel-layout.js');
+    const { readShellInsets } = await import('/src/ui/stage-frustum.js');
+    const { state } = await import('/src/state.js');
+    const hidden = PRESENT_HIDES.filter((id) => document.getElementById(id))
+      .filter((id) => getComputedStyle(document.getElementById(id)).display !== 'none');
+    return { presenting: document.documentElement.classList.contains('presenting'), stillShown: hidden, insets: readShellInsets(), playing: state.playback.playing, stripShown: getComputedStyle(document.getElementById('panelStrip')).display !== 'none' };
+  });
+  expect(during).toEqual({ presenting: true, stillShown: [], insets: { left: 0, top: 0, right: 0, bottom: 0 }, playing: true, stripShown: false });
+  await expect(page.locator('#presentBar')).toBeVisible();
+  await expect(page.locator('#presentBar [data-present="play"]')).toBeFocused();
+
+  // pause from the small transport
+  await page.locator('#presentBar [data-present="play"]').click();
+  expect(await page.evaluate(async () => (await import('/src/state.js')).state.playback.playing)).toBe(false);
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#presentBar')).toBeHidden();
+  await expect(page.locator('#panelStrip')).toBeVisible();          // strip, as before
+  await expect(page.locator('#timeline .tl-strip')).toBeHidden();   // still folded
+  await expect(present).toBeFocused();
+  const after = await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    const { getCameraRig } = await import('/src/scene.js');
+    return { presenting: document.documentElement.classList.contains('presenting'), playing: state.playback.playing, previewing: state.playback.previewing, rig: getCameraRig() };
+  });
+  expect(after.presenting).toBe(false);
+  expect(after.playing).toBe(false);
+  expect(after.previewing).toBe(false);
+  for (const k of ['tx', 'tz', 'dist', 'pitch']) expect(Math.abs(after.rig[k] - camBefore[k])).toBeLessThan(1);
+});
+
+test('Exit leaves Present too, and Present clears the selection', async ({ page }) => {
+  await boot(page);
+  await page.evaluate(async () => {
+    const chips = await import('/src/authoring/chips.js');
+    const { selectObject } = await import('/src/selection.js');
+    const { state } = await import('/src/state.js');
+    chips.spawnChip({ team: 1, x: 0, z: 15000, number: 7, pushHistory: false });
+    selectObject(state.chipGroups.at(-1));
+  });
+  await page.locator('#appTopbar [data-action="present"]').click();
+  expect(await page.evaluate(async () => (await import('/src/state.js')).state.selected)).toBe(null);
+  await page.locator('#presentBar [data-present="exit"]').click();
+  await expect(page.locator('#rightPanel')).toBeVisible();
+  await expect(page.locator('#appTopbar')).toBeVisible();
+});

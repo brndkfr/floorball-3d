@@ -721,6 +721,34 @@
   }
   #timeline .tl-fold:hover { color:var(--fb-text-1); border-color:var(--fb-text-3); }
   #timeline .tl-fold:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
+  /* A-BACK-044 step 4, Present (ui/present.js): only the stage and a small
+     transport. The ids are panel-layout.js PRESENT_HIDES; the zero insets
+     let the 2D and 3D fits use the whole window. !important: shell.js and
+     the panel strip set display inline or with higher specificity. */
+  html.presenting { --shell-rail:0px; --shell-topbar:0px; --right-panel:0px; --tabbar:0px; }
+  html.presenting #appRail, html.presenting #appTopbar, html.presenting #rightPanel,
+  html.presenting #panelStrip, html.presenting #toolPalette, html.presenting #dock,
+  html.presenting #dockStatus, html.presenting #timeline, html.presenting #touchControls,
+  html.presenting #goalieLabel, html.presenting #chipPopover, html.presenting #crosshair,
+  html.presenting #saveStatus, html.presenting #status { display:none !important; }
+  #presentBar {
+    position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); z-index:60;
+    display:flex; align-items:center; gap:12px; padding:6px 8px 6px 6px;
+    background:color-mix(in srgb, var(--fb-surf-1) 88%, transparent); border:1px solid var(--fb-line-strong); border-radius:999px;
+    color:var(--fb-text-1); font:500 13px/1 var(--fb-mono);
+  }
+  #presentBar[hidden] { display:none; }
+  #presentBar button { cursor:pointer; font:600 12px/1 var(--fb-font); }
+  #presentBar [data-present="play"] {
+    width:40px; height:40px; border-radius:50%; border:none; background:var(--fb-brand); color:#fff; font-size:14px;
+  }
+  #presentBar .pb-exit {
+    height:32px; padding:0 12px; border-radius:999px; border:1px solid var(--fb-line-strong);
+    background:transparent; color:var(--fb-text-2); display:inline-flex; align-items:center; gap:6px;
+  }
+  #presentBar .pb-exit:hover { color:var(--fb-text-1); border-color:var(--fb-text-3); }
+  #presentBar button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
+  #presentBar kbd { font:400 10px/1 var(--fb-mono); color:var(--fb-text-3); }
   /* Design canvas breakpoint: below 1200 px the side panels are drawers over
      the stage instead of columns, and the stage keeps its width. Closed means
      display:none, not an off-screen transform: mobile browsers widen the

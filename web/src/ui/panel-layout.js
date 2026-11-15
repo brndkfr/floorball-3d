@@ -15,9 +15,11 @@ export const DEFAULT_PANEL_STATE = Object.freeze({
 });
 
 // Shell roots Present mode hides (ids), leaving the stage and a small
-// transport.
+// transport. Mirrored in app.css (html.presenting); panels.spec.js checks
+// each is hidden.
 export const PRESENT_HIDES = Object.freeze([
-  'appRail', 'appTopbar', 'rightPanel', 'toolPalette', 'dock', 'dockStatus', 'timeline', 'touchControls', 'goalieLabel',
+  'appRail', 'appTopbar', 'rightPanel', 'panelStrip', 'toolPalette', 'dock', 'dockStatus', 'timeline',
+  'touchControls', 'goalieLabel', 'chipPopover', 'crosshair', 'saveStatus', 'status',
 ]);
 
 export function parsePanelState(raw) {

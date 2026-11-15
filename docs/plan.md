@@ -105,7 +105,8 @@ ring under figures, number sprite size clamp 2026-11-15); A-BACK-040
 steps 1 to 5, 7 and 8 done (orbit, pan, wheel dolly, fitted default
 view; presets, focus and follow ball 2026-11-15; zoom about the cursor
 in 2D, touchpad and pinch fixes); left there: step 6 (touch, needs a
-tablet). Next: A-BACK-044 (panels). To check
+tablet). A-BACK-044 steps 1 to 4 done 2026-11-15 (panel strip, folds,
+Present); step 5 is the user's look. To check
 by eye in a real browser: a darker band across the top of the 3D view
 that shows in headless screenshots (see the S-BACK-030 item file).
 
