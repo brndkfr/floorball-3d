@@ -40,11 +40,12 @@ the TDD workflow in [CLAUDE.md](../../CLAUDE.md).
    ball read it; `selectObject` picks for a goal or goalie; all shot
    overlays start off; boot no longer selects the home goalie. Tests:
    `test/shot-target.test.js`, `test-e2e/shot-target.spec.js`.
-2. `[small]` **Shot view state, pure.** `shot-view.js`:
+2. `[done 2026-11-15]` **Shot view state, pure.** `shot-view.js`:
    `parseShotView(stored)` -> `{ lines, shotLine, coverage }` (all
    false by default, bad input -> defaults, as `panel-layout.js`),
-   `toggleShotView(view, key)`, `outlineFollows(view)` (= `shotLine`).
-   Stored in `localStorage` `floorball3d.shotView`. Node test first.
+   `toggleShotView(view, key)`, `outlineShown(view)` (= `shotLine`),
+   `anyShotOverlay(view)` (the chip shows then). Storage key
+   `floorball3d.shotView`. Test: `test/shot-view.test.js`.
 3. `[small]` **Shot section in the ball's Inspector; View rows go.**
    `authoring/shot-section.js` builds it: target segmented control
    (Auto / Home / Away, `role="radiogroup"`), verdict card (title +
