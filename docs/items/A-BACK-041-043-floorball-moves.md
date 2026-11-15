@@ -113,7 +113,13 @@ motion), shot block on one knee, face-off stance, drag move.
    `stickPlacement(h)` within 1 mm / 0.1 deg for both hands; the
    existing `test-e2e/player-stick.spec.js` residuals stay green
    untouched.
-2. `[lead]` **Events from the doc.** New three-free
+2. `[done 2026-11-15]` **Events from the doc.** As built:
+   `actionsFor(frames, id)` returns `{ actions, carryIntervals }`;
+   intervals are `{ fromMs, toMs }`, a carrier in the last frame keeps
+   the ball to `Infinity`; a receive's `dirYaw` faces where the ball
+   came from; a frame without the main ball keeps the previous one's
+   (as `ballPoseAt`). Tests: `test/figure-actions.test.js`. Original
+   text: New three-free
    `web/src/authoring/figure-actions.js`:
    `actionsFor(frames, id)` -> sorted list of
    `{ kind: 'pass' | 'receive' | 'shot', tMs, dirYaw, speedMps, aim?,
