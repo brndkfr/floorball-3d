@@ -15,7 +15,11 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BUDGETS_MB = {
   dist: 70,
   'dist/assets': 8,
-  'web/src': 1.0,   // raised from 0.8 on 2026-09-24 (was at 0.78 before A-BACK-022 shots)
+  // Raised from 0.8 on 2026-09-24 (was at 0.78 before A-BACK-022 shots) and
+  // from 1.0 on 2026-11-15 (0.99 after the camera work, A-BACK-040; the
+  // largest files are source, photo-overlay.js 94 KB, app.css 56 KB, not
+  // an asset). Still a tripwire for a committed photo or model, not a target.
+  'web/src': 1.3,
   // Vendored by scripts/vendor-*.mjs (S-BACK-021). A jump here means the
   // Web Awesome COMPONENTS list or the font weights grew - check that first.
   'web/lib/webawesome': 1.0,   // 0.60 MB when added (23 components)
