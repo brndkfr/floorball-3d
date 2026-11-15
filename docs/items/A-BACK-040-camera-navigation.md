@@ -82,8 +82,10 @@ the last 600 ms (estimate), not a per-frame low-pass.
 - 2026-11-14: step 8 done (zoom about the cursor in 2D, one rate for
   wheel, touchpad and pinch; `test/zoom-math.test.js`,
   `test-e2e/zoom.spec.js`).
-- 2026-11-15: step 4 done (presets: Views menu and Shift+1..6). Next:
-  step 5 (focus).
+- 2026-11-15: step 4 done (presets: Views menu and Shift+1..6).
+- 2026-11-15: step 5 done (F frames the selection, double-click
+  re-targets). Left: step 6 (touch, needs a real tablet) and step 7
+  (follow ball).
 
 ## Steps
 
@@ -183,8 +185,18 @@ the last 600 ms (estimate), not a per-frame low-pass.
    (CLAUDE.md, DOM-owning modules). Tween via `lerpRig` in the
    `animate()` loop; report "active" so the render gate draws.
    e2e: choosing a preset moves the camera; `Shift+2` does the same.
-5. `[small]` **Focus.** Double-click and `F` in 3D (`F` already
-   resets the 2D view in `controls.js`; keep that).
+5. `[done 2026-11-15]` **Focus.** Double-click and `F` in 3D (`F` already
+   resets the 2D view in `controls.js`; keep that). As built:
+   `orbit-math.js` `focusRigOn` (double-click: the target moves, look
+   and distance stay) and `frameRig` (F: the selection's centre from the
+   current direction, closest distance where every selected object's
+   feet and head sit inside the view with 10 % margin, at least 4.5 m;
+   estimates); `web/src/camera-focus.js` wires both and blends through
+   `camera-menu.js` `blendCameraTo`. F with nothing selected goes to
+   Stand. A double-click within 60 px of a selected object focuses the
+   object, else the floor under the cursor; ignored while a tool is
+   active (zone / curved arrow use double-click to finish). Tests in
+   `test/orbit-math.test.js`, `test-e2e/camera-focus.spec.js`.
 6. `[lead]` **Touch.** One finger orbits, two fingers pan and pinch,
    in 3D; remove the D-pad buttons from the 3D view (keep Q / E
    rotate, cycle and deselect). Needs a real tablet check by the

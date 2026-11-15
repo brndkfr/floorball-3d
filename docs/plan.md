@@ -102,9 +102,10 @@ Progress lives in each item file ("Progress" section or `[done]` on a
 step). State on 2026-11-14 (branch `look-and-motion`, committed, not
 merged): S-BACK-030 steps 0 to 3, 6 and 8 done (disc 0.7 m, team
 ring under figures, number sprite size clamp 2026-11-15); A-BACK-040
-steps 1 to 4 done (orbit, pan, wheel dolly, fitted default view,
-presets 2026-11-15) and step 8 (zoom about the cursor in 2D, touchpad
-and pinch fixes). Next: A-BACK-040 step 5 (focus). To check
+steps 1 to 5 done (orbit, pan, wheel dolly, fitted default view,
+presets and focus 2026-11-15) and step 8 (zoom about the cursor in 2D,
+touchpad and pinch fixes); left there: step 6 (touch, needs a tablet)
+and step 7 (follow ball). Next: A-BACK-044 (panels). To check
 by eye in a real browser: a darker band across the top of the 3D view
 that shows in headless screenshots (see the S-BACK-030 item file).
 
@@ -225,9 +226,11 @@ lines. An item that needs more than ~10 lines gets its own file under
   `PW_CHANNEL=chromium` forces the old browser. Measured on 58 tests
   (camera-orbit, zoom, choreograph, timeline, bootstrap,
   choreo-tutorial): bundled, 3 workers 253 s with 5 timeouts; bundled,
-  1 worker 210 s; Edge, 3 workers 56 s; Edge, 6 workers 51 s. Open,
-  optional: a native ARM64 Node (the runner and static server are
-  still emulated).
+  1 worker 210 s; Edge, 3 workers 56 s; Edge, 6 workers 51 s. Full
+  suite with Edge: 2.3 min on mains power, 7.4 min with 2 load
+  timeouts on battery (Windows throttles the CPU); both timeouts passed
+  alone. Open, optional: a native ARM64 Node (the runner and static
+  server are still emulated).
 - **[S-BACK-031] e2e area sets** [open] One command for the area run
   that CLAUDE.md workflow step 5 asks for when `test:e2e:affected`
   says `FULL RUN`: tag each spec with its areas (`@chips`, `@camera`,

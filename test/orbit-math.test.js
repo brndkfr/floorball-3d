@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   rigToCamera, cameraToRig, orbitBy, panBy, panGrab, panKeys, dollyBy, clampRig, lerpRig,
-  fitRigToRink, projectToScreen, screenToFloor, ORBIT_LIMITS,
+  fitRigToRink, projectToScreen, screenToFloor, ORBIT_LIMITS, focusRigOn, frameRig,
 } from '../web/src/orbit-math.js';
 import { RINK_L, HALF_W } from '../web/src/constants.js';
 
@@ -197,4 +197,42 @@ test('fitRigToRink: the whole rink is inside the stage and fills it', () => {
 test('fitRigToRink falls back to the whole window when the insets leave no room', () => {
   const rig = fitRigToRink({ vw: 300, vh: 200, fovDeg: 45, insets: { left: 200, right: 200, top: 0, bottom: 0 } });
   assert.ok(Number.isFinite(rig.dist) && rig.dist > 0);
+});
+
+// A-BACK-040 step 5: double-click moves the target, F frames the selection.
+test('focusRigOn moves the target there and keeps the look and the distance', () => {
+  const next = focusRigOn(RIG, { x: -2000, z: 30000 });
+  assert.equal(next.tx, -2000);
+  assert.equal(next.tz, 30000);
+  for (const k of ['yaw', 'pitch', 'dist']) assert.equal(next[k], RIG[k]);
+  const out = focusRigOn(RIG, { x: 90000, z: -90000 });
+  assert.equal(out.tx, HALF_W + ORBIT_LIMITS.targetMargin);
+  assert.equal(out.tz, -ORBIT_LIMITS.targetMargin);
+});
+
+test('frameRig: one object, close but with a figure-sized margin around it', () => {
+  const view = { vw: 1440, vh: 900, fovDeg: 45 };
+  const rig = frameRig(RIG, [{ x: 3000, z: 12000 }], view);
+  assert.equal(rig.tx, 3000);
+  assert.equal(rig.tz, 12000);
+  assert.ok(near(rig.yaw, RIG.yaw) && near(rig.pitch, RIG.pitch));
+  assert.ok(rig.dist > 3000 && rig.dist < 8000, `dist ${rig.dist}`);
+});
+
+test('frameRig: every selected object ends up on screen, and the view is not wastefully far', () => {
+  const view = { vw: 1440, vh: 900, fovDeg: 45 };
+  const pts = [{ x: -8000, z: 6000 }, { x: 7000, z: 9000 }, { x: 0, z: 22000 }];
+  const rig = frameRig(RIG, pts, view);
+  for (const p of pts) {
+    for (const y of [0, 1800]) {   // feet and head of a figure
+      const s = projectToScreen(rig, { x: p.x, y, z: p.z }, view);
+      assert.ok(!s.behind && s.x > 0 && s.x < view.vw && s.y > 0 && s.y < view.vh, JSON.stringify({ p, y, s }));
+    }
+  }
+  assert.ok(rig.dist < frameRig(RIG, pts, view).dist * 1.01);
+  assert.ok(rig.dist < 60000);
+});
+
+test('frameRig with nothing to frame returns null', () => {
+  assert.equal(frameRig(RIG, [], { vw: 1440, vh: 900, fovDeg: 45 }), null);
 });

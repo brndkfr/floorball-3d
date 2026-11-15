@@ -138,6 +138,42 @@ export function dollyBy(rig, wheelDelta, pivot = null) {
   return clampRig(next);
 }
 
+// Double-click (A-BACK-040 step 5): turn around this floor point from now
+// on. Look direction and distance stay.
+export function focusRigOn(rig, point) {
+  return clampRig({ ...rig, tx: point.x, tz: point.z });
+}
+
+// F (A-BACK-040 step 5): look at the middle of `points` ({ x, z } on the
+// floor) from the current direction, just far enough that each point's
+// feet and head (FRAME.height) sit inside the view with a margin. null
+// when there is nothing to frame. Estimates: a figure is 1.8 m tall, 4.5 m
+// is the closest a framing goes, 10 % of the view stays free on each side.
+const FRAME = { height: 1800, minDist: 4500, margin: 0.1 };
+export function frameRig(rig, points, { vw, vh, fovDeg }) {
+  if (!points.length) return null;
+  const xs = points.map((p) => p.x), zs = points.map((p) => p.z);
+  const base = clampRig({
+    ...rig,
+    tx: (Math.min(...xs) + Math.max(...xs)) / 2,
+    tz: (Math.min(...zs) + Math.max(...zs)) / 2,
+  });
+  const view = { vw, vh, fovDeg };
+  const mx = vw * FRAME.margin, my = vh * FRAME.margin;
+  const fits = (dist) => points.every((p) => [0, FRAME.height].every((y) => {
+    const s = projectToScreen({ ...base, dist }, { x: p.x, y, z: p.z }, view);
+    return !s.behind && s.x >= mx && s.x <= vw - mx && s.y >= my && s.y <= vh - my;
+  }));
+  let lo = FRAME.minDist, hi = ORBIT_LIMITS.maxDist;
+  if (fits(lo)) return { ...base, dist: lo };
+  if (!fits(hi)) return { ...base, dist: hi };
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (fits(mid)) hi = mid; else lo = mid;
+  }
+  return { ...base, dist: hi };
+}
+
 // Blend for preset tweens; yaw takes the short way round.
 export function lerpRig(a, b, k) {
   if (k <= 0) return { ...a };

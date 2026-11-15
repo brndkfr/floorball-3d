@@ -44,17 +44,21 @@ export function goToPreset(id) {
   if (isTopDown()) exitTopDown();
   const to = presetPose(id, { fit: defaultRig(), chip: selectedChip() });
   if (!to) return false;
-  const onDone = id === 'stand' ? applyDefaultView : null;
-  if (prefersReducedMotion()) {
-    applyPose(to);
-    onDone?.();
-    tween = null;
-    markRenderDirty();
-    return true;
-  }
-  tween = { from: currentPose(), to, elapsed: 0, onDone };
-  markRenderDirty();
+  blendCameraTo(to, id === 'stand' ? applyDefaultView : null);
   return true;
+}
+
+// Blend the perspective camera to `pose` (instantly with reduced motion),
+// then call `onDone`. Also used by camera-focus.js (F, double-click).
+export function blendCameraTo(pose, onDone = null) {
+  if (prefersReducedMotion()) {
+    tween = null;
+    applyPose(pose);
+    onDone?.();
+  } else {
+    tween = { from: currentPose(), to: pose, elapsed: 0, onDone };
+  }
+  markRenderDirty();
 }
 
 // Advances a running blend; true while one ran this frame (S-BACK-011).
