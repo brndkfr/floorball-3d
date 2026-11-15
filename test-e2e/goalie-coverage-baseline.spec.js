@@ -11,6 +11,7 @@ import { test, expect, waitForAssets, waitUntil } from './fixtures.js';
 
 const FIXTURE = new URL('./goalie-coverage-baseline.json', import.meta.url);
 const TOLERANCE_POINTS = 0.5;   // same mesh, same rays: only float noise
+const PROXY_TOLERANCE_POINTS = 5;   // A-BACK-042 step 2 acceptance
 
 // Ball centre on the floor, x across the rink, dz in front of goal A's line (mm).
 const POSITIONS = [
@@ -49,8 +50,9 @@ test('goal coverage of the detailed goalie at 12 ball positions matches the base
     goal.updateMatrixWorld(true);
     return positions.map((p) => {
       const ballWorld = new THREE.Vector3(p.x, BALL_RADIUS, GOAL_LINE_FROM_BOARD + p.dz);
-      const { pctBlocked } = coverageGrid({ ballWorld, targetGoalGroup: goal, goalieMesh: goalie });
-      return { ...p, pct: Math.round(pctBlocked * 100) / 100 };
+      const mesh = coverageGrid({ ballWorld, targetGoalGroup: goal, goalieMesh: goalie, useProxy: false }).pctBlocked;
+      const app = coverageGrid({ ballWorld, targetGoalGroup: goal, goalieMesh: goalie }).pctBlocked;
+      return { ...p, pct: Math.round(mesh * 100) / 100, app: Math.round(app * 100) / 100, hasProxy: !!goalie.userData.proxy && !!state.goalies.B.userData.proxy };
     });
   }, POSITIONS);
 
@@ -63,7 +65,7 @@ test('goal coverage of the detailed goalie at 12 ball positions matches the base
     fs.writeFileSync(FIXTURE, JSON.stringify({
       note: 'A-BACK-042 step 1: % of goal A blocked by the detailed goalie at its default spot; ball on the floor, dz = mm in front of the goal line.',
       goalieModel: 'detailed',
-      positions: got,
+      positions: got.map(({ app, hasProxy, ...p }) => p),
     }, null, 2) + '\n');
     return;
   }
@@ -73,5 +75,14 @@ test('goal coverage of the detailed goalie at 12 ball positions matches the base
   for (const g of got) {
     const b = baseline.positions.find((x) => x.name === g.name);
     expect(Math.abs(g.pct - b.pct), `${g.name}: ${g.pct} vs baseline ${b.pct}`).toBeLessThanOrEqual(TOLERANCE_POINTS);
+  }
+
+  // A-BACK-042 step 2: what the app uses is the kneeling proxy
+  // (goalie-proxy-shapes.js), within PROXY_TOLERANCE_POINTS of the mesh.
+  expect(got.every((g) => g.hasProxy)).toBe(true);
+  expect(got.some((g) => Math.abs(g.app - g.pct) > 0.01)).toBe(true);   // the proxy path is the one that ran
+  for (const g of got) {
+    const b = baseline.positions.find((x) => x.name === g.name);
+    expect(Math.abs(g.app - b.pct), `${g.name}: proxy ${g.app} vs mesh ${b.pct}`).toBeLessThanOrEqual(PROXY_TOLERANCE_POINTS);
   }
 });

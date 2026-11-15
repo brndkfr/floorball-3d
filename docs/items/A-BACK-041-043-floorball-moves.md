@@ -203,7 +203,17 @@ Steps:
    `insights.js` `coverageGrid`; 0.5 point tolerance;
    `RECORD_BASELINE=1` re-records). From 63.8 % (slot 3 m) down to
    10.6 % (left sharp). The GLB goalie (S-BACK-026) matches it too.
-2. `[lead]` **Proxy coverage.** `web/src/goalie-proxy-math.js`
+2. `[done 2026-11-15]` **Proxy coverage.** As built:
+   `goalie-proxy-math.js` (`rayHitsCapsule` via segment-segment
+   distance, `rayHitsBox` slab test, `rayHitsProxy`);
+   `goalie-proxy-shapes.js` `DETAILED_GOALIE_PROXY` (2 pad boxes, a hip
+   box, torso / head / 4 arm capsules) fitted by coordinate descent to
+   the mesh's per-ray hits from 56 ball positions, worst 2.5 points off
+   the 12-position baseline; `insights.js` `coverageGrid` tests a
+   goalie's `userData.proxy` in its own frame (`useProxy: false` forces
+   the mesh); both detailed goalies carry it. One coverage update
+   ~210 ms -> ~0.3 ms in Edge. Goal B checked too. Original text:
+   `web/src/goalie-proxy-math.js`
    (ray / capsule, ray / box) with tests; coverage uses it for the
    current goalie with a hand-fitted kneeling proxy; numbers within
    5 points of the baseline at each position.
