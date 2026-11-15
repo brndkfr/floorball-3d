@@ -100,8 +100,13 @@ test('the default 3D view shows the whole rink, fitted to the stage', async ({ p
   const first = await rinkOnStage(page);
   expect(first.fov).toBe(45);
   expectRinkFitsStage(first);
-  // an untouched view follows the window
+  // an untouched view follows the window; the re-fit runs in a
+  // ResizeObserver callback, so wait for it instead of measuring once
   await page.setViewportSize({ width: 1000, height: 800 });
+  await expect.poll(async () => {
+    const { box, stage } = await rinkOnStage(page);
+    return box.x0 >= stage.x0 - 1 && box.x1 <= stage.x1 + 1 && box.y0 >= stage.y0 - 1 && box.y1 <= stage.y1 + 1;
+  }).toBe(true);
   expectRinkFitsStage(await rinkOnStage(page));
 });
 

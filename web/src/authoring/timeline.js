@@ -24,6 +24,7 @@ import {
   layoutTrack, timeToX, xToTime, rulerTicks, durationFromDrag, clampZoom,
 } from './transport-math.js';
 import { fitTopDownFrustum, refitDefaultView } from '../scene.js';
+import { state } from '../state.js';
 import { onProjectChanged } from './library-dialog.js';
 
 const el = document.getElementById('timeline');
@@ -38,6 +39,7 @@ const btnStop = el.querySelector('[data-tl="stop"]');
 const btnPrev = el.querySelector('[data-tl="prev"]');
 const btnNext = el.querySelector('[data-tl="next"]');
 const btnLoop = el.querySelector('[data-tl="loop"]');
+const btnFollow = el.querySelector('[data-tl="follow"]');
 const speedEl = el.querySelector('[data-tl="speed"]');
 const btnAdd = el.querySelector('[data-tl="add"]');
 const timeEl = el.querySelector('.tl-time');
@@ -329,6 +331,8 @@ function render() {
   btnPlay.setAttribute('aria-label', p.playing ? 'Pause' : 'Play');
   btnLoop.classList.toggle('active', p.loop);
   btnLoop.setAttribute('aria-pressed', String(p.loop));
+  btnFollow.classList.toggle('active', state.followBall);
+  btnFollow.setAttribute('aria-pressed', String(state.followBall));
   speedEl.textContent = speedLabel(p.speed);
   updateTime();
   syncInset();
@@ -397,6 +401,16 @@ btnStop.addEventListener('click', stop);
 btnPrev.addEventListener('click', () => stepFrame(-1));
 btnNext.addEventListener('click', () => stepFrame(1));
 btnLoop.addEventListener('click', toggleLoop);
+
+// Follow ball (A-BACK-040 step 7, playback.js applyFollow): a view setting,
+// remembered per browser, not part of the doc.
+const FOLLOW_KEY = 'fb.followBall';
+try { state.followBall = localStorage.getItem(FOLLOW_KEY) === '1'; } catch { /* storage blocked: default off */ }
+btnFollow.addEventListener('click', () => {
+  state.followBall = !state.followBall;
+  try { localStorage.setItem(FOLLOW_KEY, state.followBall ? '1' : '0'); } catch { /* storage blocked */ }
+  window.dispatchEvent(new Event('playbackChanged'));
+});
 btnAdd.addEventListener('click', addFrame);
 speedEl.addEventListener('click', () => setSpeed(nextSpeed(playbackState().speed)));
 

@@ -84,8 +84,9 @@ the last 600 ms (estimate), not a per-frame low-pass.
   `test-e2e/zoom.spec.js`).
 - 2026-11-15: step 4 done (presets: Views menu and Shift+1..6).
 - 2026-11-15: step 5 done (F frames the selection, double-click
-  re-targets). Left: step 6 (touch, needs a real tablet) and step 7
-  (follow ball).
+  re-targets).
+- 2026-11-15: step 7 done (Follow ball in the recorder). Left: step 6
+  (touch), which needs a real tablet check by the user.
 
 ## Steps
 
@@ -201,7 +202,17 @@ the last 600 ms (estimate), not a per-frame low-pass.
    in 3D; remove the D-pad buttons from the 3D view (keep Q / E
    rotate, cycle and deselect). Needs a real tablet check by the
    user: Playwright touch emulation is not enough.
-7. `[small]` **Follow ball.** `followTargetAt(frames, elapsedMs)` in
+7. `[done 2026-11-15]` **Follow ball.** As built: `web/src/authoring/
+   follow-ball.js` `ballAtTime` / `followTargetAt` (mean of 13 samples
+   over the last 600 ms, window cut at 0); `playback.js` `applyFollow`
+   runs where no camera keyframe applied (`applyCamera` now returns
+   whether it did), replaces only the target and reads direction and
+   distance from the camera each time, so an orbit drag still works
+   while following; a scrub snapshots the camera so Stop restores it.
+   "Follow" button next to Loop in the recorder, `state.followBall`,
+   remembered per browser (`fb.followBall`), not in the doc. Tests:
+   `test/follow-ball.test.js`, `test-e2e/follow-ball.spec.js`.
+   Original text: `followTargetAt(frames, elapsedMs)` in
    `orbit-math.js` or next to `ball-pose.js`, test with a two-frame
    pass; a "Follow ball" toggle in the recorder; a frame with its own
    camera keyframe wins over follow.
