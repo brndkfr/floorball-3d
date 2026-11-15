@@ -10,6 +10,7 @@ import { expectLoad, loaded, failed } from './status.js';
 import { selectObject } from './selection.js';
 import { markRenderDirty } from './render-dirty.js';
 import { isFixedShown } from './authoring/fixed-objects-model.js';
+import { DETAILED_GOALIE_PROXY } from './goalie-proxy-shapes.js';
 
 // --- layer: goalie - one instance per goal end (A-BACK-024), each
 // switchable between two models. `state.goalies.A` / `state.goalies.B`
@@ -190,6 +191,9 @@ loadGoalieGlb('assets/goalie_02.glb', (object) => {
   wrapper.visible = false;
   const wrapperB = mirrorForGoalB(wrapper);
   wrapperB.visible = false;
+  // Goal coverage tests this kneeling proxy, not the 10k triangles (A-BACK-042).
+  wrapper.userData.proxy = DETAILED_GOALIE_PROXY;
+  wrapperB.userData.proxy = DETAILED_GOALIE_PROXY;
   state.goalieModels.detailed = { A: wrapper, B: wrapperB };
   state.goalieOutlinesByModel.detailed = { A: buildOutlineMeshes(wrapper), B: buildOutlineMeshes(wrapperB) };
   scene.add(wrapper, wrapperB);

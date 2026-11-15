@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { rayHitsProxy } from './goalie-proxy-math.js';
 
 // Pure compute core for Mode-A/Mode-B tactical insights (docs/phase-3-plan.md).
 // No `state.*` reads, no DOM, no `scene.add` - callers own all THREE scene
@@ -95,11 +96,22 @@ const coverageRaycaster = new THREE.Raycaster();
 const coverageScratchPt = new THREE.Vector3();
 const coverageScratchDir = new THREE.Vector3();
 
+const proxyInverse = new THREE.Matrix4();
+const proxyOrigin = new THREE.Vector3();
+const proxyEnd = new THREE.Vector3();
+
 // Coverage grid. Callable with either a goalie THREE mesh (Mode A: detailed
 // OBJ; Mode B: proxy cylinder from goalie-proxy.js) or with null (all cells
-// open).
-export function coverageGrid({ ballWorld, targetGoalGroup, goalieMesh }) {
+// open). A goalie whose userData.proxy holds capsules / boxes
+// (goalie-proxy-shapes.js, A-BACK-042 step 2) is tested against those in its
+// own frame instead of its triangles; `useProxy: false` forces the mesh.
+export function coverageGrid({ ballWorld, targetGoalGroup, goalieMesh, useProxy = true }) {
   const blockedAt = new Float32Array(COVERAGE_VERTEX_COUNT);
+  const proxy = useProxy ? goalieMesh?.userData?.proxy : null;
+  if (proxy && ballWorld) {
+    proxyInverse.copy(goalieMesh.matrixWorld).invert();
+    proxyOrigin.copy(ballWorld).applyMatrix4(proxyInverse);
+  }
 
   for (let i = 0; i < COVERAGE_VERTEX_COUNT; i++) {
     const p = coverageGridLocalPoints[i];
@@ -107,7 +119,12 @@ export function coverageGrid({ ballWorld, targetGoalGroup, goalieMesh }) {
     const worldPt = targetGoalGroup.localToWorld(coverageScratchPt);
 
     let blocked = 0;
-    if (ballWorld && goalieMesh && goalieMesh.visible !== false) {
+    if (proxy && ballWorld && goalieMesh.visible !== false) {
+      proxyEnd.copy(worldPt).applyMatrix4(proxyInverse).sub(proxyOrigin);
+      const dist = proxyEnd.length();
+      proxyEnd.divideScalar(dist);
+      if (rayHitsProxy(proxyOrigin, proxyEnd, dist - 1, proxy)) blocked = 1;
+    } else if (ballWorld && goalieMesh && goalieMesh.visible !== false) {
       coverageScratchDir.copy(worldPt).sub(ballWorld);
       const dist = coverageScratchDir.length();
       coverageScratchDir.normalize();
