@@ -130,7 +130,9 @@ test('the shot readout follows the goalie: squared up, then open when it steps a
     window.removeEventListener('shotReadoutChanged', count);
     return { ...state.shotReadout, events };
   }, x);
-  const centred = await goalieAt(0);
+  // 1 mm, not 0: the goalie starts at 0, and the app loop may already have
+  // computed that pose, so only a real change is sure to fire one event.
+  const centred = await goalieAt(1);
   expect(centred.goal).toBe('A');
   expect(centred.key).toBe('blocked-centred');
   expect(centred.pctBlocked).toBeGreaterThan(30);
