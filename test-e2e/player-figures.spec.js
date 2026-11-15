@@ -128,6 +128,10 @@ async function footprints(page) {
     const { tickFigures } = await import('/src/authoring/figures.js');
     tickFigures();
     return state.chipGroups.map((g) => {
+      // Box3.setFromObject refreshes the child's world matrix only, not the
+      // group's: without this the group scale is the last rendered frame's,
+      // which can be mid drop-in animation.
+      g.updateMatrixWorld(true);
       const discs = g.children.filter((c) => c.isMesh && !c.userData.isFigureRing);
       const ring = g.userData.figureRing;
       const width = (o) => { const b = new THREE.Box3().setFromObject(o); return b.max.x - b.min.x; };

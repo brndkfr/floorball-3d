@@ -217,19 +217,18 @@ lines. An item that needs more than ~10 lines gets its own file under
 
 ### Shared / infrastructure
 
-- **[S-BACK-022] Slow local e2e runs** [open] Slow and noisy (2.2 to
-  17.5 min for the same 80 tests; headless Chromium stalls before app
-  code runs; CI unaffected). Try one change at a time, three timed full
-  runs each: local `trace: 'on-first-retry'`, `workers: 2`, a Defender
-  exclusion for `test-results/` and `node_modules/.pnpm/`, then a
-  GPU-backed launch (`--use-angle=d3d11`). Keep what measurably helps.
-  Measured 2026-11-14: `choreograph.spec.js:39` takes 8 to 55 s on
-  unchanged code (limit 30 s), `choreo-tutorial.spec.js:91` fails
-  locally; both stall after entering Choreo, so start there.
-  Also 2026-11-14: a 73-test area set with default workers took 11.7
-  min with 13 timeouts; the same 13 with `--workers=1` passed in 1.1
-  min, and CI ran the full suite in 4 min 56 s. Try `workers: 1`
-  locally first.
+- **[S-BACK-022] Slow local e2e runs** [done 2026-11-15] Cause: this
+  machine is ARM64 (Snapdragon X); Node and the bundled Playwright
+  Chromium (`chrome-win64`) are x64 and run under emulation, and
+  headless WebGL ran on SwiftShader (software). Fix: locally on Windows
+  the suite uses Edge (native ARM64, Adreno GPU via D3D11) through
+  `scripts/e2e-browser.mjs`; CI keeps the bundled Chromium.
+  `PW_CHANNEL=chromium` forces the old browser. Measured on 58 tests
+  (camera-orbit, zoom, choreograph, timeline, bootstrap,
+  choreo-tutorial): bundled, 3 workers 253 s with 5 timeouts; bundled,
+  1 worker 210 s; Edge, 3 workers 56 s; Edge, 6 workers 51 s. Open,
+  optional: a native ARM64 Node (the runner and static server are
+  still emulated).
 - **[S-BACK-031] e2e area sets** [open] One command for the area run
   that CLAUDE.md workflow step 5 asks for when `test:e2e:affected`
   says `FULL RUN`: tag each spec with its areas (`@chips`, `@camera`,
