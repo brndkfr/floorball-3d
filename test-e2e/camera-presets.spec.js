@@ -91,3 +91,28 @@ test('a preset chosen in 2D switches to 3D; Stand brings back the fitted default
   await settle(page);
   expect(await page.evaluate(async () => (await import('/src/scene.js')).isDefaultView())).toBe(true);
 });
+
+// "From the ball" once silently did nothing until a goal had been clicked
+// (it needed state.targetGoal). Without a target it looks at the nearer goal.
+test('From the ball works with no goal targeted: camera at the ball, looking at the nearer goal', async ({ page }) => {
+  await boot(page);
+  const before = await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    state.targetGoal = null;
+    state.ballGroup.position.set(-1700, 0, 5300);   // goal A end
+    return (await import('/src/scene.js')).camera.position.toArray();
+  });
+  await menuButton(page).click();
+  await page.locator('#cameraPresetMenu [data-action="view-from-ball"]').click();
+  const r = await page.evaluate(async () => {
+    const THREE = await import('three');
+    const { camera } = await import('/src/scene.js');
+    const { state } = await import('/src/state.js');
+    const dir = camera.getWorldDirection(new THREE.Vector3());
+    return { cam: camera.position.toArray(), ball: state.ballGroup.position.toArray(), dirZ: dir.z, is3d: state.activeCamera === camera };
+  });
+  expect(r.is3d).toBe(true);
+  expect(r.cam).not.toEqual(before);
+  expect(Math.hypot(r.cam[0] - r.ball[0], r.cam[2] - r.ball[2])).toBeLessThan(500);
+  expect(r.dirZ).toBeLessThan(0);   // goal A sits at small z: the camera looks toward -z
+});
