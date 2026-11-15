@@ -2,7 +2,8 @@ import { scene, renderer } from './scene.js';
 import { state, getBallWorldCenter } from './state.js';
 import { handleKeyboardMovement, clock } from './controls.js';
 import { updateTrajectory } from './trajectory.js';
-import { updateCoverage, updateGoalieLabel } from './coverage.js';
+import { updateCoverage } from './coverage.js';
+import { updateShotChip } from './ui/shot-chip.js';
 import { updateShotReadout } from './shot-readout.js';
 import { snapshotChanged, copySnapshot } from './dirty-check.js';
 import { consumeRenderDirty } from './render-dirty.js';
@@ -78,7 +79,7 @@ function animate() {
   const trajectoryChanged = updateTrajectory(ballCenter);
   updateCoverage(ballCenter);
   updateShotReadout();   // verdict + % blocked for the Inspector card and the rink chip (A-BACK-045)
-  updateGoalieLabel();
+  updateShotChip();   // verdict chip on the rink (A-BACK-045)
   const labelsChanged = updateFloorLabelOrientations(state.activeCamera);
 
   const cam = state.activeCamera;

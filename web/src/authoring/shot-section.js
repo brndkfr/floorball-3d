@@ -16,12 +16,7 @@ import { isTopDown, exitTopDown } from './topdown-camera.js';
 import { endName } from '../end-names.js';
 import { SHOT_LINE_TOKENS } from '../tokens.js';
 import { markRenderDirty } from '../render-dirty.js';
-
-export const VERDICT_TITLES = {
-  open: 'Open shot',
-  'blocked-off': 'Blocked off-centre',
-  'blocked-centred': 'Squared up',
-};
+import { verdictWords } from '../shot-chip-math.js';
 
 const TOGGLES = [
   { key: 'lines', label: 'Lines', title: 'Ball to the four goal corners' },
@@ -117,15 +112,15 @@ function refresh() {
     : pick === 'auto' ? `Aiming at ${endName(letter)}: the goal nearer the ball.`
       : `Always ${endName(letter)}, wherever the ball is.`;
 
-  const r = state.shotReadout;
+  const w = verdictWords(state.shotReadout);
   const title = root.querySelector('.shot-verdict-title');
   const pct = root.querySelector('.shot-verdict-pct');
   const dot = root.querySelector('.shot-dot');
-  if (r) {
-    title.textContent = VERDICT_TITLES[r.key] ?? r.key;
-    pct.textContent = `${Math.round(r.pctBlocked)}% blocked`;
-    dot.style.background = SHOT_LINE_TOKENS[r.key].css;
-    root.querySelector('.shot-verdict').style.borderColor = SHOT_LINE_TOKENS[r.key].css;
+  if (w) {
+    title.textContent = w.title;
+    pct.textContent = `${w.pct} blocked`;
+    dot.style.background = SHOT_LINE_TOKENS[w.key].css;
+    root.querySelector('.shot-verdict').style.borderColor = SHOT_LINE_TOKENS[w.key].css;
   } else {
     title.textContent = 'No shot';
     pct.textContent = '';

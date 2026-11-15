@@ -41,13 +41,16 @@
   #coords { top:calc(var(--shell-topbar) + 8px); right:12px; font-size:13px; min-width:180px; line-height:1.6; }
   #coords .label { color:var(--hud-accent); text-transform:uppercase; font-size:10px; letter-spacing:0.05em; }
 
+  /* Verdict chip on the rink (A-BACK-045 step 5, ui/shot-chip.js) */
   #goalieLabel {
-    position:absolute; z-index:11; transform:translate(-50%, -100%);
-    background:var(--hud-bg); color:var(--hud-accent); font-family:var(--hud-font);
-    font-size:12px; font-weight:600; letter-spacing:0.03em; padding:3px 10px;
-    border:1px solid var(--hud-accent-dim); white-space:nowrap; pointer-events:none;
-    display:none; box-shadow:0 0 8px var(--fb-line);
+    position:fixed; z-index:11; transform:translate(-50%, calc(-100% - 6px));
+    display:none; align-items:center; gap:8px; padding:5px 10px;
+    background:color-mix(in srgb, var(--fb-surf-1) 90%, transparent); color:var(--fb-text-1);
+    border:1px solid var(--fb-line-strong); border-radius:999px;
+    font:600 12px/1 var(--fb-font); white-space:nowrap; pointer-events:none;
   }
+  #goalieLabel .shot-chip-dot { width:9px; height:9px; border-radius:50%; background:var(--fb-text-3); }
+  #goalieLabel .shot-chip-pct { font:500 12px/1 var(--fb-mono); color:var(--fb-text-2); }
 
   #crosshair {
     position:absolute; top:50%; left:50%; width:18px; height:18px; z-index:9;

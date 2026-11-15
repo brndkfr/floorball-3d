@@ -139,3 +139,47 @@ test('the goalie glow comes with the shooting line, and Align goalie squares it 
   expect(r.glow).toBe(true);
   await expect(section(page).locator('.shot-verdict')).toContainText('Squared up');
 });
+
+// A-BACK-045 step 5: the verdict chip on the rink (#goalieLabel, which
+// Present already hides) shows while any shot overlay is on, next to the
+// targeted goal, inside the stage, in 2D too.
+test('the verdict chip shows by the targeted goal while an overlay is on', async ({ page }) => {
+  await boot(page);
+  const chipNow = () => page.evaluate(async () => {
+    const { updateShotReadout } = await import('/src/shot-readout.js');
+    const { updateShotChip } = await import('/src/ui/shot-chip.js');
+    const { renderer } = await import('/src/scene.js');
+    updateShotReadout();
+    updateShotChip();
+    const el = document.getElementById('goalieLabel');
+    const r = el.getBoundingClientRect();
+    const c = renderer.domElement.getBoundingClientRect();
+    return {
+      shown: getComputedStyle(el).display !== 'none',
+      text: el.textContent,
+      x: r.left + r.width / 2, y: r.bottom,
+      canvas: { left: c.left, right: c.right, top: c.top, bottom: c.bottom, mid: c.left + c.width / 2 },
+    };
+  });
+  await page.evaluate(async () => {
+    const td = await import('/src/authoring/topdown-camera.js');
+    if (!td.isTopDown()) td.enterTopDown();
+    const { state } = await import('/src/state.js');
+    state.ballGroup.position.set(0, 0, 9500);
+    state.goalies.A.position.x = 1;
+  });
+  expect((await chipNow()).shown).toBe(false);
+  await selectBall(page);
+  await chip(page, 'Shooting line').click();
+  const c = await chipNow();
+  expect(c.shown).toBe(true);
+  expect(c.text).toMatch(/Squared up/);
+  expect(c.text).toMatch(/\d+%/);
+  // inside the stage, on goal A's (left) half in the top-down view
+  expect(c.x).toBeGreaterThan(c.canvas.left);
+  expect(c.x).toBeLessThan(c.canvas.mid);
+  expect(c.y).toBeGreaterThan(c.canvas.top);
+  expect(c.y).toBeLessThan(c.canvas.bottom);
+  await chip(page, 'Shooting line').click();
+  expect((await chipNow()).shown).toBe(false);
+});

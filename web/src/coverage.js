@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { state, goalieForGoal, shotGoal } from './state.js';
-import { camera } from './scene.js';
 import { coverageGrid } from './insights.js';
 import { VECTOR_COVERAGE_BLOCKED, VECTOR_COVERAGE_OPEN } from './tokens.js';
 import { snapshotChanged, copySnapshot } from './dirty-check.js';
@@ -108,26 +107,4 @@ export function updateCoverage(ballCenter) {
   coverageGeometry.attributes.color.needsUpdate = true;
 
   state.currentCoveragePct = Math.round(pctBlocked);
-}
-
-// Floating label above the goalie's head showing the same percentage, so you
-// don't have to glance at the side panel while nudging its position around.
-const goalieLabelEl = document.getElementById('goalieLabel');
-const labelProjection = new THREE.Vector3();
-
-export function updateGoalieLabel() {
-  const goalie = goalieForGoal(shotGoal());
-  if (!goalie || !goalie.visible || state.currentCoveragePct === null) {
-    goalieLabelEl.style.display = 'none';
-    return;
-  }
-  labelProjection.set(goalie.position.x, 850, goalie.position.z).project(camera);
-  if (labelProjection.z > 1) { // behind the camera
-    goalieLabelEl.style.display = 'none';
-    return;
-  }
-  goalieLabelEl.style.left = `${(labelProjection.x * 0.5 + 0.5) * window.innerWidth}px`;
-  goalieLabelEl.style.top = `${(-labelProjection.y * 0.5 + 0.5) * window.innerHeight}px`;
-  goalieLabelEl.textContent = `${state.currentCoveragePct}% blocked`;
-  goalieLabelEl.style.display = 'block';
 }
