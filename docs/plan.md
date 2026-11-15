@@ -190,11 +190,11 @@ lines. An item that needs more than ~10 lines gets its own file under
   instead of the first-person walker, wheel dolly instead of FOV zoom, view presets
   (stand, behind each goal, player eye), touch gestures, follow-ball
   in playback. [Spec](items/A-BACK-040-camera-navigation.md).
-- **[A-BACK-041] Player moves** [open] Real floorball moves from the
+- **[A-BACK-041] Player moves** [in-progress] (steps 1-2 done) Real floorball moves from the
   doc's ball events: carry, pass, receive, wrist / slap shot, defend. Procedural stick
   tracks on the existing IK (no usable free motion capture exists).
   [Spec](items/A-BACK-041-043-floorball-moves.md).
-- **[A-BACK-042] Posable goalie** [open] Goalie as a kneeling figure
+- **[A-BACK-042] Posable goalie** [in-progress] (steps 1-2 done) Goalie as a kneeling figure
   with generated gear and a capsule proxy for coverage; replaces both
   goalie meshes. Same file.
 - **[A-BACK-043] Goalie behaviour** [blocked-by: A-BACK-042] Auto
@@ -290,7 +290,7 @@ make cheaper or safer.
   save itself fail. Opening the Library parses every full project to read
   names. Fix: IndexedDB (already used for photos), history as diffs or
   capped by bytes, a small project-name index, debounced saves.
-- **[S-BACK-026] Download weight** [open] Measured 2026-10-15:
+- **[S-BACK-026] Download weight** [in-progress] (first slice done) Measured 2026-10-15:
   - Every boot fetches `goalie_02_texture.png` (4.99 MB),
     `goalie_02.obj` (0.93 MB), `ball.obj` (0.41 MB),
     `floorball_goal.obj` (0.29 MB). Convert to GLB + meshopt with WebP or

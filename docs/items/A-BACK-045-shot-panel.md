@@ -76,7 +76,13 @@ the TDD workflow in [CLAUDE.md](../../CLAUDE.md).
    `insights.js` `shotVerdict` now tests the goalie's proxy too, so the
    verdict and the % agree. Tests: `test/shot-readout.test.js`,
    `shot-target.spec.js`.
-5. `[small]` **Verdict chip on the rink.** Replaces the old
+5. `[done 2026-11-15]` **Verdict chip on the rink.** As built:
+   `ui/shot-chip.js` `updateShotChip()` (main.js loop) fills
+   `#goalieLabel` with dot + verdict + %, above the targeted goalie,
+   projected with the active camera into the canvas rectangle
+   (`shot-chip-math.js` `ndcToPage`), so 2D works; words shared with the
+   Inspector card (`verdictWords`). coverage.js's old label is gone.
+   Tests: `test/shot-chip.test.js`, `shot-panel.spec.js`. Original text: Replaces the old
    `#goalieLabel` ("NN% blocked" over the goalie): dot + verdict +
    %, placed by the targeted goal, shown while any shot overlay is on,
    hidden in Present (`PRESENT_HIDES`). e2e: chip text follows the
