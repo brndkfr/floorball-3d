@@ -145,8 +145,11 @@ test('Present shows only the stage and a small transport; Esc restores layout an
   await boot(page);
   // a two-frame play, the panel as a strip and the recorder folded beforehand
   await page.evaluate(async () => {
-    const { duplicateFrame } = await import('/src/authoring/frames.js');
+    const { duplicateFrame, setFrameDuration } = await import('/src/authoring/frames.js');
     duplicateFrame(0, 1);
+    // A long play: a 1 s one can end on a slow CI runner before the pause
+    // click, and that click then plays it again from the start.
+    setFrameDuration(0, 60000);
   });
   await toggle(page).click();
   await page.locator('#timeline [data-action="fold-timeline"]').click();
@@ -167,6 +170,8 @@ test('Present shows only the stage and a small transport; Esc restores layout an
   await expect(page.locator('#presentBar [data-present="play"]')).toBeFocused();
 
   // pause from the small transport
+  // 5 s of a slow runner still leaves the play running
+  await page.evaluate(async () => (await import('/src/authoring/playback.js')).tickPlayback(5000));
   await page.locator('#presentBar [data-present="play"]').click();
   expect(await page.evaluate(async () => (await import('/src/state.js')).state.playback.playing)).toBe(false);
 
