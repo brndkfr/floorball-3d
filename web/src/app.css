@@ -822,6 +822,38 @@
     font:600 12px/1 var(--fb-font); margin-top:4px;
   }
   #inspector .ins-btn:hover { background:var(--fb-line); }
+  /* Shot section in the match ball's Inspector (A-BACK-045, draft variant B) */
+  #inspector .shot-section {
+    margin-top:14px; padding-top:12px; border-top:1px solid var(--fb-line);
+    display:flex; flex-direction:column; gap:8px;
+  }
+  #inspector .shot-section > .ins-label { flex:none; }
+  #inspector .shot-target {
+    display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:2px; padding:2px;
+    background:var(--fb-ink); border:1px solid var(--fb-line); border-radius:var(--fb-radius-1);
+  }
+  #inspector .shot-seg {
+    height:28px; border:0; border-radius:calc(var(--fb-radius-1) - 2px); cursor:pointer;
+    background:transparent; color:var(--fb-text-2); font:500 12px/1 var(--fb-font);
+  }
+  #inspector .shot-seg[aria-checked="true"] { background:var(--fb-brand); color:#fff; font-weight:600; }
+  #inspector .shot-seg:focus-visible, #inspector .shot-chip:focus-visible { outline:2px solid var(--fb-brand); outline-offset:1px; }
+  #inspector .shot-verdict {
+    display:flex; align-items:center; gap:8px; padding:10px 12px;
+    background:var(--fb-surf-2); border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-2);
+  }
+  #inspector .shot-dot { flex:none; width:10px; height:10px; border-radius:50%; background:var(--fb-text-3); }
+  #inspector .shot-verdict-title { flex:1; font:600 14px/1.2 var(--fb-font); color:var(--fb-text-1); }
+  #inspector .shot-verdict-pct { font:500 12px/1 var(--fb-mono); color:var(--fb-text-2); }
+  #inspector .shot-toggles { display:flex; flex-wrap:wrap; gap:6px; }
+  #inspector .shot-chip {
+    height:28px; padding:0 12px; border-radius:14px; cursor:pointer;
+    border:1px solid var(--fb-line-strong); background:transparent; color:var(--fb-text-2);
+    font:500 12px/1 var(--fb-font);
+  }
+  #inspector .shot-chip[aria-pressed="true"] { border-color:var(--fb-brand); background:var(--fb-brand-quiet); color:var(--fb-text-1); }
+  #inspector .shot-actions { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; }
+  #inspector .shot-actions .ins-btn { margin-top:0; }
   #inspector .ins-btn.danger {
     border-color:color-mix(in srgb, var(--fb-danger) 50%, transparent); background:color-mix(in srgb, var(--fb-danger) 10%, transparent);
     color:var(--fb-danger);

@@ -33,10 +33,17 @@ async function overlays(page) {
     return {
       goal: state.goalInstances.indexOf(shotGoal()) === 1 ? 'B' : 'A',
       linesVisible: lines.length > 0 && lines.every((l) => l.visible),
-      coverage: document.getElementById('coveragePct').textContent,
+      coverage: state.currentCoveragePct === null ? '-' : `${state.currentCoveragePct}% blocked`,
     };
   });
 }
+
+// The overlays are switched from the ball's Inspector since A-BACK-045 step 3.
+const turnOn = (page, key) => page.evaluate(async (key) => {
+  const { state } = await import('/src/state.js');
+  const { toggleShotOverlay } = await import('/src/shot-view-state.js');
+  if (!state.shotView[key]) toggleShotOverlay(key);
+}, key);
 
 const placeBall = (page, z) => page.evaluate(async (z) => {
   const { state } = await import('/src/state.js');
@@ -51,7 +58,7 @@ test('a fresh page shows no shot overlay until one is switched on', async ({ pag
   const o = await overlays(page);
   expect(o.linesVisible).toBe(false);
   expect(o.coverage).toBe('-');
-  expect(await page.locator('#coverageCheckbox').isChecked()).toBe(false);
+  expect(await page.evaluate(async () => (await import('/src/state.js')).state.shotView)).toEqual({ lines: false, shotLine: false, coverage: false });
 });
 
 test('a fresh page selects nothing, so the target follows the ball to the far end', async ({ page }) => {
@@ -59,7 +66,8 @@ test('a fresh page selects nothing, so the target follows the ball to the far en
   // was selected" and selected the home goalie on load, which also pinned
   // the shot target to goal A.
   await boot(page);
-  await page.locator('#trajectoryCheckbox').check();
+  await turnOn(page, 'lines');
+  await turnOn(page, 'shotLine');
   const sel = await page.evaluate(async () => {
     const { state } = await import('/src/state.js');
     return { selected: !!state.selected, picked: !!state.targetGoal };
@@ -74,8 +82,9 @@ test('a fresh page selects nothing, so the target follows the ball to the far en
 
 test('ticking the lines shows them at once, aimed at the goal nearer the ball', async ({ page }) => {
   await boot(page);
-  await page.locator('#trajectoryCheckbox').check();
-  await page.locator('#coverageCheckbox').check();
+  await turnOn(page, 'lines');
+  await turnOn(page, 'shotLine');
+  await turnOn(page, 'coverage');
   await placeBall(page, 9000);   // goal A end
   let o = await overlays(page);
   expect(o.goal).toBe('A');
@@ -89,7 +98,8 @@ test('ticking the lines shows them at once, aimed at the goal nearer the ball', 
 
 test('picking a goal or a goalie in the Layers panel aims the overlays there', async ({ page }) => {
   await boot(page);
-  await page.locator('#trajectoryCheckbox').check();
+  await turnOn(page, 'lines');
+  await turnOn(page, 'shotLine');
   await placeBall(page, 9000);   // nearer A
   await page.evaluate(async () => {
     const { selectObject } = await import('/src/selection.js');
@@ -130,7 +140,9 @@ test('the shot readout follows the goalie: squared up, then open when it steps a
     window.removeEventListener('shotReadoutChanged', count);
     return { ...state.shotReadout, events };
   }, x);
-  const centred = await goalieAt(0);
+  // 1 mm, not 0: the goalie starts at 0, and the app loop may already have
+  // computed that pose, so only a real change is sure to fire one event.
+  const centred = await goalieAt(1);
   expect(centred.goal).toBe('A');
   expect(centred.key).toBe('blocked-centred');
   expect(centred.pctBlocked).toBeGreaterThan(30);

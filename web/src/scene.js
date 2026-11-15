@@ -287,17 +287,14 @@ gridCheckbox.addEventListener('change', () => { sceneGrid.visible = gridCheckbox
 
 // --- camera shortcuts: jump to the ball's exact vantage point (same origin
 // the coverage raycasts use), and back to the default overview ---
-const coveragePctEl = document.getElementById('coveragePct');
-
-document.getElementById('viewFromBallBtn').addEventListener('click', () => {
-  if (!state.ballGroup) {
-    coveragePctEl.textContent = 'place the ball first';
-    return;
-  }
+// Callers leave the 2D view first (camera-menu.js, shot-section.js).
+// Returns false without a ball or a goal.
+export function viewFromBall() {
+  if (!state.ballGroup) return false;
   const ballCenter = new THREE.Box3().setFromObject(state.ballGroup).getCenter(new THREE.Vector3());
   // The picked goal, else the nearer one (shot-target.js).
   const goal = shotGoal();
-  if (!goal) return;
+  if (!goal) return false;
   const goalCenter = goal.localToWorld(new THREE.Vector3(0, 575, 0));
 
   // Pull back slightly from the ball, away from the goal, instead of sitting
@@ -312,7 +309,8 @@ document.getElementById('viewFromBallBtn').addEventListener('click', () => {
 
   camera.position.copy(viewPoint);
   lookAtFrom(viewPoint, goalCenter);
-});
+  return true;
+}
 
 document.getElementById('resetViewBtn').addEventListener('click', applyDefaultView);
 

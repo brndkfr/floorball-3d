@@ -25,8 +25,10 @@ test('trajectory lines recompute only when an input changes, and the verdict fol
     state.targetGoal = state.goalInstances[0];
     const goalie = goalieForGoal(state.targetGoal);
     goalie.visible = true;
-    const cb = document.getElementById('trajectoryCheckbox');
-    cb.checked = true;
+    // The overlays are switched from the ball's Inspector (A-BACK-045):
+    // state.shotView, set here directly.
+    const view = (on) => { state.shotView = { ...state.shotView, lines: on, shotLine: on }; };
+    view(true);
     const out = {};
 
     out.first = updateTrajectory(getBallWorldCenter());
@@ -45,10 +47,10 @@ test('trajectory lines recompute only when an input changes, and the verdict fol
     out.openColor = color();
     out.idleAgain = updateTrajectory(getBallWorldCenter());
 
-    cb.checked = false;
+    view(false);
     out.hide = updateTrajectory(getBallWorldCenter());
     out.hidden = !shootingLine.visible;
-    cb.checked = true;
+    view(true);
     out.reshow = updateTrajectory(getBallWorldCenter());
     out.reshownVisible = shootingLine.visible;
     return out;

@@ -21,6 +21,7 @@ import { getBallCarrier, setBallCarrier, promoteExtraBall, getBallColor, setBall
 import { passTargets, passStatus } from './choreo-pass.js';
 import { currentPass, shotVerdictFor } from './pass-overlay.js';
 import { MIN_PASS_SPEED_MPS, maxSpeedMps, mpsToKmh, padToAim, aimToPad } from './ball-pose.js';
+import { shotSection } from './shot-section.js';
 import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED, SHOT_LINE_TOKENS } from '../tokens.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
@@ -128,6 +129,7 @@ function render(sel) {
     if (getBallCarrier()) body.appendChild(shootRow());
     const incoming = currentPass();
     if (incoming) body.appendChild(passTimingSection(incoming));
+    body.appendChild(shotSection());   // A-BACK-045: shot overlays live here
     body.appendChild(ballColorRow());
     const hint = document.createElement('div');
     hint.className = 'ins-empty';
