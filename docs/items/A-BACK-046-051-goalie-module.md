@@ -1,4 +1,4 @@
-# A-BACK-046 to 051 - Goalie module: positioning with KATA and the zone model
+# A-BACK-046 to 052 - Goalie module: positioning with KATA and the zone model
 
 Status: open. Added 2026-11-15. Clickable draft (goalie lens, lesson
 player, exercise): <https://claude.ai/artifact/MWo96HehmtLYkQJM8yimvw>.
@@ -65,6 +65,30 @@ word for word needs their permission (A-Q-007).
 
 ## Items
 
+### A-BACK-052 - Goalie content in English and German `[small]` (first: every later step writes its text through it)
+
+The app has no translations yet (`index.html` is `lang="en"`), so this
+starts small and only covers the goalie module:
+- Pure `web/src/goalie-i18n.js`: `GOALIE_TEXT = { en: {...}, de:
+  {...} }` and `goalieText(key, lang, vars)`; a missing key falls back
+  to English. Zone names and cards, KATA rows and hint sentences, the
+  verdict words, lesson titles, exercise texts.
+- Language switch in the goalie lens (EN / DE), remembered per browser
+  (localStorage, like the shot overlays). The first default comes from
+  the browser language (`de*` -> German, else English).
+- KATA keeps its German letters in both languages: English shows
+  "Body (Körper)", "Placement (Ausrichtung)", "Depth (Tiefe)", "Axis
+  (Achse)", so the acronym still reads.
+- Lesson docs (A-BACK-049) store captions per language (`{ en, de }`);
+  user-written frame notes (A-BACK-035) stay one language.
+- Our own wording in both languages (A-Q-007); German uses the
+  module's terms (Schusslinie, Verschiebungsvorbereitung) so coaches
+  recognise them.
+Tests first: every key exists in `en` and `de` with the same
+placeholders; fallback to English; browser-language default. e2e: the
+switch changes the zone card and the KATA rows, and the choice
+survives a reload.
+
 ### A-BACK-048 - Goalie zone layer `[small]` (first: everything else reads the zone)
 
 Pure `web/src/goalie-zones.js`: `GOALIE_ZONES` (geometry per end, mm,
@@ -75,7 +99,9 @@ board): passing-first z < 4 m; danger z < 16 m; slot a trapezoid from
 3.8 m to 10.9 m, half-width 2.4 m widening to 3.75 m; attention 16 to
 26.6 m; awareness beyond. Mirrored for goal B.
 Layer: floor overlay in front of the defending goal, the ball's zone
-highlighted, a zone card (our wording). Tests first: zone of sample
+highlighted, a zone card (our wording). A regular entry in the Layers
+panel; the goalie lens switches it on, the user can switch it off.
+Tests first: zone of sample
 points for both ends; mirror symmetry. e2e: layer toggles, the card
 follows the ball.
 
@@ -104,8 +130,9 @@ every pure function; e2e for the section.
 
 ### A-BACK-047 - Shooter's-eye inset ("Winkelband") `[lead]`
 
-A small second view rendered from the ball toward the targeted goal
-(second camera, scissor viewport or a small canvas), shown with the
+A small inset (decided 2026-11-15, no split screen) rendered from the
+ball toward the targeted goal (second camera, scissor viewport or a
+small canvas) in a corner of the stage, shown with the
 goalie lens; updates while the goalie or the ball moves; hidden in
 Present unless switched on. Watch frame time (second render only on
 change, as S-BACK-011). Look check by eye. e2e: inset visible, its
@@ -142,15 +169,28 @@ Körper part (pose per zone / action).
 
 ## Order
 
-048 -> 046 -> 047 -> (A-BACK-035 frame notes) -> 049 -> 050 -> 051.
+052 -> 048 -> 046 -> 047 -> (A-BACK-035 frame notes) -> 049 -> 050 -> 051.
 Körper (body) follows A-BACK-042 steps 3 to 5; 051 merges into
 A-BACK-043.
 
-## Open questions
+## Decisions (2026-11-15)
 
-- A-Q-007 content rights, A-Q-008 where the module lives, A-Q-009
-  expected action (see plan section 6). A-Q-006 (goalie height) matters
-  more now: a U14 goalie covers less.
-- From the draft: gauges for all four dimensions or only the one that
-  is off? Inset or split screen? Zone layer on by default with the
-  goalie lens?
+- A-Q-007 content rights: default. Our own words, a link to the module,
+  no copied images.
+- A-Q-008 where it lives: default. A goalie lens in Plan (goalie
+  selected) plus a "Lessons" shelf in the Library.
+- A-Q-009 expected action: default. Read from the play's next ball
+  event, with a manual Shot / Pass override.
+- Gauges: the goalie's Inspector always lists all four KATA rows; the
+  worst dimension that is off is tinted and carries the one hint
+  sentence; the chip on the rink names only that dimension.
+- Shooter's view: inset, everywhere (Plan, lesson Present, exercise
+  check); no split screen. Comparison draft:
+  <https://claude.ai/artifact/2fFwsx6PRpK4urhBBSMu1v>.
+- Languages: the goalie content switches between English and German,
+  more later (A-BACK-052, added 2026-11-15).
+- Zone layer: switched on when the goalie lens opens, but it is a
+  regular entry in the Layers panel, so the user can switch it off
+  (A-BACK-048).
+
+A-Q-006 (goalie height) matters more now: a U14 goalie covers less.
