@@ -17,6 +17,8 @@ import * as THREE from 'three';
 import { scene, renderer, camera, topDownCamera } from '../scene.js';
 import { state } from '../state.js';
 import { seekTo, playbackState, totalDuration } from './playback.js';
+import { currentCaptionText } from './frame-caption.js';
+import { wrapCaption, captionBox } from './frame-notes.js';
 
 const WEBM_MIME = 'video/webm;codecs=vp9';
 
@@ -96,6 +98,46 @@ function pickCamera() {
   return state.activeCamera === topDownCamera ? topDownCamera : camera;
 }
 
+// --- frame note burn-in (A-BACK-035) ------------------------------------
+// Every exported picture is the 3D frame plus the current frame note as a
+// caption (currentCaptionText: the frame whose move is on screen). One 2D
+// canvas is reused; without a note it is a plain copy of the 3D frame.
+
+const composite = document.createElement('canvas');
+
+function drawCaption(ctx, w, h, text) {
+  const fontPx = Math.max(14, Math.round(h * 0.035));
+  ctx.font = `600 ${fontPx}px Archivo, Helvetica Neue, Arial, sans-serif`;
+  const padX = Math.round(fontPx * 0.8);
+  const lines = wrapCaption(text, w * 0.8 - 2 * padX, (s) => ctx.measureText(s).width);
+  if (!lines.length) return;
+  const lineW = Math.max(...lines.map((l) => ctx.measureText(l).width));
+  const box = captionBox({ w, h }, { lines: lines.length, lineW, fontPx });
+  ctx.fillStyle = 'rgba(13, 15, 18, 0.82)';
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(box.x, box.y, box.w, box.h, Math.round(fontPx * 0.4)); else ctx.rect(box.x, box.y, box.w, box.h);
+  ctx.fill();
+  ctx.fillStyle = '#f2f4f7';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  lines.forEach((l, k) => ctx.fillText(l, w / 2, box.y + box.padY + box.lineH * (k + 0.5)));
+}
+
+// The 3D canvas as rendered just now, with the caption burned in.
+function composeFrame() {
+  const gl = renderer.domElement;
+  if (composite.width !== gl.width || composite.height !== gl.height) {
+    composite.width = gl.width;
+    composite.height = gl.height;
+  }
+  const ctx = composite.getContext('2d');
+  ctx.clearRect(0, 0, composite.width, composite.height);
+  ctx.drawImage(gl, 0, 0);
+  const text = currentCaptionText();
+  if (text) drawCaption(ctx, composite.width, composite.height, text);
+  return composite;
+}
+
 // --- MP4 (WebCodecs + mp4-muxer) -------------------------------------
 
 export async function exportMp4({ width, height, fps, startMs = 0, endMs, onProgress, isCancelled }) {
@@ -133,7 +175,7 @@ export async function exportMp4({ width, height, fps, startMs = 0, endMs, onProg
     const elapsed = startMs + (i * 1000 / fps);
     seekTo(elapsed);
     renderer.render(scene, cam);
-    const bitmap = await createImageBitmap(renderer.domElement);
+    const bitmap = await createImageBitmap(composeFrame());   // with the frame note (A-BACK-035)
     const frame = new VideoFrame(bitmap, {
       timestamp: i * frameDurationUs,
       duration: frameDurationUs,
@@ -163,7 +205,8 @@ export function exportWebm({ fps, startMs = 0, endMs, onProgress, isCancelled })
   return new Promise((resolve, reject) => {
     const cam = pickCamera();
     const savedRenderer = saveRendererState();
-    const stream = renderer.domElement.captureStream(fps);
+    composeFrame();   // sizes the composite before the stream starts
+    const stream = composite.captureStream(fps);   // with the frame note (A-BACK-035)
     const chunks = [];
     const recorder = new MediaRecorder(stream, { mimeType: WEBM_MIME, videoBitsPerSecond: bitrateFor(renderer.domElement.width, renderer.domElement.height, fps) });
     recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
@@ -186,12 +229,14 @@ export function exportWebm({ fps, startMs = 0, endMs, onProgress, isCancelled })
       if (elapsed >= endMs) {
         seekTo(endMs);
         renderer.render(scene, cam);
+        composeFrame();
         setTimeout(() => recorder.stop(), 100);   // drain the stream
         onProgress?.(1);
         return;
       }
       seekTo(elapsed);
       renderer.render(scene, cam);
+      composeFrame();
       onProgress?.((elapsed - startMs) / totalMs);
       requestAnimationFrame(tick);
     }
@@ -206,7 +251,7 @@ export function exportPng({ width, height } = {}) {
   const savedRenderer = saveRendererState();
   if (width && height) applyRendererSize(width, height, cam);
   renderer.render(scene, cam);
-  const dataUrl = renderer.domElement.toDataURL('image/png');
+  const dataUrl = composeFrame().toDataURL('image/png');   // with the frame note (A-BACK-035)
   restoreRendererState(savedRenderer);
   return dataUrl;
 }

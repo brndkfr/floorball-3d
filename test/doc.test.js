@@ -343,3 +343,17 @@ test('acceptDoc drops a malformed frame camera and a bad duration', () => {
   assert.equal(doc.frames[0].camera, undefined);
   assert.equal(doc.frames[0].duration, undefined);
 });
+
+// A-BACK-035: frame notes survive load / import cleaned, junk is dropped.
+test('acceptDoc keeps clean frame notes and drops bad ones', async () => {
+  const raw = JSON.parse(JSON.stringify(emptyDoc()));
+  raw.frames.push({ ...JSON.parse(JSON.stringify(raw.frames[0])), id: 'f_b' });
+  raw.frames[0].note = '  Pass to the slot' + String.fromCharCode(10);
+  raw.frames[1].note = { en: 'Shot', de: 'Schuss', evil: '<script>' };
+  const d = acceptDoc(raw);
+  assert.equal(d.frames[0].note, 'Pass to the slot');
+  assert.deepEqual(d.frames[1].note, { en: 'Shot', de: 'Schuss' });
+  const bad = JSON.parse(JSON.stringify(emptyDoc()));
+  bad.frames[0].note = { x: 1 };
+  assert.equal('note' in acceptDoc(bad).frames[0], false);
+});

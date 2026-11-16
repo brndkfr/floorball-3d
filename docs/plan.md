@@ -212,8 +212,11 @@ lines. An item that needs more than ~10 lines gets its own file under
 - **[A-BACK-034] Floorball stick** [in-progress] Figures hold it in
   both hands in a ready stance, per-player Stick L / R (2026-10-16);
   open: pose tuning, hand wrap, team colours. Same spec file.
-- **[A-BACK-035] Frame notes** [open] A caption per frame, shown in
-  playback and export.
+- **[A-BACK-035] Frame notes** [in-progress] A caption per frame, shown in
+  playback and export. Built 2026-11-16: Add / Edit note in the frame
+  menu, a marker on the card, a subtitle over the stage (Plan, Train,
+  Present), in screenshots, burned into MP4 / WebM / PNG; notes may be
+  { en, de } for the lessons (A-BACK-049).
   [Spec](items/A-BACK-035-coaching-features.md), which also lists the
   unnumbered coaching ideas and missing drill-notation shapes.
 - **[A-BACK-036] Printable drill sheet** [blocked-by: A-BACK-035]

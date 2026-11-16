@@ -11,6 +11,7 @@
 //
 // v1 docs (single implicit frame) are auto-migrated on load via ensureDoc.
 
+import { sanitizeNote } from './frame-notes.js';
 import { state } from '../state.js';
 import { sanitizeZones } from './zones-model.js';
 import { sanitizeHiddenFixed } from './fixed-objects-model.js';
@@ -172,6 +173,10 @@ function sanitizeFrame(frame) {
   if (cam != null) {
     if (!isObj(cam) || !isNumArray(3)(cam.position) || !isNumArray(4)(cam.quaternion)) delete frame.camera;
     else cleanFields(cam, CAMERA_FIELDS);
+  }
+  if ('note' in frame) {   // A-BACK-035
+    const note = sanitizeNote(frame.note);
+    if (note === undefined) delete frame.note; else frame.note = note;
   }
   if (!isObj(frame.scheme)) frame.scheme = emptyScheme();
   migrateGoalieScheme(frame.scheme);
