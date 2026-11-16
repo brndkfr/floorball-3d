@@ -68,6 +68,20 @@ export function trainPose(goal) {
   return aim({ x: 0, y: TRAIN_VIEW.height, z: end + dir * TRAIN_VIEW.out }, { x: 0, y: 0, z: end + dir * TRAIN_VIEW.lookAt });
 }
 
+// Lessons (A-BACK-049): high over the side board, looking across the
+// defending half, so the whole attack (from the attention zone to behind
+// the goal) runs along the wide stage with the goal on the right, clear of
+// the caption (bottom centre) and the cards (left). A view from behind the
+// goal put the goal under the caption. Estimates, chosen by eye; meant to
+// be tuned (the user wants to revisit the lesson camera).
+const LESSON_VIEW = { side: 17000, height: 13000, depth: 12500 };   // camera x and y; camera and look-at depth from the end board, mm
+export function lessonPose(goal) {
+  const end = goal === 'B' ? RINK_L : 0;
+  const dir = goal === 'B' ? -1 : 1;   // B is A turned half round the centre spot: goal B on the right too
+  const z = end + dir * LESSON_VIEW.depth;
+  return aim({ x: dir * LESSON_VIEW.side, y: LESSON_VIEW.height, z }, { x: 0, y: 0, z });
+}
+
 // Focus goalie (KATA marks, A-BACK-046): close in front of the defending
 // goalie, looking back at it and its goal line, so the target band, the
 // footprint and the facing rays read. Estimates, chosen by eye.

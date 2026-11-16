@@ -159,6 +159,15 @@ ball's Shot section): four rows (Körper greyed until A-BACK-042 step
 3), coverage %, Shot / Pass switch, "Show the ideal". Tests first for
 every pure function; e2e for the section.
 
+Tight angle (added 2026-11-16, found building the lessons): a ball wide
+and close to the goal line is still in the danger zone, but "step forward
+on the shooting line" put the goalie metres to the side, level with the
+ball (Auto position did it too). Below `TIGHT_ANGLE_DEG` (25 deg, an
+estimate) between the shooting line and the goal line, danger and slot use
+the passing-first targets (on the line at the ball-side post);
+`shotAngleDeg()` in `kata.js`, passed to `kataTargets()` by the readout,
+the lessons and the live goalie.
+
 KATA on the rink (added 2026-11-16, mock: third row of
 <https://claude.ai/artifact/Dvebi8ZfC8rea9WpHEdm16>): `kata-visuals.js`
 (pure) gives the target band on the reference line between the target
@@ -192,6 +201,30 @@ the user's projects:
 Captions per frame (A-BACK-035), pause on captions, the inset and the
 verdict chip on. Lesson docs go through `acceptDoc()` like any import;
 a Node test validates each one.
+
+Pilot, 2026-11-16 (decided with the user: live goalie, fixed lesson
+camera to be revisited, captions as drafted for review):
+- Lessons are built in code, not shipped as JSON: `goalie-lessons.js`
+  holds the ball path, durations and `{ en, de }` captions; the goalie
+  in each keyframe comes from `idealGoaliePose()`, so a rule change moves
+  the lessons with it. Lesson 2 "Through the zones" is the first.
+- Live goalie: lesson docs carry `autoGoalie: 'A' | 'B'` (kept by
+  `acceptDoc`, junk dropped). During playback that goalie follows
+  `goalie-track.js`: the ideal pose sampled every 40 ms, moving at most
+  3 m/s and turning at most 360 deg/s (estimates), so it never teleports
+  at a zone change. Ok on all KATA dimensions 92% of the time in lesson 2;
+  the rest is the half-second recovery after a zone or angle change.
+  The zones and the readout defend the lesson's goal throughout
+  (`defendingGoal(ball, pinned)`), even while the ball is nearer the
+  other end.
+- Lesson camera: `lessonPose()` in `camera-presets.js`, high over the side
+  board looking across the defending half (goal on the right, clear of
+  the caption and the cards). A view from behind the goal put the goal
+  under the caption. The user wants to revisit it.
+- `openLesson(key)` in `train-mode.js` enters Train and shows the lesson;
+  the Lessons shelf in the Library will call it.
+Open: lessons 1, 3, 4, 5; the shelf; pause on captions; whether "Open as
+play" should keep `autoGoalie` in the copied project.
 
 ### A-BACK-050 - "Place the goalie" exercises `[small]` after 046
 

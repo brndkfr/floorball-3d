@@ -75,7 +75,7 @@ export function updateGoalieZones(ballCenter) {
     changed = true;
   }
   if (!ballCenter) return changed;
-  const goal = defendingGoal(ballCenter);
+  const goal = defendingGoal(ballCenter, state.doc?.autoGoalie);
   const zone = goalieZoneOf(ballCenter, goal);
   if (builtFor !== goal) { build(goal); changed = true; }
   const cur = state.goalieZone;
