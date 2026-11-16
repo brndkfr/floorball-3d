@@ -21,6 +21,8 @@ export const GOALIE_ZONE_KEYS = ['awareness', 'attention', 'danger', 'slot', 'pa
 const EN = {
   'goalie.title': 'Goalie training',
   'lang.label': 'Language',
+  'goalie.intro': 'A practice rink of its own: drag the goalie and the ball, your plays stay as they are. Zones, KATA and the shooter’s view follow here.',
+  'goalie.openAsPlay': 'Open as play',
   'goalie.source.text': 'Positioning after the J+S / swiss unihockey goalie module.',
   'goalie.source.link': 'Open the module',
 
@@ -57,6 +59,8 @@ const EN = {
 const DE = {
   'goalie.title': 'Goalie-Training',
   'lang.label': 'Sprache',
+  'goalie.intro': 'Ein eigenes Übungsfeld: Goalie und Ball verschieben, deine Spielzüge bleiben unverändert. Zonen, KATA und die Sicht der Schützin oder des Schützen folgen hier.',
+  'goalie.openAsPlay': 'Als Spielzug öffnen',
   'goalie.source.text': 'Positionierung nach dem J+S-/swiss-unihockey-Lernmodul für Goalies.',
   'goalie.source.link': 'Zum Lernmodul',
 

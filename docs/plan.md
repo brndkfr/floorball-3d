@@ -236,7 +236,7 @@ lines. An item that needs more than ~10 lines gets its own file under
   Auto target (goal nearer the ball), controls in the match ball's
   Inspector (draft variant B), verdict chip on the rink, lines in 2D,
   goalie glow follows the shooting line. [Spec](items/A-BACK-045-shot-panel.md).
-- **[A-BACK-054] Train mode** [open] A fourth rail mode for goalie
+- **[A-BACK-054] Train mode** [in-progress] A fourth rail mode for goalie
   training (A-Q-008, revised 2026-11-16): own practice rink, Train
   panel, Plan's editing tools hidden. Same file.
 - **[A-BACK-052] Goalie content in English and German** [in-progress] Zone

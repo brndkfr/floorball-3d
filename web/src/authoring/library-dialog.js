@@ -127,17 +127,24 @@ export { fireProjectChanged as notifyProjectChanged };
 export function switchToProject(id) {
   const doc = loadProject(id);
   if (!doc) return false;
-  state.doc = doc;
   setCurrentProjectId(id);
+  showDoc(doc);
+  initHistory();
+  fireProjectChanged();
+  return true;
+}
+
+// Puts `doc` on screen: state.doc plus every visual module rebuilt. No
+// history and no project bookkeeping; switchToProject and Train mode
+// (train-mode.js, A-BACK-054) add their own.
+export function showDoc(doc) {
+  state.doc = doc;
   rebuildFromDoc();
   rebuildShapesFromDoc();
   rebuildConesFromDoc();
   rebuildBallsFromDoc();
   rebuildGoalsFromDoc();
   applyActorsFromScheme();   // else the old project's ball/goalie mesh positions get written into this one
-  initHistory();
-  fireProjectChanged();
-  return true;
 }
 
 async function newProjectFlow() {

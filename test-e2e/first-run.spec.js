@@ -30,3 +30,14 @@ test('Choose photo switches to Analyze', async ({ page }) => {
   await expect(page.locator('#appRail [data-mode="analyze"]')).toHaveClass(/active/);
   await expect(page.locator('#photoPanel')).toBeVisible();
 });
+
+// A-BACK-054: picking a mode in the rail is a choice too; the card must not
+// sit on top of Train (or Analyze).
+test('switching mode in the rail closes it', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'load' });
+  await expect(page.locator('#onboardingTip')).toBeVisible();
+  await page.locator('#appRail [data-mode="train"]').click();
+  await expect(page.locator('#onboardingTip')).toHaveCount(0);
+  await expect(page.locator('#trainPanel')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('floorball-3d:onboarded'))).toBe('1');
+});

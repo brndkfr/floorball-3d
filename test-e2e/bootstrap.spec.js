@@ -163,7 +163,7 @@ test('Broadcast shell: rail and top bar geometry', async ({ page }) => {
     topbarLeft: 64,
     barWidth: '3px',
     barColor: 'rgb(46, 107, 255)',
-    icons: ['Plan', 'Analyze', 'Library'],
+    icons: ['Plan', 'Analyze', 'Train', 'Library'],   // Train: A-BACK-054
   });
 });
 
