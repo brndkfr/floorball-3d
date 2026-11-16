@@ -156,3 +156,84 @@ test('the side-panel toggle hides in Train; on a phone the panel leaves the rink
   const tabs = await page.locator('#appRail').boundingBox();
   expect(p.y + p.height).toBeLessThanOrEqual(tabs.y + 1);    // above the tab bar
 });
+
+// Screen point of an object (its position lifted by `lift` mm), in CSS px.
+const screenOf = (page, which, lift) => page.evaluate(async ([w, l]) => {
+  const { state } = await import('/src/state.js');
+  const o = w === 'ball' ? state.ballGroup : state.goalies[w];
+  o.updateMatrixWorld(true);
+  const v = o.position.clone();
+  v.y += l;
+  v.project(state.activeCamera);
+  const r = document.querySelector('canvas[data-engine^="three"]').getBoundingClientRect();
+  return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+}, [which, lift]);
+
+async function drag(page, from, dx, dy) {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + dx / 3, from.y + dy / 3, { steps: 3 });
+  await page.mouse.move(from.x + dx, from.y + dy, { steps: 5 });
+  await page.mouse.up();
+}
+
+const actorsNow = (page) => page.evaluate(async () => {
+  const { state } = await import('/src/state.js');
+  const { tickActors } = await import('/src/authoring/actors.js');
+  tickActors();
+  const { ensureDoc } = await import('/src/authoring/doc.js');
+  const s = ensureDoc().scheme;
+  const yaw = state.camYaw;
+  return { goalie: { x: state.goalies.A.position.x, z: state.goalies.A.position.z }, ball: { x: state.ballGroup.position.x, z: state.ballGroup.position.z }, docGoalie: s.goalies?.A ?? null, docBall: s.balls.main, yaw };
+});
+
+test('in Train a left-drag moves the goalie and the ball in 3D; a drag on empty floor still orbits', async ({ page }) => {
+  await boot(page);
+  await page.addStyleTag({ content: '#onboardingTip{display:none!important}' });
+  await railBtn(page, 'train').click();
+  const before = await actorsNow(page);
+
+  await drag(page, await screenOf(page, 'A', 600), 0, 60);
+  const afterGoalie = await actorsNow(page);
+  expect(Math.hypot(afterGoalie.goalie.x - before.goalie.x, afterGoalie.goalie.z - before.goalie.z)).toBeGreaterThan(200);
+  expect(afterGoalie.docGoalie).toMatchObject({ x: afterGoalie.goalie.x, z: afterGoalie.goalie.z });
+  expect(afterGoalie.yaw).toBe(before.yaw);                      // no orbit while dragging the goalie
+
+  await drag(page, await screenOf(page, 'ball', 40), 80, 0);
+  const afterBall = await actorsNow(page);
+  expect(Math.hypot(afterBall.ball.x - before.ball.x, afterBall.ball.z - before.ball.z)).toBeGreaterThan(200);
+  expect(afterBall.docBall).toMatchObject({ x: afterBall.ball.x, z: afterBall.ball.z });
+
+  await drag(page, { x: 400, y: 620 }, 120, 0);                // empty floor near the bottom of the stage
+  const afterOrbit = await actorsNow(page);
+  expect(afterOrbit.yaw).not.toBe(afterBall.yaw);
+  expect(afterOrbit.goalie).toEqual(afterBall.goalie);
+});
+
+test('in Plan a left-drag on the goalie in 3D still orbits instead of moving it', async ({ page }) => {
+  await boot(page);
+  await page.addStyleTag({ content: '#onboardingTip{display:none!important}' });
+  const before = await actorsNow(page);
+  await drag(page, await screenOf(page, 'A', 600), 0, 60);
+  const after = await actorsNow(page);
+  expect(after.goalie).toEqual(before.goalie);
+});
+
+test('the turn buttons turn the defending goalie 5 degrees, left and right', async ({ page }) => {
+  await boot(page);
+  await railBtn(page, 'train').click();
+  const yaw = () => page.evaluate(async () => (await import('/src/state.js')).state.goalies.A.rotation.y * 180 / Math.PI);
+  await page.evaluate(async () => {
+    const { state, getBallWorldCenter } = await import('/src/state.js');
+    const { updateGoalieZones } = await import('/src/goalie-zones-layer.js');
+    const { updateKataReadout } = await import('/src/kata-readout.js');
+    updateGoalieZones(getBallWorldCenter());
+    updateKataReadout();
+  });
+  const y0 = await yaw();
+  await panel(page).getByRole('button', { name: 'Turn the goalie left' }).click();
+  expect(await yaw()).toBeCloseTo(y0 + 5, 5);
+  await panel(page).getByRole('button', { name: 'Turn the goalie right' }).click();
+  await panel(page).getByRole('button', { name: 'Turn the goalie right' }).click();
+  expect(await yaw()).toBeCloseTo(y0 - 5, 5);
+});

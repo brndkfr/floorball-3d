@@ -421,7 +421,9 @@
   /* KATA section (A-BACK-046) */
   #trainPanel .kata { display:flex; flex-direction:column; gap:8px; }
   #trainPanel .kata[hidden] { display:none; }
-  #trainPanel .kata-pct { font:500 11px/1 var(--fb-mono); color:var(--fb-text-2); }
+  #trainPanel .kata-pct { flex:1; text-align:right; font:500 11px/1 var(--fb-mono); color:var(--fb-text-2); }
+  #trainPanel .kata-turn { display:flex; gap:4px; }
+  #trainPanel .kata-turn button { width:28px; height:26px; padding:0; align-self:auto; font:600 14px/1 var(--fb-font); }
   #trainPanel .kata-action {
     display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:2px; padding:2px;
     background:var(--fb-ink); border:1px solid var(--fb-line); border-radius:var(--fb-radius-1);
