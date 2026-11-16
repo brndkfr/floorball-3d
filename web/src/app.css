@@ -436,6 +436,7 @@
     box-shadow:0 4px 12px rgba(0, 0, 0, 0.3); border-left:4px solid var(--zl-color);
   }
   #zoneLabels .zl-tag[hidden] { display:none; }
+  #zoneLabels .zl-tag.under-inset, #trainHint.under-inset { visibility:hidden; }   /* never on the shooter's view card */
   #zoneLabels .zl-tag::after {   /* stem down to the floor spot */
     content:""; position:absolute; left:50%; top:100%; width:2px; height:14px; margin-left:-1px; background:var(--zl-color);
   }
@@ -463,8 +464,9 @@
   }
   #trainPanel .kata-body { display:flex; flex-direction:column; gap:8px; }
   #trainPanel .kata-body[hidden] { display:none; }
-  #trainPanel .kata-tools { display:flex; gap:6px; }
+  #trainPanel .kata-tools { display:flex; flex-wrap:wrap; gap:6px; }
   #trainPanel .kata-tool {
+    white-space:nowrap;
     height:26px; padding:0 10px; border-radius:13px; border:1px solid var(--fb-line-strong);
     background:transparent; color:var(--fb-text-2); font:600 11px/1 var(--fb-font);
   }
@@ -489,6 +491,28 @@
   #trainPanel .kata-row[data-status="adjust"] .kata-dot { background:var(--vector-shot-blocked-off); }
   #trainPanel .kata-row[data-status="pending"], #trainPanel .kata-row[data-status="free"] { opacity:0.55; }
   #trainPanel .kata-row.worst { background:var(--fb-surf-2); border-color:var(--vector-shot-blocked-off); }
+  /* Shooter's view inset (A-BACK-047): the GL view shows through .inset-view */
+  #trainPanel #shooterInset {
+    position:absolute; right:20px; top:20px; width:300px; margin:0; pointer-events:none;
+    border:1px solid var(--fb-line-strong); border-radius:6px; overflow:hidden;
+    box-shadow:0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+  #trainPanel #shooterInset[hidden] { display:none; }
+  #trainPanel #shooterInset .inset-view { height:170px; background:transparent; }
+  #trainPanel #shooterInset figcaption {
+    display:flex; justify-content:space-between; padding:5px 10px;
+    background:color-mix(in srgb, var(--fb-surf-1) 94%, transparent);
+    font:600 11px/1.2 var(--fb-font); color:var(--fb-text-2);
+  }
+  #trainPanel #shooterInset .inset-pct { font:500 11px/1.2 var(--fb-mono); }
+  #trainPanel #shooterInset figcaption { padding-left:26px; }
+  #trainPanel #shooterInset .inset-resize {
+    position:absolute; left:0; bottom:0; width:22px; height:22px; padding:0; pointer-events:auto;
+    display:grid; place-items:center; border:0; border-radius:0 4px 0 6px; cursor:nesw-resize;
+    background:var(--fb-surf-2); color:var(--fb-text-2); touch-action:none;
+  }
+  #trainPanel #shooterInset .inset-resize:hover { color:var(--fb-text-1); }
+  #trainPanel #shooterInset .inset-resize:focus-visible { outline:2px solid var(--fb-brand); outline-offset:-2px; }
   /* Hint pill next to the goalie (kata-section.js placeTrainHint) */
   #trainHint {
     position:absolute; left:0; top:0; max-width:260px; padding:7px 12px; border-radius:18px;
@@ -1238,6 +1262,7 @@
     #trainPanel .train-card { left:8px; right:8px; width:auto; }
     #trainPanel .gz { top:8px; }
     #trainPanel .kata { bottom:56px; }
+    #trainPanel #shooterInset { display:none; }   /* phones: no room, desktop and tablet only */
     /* the hint gets its own row above the tab bar instead of following the goalie */
     #trainHint, #trainHint.off { display:block; transform:none !important; left:8px; right:8px; top:auto; bottom:8px; max-width:none; text-align:center; }
     #trainHint[hidden] { display:none; }

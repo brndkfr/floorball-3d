@@ -264,7 +264,7 @@ lines. An item that needs more than ~10 lines gets its own file under
   offset, a Marks toggle and a Focus goalie camera
   (<https://claude.ai/artifact/Dvebi8ZfC8rea9WpHEdm16>, third row).
   [Spec](items/A-BACK-046-051-goalie-module.md).
-- **[A-BACK-047] Shooter's-eye inset** [open] A small second view from
+- **[A-BACK-047] Shooter's-eye inset** [in-progress] Built 2026-11-16: Train top-right, same renderer (viewport + scissor), in screenshots, toggle; plus Auto position (idealGoaliePose, the start of A-BACK-051). A small second view from
   the ball while the goalie moves (the module's "Winkelband"). Same file.
 - **[A-BACK-048] Goalie zone layer** [in-progress] Awareness, attention,
   danger zone + slot, passing-first; borders estimated from the

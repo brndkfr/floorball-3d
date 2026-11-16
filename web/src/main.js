@@ -7,6 +7,7 @@ import { updateShotChip } from './ui/shot-chip.js';
 import { updateShotReadout } from './shot-readout.js';
 import { updateGoalieZones } from './goalie-zones-layer.js';
 import { placeZoneLabels } from './goalie-zone-labels.js';
+import { renderFrame } from './shooter-inset.js';
 import { updateKataMarks } from './kata-marks-layer.js';
 import { updateKataReadout } from './kata-readout.js';
 import { placeTrainHint } from './authoring/kata-section.js';
@@ -107,6 +108,6 @@ function animate() {
   // it first so `||` short-circuiting never skips clearing it.
   const needsRender = consumeRenderDirty() || pollChanged || presetActive || chipsActive || markersActive
     || walksActive || choreoActive || actorsActive || figuresChanged || spritesChanged || passChanged || shadowsChanged || trajectoryChanged || zonesChanged || marksChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
-  if (needsRender) renderer.render(scene, state.activeCamera);
+  if (needsRender) renderFrame();   // main view + the Train shooter's view inset (A-BACK-047)
 }
 animate();

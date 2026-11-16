@@ -38,7 +38,8 @@ export const state = {
 
   // goalie-zones-state.js / goalie-zones-layer.js (A-BACK-048)
   goalieZonesShown: false,   // floor zones visible (Plan: stored choice; Train: on)
-  goalieZoneLabelsShown: true,   // standing name tags over the zones (stored, on by default)
+  goalieZoneLabelsShown: true,
+  shooterInsetShown: true,   // Train shooter's view inset (A-BACK-047), stored, on by default   // standing name tags over the zones (stored, on by default)
   goalieZonesLayer: null,    // THREE.Group, one mesh per zone
   goalieZone: null,          // { goal, zone } of the match ball, or null
 
