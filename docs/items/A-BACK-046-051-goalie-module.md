@@ -73,9 +73,11 @@ starts small and only covers the goalie module:
   {...} }` and `goalieText(key, lang, vars)`; a missing key falls back
   to English. Zone names and cards, KATA rows and hint sentences, the
   verdict words, lesson titles, exercise texts.
-- Language switch in the goalie lens (EN / DE), remembered per browser
-  (localStorage, like the shot overlays). The first default comes from
-  the browser language (`de*` -> German, else English).
+- Language switch, app-wide (A-Q-010, revised 2026-11-16): a globe
+  button at the bottom of the left rail (English / Deutsch), remembered
+  per browser (localStorage, like the shot overlays), in `state.lang`.
+  The first default comes from the browser language (`de*` -> German,
+  else English). Only goalie training is translated at first.
 - KATA keeps its German letters in both languages: English shows
   "Body (Körper)", "Placement (Ausrichtung)", "Depth (Tiefe)", "Axis
   (Achse)", so the acronym still reads.
@@ -88,6 +90,27 @@ Tests first: every key exists in `en` and `de` with the same
 placeholders; fallback to English; browser-language default. e2e: the
 switch changes the zone card and the KATA rows, and the choice
 survives a reload.
+
+### A-BACK-054 - Train mode `[lead]` (added 2026-11-16, before 048)
+
+A fourth rail mode, "Train", next to Plan / Analyze / Library
+(A-Q-008 revised):
+- Rail button `data-mode="train"`; `shell.js` shows `[data-view="train"]`
+  and hides Plan's editing UI (tool palette, timeline, dock, Inspector)
+  the same way Analyze does.
+- **Own practice rink (A-Q-011):** entering Train stashes the Plan doc
+  and shows a training doc (a free situation by default: ball in the
+  danger zone, goalie in the goal); leaving restores the Plan doc
+  exactly. Nothing from Train is written to the user's projects or
+  autosave. "Open as play" copies the situation into Plan as a new
+  project.
+- Train panel on the right (`#trainPanel`): title, the module source
+  link, and slots for the zone card (048), KATA rows (046), lessons
+  (049) and exercises (050). Goalie and ball stay draggable.
+Tests first: the doc stash / restore is pure (Node test: entering and
+leaving returns a deep-equal Plan doc, the Train doc never reaches the
+save path). e2e: rail button switches mode, Plan's play is unchanged
+after moving the goalie in Train, reload lands in Plan.
 
 ### A-BACK-048 - Goalie zone layer `[small]` (first: everything else reads the zone)
 
@@ -169,7 +192,7 @@ Körper part (pose per zone / action).
 
 ## Order
 
-052 -> 048 -> 046 -> 047 -> (A-BACK-035 frame notes) -> 049 -> 050 -> 051.
+052 -> 054 (Train mode) -> 048 -> 046 -> 047 -> (A-BACK-035 frame notes) -> 049 -> 050 -> 051.
 Körper (body) follows A-BACK-042 steps 3 to 5; 051 merges into
 A-BACK-043.
 
@@ -177,7 +200,12 @@ A-BACK-043.
 
 - A-Q-007 content rights: default. Our own words, a link to the module,
   no copied images.
-- A-Q-008 where it lives: default. A goalie lens in Plan (goalie
+- **Revised 2026-11-16 (A-Q-008, A-Q-010, A-Q-011):** the module lives in
+  a **Train** mode in the left rail (A-BACK-054) with its own practice
+  rink, not in Plan's Inspector; the language switch is app-wide, at
+  the bottom of the rail. Where the items below say "goalie lens" or
+  "Inspector", read "Train panel".
+- A-Q-008 where it lives (superseded, see above): default. A goalie lens in Plan (goalie
   selected) plus a "Lessons" shelf in the Library.
 - A-Q-009 expected action: default. Read from the play's next ball
   event, with a manual Shot / Pass override.

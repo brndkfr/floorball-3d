@@ -600,6 +600,22 @@
     content:""; position:absolute; left:0; top:8px; bottom:8px; width:var(--fb-accent-bar);
     border-radius:0 2px 2px 0; background:var(--fb-brand);
   }
+  /* App-wide language switch at the bottom of the rail (A-BACK-052, A-Q-010) */
+  #appRail #langBtn { margin-top:auto; }
+  #appRail #langBtn .lang-code { font:600 9px/1 var(--fb-mono); letter-spacing:0.06em; }
+  #langMenu {
+    position:fixed; left:calc(var(--shell-rail) + 6px); bottom:14px; z-index:40; min-width:150px;
+    display:flex; flex-direction:column; padding:4px 0;
+    background:var(--fb-surf-1); border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1);
+  }
+  #langMenu[hidden] { display:none; }
+  #langMenu button {
+    display:flex; align-items:center; gap:8px; padding:8px 14px; border:none; background:transparent;
+    color:var(--fb-text-1); font:500 12px/1.2 var(--fb-font); text-align:left; cursor:pointer;
+  }
+  #langMenu button::before { content:""; width:6px; height:6px; border-radius:50%; background:transparent; }
+  #langMenu button[aria-checked="true"]::before { background:var(--fb-brand); }
+  #langMenu button:hover, #langMenu button:focus-visible { background:var(--fb-brand-quiet); outline:none; }
   #libraryView {
     position:fixed; inset:var(--shell-topbar) 0 0 var(--shell-rail); z-index:25; display:none;
     align-items:center; justify-content:center;
@@ -857,20 +873,6 @@
   #inspector .shot-chip[aria-pressed="true"] { border-color:var(--fb-brand); background:var(--fb-brand-quiet); color:var(--fb-text-1); }
   #inspector .shot-actions { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; }
   #inspector .shot-actions .ins-btn { margin-top:0; }
-  /* Goalie section in a goalie's Inspector (A-BACK-052); same look as the shot section,
-     own class so `.shot-section` stays the ball's alone */
-  #inspector .goalie-section {
-    margin-top:14px; padding-top:12px; border-top:1px solid var(--fb-line);
-    display:flex; flex-direction:column; gap:8px;
-  }
-  #inspector .goalie-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-  #inspector .goalie-head > .ins-label { flex:1 1 auto; }   /* not the 100% basis .ins-label has elsewhere */
-  #inspector .goalie-lang {
-    display:grid; grid-template-columns:repeat(2, 40px); gap:2px; padding:2px;
-    background:var(--fb-ink); border:1px solid var(--fb-line); border-radius:var(--fb-radius-1);
-  }
-  #inspector .goalie-lang .shot-seg { height:24px; }
-  #inspector .goalie-source a { color:var(--fb-brand); }
   #inspector .ins-btn.danger {
     border-color:color-mix(in srgb, var(--fb-danger) 50%, transparent); background:color-mix(in srgb, var(--fb-danger) 10%, transparent);
     color:var(--fb-danger);
@@ -1091,6 +1093,8 @@
       padding:0 0 env(safe-area-inset-bottom, 0px); border-right:none; border-top:1px solid var(--fb-line);
     }
     #appRail .shell-logo { display:none; }
+    #appRail #langBtn { margin-top:0; }
+    #langMenu { left:auto; right:8px; bottom:calc(var(--tabbar) + 6px); }
     #appRail button { flex:1; justify-content:center; font-size:10px; }
     #appRail button.active::before { left:24%; right:24%; top:0; bottom:auto; width:auto; height:var(--fb-accent-bar); border-radius:0 0 2px 2px; }
     #appTopbar { left:0; gap:10px; padding:0 12px; overflow:hidden; }

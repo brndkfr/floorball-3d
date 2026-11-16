@@ -36,8 +36,8 @@ export const state = {
   // trajectory.js
   targetGoal: null,
 
-  // goalie-lang-state.js: language of the goalie module's text, 'en' | 'de' (A-BACK-052)
-  goalieLang: 'en',
+  // lang-state.js: app language, 'en' | 'de' (A-BACK-052, switched from the rail)
+  lang: 'en',
 
   // scene.js (camera look state) - read by selection.js's look-drag and
   // controls.js's walk-direction math, written by scene.js's setCameraLook
