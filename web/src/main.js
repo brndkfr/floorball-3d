@@ -6,6 +6,7 @@ import { updateCoverage } from './coverage.js';
 import { updateShotChip } from './ui/shot-chip.js';
 import { updateShotReadout } from './shot-readout.js';
 import { updateGoalieZones } from './goalie-zones-layer.js';
+import { placeZoneLabels } from './goalie-zone-labels.js';
 import { updateKataReadout } from './kata-readout.js';
 import { placeTrainHint } from './authoring/kata-section.js';
 import { snapshotChanged, copySnapshot } from './dirty-check.js';
@@ -86,6 +87,7 @@ function animate() {
   const zonesChanged = updateGoalieZones(ballCenter);   // goalie zones + the ball's zone (A-BACK-048)
   updateKataReadout();   // Train panel KATA rows (A-BACK-046), after the zone and the shot readout
   placeTrainHint();      // the hint pill follows the goalie on screen (A-BACK-054 layout A)
+  placeZoneLabels();     // standing zone name tags (A-BACK-048)
   const labelsChanged = updateFloorLabelOrientations(state.activeCamera);
 
   const cam = state.activeCamera;
