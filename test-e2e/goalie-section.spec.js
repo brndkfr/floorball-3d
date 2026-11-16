@@ -35,6 +35,12 @@ test('selecting a goalie shows the Goalie section in English on an English brows
   const link = section(page).getByRole('link', { name: 'Open the module' });
   await expect(link).toHaveAttribute('href', /goalies-positionierung/);
   await expect(link).toHaveAttribute('target', '_blank');
+
+  // the switch sits inside the panel (the title's 100% flex-basis once pushed it out)
+  const panel = await page.locator('#inspectorBody').boundingBox();
+  const sw = await section(page).getByRole('radiogroup').boundingBox();
+  expect(sw.x).toBeGreaterThanOrEqual(panel.x);
+  expect(sw.x + sw.width).toBeLessThanOrEqual(panel.x + panel.width + 0.5);
 });
 
 test('DE switches the text, and the choice survives a reload', async ({ page }) => {
