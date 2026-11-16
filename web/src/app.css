@@ -765,6 +765,18 @@
     color:var(--fb-text-1); font:600 12px/1.2 var(--fb-font); box-shadow:0 8px 24px rgba(0, 0, 0, 0.35);
   }
   #shotToast[hidden] { display:none; }
+  /* Frame note caption (A-BACK-035): a subtitle centred over the stage, above the recorder */
+  #frameCaption {
+    position:fixed; z-index:25; left:var(--shell-rail); right:var(--right-panel, 0px);
+    bottom:calc(var(--recorder-inset, 0px) + 84px); margin-inline:auto; width:fit-content;   /* above the floating dock */
+    max-width:min(80vw, 720px); box-sizing:border-box; pointer-events:none; text-align:center;
+    padding:8px 14px; border-radius:8px; background:rgba(13, 15, 18, 0.82);
+    color:var(--fb-text-1); font:600 15px/1.35 var(--fb-font);
+  }
+  #frameCaption[hidden] { display:none; }
+  body[data-mode="train"] #frameCaption { right:0; bottom:24px; }
+  html.presenting #frameCaption { left:0; right:0; bottom:84px; font-size:18px; }
+  #timeline .tl-card .tl-note { display:inline-flex; color:var(--fb-text-2); }
   #langMenu {
     position:fixed; left:calc(var(--shell-rail) + 6px); bottom:14px; z-index:40; min-width:150px;
     display:flex; flex-direction:column; padding:4px 0;

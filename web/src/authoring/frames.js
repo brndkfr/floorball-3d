@@ -13,6 +13,7 @@ import { rebuildGoalsFromDoc } from './goals.js';
 import { saveDoc } from './storage.js';
 import { applyActorsFromScheme } from './actors.js';
 import { isValidFrameIndex, clampInsertIndex, canRemoveFrame, clampCurrentAfterRemoval } from './frame-list.js';
+import { sanitizeNote } from './frame-notes.js';
 
 function afterMutation(pushHistory = true) {
   saveDoc();
@@ -123,4 +124,15 @@ export function clearFrameCamera(i) {
   saveDoc();
   import('./history.js').then((h) => h.pushHistory());
   window.dispatchEvent(new Event('framesChanged'));
+}
+
+// Frame note (A-BACK-035): set, change or (empty text) remove the note of
+// frame `i`. Undoable like every frame edit.
+export function setFrameNote(i, text) {
+  const doc = ensureDoc();
+  const f = doc.frames[i];
+  if (!f) return;
+  const note = sanitizeNote(text);
+  if (note === undefined) delete f.note; else f.note = note;
+  afterMutation();
 }

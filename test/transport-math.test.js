@@ -75,7 +75,7 @@ test('the last frame has no duration: playback ends on it', () => {
 
 test('frame menu: delete comes last, marked danger, disabled on the only frame', () => {
   const items = frameMenuItems({ count: 3, hasCamera: false });
-  assert.deepEqual(items.map((m) => m.action), ['dup', 'ins-before', 'ins-after', 'cam', 'del']);
+  assert.deepEqual(items.map((m) => m.action), ['dup', 'ins-before', 'ins-after', 'cam', 'note', 'del']);
   const del = items.at(-1);
   assert.equal(del.danger, true);
   assert.equal(del.disabled, false);
@@ -150,4 +150,10 @@ test('clampZoom keeps px per second sensible', () => {
   assert.equal(clampZoom(10), 30);
   assert.equal(clampZoom(120), 120);
   assert.equal(clampZoom(9999), 480);
+});
+
+test('frame menu: the note entry says add or edit (A-BACK-035)', () => {
+  const note = (hasNote) => frameMenuItems({ count: 2, hasCamera: false, hasNote }).find((m) => m.action === 'note').label;
+  assert.equal(note(false), 'Add note…');
+  assert.equal(note(true), 'Edit note…');
 });

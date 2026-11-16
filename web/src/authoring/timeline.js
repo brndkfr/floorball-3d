@@ -9,7 +9,7 @@
 import {
   getFrames, getCurrentIndex, selectFrame, duplicateFrame,
   insertBlankFrame, deleteFrame, addFrame,
-  setFrameCamera, clearFrameCamera, setFrameDuration,
+  setFrameCamera, clearFrameCamera, setFrameDuration, setFrameNote,
 } from './frames.js';
 import {
   stop, toggle, pause, toggleLoop, setSpeed, stepFrame, seekTo,
@@ -26,6 +26,8 @@ import {
 import { fitTopDownFrustum, refitDefaultView } from '../scene.js';
 import { state } from '../state.js';
 import { onProjectChanged } from './library-dialog.js';
+import { showPrompt } from './dialog.js';
+import { noteText } from './frame-notes.js';
 
 const el = document.getElementById('timeline');
 if (!el) throw new Error('timeline element missing from index.html');
@@ -49,6 +51,7 @@ const SEG_MIN_W = 76, END_W = 64;
 let segs = [];                 // layoutTrack() of the current frames
 let lastRenderedCur = -1;      // scroll the editing card into view only when it changes
 
+const NOTE_ICON = '<svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h14v9H8l-4 3v-3H3z"/></svg>';
 const CAM_ICON = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><rect x="2" y="7" width="14" height="11" rx="1"/><path d="M16 11l6-3v9l-6-3"/></svg>';
 
 // --- per-frame menu (one shared popover) ------------------------------
@@ -69,6 +72,11 @@ function runAction(action, i) {
   else if (action === 'ins-after') insertBlankFrame(i + 1);
   else if (action === 'cam') (f.camera ? clearFrameCamera(i) : setFrameCamera(i));
   else if (action === 'del') deleteFrame(i);
+  else if (action === 'note') {   // A-BACK-035
+    showPrompt(`Note for frame ${i + 1} (shown while it plays; empty removes it)`, noteText(f.note, state.lang)).then((text) => {
+      if (text !== null) setFrameNote(i, text);
+    });
+  }
 }
 
 function closeMenu() {
@@ -87,7 +95,7 @@ function openMenu(i, x, y, button = null) {
   closeMenu();
   menu.innerHTML = '';
   menu.setAttribute('aria-label', `Frame ${i + 1} actions`);
-  for (const item of frameMenuItems({ count: frames.length, hasCamera: !!frames[i].camera })) {
+  for (const item of frameMenuItems({ count: frames.length, hasCamera: !!frames[i].camera, hasNote: !!frames[i].note })) {
     const b = document.createElement('button');
     b.type = 'button';
     b.setAttribute('role', 'menuitem');
@@ -272,6 +280,13 @@ function render() {
       cam.title = 'Camera keyframe';
       cam.innerHTML = CAM_ICON;
       head.appendChild(cam);
+    }
+    if (f.note) {   // A-BACK-035: a note marker, the note as its tooltip
+      const note = document.createElement('span');
+      note.className = 'tl-note';
+      note.title = noteText(f.note, state.lang);
+      note.innerHTML = NOTE_ICON;
+      head.appendChild(note);
     }
     const menuBtn = document.createElement('button');
     menuBtn.type = 'button';

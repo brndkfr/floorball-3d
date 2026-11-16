@@ -14,9 +14,10 @@ import { stageCrop, applyTextTransform, shotFileName } from './screenshot-math.j
 import { renderFrame } from './shooter-inset.js';
 
 // Labels over the rink that belong in the picture.
-const OVERLAYS = ['#zoneLabels .zl-tag', '#trainHint', '#goalieLabel', '#shooterInset figcaption'];
-// Bars at the bottom of the stage (Plan recorder, Present bar).
-const BOTTOM_BARS = ['#timeline', '#dock', '#presentBar'];
+const OVERLAYS = ['#zoneLabels .zl-tag', '#trainHint', '#goalieLabel', '#shooterInset figcaption', '#frameCaption'];
+// Bars at the bottom of the stage (Plan recorder, Present bar). The dock
+// floats over the stage like the tool palette, so it is not a bar.
+const BOTTOM_BARS = ['#timeline', '#presentBar'];
 
 const shown = (el) => !!el && (el.checkVisibility
   ? el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })
