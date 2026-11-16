@@ -8,6 +8,8 @@
 // Reads state.kataReadout (kata-readout.js).
 
 import * as THREE from 'three';
+import { setShotViewUnsaved } from '../shot-view-state.js';
+import { withTrainLines, trainLinesOn } from '../shot-view.js';
 import { state } from '../state.js';
 import { renderer } from '../scene.js';
 import { t } from '../lang-state.js';
@@ -39,7 +41,7 @@ root.innerHTML = `
     <span class="kata-turn"><button type="button" data-turn="1">↺</button><button type="button" data-turn="-1">↻</button></span>
   </div>
   <div class="kata-body" id="kataBody">
-    <div class="kata-tools"><button type="button" class="kata-tool" data-tool="focus"></button><button type="button" class="kata-tool" data-tool="marks"></button></div>
+    <div class="kata-tools"><button type="button" class="kata-tool" data-tool="focus"></button><button type="button" class="kata-tool" data-tool="marks"></button><button type="button" class="kata-tool" data-tool="lines"></button></div>
     <div class="kata-action" role="radiogroup">${ACTIONS.map((a) => `<button type="button" role="radio" data-action="${a}"></button>`).join('')}</div>
     <ul class="kata-rows">${KATA_DIMS.map((d) => `<li class="kata-row" data-dim="${d}"><span class="kata-dot" aria-hidden="true"></span><span class="kata-name"></span><span class="kata-value"></span></li>`).join('')}</ul>
   </div>`;
@@ -64,6 +66,9 @@ focusBtn.addEventListener('click', () => {
 });
 window.addEventListener('shell:mode', () => { state.kataFocus = false; refresh(); });
 root.querySelector('[data-tool="marks"]').addEventListener('click', () => setKataMarksShown(!state.kataMarksShown));
+// Lines: the corner lines and the shooting line, together, shown but not
+// stored (Plan keeps its own choice, train-mode.js gives it back).
+root.querySelector('[data-tool="lines"]').addEventListener('click', () => setShotViewUnsaved(withTrainLines(state.shotView, !trainLinesOn(state.shotView))));
 
 for (const b of root.querySelectorAll('.kata-turn button')) {
   b.addEventListener('click', () => {
@@ -108,6 +113,9 @@ function refresh() {
   const marksBtn = root.querySelector('[data-tool="marks"]');
   marksBtn.textContent = t('goalie.marks');
   marksBtn.setAttribute('aria-pressed', String(!!state.kataMarksShown));
+  const linesBtn = root.querySelector('[data-tool="lines"]');
+  linesBtn.textContent = t('goalie.lines');
+  linesBtn.setAttribute('aria-pressed', String(trainLinesOn(state.shotView)));
   for (const b of root.querySelectorAll('.kata-turn button')) {
     const label = t(b.dataset.turn === '1' ? 'goalie.turn.left' : 'goalie.turn.right');
     b.setAttribute('aria-label', label);
@@ -135,7 +143,7 @@ function refresh() {
   pill.dataset.status = r.judged.worst ? 'adjust' : (r.judged.hint.key === 'goalie.hint.free' ? 'free' : 'ok');
 }
 
-for (const ev of ['kataReadoutChanged', 'trainCardsChanged', 'langChanged', 'kataMarksChanged']) window.addEventListener(ev, refresh);
+for (const ev of ['kataReadoutChanged', 'trainCardsChanged', 'langChanged', 'kataMarksChanged', 'shotViewChanged']) window.addEventListener(ev, refresh);
 refresh();
 
 // Put the hint pill to the right of the defending goalie's head, in the
