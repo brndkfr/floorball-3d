@@ -12,6 +12,8 @@ import { zoneLabelAnchors, zoneDepthText } from './goalie-zones.js';
 import { GOALIE_ZONE_TOKENS } from './tokens.js';
 import { t } from './lang-state.js';
 import './goalie-zones-state.js';   // loads state.goalieZoneLabelsShown
+import { insetRect } from './shooter-inset.js';
+import { rectsOverlap } from './shooter-view.js';
 
 const root = document.createElement('div');
 root.id = 'zoneLabels';
@@ -72,6 +74,9 @@ export function placeZoneLabels() {
     tag.el.classList.toggle('current', tag === current);
     if (!off) tag.el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%)`;
   }
+  // Not on the shooter's view card (its view area is see-through).
+  const card = insetRect();
+  for (const tag of tagEls) tag.el.classList.toggle('under-inset', !tag.el.hidden && rectsOverlap(tag.el.getBoundingClientRect(), card));
 }
 
 window.addEventListener('langChanged', () => { builtFor = null; });

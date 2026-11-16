@@ -436,6 +436,7 @@
     box-shadow:0 4px 12px rgba(0, 0, 0, 0.3); border-left:4px solid var(--zl-color);
   }
   #zoneLabels .zl-tag[hidden] { display:none; }
+  #zoneLabels .zl-tag.under-inset, #trainHint.under-inset { visibility:hidden; }   /* never on the shooter's view card */
   #zoneLabels .zl-tag::after {   /* stem down to the floor spot */
     content:""; position:absolute; left:50%; top:100%; width:2px; height:14px; margin-left:-1px; background:var(--zl-color);
   }
@@ -504,6 +505,14 @@
     font:600 11px/1.2 var(--fb-font); color:var(--fb-text-2);
   }
   #trainPanel #shooterInset .inset-pct { font:500 11px/1.2 var(--fb-mono); }
+  #trainPanel #shooterInset figcaption { padding-left:26px; }
+  #trainPanel #shooterInset .inset-resize {
+    position:absolute; left:0; bottom:0; width:22px; height:22px; padding:0; pointer-events:auto;
+    display:grid; place-items:center; border:0; border-radius:0 4px 0 6px; cursor:nesw-resize;
+    background:var(--fb-surf-2); color:var(--fb-text-2); touch-action:none;
+  }
+  #trainPanel #shooterInset .inset-resize:hover { color:var(--fb-text-1); }
+  #trainPanel #shooterInset .inset-resize:focus-visible { outline:2px solid var(--fb-brand); outline-offset:-2px; }
   /* Hint pill next to the goalie (kata-section.js placeTrainHint) */
   #trainHint {
     position:absolute; left:0; top:0; max-width:260px; padding:7px 12px; border-radius:18px;
