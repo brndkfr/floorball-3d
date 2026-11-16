@@ -159,6 +159,19 @@ the J+S / swiss unihockey module "Goalies - Positionierung". Draft:
 9. **[A-BACK-051] Ideal goalie** Ghost from the zone rules; merges
    into A-BACK-043 and needs A-BACK-042 for the body.
 
+### App tools track (added 2026-11-16)
+
+Screenshot for the whole app, then the app's actions as commands and an
+MCP server in the app, so Claude can work with every part of it (A-Q-013,
+A-Q-014). [items/S-BACK-032-035](items/S-BACK-032-035-screenshot-mcp.md).
+
+1. **[S-BACK-032] Screenshot, whole app** One click saves what is on
+   screen, labels included; Copy and Clean in a small menu.
+2. **[S-BACK-033] Command layer** The app's actions as typed commands.
+3. **[S-BACK-034] MCP server in the app + local relay** Connect AI with
+   a pairing code; screenshot is one of the tools.
+4. **[S-BACK-035] Cloud relay** (optional) For claude.ai or a tablet.
+
 ### Later (parked)
 
 - **[A-BACK-028 to 030] Arena branding** Board slots, floor logo,
@@ -300,6 +313,14 @@ lines. An item that needs more than ~10 lines gets its own file under
   timeouts on battery (Windows throttles the CPU); both timeouts passed
   alone. Open, optional: a native ARM64 Node (the runner and static
   server are still emulated).
+- **[S-BACK-032] Screenshot, whole app** [in-progress] Camera button in
+  every mode, PNG with the HTML overlays painted in, Copy and Clean.
+  [Spec](items/S-BACK-032-035-screenshot-mcp.md).
+- **[S-BACK-033] Command layer** [open] Typed commands for the app's
+  actions, run by the UI's own code. Same file.
+- **[S-BACK-034] MCP server in the app + local relay** [open] Tools in
+  the tab, a thin relay to MCP clients, Connect AI with pairing. Same file.
+- **[S-BACK-035] Cloud relay** [open, optional] Same file.
 - **[S-BACK-031] e2e area sets** [open] One command for the area run
   that CLAUDE.md workflow step 5 asks for when `test:e2e:affected`
   says `FULL RUN`: tag each spec with its areas (`@chips`, `@camera`,
@@ -432,6 +453,11 @@ coupling visible.
 - **[A-Q-010] Language switch** [decided 2026-11-16] App-wide, a globe
   button at the bottom of the left rail (English / Deutsch). Goalie
   training is translated first; the rest of the UI follows.
+- **[A-Q-013] MCP for the whole app** [decided 2026-11-16] MCP server
+  inside the app plus a thin relay (local first, cloud optional);
+  WebMCP later. [Spec](items/S-BACK-032-035-screenshot-mcp.md).
+- **[A-Q-014] Screenshot** [decided 2026-11-16] Whole app; with labels
+  by default; click saves a PNG, menu has Copy and Clean.
 - **[A-Q-012] Train layout** [decided 2026-11-16] Layout A, floating
   cards: no side panel; zone card top-left, KATA card bottom-left, both
   collapsible (remembered per browser); the hint as a pill next to the
