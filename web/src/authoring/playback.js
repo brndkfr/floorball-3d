@@ -175,6 +175,7 @@ import { bezierPos, segmentControls, lerpAngle } from './bezier.js';
 import { ballPoseAt } from './ball-pose.js';
 import { followTargetAt } from './follow-ball.js';
 import { applyActorsFromScheme } from './actors.js';
+import { cachedGoalieTrack, goalieTrackAt } from '../goalie-track.js';
 
 function applyPose(elapsed) {
   const frames = getFrames();
@@ -205,9 +206,17 @@ function applyPose(elapsed) {
       state.ballGroup.position.z = p.z;
     }
   }
+  const auto = ensureDoc().autoGoalie;   // lessons: this goalie moves by the rules (goalie-track.js)
   for (const letter of ['A', 'B']) {
     const g = state.goalies[letter];
     if (!g) continue;
+    if (letter === auto) {
+      const p = goalieTrackAt(cachedGoalieTrack(frames, letter), elapsed);
+      g.position.x = p.x;
+      g.position.z = p.z;
+      g.rotation.y = p.yaw;
+      continue;
+    }
     const ga = fa.goalies?.[letter], gb = fb.goalies?.[letter] || ga;
     if (ga) {
       g.position.x = lerp(ga.x, gb.x, t);

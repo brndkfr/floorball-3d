@@ -50,8 +50,10 @@ export function goalieZoneOf({ x, z }, goal) {
   return 'awareness';
 }
 
-// The goal the zones are drawn in front of: the one nearer the ball.
-export const defendingGoal = ({ z }) => nearestGoal(z);
+// The goal the zones are drawn in front of: the one nearer the ball, or
+// `pinned` ('A' | 'B') when the doc defends one goal throughout (a lesson's
+// autoGoalie, A-BACK-049).
+export const defendingGoal = ({ z }, pinned) => (pinned === 'A' || pinned === 'B' ? pinned : nearestGoal(z));
 
 // Floor polygons for `goal`, in GOALIE_ZONE_ORDER, as [x, z] world points:
 // { key, outer, holes? }. The slot is drawn over danger (which has a hole

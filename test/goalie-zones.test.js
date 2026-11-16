@@ -69,6 +69,15 @@ test('the defending goal is the one nearer the ball', () => {
   assert.equal(defendingGoal({ x: 0, z: RINK_L - 9000 }), 'B');
 });
 
+// A-BACK-049: a lesson defends one goal for the whole play, even while the
+// ball is still nearer the other end (the attack starts 24 m out).
+test('a pinned goal (lesson autoGoalie) wins over the nearer one; junk is ignored', () => {
+  assert.equal(defendingGoal({ x: 0, z: RINK_L - 9000 }, 'A'), 'A');
+  assert.equal(defendingGoal({ x: 0, z: 9000 }, 'B'), 'B');
+  assert.equal(defendingGoal({ x: 0, z: 9000 }, 'C'), 'A');
+  assert.equal(defendingGoal({ x: 0, z: 9000 }, undefined), 'A');
+});
+
 // Even-odd point in polygon on [x, z] pairs.
 function inside([px, pz], poly) {
   let hit = false;

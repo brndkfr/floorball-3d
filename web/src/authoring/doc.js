@@ -193,6 +193,7 @@ function sanitizeDoc(doc) {
   if (doc.frames.length === 0) return null;
   doc.zones = sanitizeZones(doc.zones);   // A-BACK-039: shown tactical zones, project-level
   doc.hiddenFixed = sanitizeHiddenFixed(doc.hiddenFixed);   // hidden fixed goals / goalies, project-level
+  if ('autoGoalie' in doc && doc.autoGoalie !== 'A' && doc.autoGoalie !== 'B') delete doc.autoGoalie;   // A-BACK-049: live goalie (goalie-track.js)
   for (const frame of doc.frames) {
     if (!sanitizeFrame(frame)) return null;
     const photo = frame.photo;

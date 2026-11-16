@@ -11,7 +11,7 @@
 // the zone card (A-BACK-048), KATA rows (A-BACK-046), lessons (A-BACK-049)
 // and exercises (A-BACK-050) go into #trainSlots.
 
-import { ensureDoc } from './doc.js';
+import { ensureDoc, acceptDoc } from './doc.js';
 import { setSaveSandbox, adoptDocAsProject } from './storage.js';
 import { showDoc, switchToProject, notifyProjectChanged } from './library-dialog.js';
 import { initHistory, resetHistory } from './history.js';
@@ -31,7 +31,8 @@ import './goalie-zone-card.js';   // zone card in #trainSlots (A-BACK-048)
 import './kata-section.js';       // KATA card (A-BACK-046)
 import { getCameraRig, isDefaultView, applyDefaultView, defaultRig } from '../scene.js';
 import { blendCameraTo } from '../ui/camera-menu.js';
-import { trainPose } from '../camera-presets.js';
+import { trainPose, lessonPose } from '../camera-presets.js';
+import { buildLesson } from '../goalie-lessons.js';
 import { state, getBallWorldCenter } from '../state.js';
 import { rigToCamera } from '../orbit-math.js';
 import { updateGoalieZones } from '../goalie-zones-layer.js';
@@ -99,6 +100,24 @@ window.addEventListener('shell:mode', (e) => {
   if (e.detail?.mode === 'train') enterTrain();
   else if (e.detail?.previous === 'train') leaveTrain();
 });
+
+// A-BACK-049: show a shipped lesson on the practice rink (entering Train
+// first if needed). Like the practice doc it is never saved; "Open as
+// play" copies it into the user's projects. Returns false for an unknown key.
+export function openLesson(key) {
+  const raw = buildLesson(key, state.lang);
+  if (!raw) return false;
+  if (!stash) document.querySelector('#appRail [data-mode="train"]')?.click();   // enters Train (shell:mode)
+  if (!stash) throw new Error('train-mode.js: openLesson could not enter Train');
+  settle();
+  showDoc(acceptDoc(JSON.parse(JSON.stringify(raw))));
+  resetHistory();
+  updateGoalieZones(getBallWorldCenter());
+  updateKataReadout();
+  blendCameraTo(lessonPose(raw.autoGoalie));
+  markRenderDirty();
+  return true;
+}
 
 // "Open as play": the practice situation becomes a new project in Plan;
 // the Plan play that was open stays as it was.

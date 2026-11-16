@@ -357,3 +357,18 @@ test('acceptDoc keeps clean frame notes and drops bad ones', async () => {
   bad.frames[0].note = { x: 1 };
   assert.equal('note' in acceptDoc(bad).frames[0], false);
 });
+
+// A-BACK-049: lesson docs ask for the live goalie at one end; anything
+// else is dropped so a shared link cannot switch on something odd.
+test('acceptDoc keeps autoGoalie A or B and drops other values', () => {
+  const raw = JSON.parse(JSON.stringify(emptyDoc()));
+  raw.autoGoalie = 'B';
+  assert.equal(acceptDoc(JSON.parse(JSON.stringify(raw))).autoGoalie, 'B');
+  for (const bad of ['C', 1, { goal: 'A' }, '']) {
+    const r = JSON.parse(JSON.stringify(raw));
+    r.autoGoalie = bad;
+    assert.equal('autoGoalie' in acceptDoc(r), false, JSON.stringify(bad));
+  }
+  const none = acceptDoc(JSON.parse(JSON.stringify(emptyDoc())));
+  assert.equal('autoGoalie' in none, false);
+});
