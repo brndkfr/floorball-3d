@@ -51,6 +51,16 @@ export const ARROW_ROLE_TOKENS = {
   run:  VECTOR_ARROW_RUN,
 };
 
+// Goalie zones on the floor (A-BACK-048): calm far from the goal, hot near
+// it. Scene-only for now, so no tokens.css mirror.
+export const GOALIE_ZONE_TOKENS = {
+  awareness: pair(0x7f93ad),   // slate
+  attention: pair(0xf2c94c),   // yellow
+  danger: pair(0xff7a33),      // orange
+  passing: pair(0xa77bff),     // violet
+  slot: pair(0xe5484d),        // red
+};
+
 export function arrowRoleColor(role) {
   return ARROW_ROLE_TOKENS[role]?.css ?? null;
 }
