@@ -233,7 +233,7 @@ lines. An item that needs more than ~10 lines gets its own file under
   Auto target (goal nearer the ball), controls in the match ball's
   Inspector (draft variant B), verdict chip on the rink, lines in 2D,
   goalie glow follows the shooting line. [Spec](items/A-BACK-045-shot-panel.md).
-- **[A-BACK-052] Goalie content in English and German** [open] Zone
+- **[A-BACK-052] Goalie content in English and German** [in-progress] Zone
   cards, KATA rows and hints, verdict chip, lesson captions and
   exercise texts switch between English and German; more languages
   later. [Spec](items/A-BACK-046-051-goalie-module.md).
@@ -254,6 +254,10 @@ lines. An item that needs more than ~10 lines gets its own file under
 - **[A-BACK-051] Ideal goalie** [blocked-by: A-BACK-046, A-BACK-048]
   Position and facing from the zone rules, shown as a ghost; first
   version of A-BACK-043. Same file.
+- **[A-BACK-053] Goalie size: Adult / U14** [open] Per-goalie setting
+  (A-Q-006); a U14 goalie is smaller, so coverage and the ideal goalie
+  report less of the goal covered. Needs a sourced or clearly estimated
+  U14 scale. Same file.
 
 ### Mode B - Analyze
 
@@ -408,8 +412,8 @@ coupling visible.
   to 043: can the user supply a few photos or clips per move (carry,
   pass, wrist shot, slap shot, goalie stance, a save)? Without them
   every pose number stays an estimate.
-- **[A-Q-006] Goalie height** [open] Adult only, or a U14 setting? It
-  changes what coverage reports (A-BACK-042).
+- **[A-Q-006] Goalie height** [decided 2026-11-16] Support both: an
+  Adult / U14 setting per goalie (A-BACK-053).
 - **[A-Q-007] Goalie module content** [decided 2026-11-15] Our own
   words, a link to the module, no copied images.
 - **[A-Q-008] Where the goalie module lives** [decided 2026-11-15] A

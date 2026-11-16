@@ -857,6 +857,19 @@
   #inspector .shot-chip[aria-pressed="true"] { border-color:var(--fb-brand); background:var(--fb-brand-quiet); color:var(--fb-text-1); }
   #inspector .shot-actions { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; }
   #inspector .shot-actions .ins-btn { margin-top:0; }
+  /* Goalie section in a goalie's Inspector (A-BACK-052); same look as the shot section,
+     own class so `.shot-section` stays the ball's alone */
+  #inspector .goalie-section {
+    margin-top:14px; padding-top:12px; border-top:1px solid var(--fb-line);
+    display:flex; flex-direction:column; gap:8px;
+  }
+  #inspector .goalie-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  #inspector .goalie-lang {
+    display:grid; grid-template-columns:repeat(2, 40px); gap:2px; padding:2px;
+    background:var(--fb-ink); border:1px solid var(--fb-line); border-radius:var(--fb-radius-1);
+  }
+  #inspector .goalie-lang .shot-seg { height:24px; }
+  #inspector .goalie-source a { color:var(--fb-brand); }
   #inspector .ins-btn.danger {
     border-color:color-mix(in srgb, var(--fb-danger) 50%, transparent); background:color-mix(in srgb, var(--fb-danger) 10%, transparent);
     color:var(--fb-danger);

@@ -22,6 +22,7 @@ import { passTargets, passStatus } from './choreo-pass.js';
 import { currentPass, shotVerdictFor } from './pass-overlay.js';
 import { MIN_PASS_SPEED_MPS, maxSpeedMps, mpsToKmh, padToAim, aimToPad } from './ball-pose.js';
 import { shotSection } from './shot-section.js';
+import { goalieSection } from './goalie-section.js';
 import { VECTOR_PASS_CLEAR, VECTOR_PASS_BLOCKED, SHOT_LINE_TOKENS } from '../tokens.js';
 
 // Chip properties live in the chip-anchored popover (see chip-popover.js),
@@ -119,6 +120,7 @@ function render(sel) {
   // Goalie: rotation slider (Q/E works too but a slider is discoverable).
   if (sel === state.goalies.A || sel === state.goalies.B) {
     body.appendChild(rotationRow(sel));
+    body.appendChild(goalieSection());   // A-BACK-052: start of the goalie lens
     return;
   }
 

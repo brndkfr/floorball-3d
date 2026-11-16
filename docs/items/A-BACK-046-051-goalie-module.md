@@ -193,4 +193,6 @@ A-BACK-043.
   regular entry in the Layers panel, so the user can switch it off
   (A-BACK-048).
 
-A-Q-006 (goalie height) matters more now: a U14 goalie covers less.
+A-Q-006 (goalie height), decided 2026-11-16: support both. A per-goalie
+Adult / U14 setting is its own item, A-BACK-053; coverage, KATA targets
+and the ideal goalie read the goalie's size.
