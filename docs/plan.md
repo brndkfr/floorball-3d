@@ -250,7 +250,7 @@ lines. An item that needs more than ~10 lines gets its own file under
   [Spec](items/A-BACK-046-051-goalie-module.md).
 - **[A-BACK-047] Shooter's-eye inset** [open] A small second view from
   the ball while the goalie moves (the module's "Winkelband"). Same file.
-- **[A-BACK-048] Goalie zone layer** [open] Awareness, attention,
+- **[A-BACK-048] Goalie zone layer** [in-progress] Awareness, attention,
   danger zone + slot, passing-first; borders estimated from the
   module's diagram. Same file.
 - **[A-BACK-049] Goalie lessons** [blocked-by: A-BACK-035] Five

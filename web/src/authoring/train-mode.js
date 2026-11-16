@@ -24,6 +24,8 @@ import { deselectAll } from '../selection.js';
 import { t } from '../lang-state.js';
 import { GOALIE_MODULE_URL } from '../i18n.js';
 import { markRenderDirty } from '../render-dirty.js';
+import { setGoalieZonesShown, restorePlanGoalieZones } from '../goalie-zones-state.js';
+import './goalie-zone-card.js';   // zone card in #trainSlots (A-BACK-048)
 
 // Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
 const panel = document.getElementById('trainPanel');
@@ -49,6 +51,7 @@ function enterTrain() {
   setSaveSandbox(true);
   showDoc(practiceDoc());
   resetHistory();
+  setGoalieZonesShown(true, { remember: false });   // A-BACK-048: Train starts with the zones on
   markRenderDirty();
 }
 
@@ -59,6 +62,7 @@ function leaveTrain() {
   showDoc(restorePlanDoc(stash));
   stash = null;
   setSaveSandbox(false);
+  restorePlanGoalieZones();
   initHistory();
   notifyProjectChanged();
   markRenderDirty();

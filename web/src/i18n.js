@@ -35,6 +35,9 @@ const EN = {
   'goalie.action.pass': 'Pass',
   'goalie.action.dribble': 'Dribble',
 
+  'goalie.zones.toggle': 'Zones',
+  'goalie.zones.layer': 'Goalie zones',
+  'goalie.zones.section': 'Goalie zones',
   'goalie.zone.ball': 'Ball zone: {zone}',
   'goalie.zone.awareness.name': 'Awareness zone',
   'goalie.zone.awareness.motto': 'Recover!',
@@ -73,6 +76,9 @@ const DE = {
   'goalie.action.pass': 'Pass',
   'goalie.action.dribble': 'Dribbling',
 
+  'goalie.zones.toggle': 'Zonen',
+  'goalie.zones.layer': 'Goalie-Zonen',
+  'goalie.zones.section': 'Goalie-Zonen',
   'goalie.zone.ball': 'Ballzone: {zone}',
   'goalie.zone.awareness.name': 'Awareness-Zone',
   'goalie.zone.awareness.motto': 'Erholen!',
