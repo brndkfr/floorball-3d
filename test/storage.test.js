@@ -39,6 +39,8 @@ const {
   saveHistoryState,
   loadHistoryState,
   deleteHistoryState,
+  setSaveSandbox,
+  isSaveSandboxed,
 } = await import('../web/src/authoring/storage.js');
 const { state } = await import('../web/src/state.js');
 const { emptyDoc, emptyMeta } = await import('../web/src/authoring/doc.js');
@@ -231,4 +233,37 @@ test('emptyMeta generates unique ids', () => {
   const a = emptyMeta();
   const b = emptyMeta();
   assert.notEqual(a.id, b.id);
+});
+
+// A-BACK-054 / A-Q-011: Train mode's practice rink must never reach the
+// user's projects or their undo history.
+test('save sandbox: saveDoc and saveHistoryState write nothing while on', () => {
+  fakeStorage.failNextWrites = false;
+  state.doc = null;
+  saveDoc();                                    // a normal current project
+  const id = getCurrentProjectId();
+  const savedBefore = fakeStorage.getItem(`floorball-3d:project:${id}`);
+  saveHistoryState(id, { stack: ['x'], cursor: 0 });
+  const histBefore = fakeStorage.getItem(`floorball-3d:history:${id}`);
+  const statusBefore = getSaveStatus();
+  const keysBefore = fakeStorage.length;
+
+  assert.equal(isSaveSandboxed(), false);
+  setSaveSandbox(true);
+  assert.equal(isSaveSandboxed(), true);
+  state.doc = null;                             // what Train shows instead: a different doc
+  saveDoc();
+  saveHistoryState(id, { stack: ['train'], cursor: 0 });
+  assert.equal(fakeStorage.getItem(`floorball-3d:project:${id}`), savedBefore);
+  assert.equal(fakeStorage.getItem(`floorball-3d:history:${id}`), histBefore);
+  assert.equal(fakeStorage.length, keysBefore, 'no new project written either');
+  assert.equal(getCurrentProjectId(), id, 'the current project pointer is untouched');
+  assert.equal(getSaveStatus(), statusBefore, 'the save badge does not change');
+
+  setSaveSandbox(false);
+  assert.equal(isSaveSandboxed(), false);
+  state.doc = loadProject(id);
+  saveDoc();
+  saveHistoryState(id, { stack: ['back'], cursor: 0 });
+  assert.match(fakeStorage.getItem(`floorball-3d:history:${id}`), /back/);
 });

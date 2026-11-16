@@ -71,6 +71,14 @@ export function redo() {
   return true;
 }
 
+// A fresh in-memory stack seeded with the doc on screen, without loading the
+// project's persisted one: Train mode's practice rink (A-BACK-054), where
+// the save sandbox also keeps persist() from writing.
+export function resetHistory() {
+  resetHistoryStack(hs);
+  pushHistory();
+}
+
 // Seed the stack with the current doc state (call once after initial load,
 // and again on every project switch so undo can't reach across projects).
 // Restores a persisted stack for this project if one exists; otherwise

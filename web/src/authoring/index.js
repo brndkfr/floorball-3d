@@ -29,6 +29,7 @@ import './dock.js';       // side-effect: wires up the DOM
 import './tool-palette.js'; // side-effect: wires up the left tool palette
 import '../ui/topbar.js';  // side-effect: Broadcast top bar (crumb, 2D/3D, Export)
 import '../ui/lang-menu.js';  // side-effect: rail globe button, app-wide English / Deutsch (A-BACK-052)
+import './train-mode.js';  // side-effect: Train mode in the rail, own practice rink (A-BACK-054)
 import '../ui/camera-menu.js';  // side-effect: top bar Views menu + Shift+1..6 (A-BACK-040 step 4)
 import '../ui/panels.js';  // side-effect: right panel strip / drawer toggle (A-BACK-044)
 import '../ui/present.js';  // side-effect: top bar Present + #presentBar (A-BACK-044 step 4)
