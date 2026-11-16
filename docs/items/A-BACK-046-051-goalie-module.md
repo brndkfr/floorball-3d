@@ -201,7 +201,13 @@ shows the ideal as a faint ghost and the two shooter's views side by
 side, with one hint sentence. Score kept per browser. Tests: scoring is
 pure; e2e: one situation end to end.
 
-### A-BACK-051 - Ideal goalie `[lead]` (with A-BACK-043)
+### A-BACK-051 - Ideal goalie
+
+Started 2026-11-16 with A-BACK-047: `idealGoaliePose()` in
+`web/src/shooter-view.js` (position from the target band's middle, facing
+from the axis target; every KATA dimension judges ok there, Node-tested
+for every zone and action at both ends) and an Auto position button that
+glides the goalie there. The ghost and animations build on it. `[lead]` (with A-BACK-043)
 
 `idealGoalie(ball, zone, action)` -> position and facing from the zone
 rules. Shown as a ghost on demand in any play; it is also the first
