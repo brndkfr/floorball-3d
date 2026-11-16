@@ -6,6 +6,7 @@ import { updateCoverage } from './coverage.js';
 import { updateShotChip } from './ui/shot-chip.js';
 import { updateShotReadout } from './shot-readout.js';
 import { updateGoalieZones } from './goalie-zones-layer.js';
+import { updateKataReadout } from './kata-readout.js';
 import { snapshotChanged, copySnapshot } from './dirty-check.js';
 import { consumeRenderDirty } from './render-dirty.js';
 import { tickBlobShadows } from './blob-shadow.js';
@@ -82,6 +83,7 @@ function animate() {
   updateShotReadout();   // verdict + % blocked for the Inspector card and the rink chip (A-BACK-045)
   updateShotChip();   // verdict chip on the rink (A-BACK-045)
   const zonesChanged = updateGoalieZones(ballCenter);   // goalie zones + the ball's zone (A-BACK-048)
+  updateKataReadout();   // Train panel KATA rows (A-BACK-046), after the zone and the shot readout
   const labelsChanged = updateFloorLabelOrientations(state.activeCamera);
 
   const cam = state.activeCamera;

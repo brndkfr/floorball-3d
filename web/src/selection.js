@@ -18,6 +18,7 @@ import { isTopDown } from './authoring/topdown-camera.js';
 import { disposeObject } from './dispose.js';
 import { goalName } from './end-names.js';
 import { goalLetterForPick } from './shot-target.js';
+import { canBodyDrag } from './drag-rules.js';
 
 // --- coordinate readout: hover to preview, click to pin a coordinate ---
 const coordXEl = document.getElementById('coordX');
@@ -226,6 +227,20 @@ export function selectedChips() {
 // user-spawned extra balls and extra goals. The two fixed goals, the
 // main ball and the goalie are deliberately excluded - they have their
 // own gestures.
+// Kind of a pick for drag-rules.js.
+function dragKind(obj) {
+  if (!obj) return null;
+  if (state.chipGroups.includes(obj)) return 'chip';
+  if (state.shapeObjects.includes(obj)) return 'shape';
+  if (state.coneObjects.includes(obj)) return 'cone';
+  if (state.extraBalls.includes(obj)) return 'extraBall';
+  if (state.extraGoals.includes(obj)) return 'extraGoal';
+  if (obj === state.ballGroup) return 'matchBall';
+  if (obj === state.goalies.A || obj === state.goalies.B) return 'goalie';
+  return null;
+}
+const leftDragMoves = (obj) => canBodyDrag(dragKind(obj), { mode: document.body.dataset.mode, topDown: isTopDown(), tool: state.activeTool });
+
 function isBodyDraggable(obj) {
   return !!obj && (state.chipGroups.includes(obj) || state.shapeObjects.includes(obj) || state.coneObjects.includes(obj) || state.extraBalls.includes(obj) || state.extraGoals.includes(obj));
 }
@@ -399,26 +414,20 @@ renderer.domElement.addEventListener('pointermove', (event) => {
 
   const moved = Math.hypot(event.clientX - lmb.downX, event.clientY - lmb.downY) > DRAG_THRESHOLD;
 
-  // 3D perspective, no tool active: left-drag orbits the camera, Shift +
-  // left-drag pans it.
-  if (lmb.mode === 'look' || lmb.mode === 'pan' || (lmb.mode === 'idle' && moved && state.activeCamera === camera && !state.activeTool)) {
-    if (lmb.mode === 'idle') lmb.mode = lmb.additive ? 'pan' : 'look';
-    dragCamera(lmb, event, lmb.mode === 'pan' ? panGrab : orbitDrag);
-    return;
-  }
-
-  // 2D top-down: left-drag on a chip or shape body moves it. If the grabbed
+  // Left-drag on an object body moves it: in Plan chips / shapes / cones /
+  // extra balls / goals in 2D, in Train the match ball and goalies in 2D and
+  // 3D (drag-rules.js). Checked before the 3D orbit so Train can grab them. If the grabbed
   // object is part of a multi-selection, the whole set translates by the drag
   // delta (relative offsets preserved). Grabbing something that ISN'T selected
   // makes it the sole selection first (RTS convention). Chips move via their
   // Object3D position; shapes bake world coords, so during the drag they only
   // get a transform offset - the doc coords are rewritten once on release.
-  if (lmb.mode === 'obj-drag' || (lmb.mode === 'idle' && moved && isBodyDraggable(lmb.hit) && isTopDown() && !state.activeTool)) {
+  if (lmb.mode === 'obj-drag' || (lmb.mode === 'idle' && moved && leftDragMoves(lmb.hit))) {
     if (lmb.mode !== 'obj-drag') {
       if (!state.selectedSet.includes(lmb.hit)) selectObject(lmb.hit);
       lmb.mode = 'obj-drag';
       const multi = state.selectedSet.includes(lmb.hit) && state.selectedSet.length > 1;
-      const set = (multi ? state.selectedSet.slice() : [lmb.hit]).filter(isBodyDraggable);
+      const set = (multi ? state.selectedSet.slice() : [lmb.hit]).filter(leftDragMoves);
       lmb.dragObjs = set;
       lmb.dragOrigin = p ? { x: p.x, z: p.z } : { x: 0, z: 0 };
       lmb.dragBase = new Map();
@@ -438,6 +447,15 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     }
     return;
   }
+
+  // 3D perspective, no tool active: left-drag orbits the camera, Shift +
+  // left-drag pans it.
+  if (lmb.mode === 'look' || lmb.mode === 'pan' || (lmb.mode === 'idle' && moved && state.activeCamera === camera && !state.activeTool)) {
+    if (lmb.mode === 'idle') lmb.mode = lmb.additive ? 'pan' : 'look';
+    dragCamera(lmb, event, lmb.mode === 'pan' ? panGrab : orbitDrag);
+    return;
+  }
+
 
   // 2D top-down: left-drag starting on empty floor draws a marquee box.
   if (lmb.mode === 'marquee' || (lmb.mode === 'idle' && moved && !lmb.hit && isTopDown() && !state.activeTool)) {

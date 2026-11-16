@@ -41,6 +41,10 @@ export const state = {
   goalieZonesLayer: null,    // THREE.Group, one mesh per zone
   goalieZone: null,          // { goal, zone } of the match ball, or null
 
+  // kata-readout.js (A-BACK-046)
+  kataReadout: null,         // { goal, zone, action, actionAuto, kata, judged, pct } in Train, else null
+  kataAction: null,          // null = Auto (from the play) | 'shot' | 'pass' | 'dribble'
+
   // lang-state.js: app language, 'en' | 'de' (A-BACK-052, switched from the rail)
   lang: 'en',
 
