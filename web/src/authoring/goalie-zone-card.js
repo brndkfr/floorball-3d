@@ -7,7 +7,7 @@
 
 import { state } from '../state.js';
 import { t } from '../lang-state.js';
-import { setGoalieZonesShown } from '../goalie-zones-state.js';
+import { setGoalieZonesShown, setGoalieZoneLabelsShown } from '../goalie-zones-state.js';
 import { GOALIE_ZONE_TOKENS } from '../tokens.js';
 import { isCardCollapsed, toggleCard } from './train-cards-ui.js';
 
@@ -23,19 +23,25 @@ root.innerHTML = `
       <span class="gz-dot" aria-hidden="true"></span><span class="gz-name"></span><span class="gz-motto"></span>
       <svg class="tc-chevron" width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 8l5 5 5-5"></path></svg>
     </button>
-    <button type="button" class="gz-toggle"></button>
+    <button type="button" class="gz-toggle" data-k="zones"></button>
+    <button type="button" class="gz-toggle" data-k="labels"></button>
   </div>
   <p class="gz-text" id="gzBody"></p>`;
 slots.appendChild(root);
 
 const collapse = root.querySelector('.tc-collapse');
-const toggle = root.querySelector('.gz-toggle');
+const toggle = root.querySelector('.gz-toggle[data-k="zones"]');
+const labelsToggle = root.querySelector('.gz-toggle[data-k="labels"]');
+labelsToggle.addEventListener('click', () => setGoalieZoneLabelsShown(!state.goalieZoneLabelsShown));
 collapse.addEventListener('click', () => toggleCard('zone'));
 toggle.addEventListener('click', () => setGoalieZonesShown(!state.goalieZonesShown, { remember: false }));
 
 function refresh() {
   toggle.textContent = t('goalie.zones.toggle');
   toggle.setAttribute('aria-pressed', String(!!state.goalieZonesShown));
+  labelsToggle.textContent = t('goalie.zones.labels');
+  labelsToggle.setAttribute('aria-pressed', String(!!state.goalieZoneLabelsShown));
+  labelsToggle.disabled = !state.goalieZonesShown;   // tags only stand on visible zones
   const collapsed = isCardCollapsed('zone');
   collapse.setAttribute('aria-expanded', String(!collapsed));
   root.classList.toggle('collapsed', collapsed);
@@ -49,5 +55,5 @@ function refresh() {
   root.querySelector('.gz-text').textContent = t(`goalie.zone.${zone}.card`);
 }
 
-for (const ev of ['goalieZoneChanged', 'goalieZonesChanged', 'trainCardsChanged', 'langChanged']) window.addEventListener(ev, refresh);
+for (const ev of ['goalieZoneChanged', 'goalieZonesChanged', 'goalieZoneLabelsChanged', 'trainCardsChanged', 'langChanged']) window.addEventListener(ev, refresh);
 refresh();

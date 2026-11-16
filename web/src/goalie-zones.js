@@ -28,6 +28,10 @@ const B = GOALIE_ZONE_BOUNDS;
 export const GOALIE_ZONES_STORAGE_KEY = 'floorball3d.goalieZones';
 export const parseGoalieZonesShown = (stored) => stored === '1';
 
+// Zone labels (standing tags, A-BACK-048 follow-up): on by default.
+export const GOALIE_ZONE_LABELS_STORAGE_KEY = 'floorball3d.goalieZoneLabels';
+export const parseGoalieZoneLabelsShown = (stored) => stored !== '0';
+
 export const depthFromEnd = (z, goal) => (goal === 'B' ? RINK_L - z : z);
 
 export function slotHalfWidthAt(d) {
@@ -66,4 +70,31 @@ export function zonePolygons(goal) {
     { key: 'passing', outer: band(0, B.passingDepth) },
     { key: 'slot', outer: trapezoid(B.slot.near, B.slot.far) },
   ];
+}
+
+// Where each zone's tag stands, in front of `goal` (world x, z in mm): two
+// beside the goal for passing-first and two out wide for danger, so one
+// stays in view whichever way the camera turns. Spots picked by eye.
+const TAG_SPOTS = [
+  ['passing', -6000, 2000], ['passing', 6000, 2000],
+  ['slot', 0, 7000],
+  ['danger', -6500, 10000], ['danger', 6500, 10000],
+  ['attention', 0, 21000],
+  ['awareness', 0, 33000],
+];
+export function zoneLabelAnchors(goal) {
+  return TAG_SPOTS.map(([key, x, d]) => ({ key, x, z: goal === 'B' ? RINK_L - d : d }));
+}
+
+// Depth range of a zone from the end board, for its tag.
+const m = (mm) => `${mm / 1000}`;
+export function zoneDepthText(key) {
+  switch (key) {
+    case 'passing': return `0 – ${m(B.passingDepth)} m`;
+    case 'slot': return `${m(B.slot.near)} – ${m(B.slot.far)} m`;
+    case 'danger': return `${m(B.passingDepth)} – ${m(B.dangerDepth)} m`;
+    case 'attention': return `${m(B.dangerDepth)} – ${m(B.attentionDepth)} m`;
+    case 'awareness': return `${m(B.attentionDepth)} m +`;
+    default: return '';
+  }
 }
