@@ -429,6 +429,12 @@ coupling visible.
 - **[A-Q-010] Language switch** [decided 2026-11-16] App-wide, a globe
   button at the bottom of the left rail (English / Deutsch). Goalie
   training is translated first; the rest of the UI follows.
+- **[A-Q-012] Train layout** [decided 2026-11-16] Layout A, floating
+  cards: no side panel; zone card top-left, KATA card bottom-left, both
+  collapsible (remembered per browser); the hint as a pill next to the
+  goalie; title, Open as play and the module link in the top bar; the
+  camera frames the defending goal from high in the rink. Comparison:
+  <https://claude.ai/artifact/Dvebi8ZfC8rea9WpHEdm16>.
 - **[A-Q-011] What Train works on** [decided 2026-11-16] Its own
   practice rink (lesson, exercise or free situation). The user's plays
   are never changed; "Open as play" copies a situation into Plan.

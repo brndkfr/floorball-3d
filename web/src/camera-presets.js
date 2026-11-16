@@ -57,6 +57,17 @@ export function presetPose(id, { fit, chip }) {
   }
 }
 
+// Train mode (A-BACK-054, layout A): high up in the rink in front of the
+// defending goal, looking back at it, so the goalie is seen from the front
+// and the danger zone, the slot and the ball fill the view. Estimates,
+// chosen by eye like the presets above.
+const TRAIN_VIEW = { out: 15500, height: 8500, lookAt: 5000 };   // camera / look-at depth from the end board, mm; height mm
+export function trainPose(goal) {
+  const end = goal === 'B' ? RINK_L : 0;
+  const dir = goal === 'B' ? -1 : 1;
+  return aim({ x: 0, y: TRAIN_VIEW.height, z: end + dir * TRAIN_VIEW.out }, { x: 0, y: 0, z: end + dir * TRAIN_VIEW.lookAt });
+}
+
 // The preset for a key event, or null. Reads `code` (Digit2 / Numpad2):
 // with Shift held, `key` is the shifted character, which differs per
 // keyboard layout.

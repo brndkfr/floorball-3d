@@ -16,7 +16,7 @@ async function boot(page) {
 }
 
 const railBtn = (page, mode) => page.locator(`#appRail [data-mode="${mode}"]`);
-const card = (page) => page.locator('#trainPanel .gz-card');
+const card = (page) => page.locator('#trainPanel .gz');
 const toggle = (page) => page.locator('#trainPanel').getByRole('button', { name: /^(Zones|Zonen)$/ });
 
 // Put the ball somewhere and run one zone update; returns what the layer shows.
