@@ -5,6 +5,7 @@ import { updateTrajectory } from './trajectory.js';
 import { updateCoverage } from './coverage.js';
 import { updateShotChip } from './ui/shot-chip.js';
 import { updateShotReadout } from './shot-readout.js';
+import { updateGoalieZones } from './goalie-zones-layer.js';
 import { snapshotChanged, copySnapshot } from './dirty-check.js';
 import { consumeRenderDirty } from './render-dirty.js';
 import { tickBlobShadows } from './blob-shadow.js';
@@ -80,6 +81,7 @@ function animate() {
   updateCoverage(ballCenter);
   updateShotReadout();   // verdict + % blocked for the Inspector card and the rink chip (A-BACK-045)
   updateShotChip();   // verdict chip on the rink (A-BACK-045)
+  const zonesChanged = updateGoalieZones(ballCenter);   // goalie zones + the ball's zone (A-BACK-048)
   const labelsChanged = updateFloorLabelOrientations(state.activeCamera);
 
   const cam = state.activeCamera;
@@ -96,7 +98,7 @@ function animate() {
   // consumeRenderDirty() must run every frame (it's edge-triggered) - keep
   // it first so `||` short-circuiting never skips clearing it.
   const needsRender = consumeRenderDirty() || pollChanged || presetActive || chipsActive || markersActive
-    || walksActive || choreoActive || actorsActive || figuresChanged || spritesChanged || passChanged || shadowsChanged || trajectoryChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
+    || walksActive || choreoActive || actorsActive || figuresChanged || spritesChanged || passChanged || shadowsChanged || trajectoryChanged || zonesChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
   if (needsRender) renderer.render(scene, state.activeCamera);
 }
 animate();

@@ -36,6 +36,11 @@ export const state = {
   // trajectory.js
   targetGoal: null,
 
+  // goalie-zones-state.js / goalie-zones-layer.js (A-BACK-048)
+  goalieZonesShown: false,   // floor zones visible (Plan: stored choice; Train: on)
+  goalieZonesLayer: null,    // THREE.Group, one mesh per zone
+  goalieZone: null,          // { goal, zone } of the match ball, or null
+
   // lang-state.js: app language, 'en' | 'de' (A-BACK-052, switched from the rail)
   lang: 'en',
 

@@ -21,6 +21,8 @@ import { saveDoc } from './storage.js';
 import { ZONES, isZoneVisible, withZone } from './zones-model.js';
 import { FIXED_OBJECTS, isFixedShown, withFixedShown } from './fixed-objects-model.js';
 import { endName } from '../end-names.js';
+import { setGoalieZonesShown } from '../goalie-zones-state.js';
+import { t } from '../lang-state.js';
 
 // Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
 const root = document.getElementById('layersPanel');
@@ -74,6 +76,8 @@ if (!root) throw new Error('layersPanel element missing from index.html');
   });
 
   document.addEventListener('layers:dirty', render);
+  window.addEventListener('goalieZonesChanged', render);   // A-BACK-048 row
+  window.addEventListener('langChanged', render);
   window.addEventListener('ballCarrierChanged', render);
   window.addEventListener('ballColorChanged', render);
   // Re-selecting the same object must not rebuild the rows: the second click of a double-click would detach the name being renamed.
@@ -136,6 +140,31 @@ if (!root) throw new Error('layersPanel element missing from index.html');
     renderSection('goals', `Goals \u00b7 ${goals.length + 2}`, [...fixed('goal'), ...goals.map(goalRow(selId))]);
     renderSection('goalies', 'Goalies \u00b7 2', fixed('goalie'));
     renderSection('tactical', `Tactical zones \u00b7 ${ZONES.length}`, ZONES.map(tacticalRow(doc)));
+    renderSection('goalie-zones', t('goalie.zones.section'), [goalieZonesRow()]);
+  }
+
+  // Goalie zones (A-BACK-048): a view choice per browser, not project data;
+  // one row for the whole layer. Train switches them on by itself.
+  function goalieZonesRow() {
+    const on = !!state.goalieZonesShown;
+    const label = t('goalie.zones.layer');
+    const row = document.createElement('div');
+    row.className = 'lp-row';
+    row.dataset.goalieZones = '';
+    row.title = 'Goalie zone model (J+S / swiss unihockey module); borders estimated from its diagram';
+    const eye = document.createElement('button');
+    eye.className = 'lp-eye';
+    eye.title = on ? 'Hide' : 'Show';
+    eye.textContent = on ? '●' : '○';
+    eye.setAttribute('aria-pressed', String(on));
+    eye.setAttribute('aria-label', `${on ? 'Hide' : 'Show'} ${label}`);
+    row.appendChild(eye);
+    const name = document.createElement('span');
+    name.className = 'lp-name';
+    name.textContent = label;
+    row.appendChild(name);
+    row.addEventListener('click', () => setGoalieZonesShown(!state.goalieZonesShown));
+    return row;
   }
 
   // The two fixed rink goals and their goalies: shown / hidden per project
