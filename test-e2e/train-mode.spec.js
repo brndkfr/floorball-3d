@@ -17,6 +17,7 @@ async function boot(page) {
 
 const railBtn = (page, mode) => page.locator(`#appRail [data-mode="${mode}"]`);
 const panel = (page) => page.locator('#trainPanel');
+const topbar = (page) => page.locator('#appTopbar');
 
 // The Plan play: a named project with a moved goalie, saved.
 async function seedPlan(page) {
@@ -46,8 +47,18 @@ test('the Train button switches to Train mode: Plan UI hidden, Train panel shown
   await expect(panel(page)).toBeVisible();
   for (const id of ['toolPalette', 'timeline', 'dock', 'rightPanel']) await expect(page.locator(`#${id}`)).toBeHidden();
   await expect(page.locator('#appTopbarProjectName')).toBeHidden();
-  await expect(panel(page).getByRole('heading', { name: 'Goalie training' })).toBeVisible();
-  await expect(panel(page).getByRole('link', { name: 'Open the module' })).toHaveAttribute('href', /goalies-positionierung/);
+  await expect(topbar(page).getByRole('heading', { name: 'Goalie training' })).toBeVisible();
+  await expect(topbar(page).getByRole('link', { name: 'Open the module' })).toHaveAttribute('href', /goalies-positionierung/);
+  // Layout A: no side panel; the overlay spans the stage, the cards float in its corners
+  const stage = await panel(page).boundingBox();
+  const vp = page.viewportSize();
+  expect(stage.x + stage.width).toBeGreaterThanOrEqual(vp.width - 1);
+  const zone = await panel(page).locator('.gz').boundingBox();
+  const kata = await panel(page).locator('.kata').boundingBox();
+  expect(zone.x).toBeLessThan(stage.x + 40);
+  expect(zone.y).toBeLessThan(stage.y + 40);
+  expect(kata.x).toBeLessThan(stage.x + 40);
+  expect(kata.y + kata.height).toBeGreaterThan(stage.y + stage.height - 40);
 
   await railBtn(page, 'plan').click();
   await expect(panel(page)).toBeHidden();
@@ -121,7 +132,7 @@ test('Open as play copies the practice situation into a new project and switches
   await boot(page);
   const before = await seedPlan(page);
   await railBtn(page, 'train').click();
-  await panel(page).getByRole('button', { name: 'Open as play' }).click();
+  await topbar(page).getByRole('button', { name: 'Open as play' }).click();
   await expect(railBtn(page, 'plan')).toHaveClass(/active/);
   await expect(page.locator('#dockProjectName')).toHaveText('Goalie training');
   const r = await page.evaluate(async (oldId) => {
@@ -139,22 +150,26 @@ test('the Train panel follows the app language', async ({ page }) => {
   await railBtn(page, 'train').click();
   await page.locator('#langBtn').click();
   await page.locator('#langMenu').getByRole('menuitemradio', { name: 'Deutsch' }).click();
-  await expect(panel(page).getByRole('heading', { name: 'Goalie-Training' })).toBeVisible();
-  await expect(panel(page).getByRole('link', { name: 'Zum Lernmodul' })).toBeVisible();
-  await expect(panel(page).getByRole('button', { name: 'Als Spielzug öffnen' })).toBeVisible();
+  await expect(topbar(page).getByRole('heading', { name: 'Goalie-Training' })).toBeVisible();
+  await expect(topbar(page).getByRole('link', { name: 'Zum Lernmodul' })).toBeVisible();
+  await expect(topbar(page).getByRole('button', { name: 'Als Spielzug öffnen' })).toBeVisible();
 });
 
-test('the side-panel toggle hides in Train; on a phone the panel leaves the rink visible', async ({ page }) => {
+test('the side-panel toggle hides in Train; on a phone the cards sit top and bottom, clear of the tab bar', async ({ page }) => {
   await boot(page);
   await railBtn(page, 'train').click();
   await expect(page.locator('#appTopbar [data-action="toggle-panel"]')).toBeHidden();
   await page.setViewportSize({ width: 390, height: 844 });
-  const p = await panel(page).boundingBox();
   const vp = page.viewportSize();
-  expect(p.width).toBeGreaterThanOrEqual(vp.width - 1);      // a bottom sheet across the screen
-  expect(p.y).toBeGreaterThan(vp.height * 0.45);             // the top half shows the rink
+  const zone = await panel(page).locator('.gz').boundingBox();
+  const kata = await panel(page).locator('.kata').boundingBox();
   const tabs = await page.locator('#appRail').boundingBox();
-  expect(p.y + p.height).toBeLessThanOrEqual(tabs.y + 1);    // above the tab bar
+  for (const c of [zone, kata]) {
+    expect(c.x).toBeGreaterThanOrEqual(0);
+    expect(c.x + c.width).toBeLessThanOrEqual(vp.width);
+  }
+  expect(zone.y).toBeLessThan(vp.height * 0.3);
+  expect(kata.y + kata.height).toBeLessThanOrEqual(tabs.y + 1);
 });
 
 // Screen point of an object (its position lifted by `lift` mm), in CSS px.
@@ -187,9 +202,10 @@ const actorsNow = (page) => page.evaluate(async () => {
   return { goalie: { x: state.goalies.A.position.x, z: state.goalies.A.position.z }, ball: { x: state.ballGroup.position.x, z: state.ballGroup.position.z }, docGoalie: s.goalies?.A ?? null, docBall: s.balls.main, yaw };
 });
 
+
 test('in Train a left-drag moves the goalie and the ball in 3D; a drag on empty floor still orbits', async ({ page }) => {
   await boot(page);
-  await page.addStyleTag({ content: '#onboardingTip{display:none!important}' });
+  await page.emulateMedia({ reducedMotion: 'reduce' });            // the Train camera lands at once
   await railBtn(page, 'train').click();
   const before = await actorsNow(page);
 
@@ -204,7 +220,8 @@ test('in Train a left-drag moves the goalie and the ball in 3D; a drag on empty 
   expect(Math.hypot(afterBall.ball.x - before.ball.x, afterBall.ball.z - before.ball.z)).toBeGreaterThan(200);
   expect(afterBall.docBall).toMatchObject({ x: afterBall.ball.x, z: afterBall.ball.z });
 
-  await drag(page, { x: 400, y: 620 }, 120, 0);                // empty floor near the bottom of the stage
+  const r = await page.locator('canvas[data-engine^="three"]').boundingBox();
+  await drag(page, { x: r.x + r.width * 0.88, y: r.y + r.height * 0.5 }, -120, 0);   // empty floor on the right, clear of the cards
   const afterOrbit = await actorsNow(page);
   expect(afterOrbit.yaw).not.toBe(afterBall.yaw);
   expect(afterOrbit.goalie).toEqual(afterBall.goalie);
@@ -236,4 +253,70 @@ test('the turn buttons turn the defending goalie 5 degrees, left and right', asy
   await panel(page).getByRole('button', { name: 'Turn the goalie right' }).click();
   await panel(page).getByRole('button', { name: 'Turn the goalie right' }).click();
   expect(await yaw()).toBeCloseTo(y0 - 5, 5);
+});
+
+test('the cards collapse to their header, and the choice is remembered', async ({ page }) => {
+  await boot(page);
+  await railBtn(page, 'train').click();
+  await page.evaluate(async () => {
+    const { getBallWorldCenter } = await import('/src/state.js');
+    (await import('/src/goalie-zones-layer.js')).updateGoalieZones(getBallWorldCenter());
+    (await import('/src/kata-readout.js')).updateKataReadout();
+  });
+  const kataToggle = panel(page).locator('.kata').getByRole('button', { name: /KATA/ });
+  await expect(kataToggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(panel(page).locator('.kata-rows')).toBeVisible();
+  await kataToggle.click();
+  await expect(kataToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(panel(page).locator('.kata-rows')).toBeHidden();
+  const zoneToggle = panel(page).locator('.gz').getByRole('button', { name: /Slot/ });
+  await zoneToggle.click();
+  await expect(panel(page).locator('.gz-text')).toBeHidden();
+  await expect(panel(page).locator('.gz-name')).toHaveText('Slot');          // the header still names the zone
+
+  await boot(page);
+  await railBtn(page, 'train').click();
+  await expect(panel(page).locator('.kata').getByRole('button', { name: /KATA/ })).toHaveAttribute('aria-expanded', 'false');
+  expect(JSON.parse(await page.evaluate(() => localStorage.getItem('floorball3d.trainCards')))).toEqual({ zone: true, kata: true });
+});
+
+test('the hint is a pill next to the goalie on the rink', async ({ page }) => {
+  await boot(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await railBtn(page, 'train').click();
+  await page.evaluate(async () => {
+    const { state, getBallWorldCenter } = await import('/src/state.js');
+    state.goalies.A.position.set(900, 0, 4300);
+    state.goalies.A.rotation.y = 0;
+    (await import('/src/goalie-zones-layer.js')).updateGoalieZones(getBallWorldCenter());
+    (await import('/src/shot-readout.js')).updateShotReadout();
+    (await import('/src/kata-readout.js')).updateKataReadout();
+    (await import('/src/authoring/kata-section.js')).placeTrainHint();
+  });
+  const pill = page.locator('#trainHint');
+  await expect(pill).toBeVisible();
+  await expect(pill).toHaveText(/to your right/);
+  const g = await screenOf(page, 'A', 1200);
+  const b = await pill.boundingBox();
+  expect(Math.abs(b.x - g.x)).toBeLessThan(220);
+  expect(Math.abs(b.y + b.height / 2 - g.y)).toBeLessThan(120);
+});
+
+test('Train frames the defending goal end and Plan gets its own camera back', async ({ page }) => {
+  await boot(page);
+  const rig = () => page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    const c = state.activeCamera;
+    return { x: c.position.x, y: c.position.y, z: c.position.z, yaw: state.camYaw };
+  });
+  const plan = await rig();
+  await page.emulateMedia({ reducedMotion: 'reduce' });            // no blend: the pose lands at once
+  await railBtn(page, 'train').click();
+  const train = await rig();
+  expect(train.z).toBeGreaterThan(11500);                          // in the rink, in front of goal A
+  expect(train.z).toBeLessThan(20000);
+  expect(train.y).toBeGreaterThan(6000);
+  await railBtn(page, 'plan').click();
+  const back = await rig();
+  for (const k of ['x', 'y', 'z']) expect(back[k]).toBeCloseTo(plan[k], 0);
 });

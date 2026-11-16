@@ -61,13 +61,13 @@ test('square on the line 1 m out is good for a shot; off to the left the hint sa
   await boot(page);
   const r = await placeGoalie(page);
   expect(r).toMatchObject({ zone: 'slot', action: 'shot' });
-  await expect(section(page).locator('.kata-hint')).toHaveText('Good position for this situation.');
+  await expect(page.locator('#trainHint')).toHaveText('Good position for this situation.');
   for (const dim of ['placement', 'depth', 'axis']) await expect(row(page, dim)).toHaveAttribute('data-status', 'ok');
 
   await placeGoalie(page, { leftMm: 500 });
   await expect(row(page, 'placement')).toHaveAttribute('data-status', 'adjust');
   await expect(row(page, 'placement')).toHaveClass(/worst/);
-  await expect(section(page).locator('.kata-hint')).toHaveText('Step 0.5 m to your right.');
+  await expect(page.locator('#trainHint')).toHaveText('Step 0.5 m to your right.');
 });
 
 test('Pass changes the targets: deep and parallel; Auto goes back to the play', async ({ page }) => {
@@ -77,7 +77,7 @@ test('Pass changes the targets: deep and parallel; Auto goes back to the play', 
   await expect(action(page, 'Pass')).toHaveAttribute('aria-checked', 'true');
   await placeGoalie(page);
   await expect(row(page, 'depth')).toHaveAttribute('data-status', 'adjust');
-  await expect(section(page).locator('.kata-hint')).toHaveText('Step 0.5 m back towards the goal line.');
+  await expect(page.locator('#trainHint')).toHaveText('Step 0.5 m back towards the goal line.');
   await action(page, 'Auto').click();
   const r = await placeGoalie(page);
   expect(r.action).toBe('shot');
@@ -89,6 +89,6 @@ test('the KATA text follows the app language', async ({ page }) => {
   await page.locator('#langBtn').click();
   await page.locator('#langMenu').getByRole('menuitemradio', { name: 'Deutsch' }).click();
   await expect(row(page, 'axis')).toContainText('Achse');
-  await expect(section(page).locator('.kata-hint')).toHaveText('30° nach rechts drehen, frontal zur Schusslinie.');
+  await expect(page.locator('#trainHint')).toHaveText('30° nach rechts drehen, frontal zur Schusslinie.');
   await expect(action(page, 'Schuss')).toBeVisible();
 });

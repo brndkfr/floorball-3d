@@ -7,6 +7,7 @@ import { updateShotChip } from './ui/shot-chip.js';
 import { updateShotReadout } from './shot-readout.js';
 import { updateGoalieZones } from './goalie-zones-layer.js';
 import { updateKataReadout } from './kata-readout.js';
+import { placeTrainHint } from './authoring/kata-section.js';
 import { snapshotChanged, copySnapshot } from './dirty-check.js';
 import { consumeRenderDirty } from './render-dirty.js';
 import { tickBlobShadows } from './blob-shadow.js';
@@ -84,6 +85,7 @@ function animate() {
   updateShotChip();   // verdict chip on the rink (A-BACK-045)
   const zonesChanged = updateGoalieZones(ballCenter);   // goalie zones + the ball's zone (A-BACK-048)
   updateKataReadout();   // Train panel KATA rows (A-BACK-046), after the zone and the shot readout
+  placeTrainHint();      // the hint pill follows the goalie on screen (A-BACK-054 layout A)
   const labelsChanged = updateFloorLabelOrientations(state.activeCamera);
 
   const cam = state.activeCamera;

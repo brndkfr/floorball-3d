@@ -21,7 +21,8 @@ export const GOALIE_ZONE_KEYS = ['awareness', 'attention', 'danger', 'slot', 'pa
 const EN = {
   'goalie.title': 'Goalie training',
   'lang.label': 'Language',
-  'goalie.intro': 'A practice rink of its own: drag the goalie and the ball on the rink, turn the goalie with the turn buttons or Q / E. Your plays stay as they are.',
+  'goalie.intro': 'Practice rink: drag the goalie and the ball, turn with ↺ ↻ or Q / E.',
+  'goalie.card.toggle': 'Show or hide {card}',
   'goalie.turn.left': 'Turn the goalie left',
   'goalie.turn.right': 'Turn the goalie right',
   'goalie.openAsPlay': 'Open as play',
@@ -86,7 +87,8 @@ const EN = {
 const DE = {
   'goalie.title': 'Goalie-Training',
   'lang.label': 'Sprache',
-  'goalie.intro': 'Ein eigenes Übungsfeld: Goalie und Ball auf dem Feld ziehen, den Goalie mit den Drehknöpfen oder Q / E drehen. Deine Spielzüge bleiben unverändert.',
+  'goalie.intro': 'Übungsfeld: Goalie und Ball ziehen, drehen mit ↺ ↻ oder Q / E.',
+  'goalie.card.toggle': '{card} ein- oder ausblenden',
   'goalie.turn.left': 'Goalie nach links drehen',
   'goalie.turn.right': 'Goalie nach rechts drehen',
   'goalie.openAsPlay': 'Als Spielzug öffnen',

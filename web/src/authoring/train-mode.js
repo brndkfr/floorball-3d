@@ -26,7 +26,14 @@ import { GOALIE_MODULE_URL } from '../i18n.js';
 import { markRenderDirty } from '../render-dirty.js';
 import { setGoalieZonesShown, restorePlanGoalieZones } from '../goalie-zones-state.js';
 import './goalie-zone-card.js';   // zone card in #trainSlots (A-BACK-048)
-import './kata-section.js';       // KATA rows under it (A-BACK-046)
+import './kata-section.js';       // KATA card (A-BACK-046)
+import { getCameraRig, isDefaultView, applyDefaultView, defaultRig } from '../scene.js';
+import { blendCameraTo } from '../ui/camera-menu.js';
+import { trainPose } from '../camera-presets.js';
+import { state, getBallWorldCenter } from '../state.js';
+import { rigToCamera } from '../orbit-math.js';
+import { updateGoalieZones } from '../goalie-zones-layer.js';
+import { updateKataReadout } from '../kata-readout.js';
 
 // Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
 const panel = document.getElementById('trainPanel');
@@ -35,6 +42,8 @@ const sourceLink = document.getElementById('trainSourceLink');
 if (!panel || !openAsPlay || !sourceLink) throw new Error('train-mode.js: #trainPanel, #trainOpenAsPlay or #trainSourceLink missing from index.html');
 
 let stash = null;   // the Plan doc as JSON while Train is on
+let planRig = null; // Plan's camera, given back on the way out
+let planWasDefault = false;   // ...or its default view, which follows layout changes
 
 // Leave whatever is running on the doc on screen before it is swapped.
 function settle() {
@@ -53,6 +62,13 @@ function enterTrain() {
   showDoc(practiceDoc());
   resetHistory();
   setGoalieZonesShown(true, { remember: false });   // A-BACK-048: Train starts with the zones on
+  // Zone card and KATA right away, not one frame later (no empty flash).
+  updateGoalieZones(getBallWorldCenter());
+  updateKataReadout();
+  // Layout A: frame the defending goal end (the practice ball is at goal A).
+  planRig = getCameraRig();
+  planWasDefault = isDefaultView();
+  blendCameraTo(trainPose(state.goalieZone?.goal ?? 'A'));
   markRenderDirty();
 }
 
@@ -64,6 +80,11 @@ function leaveTrain() {
   stash = null;
   setSaveSandbox(false);
   restorePlanGoalieZones();
+  // Through the same blend, so it also replaces a blend still running from entering.
+  if (planWasDefault) blendCameraTo(rigToCamera(defaultRig()), applyDefaultView);   // like Stand: still the default view after
+  else if (planRig) blendCameraTo(rigToCamera(planRig));
+  planRig = null;
+  planWasDefault = false;
   initHistory();
   notifyProjectChanged();
   markRenderDirty();
@@ -85,8 +106,8 @@ openAsPlay.addEventListener('click', () => {
 });
 
 function relabel() {
-  panel.querySelector('#trainTitle').textContent = t('goalie.title');
-  for (const el of panel.querySelectorAll('[data-t]')) el.textContent = t(el.dataset.t);
+  // Train's text lives in the overlay and in the top bar ([data-t]).
+  for (const el of document.querySelectorAll('[data-t]')) el.textContent = t(el.dataset.t);
   panel.lang = document.documentElement.lang;
 }
 sourceLink.href = GOALIE_MODULE_URL;
