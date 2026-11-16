@@ -25,3 +25,10 @@ export function toggleShotView(view, key) {
 
 export const outlineShown = (view) => !!view.shotLine;
 export const anyShotOverlay = (view) => SHOT_VIEW_KEYS.some((k) => !!view[k]);
+
+// Train mode (A-BACK-054 follow-up): the corner lines and the shooting
+// line come on with Train, on top of Plan's choice; Train's Lines switch
+// turns both together. Plan's stored choice is never touched.
+export const trainShotView = (planView) => ({ ...planView, lines: true, shotLine: true });
+export const trainLinesOn = (view) => !!view.lines && !!view.shotLine;
+export const withTrainLines = (view, on) => ({ ...view, lines: !!on, shotLine: !!on });

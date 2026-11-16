@@ -25,6 +25,8 @@ import { t } from '../lang-state.js';
 import { GOALIE_MODULE_URL } from '../i18n.js';
 import { markRenderDirty } from '../render-dirty.js';
 import { setGoalieZonesShown, restorePlanGoalieZones } from '../goalie-zones-state.js';
+import { setShotViewUnsaved, restoreStoredShotView } from '../shot-view-state.js';
+import { trainShotView } from '../shot-view.js';
 import './goalie-zone-card.js';   // zone card in #trainSlots (A-BACK-048)
 import './kata-section.js';       // KATA card (A-BACK-046)
 import { getCameraRig, isDefaultView, applyDefaultView, defaultRig } from '../scene.js';
@@ -62,6 +64,7 @@ function enterTrain() {
   showDoc(practiceDoc());
   resetHistory();
   setGoalieZonesShown(true, { remember: false });   // A-BACK-048: Train starts with the zones on
+  setShotViewUnsaved(trainShotView(state.shotView));   // corner lines + shooting line, not stored
   // Zone card and KATA right away, not one frame later (no empty flash).
   updateGoalieZones(getBallWorldCenter());
   updateKataReadout();
@@ -80,6 +83,7 @@ function leaveTrain() {
   stash = null;
   setSaveSandbox(false);
   restorePlanGoalieZones();
+  restoreStoredShotView();   // Plan's own lines choice
   // Through the same blend, so it also replaces a blend still running from entering.
   if (planWasDefault) blendCameraTo(rigToCamera(defaultRig()), applyDefaultView);   // like Stand: still the default view after
   else if (planRig) blendCameraTo(rigToCamera(planRig));
