@@ -36,6 +36,9 @@ export const state = {
   // trajectory.js
   targetGoal: null,
 
+  // lang-state.js: app language, 'en' | 'de' (A-BACK-052, switched from the rail)
+  lang: 'en',
+
   // scene.js (camera look state) - read by selection.js's look-drag and
   // controls.js's walk-direction math, written by scene.js's setCameraLook
   camYaw: 0,

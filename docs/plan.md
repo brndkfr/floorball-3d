@@ -141,19 +141,22 @@ the J+S / swiss unihockey module "Goalies - Positionierung". Draft:
 <https://claude.ai/artifact/MWo96HehmtLYkQJM8yimvw>.
 [items/A-BACK-046-051](items/A-BACK-046-051-goalie-module.md).
 
-1. **[A-BACK-052] Goalie content in English and German** String
-   tables and a language switch; every later step adds its text in
-   both languages.
-2. **[A-BACK-048] Goalie zone layer** Five zones in front of the
+1. **[A-BACK-052] English and German** String tables and an
+   app-wide language switch at the bottom of the rail (A-Q-010);
+   every later step adds its text in both languages.
+2. **[A-BACK-054] Train mode** Rail button and mode with its own
+   practice rink (A-Q-011) and a Train panel; every later goalie step
+   lives in it.
+3. **[A-BACK-048] Goalie zone layer** Five zones in front of the
    defending goal, the ball's zone highlighted, a zone card.
-3. **[A-BACK-046] KATA readout** Goalie selected: placement, depth,
+4. **[A-BACK-046] KATA readout** In the Train panel: placement, depth,
    axis and coverage against the zone's targets; Shot / Pass.
-4. **[A-BACK-047] Shooter's-eye inset** The "angle tape", live.
-5. **[A-BACK-035] Frame notes** (moved up from "Later": the lessons
+5. **[A-BACK-047] Shooter's-eye inset** The "angle tape", live.
+6. **[A-BACK-035] Frame notes** (moved up from "Later": the lessons
    need captions).
-6. **[A-BACK-049] Goalie lessons** Five animated plays in the Library.
-7. **[A-BACK-050] "Place the goalie" exercises**
-8. **[A-BACK-051] Ideal goalie** Ghost from the zone rules; merges
+7. **[A-BACK-049] Goalie lessons** Five animated plays in Train.
+8. **[A-BACK-050] "Place the goalie" exercises**
+9. **[A-BACK-051] Ideal goalie** Ghost from the zone rules; merges
    into A-BACK-043 and needs A-BACK-042 for the body.
 
 ### Later (parked)
@@ -233,7 +236,10 @@ lines. An item that needs more than ~10 lines gets its own file under
   Auto target (goal nearer the ball), controls in the match ball's
   Inspector (draft variant B), verdict chip on the rink, lines in 2D,
   goalie glow follows the shooting line. [Spec](items/A-BACK-045-shot-panel.md).
-- **[A-BACK-052] Goalie content in English and German** [open] Zone
+- **[A-BACK-054] Train mode** [open] A fourth rail mode for goalie
+  training (A-Q-008, revised 2026-11-16): own practice rink, Train
+  panel, Plan's editing tools hidden. Same file.
+- **[A-BACK-052] Goalie content in English and German** [in-progress] Zone
   cards, KATA rows and hints, verdict chip, lesson captions and
   exercise texts switch between English and German; more languages
   later. [Spec](items/A-BACK-046-051-goalie-module.md).
@@ -254,6 +260,10 @@ lines. An item that needs more than ~10 lines gets its own file under
 - **[A-BACK-051] Ideal goalie** [blocked-by: A-BACK-046, A-BACK-048]
   Position and facing from the zone rules, shown as a ghost; first
   version of A-BACK-043. Same file.
+- **[A-BACK-053] Goalie size: Adult / U14** [open] Per-goalie setting
+  (A-Q-006); a U14 goalie is smaller, so coverage and the ideal goalie
+  report less of the goal covered. Needs a sourced or clearly estimated
+  U14 scale. Same file.
 
 ### Mode B - Analyze
 
@@ -408,12 +418,20 @@ coupling visible.
   to 043: can the user supply a few photos or clips per move (carry,
   pass, wrist shot, slap shot, goalie stance, a save)? Without them
   every pose number stays an estimate.
-- **[A-Q-006] Goalie height** [open] Adult only, or a U14 setting? It
-  changes what coverage reports (A-BACK-042).
+- **[A-Q-006] Goalie height** [decided 2026-11-16] Support both: an
+  Adult / U14 setting per goalie (A-BACK-053).
 - **[A-Q-007] Goalie module content** [decided 2026-11-15] Our own
   words, a link to the module, no copied images.
-- **[A-Q-008] Where the goalie module lives** [decided 2026-11-15] A
-  goalie lens in Plan (goalie selected) plus lessons in the Library.
+- **[A-Q-008] Where the goalie module lives** [decided 2026-11-16,
+  revised] A **Train** mode in the left rail, next to Plan / Analyze /
+  Library: zones, KATA, the inset, lessons and exercises all live there
+  (option C; replaces the 2026-11-15 "goalie lens in the Inspector").
+- **[A-Q-010] Language switch** [decided 2026-11-16] App-wide, a globe
+  button at the bottom of the left rail (English / Deutsch). Goalie
+  training is translated first; the rest of the UI follows.
+- **[A-Q-011] What Train works on** [decided 2026-11-16] Its own
+  practice rink (lesson, exercise or free situation). The user's plays
+  are never changed; "Open as play" copies a situation into Plan.
 - **[A-Q-009] Expected action** [decided 2026-11-15] Read from the
   play's next ball event, with a manual Shot / Pass override.
 - **[A-Q-004] Tablet authoring** [open] Coaches prepare on a laptop or
