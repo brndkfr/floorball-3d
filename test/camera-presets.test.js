@@ -113,3 +113,19 @@ test('easeInOut runs 0 to 1, symmetric', () => {
   assert.equal(easeInOut(-1), 0);
   assert.equal(easeInOut(2), 1);
 });
+
+// A-BACK-054 layout A: Train frames the defending goal end from high up in
+// the rink, looking back at the goal, so the goalie is seen from the front
+// and the ball sits between the camera and the goal (the shooter's side).
+test('trainPose: high in the rink in front of the defending goal, looking down at it; mirrored for B', async () => {
+  const { trainPose } = await import('../web/src/camera-presets.js');
+  const a = trainPose('A');
+  assert.ok(a.z > GOAL_LINE_FROM_BOARD + 8000 && a.z < RINK_L / 2, `in front of goal A (${a.z})`);
+  assert.ok(a.y > 6000, 'high up');
+  assert.ok(a.pitch < -0.5 && a.pitch > -1.2, `looks down (${a.pitch})`);
+  assert.ok(near(Math.abs(a.yaw), Math.PI), 'faces -z, toward goal A');
+  assert.ok(near(a.x, 0));
+  const b = trainPose('B');
+  assert.ok(near(b.z, RINK_L - a.z) && near(b.y, a.y) && near(b.pitch, a.pitch));
+  assert.ok(near(b.yaw, 0), 'faces +z, toward goal B');
+});

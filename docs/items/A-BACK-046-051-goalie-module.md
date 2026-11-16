@@ -104,9 +104,14 @@ A fourth rail mode, "Train", next to Plan / Analyze / Library
   exactly. Nothing from Train is written to the user's projects or
   autosave. "Open as play" copies the situation into Plan as a new
   project.
-- Train panel on the right (`#trainPanel`): title, the module source
-  link, and slots for the zone card (048), KATA rows (046), lessons
-  (049) and exercises (050). Goalie and ball stay draggable.
+- Layout A (A-Q-012, 2026-11-16): `#trainPanel` is a see-through
+  overlay over the stage, no side panel. Zone card top-left (A-BACK-048),
+  KATA card bottom-left (A-BACK-046), both collapsible and remembered per
+  browser; the hint is a pill next to the goalie; the shooter's view
+  (A-BACK-047) goes top-right. Title, Open as play and the module link
+  sit in the top bar. The camera frames the defending goal from high in
+  the rink; leaving gives Plan its own view back. Goalie and ball are
+  dragged directly in 3D; turn buttons and Q / E turn the goalie.
 Tests first: the doc stash / restore is pure (Node test: entering and
 leaving returns a deep-equal Plan doc, the Train doc never reaches the
 save path). e2e: rail button switches mode, Plan's play is unchanged
