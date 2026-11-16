@@ -9,7 +9,7 @@
 
 import { state, getBallWorldCenter } from './state.js';
 import { GOAL_CENTER_LOCAL } from './constants.js';
-import { kataOf, kataTargets, judgeKata, expectedAction } from './kata.js';
+import { kataOf, kataTargets, judgeKata, expectedAction, shotAngleDeg } from './kata.js';
 
 let lastKey = null;
 
@@ -37,7 +37,7 @@ export function updateKataReadout() {
     goalie: { x: goalie.position.x, z: goalie.position.z, yaw: goalie.rotation.y },
   };
   const kata = kataOf(inputs);
-  const targets = kataTargets(zone.zone, action);
+  const targets = kataTargets(zone.zone, action, shotAngleDeg(inputs.ball, zone.goal, inputs.goalCenter));
   const judged = judgeKata(kata, targets);
   const pct = state.shotReadout?.goal === zone.goal ? state.shotReadout.pctBlocked : null;
   const key = JSON.stringify([zone, action, actionAuto, Math.round(kata.placementLeftMm / 10), Math.round(kata.depthMm / 10),

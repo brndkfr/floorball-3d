@@ -44,10 +44,27 @@ export function kataOf({ ball, goal, goalCenter, goalie }) {
 // parallel to it); tol in degrees.
 export const POST_OFFSET_MM = 500;   // goalie centre 0.3 m inside the post (mouth half-width 0.8 m)
 
-export function kataTargets(zone, action) {
+// Tight angle (found building the lessons, A-BACK-049): a ball wide and
+// close to the goal line is still in the danger zone, but "step forward on
+// the shooting line" would put the goalie metres to the side, level with
+// the ball. Below this angle between the shooting line and the goal line,
+// danger and slot use the passing-first targets (on the line at the
+// ball-side post). ESTIMATE, picked by eye; not a figure from the module.
+export const TIGHT_ANGLE_DEG = 25;
+
+// Angle in degrees (0 to 90) between the line ball -> goal centre and the
+// goal line; 0 when the ball is level with or behind the goal line.
+export function shotAngleDeg(ball, goal, goalCenter) {
+  const out = goal === 'B' ? goalCenter.z - ball.z : ball.z - goalCenter.z;
+  if (out <= 0) return 0;
+  return Math.atan2(out, Math.abs(ball.x - goalCenter.x)) * DEG;
+}
+
+// angleDeg (optional): shotAngleDeg of the ball; left out, no tight-angle rule.
+export function kataTargets(zone, action, angleDeg) {
   if (zone === 'awareness') return { placement: null, depth: null, axis: null };
   if (zone === 'attention') return { placement: { ref: 'goal', tol: 150 }, depth: { min: 0, max: 500 }, axis: { ref: 'goalLine', tol: 15 } };
-  if (zone === 'passing') return { placement: { ref: 'post', tol: 200 }, depth: { min: 0, max: 200 }, axis: { ref: 'goalLine', tol: 10 } };
+  if (zone === 'passing' || angleDeg < TIGHT_ANGLE_DEG) return { placement: { ref: 'post', tol: 200 }, depth: { min: 0, max: 200 }, axis: { ref: 'goalLine', tol: 10 } };
   // danger and slot
   if (action === 'pass') return { placement: { ref: 'line', tol: 300 }, depth: { min: 0, max: 500 }, axis: { ref: 'goalLine', tol: 10 } };
   if (action === 'dribble') return { placement: { ref: 'line', tol: 100 }, depth: { min: 700, max: 1600 }, axis: { ref: 'shot', tol: 15 } };

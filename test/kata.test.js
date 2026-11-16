@@ -123,3 +123,30 @@ test('expectedAction: the next ball event of the play; a carrier with nothing ne
   assert.equal(expectedAction([frame({ players: {}, balls: { main: { x: 0, z: 9000, carrier: null } } })], 0), 'shot');
   assert.equal(expectedAction([], 0), 'shot');
 });
+
+// Tight angle (A-BACK-049 finding): a ball wide and close to the goal line
+// is still the danger zone, but stepping out on the shooting line would put
+// the goalie metres to the side. From a tight angle the targets are the
+// passing-first ones: on the line at the ball-side post.
+test('shotAngleDeg: angle between the shooting line and the goal line, 0 behind it, both ends', async () => {
+  const { shotAngleDeg } = await import('../web/src/kata.js');
+  const gcA = { x: 0, z: GOAL_Z.A }, gcB = { x: 0, z: GOAL_Z.B };
+  near(shotAngleDeg({ x: 0, z: GOAL_Z.A + 5000 }, 'A', gcA), 90);
+  near(shotAngleDeg({ x: 4000, z: GOAL_Z.A + 4000 }, 'A', gcA), 45);
+  near(shotAngleDeg({ x: -4000, z: GOAL_Z.A + 4000 }, 'A', gcA), 45);
+  near(shotAngleDeg({ x: 4000, z: GOAL_Z.B - 4000 }, 'B', gcB), 45);
+  assert.equal(shotAngleDeg({ x: 2000, z: GOAL_Z.A - 1000 }, 'A', gcA), 0);
+  assert.equal(shotAngleDeg({ x: 2000, z: GOAL_Z.B + 1000 }, 'B', gcB), 0);
+});
+
+test('kataTargets: below the tight angle, danger and slot use the passing-first targets; above it and without an angle, unchanged', async () => {
+  const { TIGHT_ANGLE_DEG } = await import('../web/src/kata.js');
+  for (const zone of ['danger', 'slot']) {
+    for (const action of ['shot', 'pass', 'dribble']) {
+      assert.deepEqual(kataTargets(zone, action, TIGHT_ANGLE_DEG - 1), kataTargets('passing', action), `${zone} ${action}`);
+      assert.deepEqual(kataTargets(zone, action, TIGHT_ANGLE_DEG + 1), kataTargets(zone, action), `${zone} ${action}`);
+    }
+  }
+  assert.deepEqual(kataTargets('attention', 'shot', 5), kataTargets('attention', 'shot'));
+  assert.ok(TIGHT_ANGLE_DEG > 10 && TIGHT_ANGLE_DEG < 40);
+});
