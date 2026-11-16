@@ -426,6 +426,33 @@
   }
   #trainPanel .gz-toggle[aria-pressed="true"] { border-color:var(--fb-brand); background:var(--fb-brand-quiet); color:var(--fb-text-1); }
   #trainPanel .gz-text { margin:0; color:var(--fb-text-2); }
+  #trainPanel .gz-toggle:disabled { opacity:0.45; cursor:default; }
+  /* Zone labels (A-BACK-048): standing tags over the rink, broadcast-chip style */
+  #zoneLabels { position:fixed; inset:0; z-index:24; pointer-events:none; }
+  #zoneLabels[hidden] { display:none; }
+  #zoneLabels .zl-tag {
+    position:absolute; left:0; top:0; display:flex; align-items:stretch; white-space:nowrap;
+    border-radius:4px; background:rgba(13, 15, 18, 0.88);
+    box-shadow:0 4px 12px rgba(0, 0, 0, 0.3); border-left:4px solid var(--zl-color);
+  }
+  #zoneLabels .zl-tag[hidden] { display:none; }
+  #zoneLabels .zl-tag::after {   /* stem down to the floor spot */
+    content:""; position:absolute; left:50%; top:100%; width:2px; height:14px; margin-left:-1px; background:var(--zl-color);
+  }
+  #zoneLabels .zl-tag { translate:0 -14px; }   /* lift the tag so the stem ends on the spot */
+  #zoneLabels .zl-name {
+    padding:4px 9px 4px 7px; font:700 10px/1.2 var(--fb-font); letter-spacing:0.14em; text-transform:uppercase; color:var(--fb-text-1);
+  }
+  #zoneLabels .zl-extra { display:none; }
+  #zoneLabels .zl-tag.current { border-left:0; border-radius:5px; box-shadow:0 8px 20px rgba(0, 0, 0, 0.4); }
+  #zoneLabels .zl-tag.current .zl-name {
+    display:flex; align-items:center; padding:0 10px; background:var(--zl-color); color:#fff;
+    font-size:13px; letter-spacing:0.16em; border-radius:5px 0 0 5px;
+  }
+  #zoneLabels .zl-tag.current .zl-extra { display:flex; flex-direction:column; justify-content:center; padding:5px 10px; }
+  #zoneLabels .zl-motto { font:600 12px/1.2 var(--fb-font); color:var(--fb-text-1); }
+  #zoneLabels .zl-depth { font:500 10px/1.3 var(--fb-mono); color:var(--fb-text-2); }
+  html.presenting #zoneLabels { display:none; }
   /* KATA card (A-BACK-046) */
   #trainPanel .kata-title { font:600 10px/1 var(--fb-font); letter-spacing:0.09em; color:var(--fb-text-2); }
   #trainPanel .kata-pct { font:500 11px/1 var(--fb-mono); color:var(--fb-text-2); }

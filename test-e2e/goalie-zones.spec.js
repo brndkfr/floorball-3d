@@ -102,3 +102,77 @@ test('in Plan the zones are a Layers row, remembered per browser, and Train does
   expect((await ballAt(page)).visible).toBe(false);
   await expect(row.locator('.lp-eye')).toHaveAttribute('aria-pressed', 'false');
 });
+
+// Zone labels: standing tags that face the camera (A-BACK-048 follow-up).
+const tags = (page) => page.locator('#zoneLabels:not([hidden]) .zl-tag:not([hidden])');
+const labelsToggle = (page) => page.locator('#trainPanel').getByRole('button', { name: /^(Labels|Beschriftung)$/ });
+const placeLabels = (page) => page.evaluate(async () => {
+  const { getBallWorldCenter } = await import('/src/state.js');
+  (await import('/src/goalie-zones-layer.js')).updateGoalieZones(getBallWorldCenter());
+  (await import('/src/goalie-zone-labels.js')).placeZoneLabels();
+});
+
+test('in Train the zone tags stand on the rink; the ball\'s zone tag carries its motto and depth', async ({ page }) => {
+  await boot(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await railBtn(page, 'train').click();
+  await placeLabels(page);
+  expect(await tags(page).count()).toBeGreaterThanOrEqual(3);
+  const current = page.locator('#zoneLabels .zl-tag.current');
+  await expect(current).toHaveCount(1);
+  await expect(current).toHaveAttribute('data-zone', 'slot');
+  await expect(current).toContainText('Slot');
+  await expect(current).toContainText('Full alert!');
+  await expect(current).toContainText('3.8 – 10.9 m');
+  await expect(labelsToggle(page)).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('the tags stay on their spot when the camera turns', async ({ page }) => {
+  await boot(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await railBtn(page, 'train').click();
+  const spot = () => page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    const { zoneLabelAnchors } = await import('/src/goalie-zones.js');
+    const a = zoneLabelAnchors('A').find((t) => t.key === 'slot');
+    const v = state.ballGroup.position.clone().set(a.x, 0, a.z).project(state.activeCamera);
+    const r = document.querySelector('canvas[data-engine^="three"]').getBoundingClientRect();
+    return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+  });
+  for (const turn of [0, 0.35, -0.7]) {   // cumulative: 0, +20 deg, then -20 deg from the start
+    await page.evaluate(async (dy) => {
+      const { state } = await import('/src/state.js');
+      const { setCameraLook } = await import('/src/scene.js');
+      setCameraLook(state.camYaw + dy, state.camPitch);
+    }, turn);
+    await placeLabels(page);
+    const tag = page.locator('#zoneLabels .zl-tag.current');
+    const p = await spot();
+    const b = await tag.boundingBox();
+    expect(Math.abs(b.x + b.width / 2 - p.x)).toBeLessThan(4);           // centred over its spot
+    expect(Math.abs(b.y + b.height - p.y)).toBeLessThan(40);              // standing on it (stem below)
+  }
+});
+
+test('the Labels toggle hides the tags, is remembered, and the tags go with the zones', async ({ page }) => {
+  await boot(page);
+  await railBtn(page, 'train').click();
+  await placeLabels(page);
+  await labelsToggle(page).click();
+  await expect(labelsToggle(page)).toHaveAttribute('aria-pressed', 'false');
+  await placeLabels(page);
+  await expect(tags(page)).toHaveCount(0);
+
+  await boot(page);
+  await railBtn(page, 'train').click();
+  await placeLabels(page);
+  await expect(tags(page)).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('floorball3d.goalieZoneLabels'))).toBe('0');
+  await labelsToggle(page).click();
+  await placeLabels(page);
+  expect(await tags(page).count()).toBeGreaterThanOrEqual(3);
+
+  await toggle(page).click();                                     // Zones off: their tags go too
+  await placeLabels(page);
+  await expect(tags(page)).toHaveCount(0);
+});

@@ -100,3 +100,33 @@ test('zonePolygons: one per zone, inside the rink, and they agree with goalieZon
     }
   }
 });
+
+// Zone labels (standing tags): where each tag stands, and its depth text.
+test('zoneLabelAnchors: tags stand inside their own zone, two beside the goal, mirrored for B', async () => {
+  const { zoneLabelAnchors } = await import('../web/src/goalie-zones.js');
+  for (const goal of ['A', 'B']) {
+    const tags = zoneLabelAnchors(goal);
+    assert.deepEqual(tags.map((t) => t.key), ['passing', 'passing', 'slot', 'danger', 'danger', 'attention', 'awareness']);
+    for (const t of tags) assert.equal(goalieZoneOf(t, goal), t.key, `${goal} ${t.key} at ${t.x},${t.z}`);
+  }
+  const a = zoneLabelAnchors('A'), b = zoneLabelAnchors('B');
+  a.forEach((t, i) => { assert.equal(b[i].x, t.x); assert.equal(b[i].z, RINK_L - t.z); });
+});
+
+test('zoneDepthText: the depth range of each zone from the end board', async () => {
+  const { zoneDepthText } = await import('../web/src/goalie-zones.js');
+  assert.equal(zoneDepthText('passing'), '0 – 4 m');
+  assert.equal(zoneDepthText('slot'), '3.8 – 10.9 m');
+  assert.equal(zoneDepthText('danger'), '4 – 16 m');
+  assert.equal(zoneDepthText('attention'), '16 – 26.6 m');
+  assert.equal(zoneDepthText('awareness'), '26.6 m +');
+  assert.equal(zoneDepthText('nope'), '');
+});
+
+test('Labels choice: on by default, stored as 1 / 0', async () => {
+  const { GOALIE_ZONE_LABELS_STORAGE_KEY, parseGoalieZoneLabelsShown } = await import('../web/src/goalie-zones.js');
+  assert.equal(GOALIE_ZONE_LABELS_STORAGE_KEY, 'floorball3d.goalieZoneLabels');
+  assert.equal(parseGoalieZoneLabelsShown(null), true);
+  assert.equal(parseGoalieZoneLabelsShown('0'), false);
+  assert.equal(parseGoalieZoneLabelsShown('1'), true);
+});
