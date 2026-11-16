@@ -63,6 +63,7 @@ const EN = {
   'goalie.action.dribble': 'Dribble',
 
   'goalie.zones.toggle': 'Zones',
+  'goalie.lines': 'Lines',
   'goalie.zones.labels': 'Labels',
   'goalie.zones.layer': 'Goalie zones',
   'goalie.zones.section': 'Goalie zones',
@@ -132,6 +133,7 @@ const DE = {
   'goalie.action.dribble': 'Dribbling',
 
   'goalie.zones.toggle': 'Zonen',
+  'goalie.lines': 'Linien',
   'goalie.zones.labels': 'Beschriftung',
   'goalie.zones.layer': 'Goalie-Zonen',
   'goalie.zones.section': 'Goalie-Zonen',

@@ -35,3 +35,15 @@ test('anyShotOverlay: true when at least one overlay is on (the verdict chip sho
   assert.equal(anyShotOverlay(DEFAULT_SHOT_VIEW), false);
   for (const k of SHOT_VIEW_KEYS) assert.equal(anyShotOverlay(toggleShotView(DEFAULT_SHOT_VIEW, k)), true, k);
 });
+
+// Train (A-BACK-054 follow-up): the projection lines come on with Train,
+// on top of whatever Plan has, and one Lines switch turns both off / on.
+test('trainShotView: Train adds the corner lines and the shooting line, keeps coverage as Plan has it', async () => {
+  const { trainShotView, trainLinesOn, withTrainLines } = await import('../web/src/shot-view.js');
+  assert.deepEqual(trainShotView(DEFAULT_SHOT_VIEW), { lines: true, shotLine: true, coverage: false });
+  assert.deepEqual(trainShotView({ lines: false, shotLine: false, coverage: true }), { lines: true, shotLine: true, coverage: true });
+  assert.equal(trainLinesOn({ lines: true, shotLine: true, coverage: false }), true);
+  assert.equal(trainLinesOn({ lines: true, shotLine: false, coverage: false }), false);
+  assert.deepEqual(withTrainLines({ lines: true, shotLine: true, coverage: true }, false), { lines: false, shotLine: false, coverage: true });
+  assert.deepEqual(withTrainLines(DEFAULT_SHOT_VIEW, true), { lines: true, shotLine: true, coverage: false });
+});
