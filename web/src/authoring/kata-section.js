@@ -15,6 +15,9 @@ import { setKataAction, updateKataReadout } from '../kata-readout.js';
 import { markRenderDirty } from '../render-dirty.js';
 import { KATA_DIMS } from '../kata.js';
 import { isCardCollapsed, toggleCard } from './train-cards-ui.js';
+import { setKataMarksShown } from '../kata-marks-layer.js';
+import { blendCameraTo } from '../ui/camera-menu.js';
+import { trainPose, trainFocusPose } from '../camera-presets.js';
 
 // Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
 const slots = document.getElementById('trainSlots');
@@ -36,6 +39,7 @@ root.innerHTML = `
     <span class="kata-turn"><button type="button" data-turn="1">↺</button><button type="button" data-turn="-1">↻</button></span>
   </div>
   <div class="kata-body" id="kataBody">
+    <div class="kata-tools"><button type="button" class="kata-tool" data-tool="focus"></button><button type="button" class="kata-tool" data-tool="marks"></button></div>
     <div class="kata-action" role="radiogroup">${ACTIONS.map((a) => `<button type="button" role="radio" data-action="${a}"></button>`).join('')}</div>
     <ul class="kata-rows">${KATA_DIMS.map((d) => `<li class="kata-row" data-dim="${d}"><span class="kata-dot" aria-hidden="true"></span><span class="kata-name"></span><span class="kata-value"></span></li>`).join('')}</ul>
   </div>`;
@@ -46,6 +50,21 @@ root.querySelector('.tc-collapse').addEventListener('click', () => toggleCard('k
 // Turn the defending goalie 5 degrees; rotation.y grows turning left
 // (Q / E do the same on a selected goalie, controls.js).
 const TURN_STEP = (5 * Math.PI) / 180;
+// Focus goalie: close camera on the defending goalie (trainFocusPose),
+// a second press goes back to the Train view. Off again whenever the mode
+// changes (train-mode.js sets the Train view on the way in).
+const focusBtn = root.querySelector('[data-tool="focus"]');
+focusBtn.addEventListener('click', () => {
+  const goal = state.goalieZone?.goal ?? 'A';
+  const g = state.goalies[goal];
+  if (!g) return;
+  state.kataFocus = !state.kataFocus;
+  blendCameraTo(state.kataFocus ? trainFocusPose(goal, { x: g.position.x, z: g.position.z }) : trainPose(goal));
+  refresh();
+});
+window.addEventListener('shell:mode', () => { state.kataFocus = false; refresh(); });
+root.querySelector('[data-tool="marks"]').addEventListener('click', () => setKataMarksShown(!state.kataMarksShown));
+
 for (const b of root.querySelectorAll('.kata-turn button')) {
   b.addEventListener('click', () => {
     const g = state.goalies[state.goalieZone?.goal ?? 'A'];
@@ -84,6 +103,11 @@ function refresh() {
   collapse.title = t('goalie.card.toggle', { card: title });
   root.classList.toggle('collapsed', collapsed);
   root.querySelector('.kata-body').hidden = collapsed;
+  focusBtn.textContent = t('goalie.focus');
+  focusBtn.setAttribute('aria-pressed', String(!!state.kataFocus));
+  const marksBtn = root.querySelector('[data-tool="marks"]');
+  marksBtn.textContent = t('goalie.marks');
+  marksBtn.setAttribute('aria-pressed', String(!!state.kataMarksShown));
   for (const b of root.querySelectorAll('.kata-turn button')) {
     const label = t(b.dataset.turn === '1' ? 'goalie.turn.left' : 'goalie.turn.right');
     b.setAttribute('aria-label', label);
@@ -111,7 +135,7 @@ function refresh() {
   pill.dataset.status = r.judged.worst ? 'adjust' : (r.judged.hint.key === 'goalie.hint.free' ? 'free' : 'ok');
 }
 
-for (const ev of ['kataReadoutChanged', 'trainCardsChanged', 'langChanged']) window.addEventListener(ev, refresh);
+for (const ev of ['kataReadoutChanged', 'trainCardsChanged', 'langChanged', 'kataMarksChanged']) window.addEventListener(ev, refresh);
 refresh();
 
 // Put the hint pill to the right of the defending goalie's head, in the
