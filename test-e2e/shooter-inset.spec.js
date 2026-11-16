@@ -103,3 +103,70 @@ test('the inset stays out of Plan', async ({ page }) => {
   await page.locator('#appRail [data-mode="plan"]').click();
   await expect(page.locator('#shooterInset')).toBeHidden();
 });
+
+// Resizable: drag the bottom-left corner handle; arrows on the handle too.
+const viewBox = (page) => page.locator('#shooterInset .inset-view').boundingBox();
+const handle = (page) => page.locator('#shooterInset').getByRole('button', { name: "Resize the shooter's view" });
+
+test('the inset card resizes from its bottom-left corner, is remembered, and stays within limits', async ({ page }) => {
+  await boot(page);
+  await tick(page);
+  const before = await viewBox(page);
+  const h = await handle(page).boundingBox();
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(h.x - 120, h.y + h.height / 2 + 60, { steps: 6 });
+  await page.mouse.up();
+  const after = await viewBox(page);
+  expect(after.width).toBeCloseTo(before.width + 120 + h.width / 2, -1);
+  expect(after.height).toBeGreaterThan(before.height + 40);
+  expect(after.x + after.width).toBeCloseTo(before.x + before.width, 0);   // still hangs from the top-right
+  const stored = JSON.parse(await page.evaluate(() => localStorage.getItem('floorball3d.shooterInsetSize')));
+  expect(stored.w).toBe(Math.round(after.width));
+
+  await page.reload();
+  await boot(page);
+  await tick(page);
+  expect((await viewBox(page)).width).toBeCloseTo(after.width, 0);
+
+  const g = await handle(page).boundingBox();                               // way too big: clamped to 60% of the stage
+  await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(g.x - 3000, g.y + 3000, { steps: 4 });
+  await page.mouse.up();
+  const stage = await page.locator('#trainPanel').boundingBox();
+  const big = await viewBox(page);
+  expect(big.width).toBeLessThanOrEqual(Math.round(stage.width * 0.6) + 1);
+  expect(big.height).toBeLessThanOrEqual(Math.round(stage.height * 0.6) + 1);
+});
+
+test('arrow keys on the handle resize the card in steps', async ({ page }) => {
+  await boot(page);
+  await tick(page);
+  const before = await viewBox(page);
+  await handle(page).focus();
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowDown');
+  const after = await viewBox(page);
+  expect(after.width).toBeCloseTo(before.width + 20, 0);
+  expect(after.height).toBeCloseTo(before.height + 20, 0);
+});
+
+test('zone tags and the hint pill never show on top of the inset card', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('floorball3d.shooterInsetSize', JSON.stringify({ w: 520, h: 300 })));
+  await boot(page);
+  await tool(page, 'Auto position').click();
+  const clash = await page.evaluate(async () => {
+    const { state, getBallWorldCenter } = await import('/src/state.js');
+    (await import('/src/goalie-zones-layer.js')).updateGoalieZones(getBallWorldCenter());
+    (await import('/src/kata-readout.js')).updateKataReadout();
+    (await import('/src/goalie-zone-labels.js')).placeZoneLabels();
+    (await import('/src/authoring/kata-section.js')).placeTrainHint();
+    const card = document.getElementById('shooterInset').getBoundingClientRect();
+    const seen = [...document.querySelectorAll('#zoneLabels .zl-tag, #trainHint')]
+      .filter((el) => el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }));
+    return seen.filter((el) => { const r = el.getBoundingClientRect(); return r.left < card.right && r.right > card.left && r.top < card.bottom && r.bottom > card.top; }).map((el) => el.textContent);
+  });
+  expect(clash).toEqual([]);
+  await expect(page.locator('#trainHint')).toBeVisible();            // the hint moves to the goalie's other side
+});

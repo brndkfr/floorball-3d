@@ -10,8 +10,8 @@
 import * as THREE from 'three';
 import { setShotViewUnsaved } from '../shot-view-state.js';
 import { withTrainLines, trainLinesOn } from '../shot-view.js';
-import { setShooterInsetShown } from '../shooter-inset.js';
-import { idealGoaliePose } from '../shooter-view.js';
+import { setShooterInsetShown, insetRect } from '../shooter-inset.js';
+import { idealGoaliePose, rectsOverlap } from '../shooter-view.js';
 import { prefersReducedMotion } from '../reduced-motion.js';
 import { state } from '../state.js';
 import { renderer } from '../scene.js';
@@ -188,11 +188,14 @@ function refresh() {
 for (const ev of ['kataReadoutChanged', 'trainCardsChanged', 'langChanged', 'kataMarksChanged', 'shotViewChanged', 'shooterInsetChanged']) window.addEventListener(ev, refresh);
 refresh();
 
-// Put the hint pill to the right of the defending goalie's head, in the
-// overlay's coordinates. Writes the DOM only when the spot moves.
+// Put the hint pill beside the defending goalie's head, in the overlay's
+// coordinates: on its right, or on its left when the shooter's view card
+// covers the right; hidden only when both sides are covered. Writes the
+// DOM only when the spot changes.
 const v = new THREE.Vector3();
-let lastSpot = '';
+let lastTransform = '';
 const HEAD_MM = 1200;   // estimate: pill at about head height
+const GAP = 28;         // px between the goalie and the pill
 export function placeTrainHint() {
   if (pill.hidden || document.body.dataset.mode !== 'train') return;
   const g = state.goalies[state.kataReadout?.goal ?? 'A'];
@@ -200,12 +203,19 @@ export function placeTrainHint() {
   v.set(g.position.x, g.position.y + HEAD_MM, g.position.z).project(state.activeCamera);
   const canvas = renderer.domElement.getBoundingClientRect();
   const box = overlay.getBoundingClientRect();
-  const x = Math.round(canvas.left + ((v.x + 1) / 2) * canvas.width - box.left + 28);
+  const gx = canvas.left + ((v.x + 1) / 2) * canvas.width - box.left;
   const y = Math.round(canvas.top + ((1 - v.y) / 2) * canvas.height - box.top);
-  const off = v.z > 1 || x < 0 || y < 0 || x > box.width || y > box.height;
-  const spot = off ? 'off' : `${x},${y}`;
-  if (spot === lastSpot) return;
-  lastSpot = spot;
+  const off = v.z > 1 || gx < 0 || y < 0 || gx > box.width || y > box.height;
   pill.classList.toggle('off', off);
-  if (!off) pill.style.transform = `translate(${x}px, ${y}px) translateY(-50%)`;
+  if (off) return;
+  const w = pill.offsetWidth, h = pill.offsetHeight;
+  const card = insetRect();
+  const at = (x) => ({ left: box.left + x, right: box.left + x + w, top: box.top + y - h / 2, bottom: box.top + y + h / 2 });
+  const right = Math.round(gx + GAP), left = Math.round(gx - GAP - w);
+  let x = right;
+  if (rectsOverlap(at(right), card)) x = rectsOverlap(at(left), card) ? null : left;
+  pill.classList.toggle('under-inset', x === null);
+  if (x === null) return;
+  const transform = `translate(${x}px, ${y}px) translateY(-50%)`;
+  if (transform !== lastTransform) { pill.style.transform = transform; lastTransform = transform; }
 }

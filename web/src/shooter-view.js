@@ -53,3 +53,34 @@ export function idealGoaliePose({ ball, goal, goalCenter, goalie, targets }) {
   if (at) yaw = at.ref === 'shot' ? Math.atan2(ball.x - goalCenter.x, ball.z - goalCenter.z) : (goal === 'B' ? Math.PI : 0);
   return { x, z, yaw };
 }
+
+// Resizable inset card: it hangs from the stage's top-right corner and is
+// dragged by its bottom-left corner. Sizes in CSS px of the view (the
+// caption sits under it). Limits are estimates: below 200 x 112 the goal
+// is too small to read, above 60% of the stage it hides the rink.
+export const DEFAULT_INSET_SIZE = Object.freeze({ w: 300, h: 170 });
+export const INSET_SIZE_STORAGE_KEY = 'floorball3d.shooterInsetSize';
+const MIN_W = 200, MIN_H = 112, MAX_SHARE = 0.6;
+
+export function parseInsetSize(stored) {
+  let v = null;
+  try { v = JSON.parse(stored); } catch { /* not JSON: default */ }
+  if (!v || typeof v !== 'object' || !Number.isFinite(v.w) || !Number.isFinite(v.h)) return DEFAULT_INSET_SIZE;
+  return { w: v.w, h: v.h };
+}
+
+export function clampInsetSize({ w, h }, stage) {
+  const clamp = (v, lo, hi) => Math.round(Math.min(Math.max(v, lo), Math.max(lo, hi)));
+  return { w: clamp(w, MIN_W, stage.w * MAX_SHARE), h: clamp(h, MIN_H, stage.h * MAX_SHARE) };
+}
+
+// Pointer moved by (dx, dy) from where the drag started: left and down grow it.
+export const resizeFromCorner = (start, dx, dy) => ({ w: start.w - dx, h: start.h + dy });
+
+// Two DOMRect-like boxes share area (touching edges do not count). Labels
+// over the rink hide while they would sit on the inset card: its view
+// area is see-through so the 3D picture shows, labels would show too.
+export function rectsOverlap(a, b) {
+  if (!a || !b) return false;
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}

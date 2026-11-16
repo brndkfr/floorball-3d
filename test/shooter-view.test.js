@@ -69,3 +69,34 @@ test('idealGoaliePose: awareness (all free) keeps the goalie where it is', () =>
   const start = { x: 400, z: 4200, yaw: 0.3 };
   assert.deepEqual(idealGoaliePose({ ball, goal: 'A', goalCenter: GC.A, goalie: start, targets: kataTargets('awareness', 'shot') }), start);
 });
+
+// Resizable card: dragged by its bottom-left corner (the card hangs from
+// the top-right), clamped so it stays readable and never covers most of
+// the rink; remembered per browser.
+test('inset size: default, stored size parsed safely, clamped to the stage', async () => {
+  const { DEFAULT_INSET_SIZE, INSET_SIZE_STORAGE_KEY, parseInsetSize, clampInsetSize, resizeFromCorner } = await import('../web/src/shooter-view.js');
+  assert.deepEqual(DEFAULT_INSET_SIZE, { w: 300, h: 170 });
+  assert.equal(INSET_SIZE_STORAGE_KEY, 'floorball3d.shooterInsetSize');
+  assert.deepEqual(parseInsetSize(JSON.stringify({ w: 420, h: 240 })), { w: 420, h: 240 });
+  for (const bad of [null, '', 'x', '{"w":"a","h":1}', '[]']) assert.deepEqual(parseInsetSize(bad), DEFAULT_INSET_SIZE, String(bad));
+  const stage = { w: 1376, h: 848 };
+  assert.deepEqual(clampInsetSize({ w: 50, h: 20 }, stage), { w: 200, h: 112 });          // smallest readable
+  assert.deepEqual(clampInsetSize({ w: 2000, h: 2000 }, stage), { w: 826, h: 509 });     // 60% of the stage
+  assert.deepEqual(clampInsetSize({ w: 420, h: 240 }, stage), { w: 420, h: 240 });
+});
+
+test('resizeFromCorner: dragging the bottom-left corner left and down makes it bigger', async () => {
+  const { resizeFromCorner } = await import('../web/src/shooter-view.js');
+  assert.deepEqual(resizeFromCorner({ w: 300, h: 170 }, -100, 50), { w: 400, h: 220 });
+  assert.deepEqual(resizeFromCorner({ w: 300, h: 170 }, 60, -30), { w: 240, h: 140 });
+});
+
+test('rectsOverlap: labels that would sit on the inset card are hidden', async () => {
+  const { rectsOverlap } = await import('../web/src/shooter-view.js');
+  const card = { left: 900, top: 70, right: 1420, bottom: 380 };
+  assert.equal(rectsOverlap({ left: 1050, top: 285, right: 1200, bottom: 305 }, card), true);
+  assert.equal(rectsOverlap({ left: 770, top: 340, right: 980, bottom: 368 }, card), true);   // the pill reaching under its edge
+  assert.equal(rectsOverlap({ left: 230, top: 285, right: 385, bottom: 305 }, card), false);
+  assert.equal(rectsOverlap({ left: 900, top: 380, right: 950, bottom: 400 }, card), false);  // touching is not overlapping
+  assert.equal(rectsOverlap({ left: 1000, top: 100, right: 1100, bottom: 120 }, null), false);
+});

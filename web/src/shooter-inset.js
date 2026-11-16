@@ -10,7 +10,7 @@
 import * as THREE from 'three';
 import { renderer, scene } from './scene.js';
 import { state, getBallWorldCenter } from './state.js';
-import { shooterViewPose, SHOOTER_INSET_STORAGE_KEY, parseShooterInsetShown } from './shooter-view.js';
+import { shooterViewPose, SHOOTER_INSET_STORAGE_KEY, parseShooterInsetShown, INSET_SIZE_STORAGE_KEY, parseInsetSize, clampInsetSize, resizeFromCorner } from './shooter-view.js';
 import { t } from './lang-state.js';
 import { markRenderDirty } from './render-dirty.js';
 
@@ -33,13 +33,68 @@ export function setShooterInsetShown(on) {
   markRenderDirty();
 }
 
+// --- resizable card: a handle on the bottom-left corner (it hangs from the
+// top-right), arrows on the handle in 20 px steps; size remembered.
+const overlay = document.getElementById('trainPanel');
+const handle = document.createElement('button');
+handle.type = 'button';
+handle.className = 'inset-resize';
+handle.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M1 3l8 8M1 7l4 4"/></svg>';
+frame.appendChild(handle);
+
+let storedSize = null;
+try { storedSize = localStorage.getItem(INSET_SIZE_STORAGE_KEY); } catch { /* storage blocked: default */ }
+let size = parseInsetSize(storedSize);
+
+function stageSize() {
+  const r = overlay?.getBoundingClientRect();
+  return r && r.width > 0 ? { w: r.width, h: r.height } : { w: window.innerWidth, h: window.innerHeight };
+}
+function applySize(next, { save = false } = {}) {
+  size = clampInsetSize(next, stageSize());
+  frame.style.width = `${size.w}px`;
+  view.style.height = `${size.h}px`;
+  if (save) { try { localStorage.setItem(INSET_SIZE_STORAGE_KEY, JSON.stringify(size)); } catch { /* storage blocked */ } }
+  markRenderDirty();
+}
+
+let drag = null;
+handle.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  handle.setPointerCapture(e.pointerId);
+  drag = { x: e.clientX, y: e.clientY, start: { ...size } };
+});
+handle.addEventListener('pointermove', (e) => {
+  if (drag) applySize(resizeFromCorner(drag.start, e.clientX - drag.x, e.clientY - drag.y));
+});
+const endDrag = () => { if (drag) { drag = null; applySize(size, { save: true }); } };
+handle.addEventListener('pointerup', endDrag);
+handle.addEventListener('pointercancel', endDrag);
+handle.addEventListener('keydown', (e) => {
+  const step = { ArrowLeft: [20, 0], ArrowRight: [-20, 0], ArrowDown: [0, 20], ArrowUp: [0, -20] }[e.key];
+  if (!step) return;
+  e.preventDefault();
+  e.stopPropagation();
+  applySize({ w: size.w + step[0], h: size.h + step[1] }, { save: true });
+});
+window.addEventListener('resize', () => { if (!frame.hidden) applySize(size); });
+
 const cam = new THREE.PerspectiveCamera(30, 300 / 170, 10, 200000);
 export const insetCamera = () => cam;
+
+// The card's box on screen while it shows, else null (labels avoid it).
+export const insetRect = () => (frame.hidden ? null : frame.getBoundingClientRect());
 
 const wanted = () => document.body.dataset.mode === 'train' && state.shooterInsetShown && !!state.kataReadout;
 
 function refresh() {
+  const wasHidden = frame.hidden;
   frame.hidden = !wanted();
+  if (wasHidden && !frame.hidden) applySize(size);   // clamp to the stage now that it has a size
+  const label = t('goalie.inset.resize');
+  handle.setAttribute('aria-label', label);
+  handle.title = label;
   frame.querySelector('.inset-title').textContent = t('goalie.inset.title');
   const pct = state.kataReadout?.pct;
   frame.querySelector('.inset-pct').textContent = pct == null ? '' : `${Math.round(pct)}%`;

@@ -64,6 +64,7 @@ const EN = {
 
   'goalie.zones.toggle': 'Zones',
   'goalie.inset.title': "Shooter's view",
+  'goalie.inset.resize': "Resize the shooter's view",
   'goalie.auto': 'Auto position',
   'goalie.auto.title': 'Move the goalie to the ideal spot and facing for this situation',
   'goalie.lines': 'Lines',
@@ -137,6 +138,7 @@ const DE = {
 
   'goalie.zones.toggle': 'Zonen',
   'goalie.inset.title': 'Schützensicht',
+  'goalie.inset.resize': 'Schützensicht grösser oder kleiner ziehen',
   'goalie.auto': 'Auto-Position',
   'goalie.auto.title': 'Goalie auf die ideale Position und Ausrichtung für diese Situation stellen',
   'goalie.lines': 'Linien',
