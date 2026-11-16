@@ -39,6 +39,17 @@ function setSaveStatus(status) {
   for (const cb of listeners) cb(status);
 }
 
+// --- save sandbox (A-BACK-054) ---------------------------------------
+
+// While on, the doc on screen is Train mode's practice rink (A-Q-011): the
+// two autosave paths every edit goes through (saveDoc, saveHistoryState)
+// write nothing, so it never reaches the user's projects or undo history.
+// Explicit project operations (adoptDocAsProject for "Open as play") still
+// work.
+let sandboxed = false;
+export function setSaveSandbox(on) { sandboxed = !!on; }
+export function isSaveSandboxed() { return sandboxed; }
+
 // --- project CRUD -----------------------------------------------------
 
 function projectKey(id) {
@@ -140,7 +151,7 @@ export function deleteProject(id) {
 // failure which needs the visible save-status badge).
 
 export function saveHistoryState(id, data) {
-  if (!id) return false;
+  if (!id || sandboxed) return false;
   try {
     localStorage.setItem(HISTORY_PREFIX + id, JSON.stringify(data));
     return true;
@@ -219,6 +230,7 @@ export function adoptDocAsProject(rawDoc, { name } = {}) {
 // point every mutating module (chips.js, shapes.js, ...) calls, so its
 // signature has to stay identical to the pre-A-GAP-003 version.
 export function saveDoc() {
+  if (sandboxed) { markRenderDirty(); return; }   // Train's practice rink: redraw, never persist
   const doc = ensureDoc();
   if (!getCurrentProjectId()) setCurrentProjectId(doc.meta.id);
   saveProject(doc);

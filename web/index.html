@@ -35,6 +35,7 @@
   <div class="shell-logo" aria-hidden="true">F</div>
   <button data-mode="plan" title="Plan: tactical authoring"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="14" height="10" rx="2"/><path d="M10 5v10"/><circle cx="10" cy="10" r="2"/></svg>Plan</button>
   <button data-mode="analyze" title="Analyze: photo/video overlay"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7V5h2M14 5h2v2M16 13v2h-2M6 15H4v-2"/><circle cx="10" cy="10" r="2.4"/></svg>Analyze</button>
+  <button data-mode="train" title="Train: goalie positioning on a practice rink"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 15V6h14v9"/><path d="M3 9h14M3 12h14M7 6v9M10 6v9M13 6v9" stroke-width="0.9" opacity="0.55"/><path d="M2 15h16"/></svg>Train</button>
   <button data-mode="library" data-action="library" title="Library: saved projects"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M10 3l7 4-7 4-7-4z"/><path d="M3 11l7 4 7-4"/></svg>Library</button>
   <button id="langBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="langMenu" aria-label="Language: English" title="Language"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c2 2.2 2.8 4.5 2.8 7s-.8 4.8-2.8 7c-2-2.2-2.8-4.5-2.8-7s.8-4.8 2.8-7z"/></svg><span class="lang-code">EN</span></button>
 </div>
@@ -230,6 +231,13 @@
   </div>
   <input type="file" id="dockImportFile" accept="application/json,.json" hidden>
 </div>
+<aside id="trainPanel" class="hud-panel" data-view="train" aria-labelledby="trainTitle">
+  <h2 id="trainTitle" class="tp-title">Goalie training</h2>
+  <p class="tp-intro" data-t="goalie.intro"></p>
+  <div id="trainSlots"></div>
+  <button type="button" id="trainOpenAsPlay" data-t="goalie.openAsPlay">Open as play</button>
+  <p class="tp-source"><span data-t="goalie.source.text"></span> <a id="trainSourceLink" target="_blank" rel="noopener noreferrer" data-t="goalie.source.link"></a></p>
+</aside>
 <aside id="photoPanel" class="hud-panel" data-view="analyze" aria-label="Photo analysis">
   <button type="button" id="photoSheetGrab" class="ps-grab" aria-controls="photoPanel" aria-expanded="false" aria-label="Expand the analysis steps"></button>
   <div class="hud-body">

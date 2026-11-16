@@ -154,6 +154,9 @@ function showOnboarding() {
   const dismiss = () => { tip.remove(); localStorage.setItem(ONBOARDED_KEY, '1'); };
   // The topbar, recorder and Library start the tutorial without going through this tip.
   window.addEventListener('tutorial:started', dismiss, { once: true });
+  // Picking another mode in the rail is a choice too (A-BACK-054: not on top of Train).
+  const onMode = (e) => { if (e.detail?.mode !== 'plan') { dismiss(); window.removeEventListener('shell:mode', onMode); } };
+  window.addEventListener('shell:mode', onMode);
   tip.querySelector('[data-x="ok"]').addEventListener('click', dismiss);
   tip.querySelector('[data-x="tutorial"]').addEventListener('click', () => { dismiss(); startTutorial(); });
   tip.querySelector('[data-x="help"]').addEventListener('click', () => { dismiss(); openHelp(); });

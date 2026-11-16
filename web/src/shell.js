@@ -39,11 +39,9 @@ function setMode(mode) {
   const previous = currentMode;
   currentMode = mode;
   document.body.dataset.mode = mode;   // CSS hook (phone Analyze sheet, app.css)
-  for (const el of document.querySelectorAll('[data-view="plan"]')) {
-    el.style.display = mode === 'plan' ? '' : 'none';
-  }
-  for (const el of document.querySelectorAll('[data-view="analyze"]')) {
-    el.style.display = mode === 'analyze' ? '' : 'none';
+  // Each mode's own UI is tagged [data-view="<mode>"] (plan, analyze, train).
+  for (const el of document.querySelectorAll('[data-view]')) {
+    el.style.display = el.dataset.view === mode ? '' : 'none';
   }
   enforcePhotoCanvasVisibility();
   restoreWebGLCanvasIfNeeded();
