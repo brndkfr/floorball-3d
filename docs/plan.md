@@ -259,7 +259,10 @@ lines. An item that needs more than ~10 lines gets its own file under
 - **[A-BACK-046] KATA readout** [in-progress] Goalie selected: placement off
   the shooting line, depth, axis and coverage against targets per zone
   and expected action (shot / pass, read from the play's next ball
-  event); body (Körper) after A-BACK-042.
+  event); body (Körper) after A-BACK-042. On the rink (2026-11-16): target
+  band, ideal footprint, facing rays with the turn arc and the placement
+  offset, a Marks toggle and a Focus goalie camera
+  (<https://claude.ai/artifact/Dvebi8ZfC8rea9WpHEdm16>, third row).
   [Spec](items/A-BACK-046-051-goalie-module.md).
 - **[A-BACK-047] Shooter's-eye inset** [open] A small second view from
   the ball while the goalie moves (the module's "Winkelband"). Same file.

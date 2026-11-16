@@ -159,6 +159,16 @@ ball's Shot section): four rows (Körper greyed until A-BACK-042 step
 3), coverage %, Shot / Pass switch, "Show the ideal". Tests first for
 every pure function; e2e for the section.
 
+KATA on the rink (added 2026-11-16, mock: third row of
+<https://claude.ai/artifact/Dvebi8ZfC8rea9WpHEdm16>): `kata-visuals.js`
+(pure) gives the target band on the reference line between the target
+depths (+/- the placement tolerance, at least 0.15 m), the ideal footprint
+in its middle, the current and target facing rays with the turn arc, and
+the placement offset; `kata-marks-layer.js` draws them in Train (green
+when in range, yellow to adjust). A Marks toggle (remembered) and a Focus
+goalie button (`trainFocusPose`, a close camera in front of the goalie)
+sit in the KATA card.
+
 ### A-BACK-047 - Shooter's-eye inset ("Winkelband") `[lead]`
 
 A small inset (decided 2026-11-15, no split screen) rendered from the

@@ -129,3 +129,19 @@ test('trainPose: high in the rink in front of the defending goal, looking down a
   assert.ok(near(b.z, RINK_L - a.z) && near(b.y, a.y) && near(b.pitch, a.pitch));
   assert.ok(near(b.yaw, 0), 'faces +z, toward goal B');
 });
+
+// Focus goalie (KATA marks): close in front of the defending goalie, looking
+// back at it and the goal, so the target band and rays read.
+test('trainFocusPose: a few metres in front of the goalie, low, looking at goalie and goal; mirrored for B', async () => {
+  const { trainFocusPose } = await import('../web/src/camera-presets.js');
+  const gA = { x: 600, z: GOAL_LINE_FROM_BOARD + 1000 };
+  const a = trainFocusPose('A', gA);
+  assert.ok(a.z > gA.z + 3000 && a.z < gA.z + 9000, `in front of the goalie (${a.z})`);
+  assert.ok(a.y > 2500 && a.y < 6500, `low-ish (${a.y})`);
+  assert.ok(near(Math.abs(a.yaw), Math.PI, 0.25), `faces -z (${a.yaw})`);
+  assert.ok(a.pitch < -0.35 && a.pitch > -1.0, `looks down (${a.pitch})`);
+  assert.ok(a.x > 0 && a.x <= gA.x, 'leans toward the goalie side');
+  const b = trainFocusPose('B', { x: 600, z: RINK_L - gA.z });
+  assert.ok(near(b.z, RINK_L - a.z) && near(b.y, a.y) && near(b.pitch, a.pitch) && near(b.x, a.x));
+  assert.ok(near(Math.abs(b.yaw), Math.abs(Math.PI - Math.abs(a.yaw)), 1e-9));
+});
