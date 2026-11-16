@@ -6,7 +6,8 @@
 
 import { state } from '../state.js';
 import { t } from '../lang-state.js';
-import { setKataAction } from '../kata-readout.js';
+import { setKataAction, updateKataReadout } from '../kata-readout.js';
+import { markRenderDirty } from '../render-dirty.js';
 import { KATA_DIMS } from '../kata.js';
 
 // Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
@@ -18,11 +19,25 @@ const ACTIONS = ['auto', 'shot', 'pass', 'dribble'];
 const root = document.createElement('section');
 root.className = 'kata';
 root.innerHTML = `
-  <div class="gz-head"><span class="gz-label"></span><span class="kata-pct"></span></div>
+  <div class="gz-head"><span class="gz-label"></span><span class="kata-pct"></span>
+    <span class="kata-turn"><button type="button" data-turn="1">↺</button><button type="button" data-turn="-1">↻</button></span></div>
   <div class="kata-action" role="radiogroup">${ACTIONS.map((a) => `<button type="button" role="radio" data-action="${a}"></button>`).join('')}</div>
   <ul class="kata-rows">${KATA_DIMS.map((d) => `<li class="kata-row" data-dim="${d}"><span class="kata-dot" aria-hidden="true"></span><span class="kata-name"></span><span class="kata-value"></span></li>`).join('')}</ul>
   <p class="kata-hint" role="status"></p>`;
 slots.appendChild(root);
+
+// Turn the defending goalie 5 degrees; rotation.y grows turning left
+// (Q / E do the same on a selected goalie, controls.js).
+const TURN_STEP = (5 * Math.PI) / 180;
+for (const b of root.querySelectorAll('.kata-turn button')) {
+  b.addEventListener('click', () => {
+    const g = state.goalies[state.goalieZone?.goal ?? 'A'];
+    if (!g) return;
+    g.rotation.y += Number(b.dataset.turn) * TURN_STEP;
+    updateKataReadout();
+    markRenderDirty();
+  });
+}
 
 for (const b of root.querySelectorAll('.kata-action button')) {
   b.addEventListener('click', () => setKataAction(b.dataset.action === 'auto' ? null : b.dataset.action));
@@ -45,6 +60,11 @@ function refresh() {
   const r = state.kataReadout;
   root.hidden = !r;
   root.querySelector('.gz-label').textContent = t('goalie.kata.title');
+  for (const b of root.querySelectorAll('.kata-turn button')) {
+    const label = t(b.dataset.turn === '1' ? 'goalie.turn.left' : 'goalie.turn.right');
+    b.setAttribute('aria-label', label);
+    b.title = label;
+  }
   const group = root.querySelector('.kata-action');
   group.setAttribute('aria-label', t('goalie.kata.action'));
   const picked = state.kataAction ?? 'auto';

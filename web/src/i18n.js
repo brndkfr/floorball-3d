@@ -21,7 +21,9 @@ export const GOALIE_ZONE_KEYS = ['awareness', 'attention', 'danger', 'slot', 'pa
 const EN = {
   'goalie.title': 'Goalie training',
   'lang.label': 'Language',
-  'goalie.intro': 'A practice rink of its own: drag the goalie and the ball, your plays stay as they are. Zones, KATA and the shooter’s view follow here.',
+  'goalie.intro': 'A practice rink of its own: drag the goalie and the ball on the rink, turn the goalie with the turn buttons or Q / E. Your plays stay as they are.',
+  'goalie.turn.left': 'Turn the goalie left',
+  'goalie.turn.right': 'Turn the goalie right',
   'goalie.openAsPlay': 'Open as play',
   'goalie.source.text': 'Positioning after the J+S / swiss unihockey goalie module.',
   'goalie.source.link': 'Open the module',
@@ -84,7 +86,9 @@ const EN = {
 const DE = {
   'goalie.title': 'Goalie-Training',
   'lang.label': 'Sprache',
-  'goalie.intro': 'Ein eigenes Übungsfeld: Goalie und Ball verschieben, deine Spielzüge bleiben unverändert. Zonen, KATA und die Sicht der Schützin oder des Schützen folgen hier.',
+  'goalie.intro': 'Ein eigenes Übungsfeld: Goalie und Ball auf dem Feld ziehen, den Goalie mit den Drehknöpfen oder Q / E drehen. Deine Spielzüge bleiben unverändert.',
+  'goalie.turn.left': 'Goalie nach links drehen',
+  'goalie.turn.right': 'Goalie nach rechts drehen',
   'goalie.openAsPlay': 'Als Spielzug öffnen',
   'goalie.source.text': 'Positionierung nach dem J+S-/swiss-unihockey-Lernmodul für Goalies.',
   'goalie.source.link': 'Zum Lernmodul',
