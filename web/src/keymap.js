@@ -95,6 +95,7 @@ export const KEY_SECTIONS = [
   {
     title: 'Help',
     entries: [
+      ['P', 'screenshot: save a PNG of what is on screen (menu next to the camera button: copy, without labels)'],
       ['?', 'open this dialog'],
     ],
   },

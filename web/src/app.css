@@ -719,6 +719,28 @@
   /* App-wide language switch at the bottom of the rail (A-BACK-052, A-Q-010) */
   #appRail #langBtn { margin-top:auto; }
   #appRail #langBtn .lang-code { font:600 9px/1 var(--fb-mono); letter-spacing:0.06em; }
+  /* Screenshot (S-BACK-032): camera button + caret in the top bar, its menu, a toast */
+  #appTopbar .shot-wrap { gap:0; }
+  #appTopbar .shot-caret { padding:0 6px; margin-left:-4px; }
+  #shotMenu {
+    position:absolute; top:calc(100% + 6px); right:0; z-index:40; min-width:200px;
+    display:flex; flex-direction:column; padding:4px 0;
+    background:var(--fb-surf-1); border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1);
+  }
+  #shotMenu[hidden] { display:none; }
+  #shotMenu button {
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:8px 14px; border:none; background:transparent; color:var(--fb-text-1);
+    font:500 12px/1.2 var(--fb-font); text-align:left; cursor:pointer;
+  }
+  #shotMenu button:hover, #shotMenu button:focus-visible { background:var(--fb-brand-quiet); outline:none; }
+  #shotMenu kbd { font:400 10px/1 var(--fb-mono); color:var(--fb-text-3); }
+  #shotToast {
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:60; pointer-events:none;
+    padding:8px 14px; border-radius:18px; background:var(--fb-surf-2); border:1px solid var(--fb-line-strong);
+    color:var(--fb-text-1); font:600 12px/1.2 var(--fb-font); box-shadow:0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+  #shotToast[hidden] { display:none; }
   #langMenu {
     position:fixed; left:calc(var(--shell-rail) + 6px); bottom:14px; z-index:40; min-width:150px;
     display:flex; flex-direction:column; padding:4px 0;
