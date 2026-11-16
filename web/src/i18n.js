@@ -34,6 +34,8 @@ const EN = {
   'goalie.kata.depth': 'Depth (Tiefe)',
   'goalie.kata.axis': 'Axis (Achse)',
 
+  'goalie.marks': 'Marks',
+  'goalie.focus': 'Focus goalie',
   'goalie.kata.title': 'KATA',
   'goalie.kata.action': 'Expected action',
   'goalie.kata.auto': 'Auto',
@@ -101,6 +103,8 @@ const DE = {
   'goalie.kata.depth': 'Tiefe',
   'goalie.kata.axis': 'Achse',
 
+  'goalie.marks': 'Markierungen',
+  'goalie.focus': 'Goalie fokussieren',
   'goalie.kata.title': 'KATA',
   'goalie.kata.action': 'Erwartete Aktion',
   'goalie.kata.auto': 'Auto',

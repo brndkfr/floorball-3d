@@ -463,6 +463,12 @@
   }
   #trainPanel .kata-body { display:flex; flex-direction:column; gap:8px; }
   #trainPanel .kata-body[hidden] { display:none; }
+  #trainPanel .kata-tools { display:flex; gap:6px; }
+  #trainPanel .kata-tool {
+    height:26px; padding:0 10px; border-radius:13px; border:1px solid var(--fb-line-strong);
+    background:transparent; color:var(--fb-text-2); font:600 11px/1 var(--fb-font);
+  }
+  #trainPanel .kata-tool[aria-pressed="true"] { border-color:var(--fb-brand); background:var(--fb-brand-quiet); color:var(--fb-text-1); }
   #trainPanel .kata-action {
     display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:2px; padding:2px;
     background:var(--fb-ink); border:1px solid var(--fb-line); border-radius:var(--fb-radius-1);
