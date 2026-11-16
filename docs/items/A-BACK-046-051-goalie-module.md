@@ -128,6 +128,9 @@ Tests first: zone of sample
 points for both ends; mirror symmetry. e2e: layer toggles, the card
 follows the ball.
 
+Borders reviewed 2026-11-16: kept as drafted (attention still reaches 6.6 m past
+the centre line).
+
 ### A-BACK-046 - KATA readout for the goalie `[small]`
 
 Pure `web/src/kata.js`:

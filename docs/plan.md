@@ -243,7 +243,7 @@ lines. An item that needs more than ~10 lines gets its own file under
   cards, KATA rows and hints, verdict chip, lesson captions and
   exercise texts switch between English and German; more languages
   later. [Spec](items/A-BACK-046-051-goalie-module.md).
-- **[A-BACK-046] KATA readout** [open] Goalie selected: placement off
+- **[A-BACK-046] KATA readout** [in-progress] Goalie selected: placement off
   the shooting line, depth, axis and coverage against targets per zone
   and expected action (shot / pass, read from the play's next ball
   event); body (Körper) after A-BACK-042.
