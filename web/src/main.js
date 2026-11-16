@@ -7,6 +7,7 @@ import { updateShotChip } from './ui/shot-chip.js';
 import { updateShotReadout } from './shot-readout.js';
 import { updateGoalieZones } from './goalie-zones-layer.js';
 import { placeZoneLabels } from './goalie-zone-labels.js';
+import { updateKataMarks } from './kata-marks-layer.js';
 import { updateKataReadout } from './kata-readout.js';
 import { placeTrainHint } from './authoring/kata-section.js';
 import { snapshotChanged, copySnapshot } from './dirty-check.js';
@@ -88,6 +89,7 @@ function animate() {
   updateKataReadout();   // Train panel KATA rows (A-BACK-046), after the zone and the shot readout
   placeTrainHint();      // the hint pill follows the goalie on screen (A-BACK-054 layout A)
   placeZoneLabels();     // standing zone name tags (A-BACK-048)
+  const marksChanged = updateKataMarks();   // KATA marks on the rink (A-BACK-046)
   const labelsChanged = updateFloorLabelOrientations(state.activeCamera);
 
   const cam = state.activeCamera;
@@ -104,7 +106,7 @@ function animate() {
   // consumeRenderDirty() must run every frame (it's edge-triggered) - keep
   // it first so `||` short-circuiting never skips clearing it.
   const needsRender = consumeRenderDirty() || pollChanged || presetActive || chipsActive || markersActive
-    || walksActive || choreoActive || actorsActive || figuresChanged || spritesChanged || passChanged || shadowsChanged || trajectoryChanged || zonesChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
+    || walksActive || choreoActive || actorsActive || figuresChanged || spritesChanged || passChanged || shadowsChanged || trajectoryChanged || zonesChanged || marksChanged || labelsChanged || !!state.drawState || !!state.playback?.playing;
   if (needsRender) renderer.render(scene, state.activeCamera);
 }
 animate();

@@ -45,6 +45,10 @@ export const state = {
   // kata-readout.js (A-BACK-046)
   kataReadout: null,         // { goal, zone, action, actionAuto, kata, judged, pct } in Train, else null
   kataAction: null,          // null = Auto (from the play) | 'shot' | 'pass' | 'dribble'
+  kataMarks: null,           // kata-marks-layer.js: the marks on the rink (kata-visuals.js), Train only
+  kataMarksLayer: null,      // THREE.Group of the marks
+  kataMarksShown: true,      // Marks toggle in the KATA card (stored, on by default)
+  kataFocus: false,          // Focus goalie camera on (Train)
 
   // lang-state.js: app language, 'en' | 'de' (A-BACK-052, switched from the rail)
   lang: 'en',
