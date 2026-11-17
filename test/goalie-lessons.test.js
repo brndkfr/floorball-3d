@@ -93,3 +93,25 @@ test('buildLesson: lesson docs switch on the live goalie at their goal, also aft
     assert.equal(doc.autoGoalie, LESSONS[key].goal);
   }
 });
+
+// Lessons shelf in the Library (A-BACK-049): one row per shipped lesson, in
+// the module's order, titled in the app language with its length.
+test('lessonShelf: every shipped lesson once, ordered by its module number, with frames and seconds', async () => {
+  const { lessonShelf } = await import('../web/src/goalie-lessons.js');
+  const shelf = lessonShelf('en');
+  assert.deepEqual(shelf.map((r) => r.key).sort(), [...LESSON_KEYS].sort());
+  const ns = shelf.map((r) => r.n);
+  assert.deepEqual(ns, [...ns].sort((a, b) => a - b));
+  const zones = shelf.find((r) => r.key === 'zones');
+  assert.deepEqual(zones, {
+    key: 'zones', n: 2, title: 'Through the zones',
+    frames: LESSONS.zones.frames.length,
+    seconds: LESSONS.zones.frames.reduce((s, f) => s + f.ms, 0) / 1000,
+  });
+});
+
+test('lessonShelf: titles follow the language, unknown languages fall back to English', async () => {
+  const { lessonShelf } = await import('../web/src/goalie-lessons.js');
+  assert.equal(lessonShelf('de').find((r) => r.key === 'zones').title, 'Durch die Zonen');
+  assert.equal(lessonShelf('fr').find((r) => r.key === 'zones').title, 'Through the zones');
+});

@@ -119,6 +119,12 @@ export function openLesson(key) {
   return true;
 }
 
+// The Library's Lessons shelf (library-dialog.js) carries data-action="lesson".
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest?.('[data-action="lesson"]');
+  if (btn) openLesson(btn.dataset.lesson);
+});
+
 // "Open as play": the practice situation becomes a new project in Plan;
 // the Plan play that was open stays as it was.
 openAsPlay.addEventListener('click', () => {
