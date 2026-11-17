@@ -223,7 +223,13 @@ camera to be revisited, captions as drafted for review):
   under the caption. The user wants to revisit it.
 - `openLesson(key)` in `train-mode.js` enters Train and shows the lesson;
   the Lessons shelf in the Library will call it.
-Open: lessons 1, 3, 4, 5; the shelf; pause on captions; whether "Open as
+- Lessons shelf (2026-11-17): a "Goalie lessons" section at the top of the
+  Library dialog, one row per shipped lesson (`lessonShelf(lang)` in
+  `goalie-lessons.js`: module order, title in the app language, frames and
+  seconds); Open carries `data-action="lesson"` and train-mode.js's
+  delegated listener calls `openLesson()`, so library-dialog.js does not
+  import train-mode.js (which imports it).
+Open: lessons 1, 3, 4, 5; pause on captions; whether "Open as
 play" should keep `autoGoalie` in the copied project.
 
 ### A-BACK-050 - "Place the goalie" exercises `[small]` after 046

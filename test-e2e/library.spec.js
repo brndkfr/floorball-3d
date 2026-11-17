@@ -59,7 +59,7 @@ async function openLibrary(page) {
 }
 
 async function libraryRowNames(page) {
-  return page.$$eval('.library-row', (rows) =>
+  return page.$$eval('.library-body .library-row', (rows) =>
     rows.map((r) => ({
       name: r.querySelector('.library-name').textContent,
       current: r.classList.contains('current'),
@@ -68,7 +68,7 @@ async function libraryRowNames(page) {
 }
 
 async function clickRowAction(page, name, actionLabel) {
-  const row = page.locator('.library-row', { hasText: name }).first();
+  const row = page.locator('.library-body .library-row', { hasText: name }).first();
   await row.locator('button', { hasText: actionLabel }).click();
 }
 

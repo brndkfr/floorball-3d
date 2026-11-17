@@ -99,3 +99,39 @@ test('every keyframe of the lesson reads all ok on the live KATA card', async ({
     for (const dim of ['placement', 'depth', 'axis']) expect(status?.[dim], `frame ${i} ${dim}`).toMatch(/^(ok|free)$/);
   }
 });
+
+// The Lessons shelf in the Library: a row per shipped lesson, Open shows it in Train.
+test('Library shelf: the lesson row opens the lesson in Train and closes the Library', async ({ page }) => {
+  await boot(page);
+  await page.locator('#appRail button[data-mode="library"]').click();
+  const shelf = page.locator('dialog.library-dialog .library-lessons');
+  await expect(shelf).toBeVisible();
+  await expect(shelf.getByRole('heading', { name: 'Goalie lessons' })).toBeVisible();
+  const row = shelf.locator('.library-row[data-lesson="zones"]');
+  await expect(row.locator('.library-name')).toHaveText('Through the zones');
+  await expect(row.locator('.library-modified')).toHaveText('Lesson 2 · 5 frames · 12 s');
+  await row.getByRole('button', { name: 'Open' }).click();
+  await expect(page.locator('dialog.library-dialog')).toHaveCount(0);
+  await expect(page.locator('#appRail [data-mode="train"]')).toHaveClass(/active/);
+  const info = await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    return { frames: state.doc.frames.length, auto: state.doc.autoGoalie, name: state.doc.meta.name };
+  });
+  expect(info).toEqual({ frames: 5, auto: 'A', name: 'Through the zones' });
+});
+
+test('Library shelf: in German the shelf and the opened lesson are German', async ({ page }) => {
+  await boot(page);
+  await page.evaluate(async () => {
+    const { setLang } = await import('/src/lang-state.js');
+    setLang('de');
+  });
+  await page.locator('#appRail button[data-mode="library"]').click();
+  const shelf = page.locator('dialog.library-dialog .library-lessons');
+  await expect(shelf.getByRole('heading', { name: 'Goalie-Lektionen' })).toBeVisible();
+  const row = shelf.locator('.library-row[data-lesson="zones"]');
+  await expect(row.locator('.library-name')).toHaveText('Durch die Zonen');
+  await row.getByRole('button', { name: 'Öffnen' }).click();
+  await expect(page.locator('#appRail [data-mode="train"]')).toHaveClass(/active/);
+  expect(await page.evaluate(async () => (await import('/src/state.js')).state.doc.meta.name)).toBe('Durch die Zonen');
+});

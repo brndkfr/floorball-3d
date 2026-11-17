@@ -28,6 +28,10 @@ const EN = {
   'goalie.openAsPlay': 'Open as play',
   'goalie.source.text': 'Positioning after the J+S / swiss unihockey goalie module.',
   'goalie.source.link': 'Open the module',
+  'goalie.lessons.title': 'Goalie lessons',
+  'goalie.lessons.meta': 'Lesson {n} · {frames} frames · {seconds} s',
+  'goalie.lessons.open': 'Open',
+  'goalie.lessons.openTitle': 'Open the lesson in Train',
 
   'goalie.kata.body': 'Body (Körper)',
   'goalie.kata.placement': 'Placement (Ausrichtung)',
@@ -102,6 +106,10 @@ const DE = {
   'goalie.openAsPlay': 'Als Spielzug öffnen',
   'goalie.source.text': 'Positionierung nach dem J+S-/swiss-unihockey-Lernmodul für Goalies.',
   'goalie.source.link': 'Zum Lernmodul',
+  'goalie.lessons.title': 'Goalie-Lektionen',
+  'goalie.lessons.meta': 'Lektion {n} · {frames} Bilder · {seconds} s',
+  'goalie.lessons.open': 'Öffnen',
+  'goalie.lessons.openTitle': 'Lektion im Training öffnen',
 
   'goalie.kata.body': 'Körper',
   'goalie.kata.placement': 'Ausrichtung',

@@ -24,6 +24,7 @@ export const LESSONS = Object.freeze({
   // 2. Through the zones: one attacker carries the ball from the attention
   // zone down the right side into the danger zone and behind the goal.
   zones: {
+    n: 2,   // the lesson's number in the plan's list of five (A-BACK-049)
     goal: 'A',
     title: { en: 'Through the zones', de: 'Durch die Zonen' },
     frames: [
@@ -47,6 +48,23 @@ export const LESSONS = Object.freeze({
 });
 
 export const LESSON_KEYS = Object.freeze(Object.keys(LESSONS));
+
+// The Lessons shelf in the Library: one row per shipped lesson in the
+// module's order, titled in `lang` (English when there is no title in it).
+export function lessonShelf(lang = 'en') {
+  return LESSON_KEYS
+    .map((key) => {
+      const l = LESSONS[key];
+      return {
+        key,
+        n: l.n,
+        title: l.title[lang] ?? l.title.en,
+        frames: l.frames.length,
+        seconds: l.frames.reduce((s, f) => s + f.ms, 0) / 1000,
+      };
+    })
+    .sort((a, b) => a.n - b.n);
+}
 
 const faceToward = (from, to) => Math.atan2(to.x - from.x, to.z - from.z);   // rotation.y, local +z forward
 
