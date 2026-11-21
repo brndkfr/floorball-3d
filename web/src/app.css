@@ -775,7 +775,8 @@
     color:var(--fb-text-1); font:600 15px/1.35 var(--fb-font);
   }
   #frameCaption[hidden] { display:none; }
-  body[data-mode="train"] #frameCaption { right:0; bottom:24px; }
+  /* Train: sit in the free space to the right of the bottom-left KATA card (20px + 340px wide), never under it */
+  body[data-mode="train"] #frameCaption { left:calc(var(--shell-rail) + 20px + 340px + 16px); right:0; bottom:24px; max-width:min(80vw, 720px); }
   html.presenting #frameCaption { left:0; right:0; bottom:84px; font-size:18px; }
   #timeline .tl-card .tl-note { display:inline-flex; color:var(--fb-text-2); }
   #langMenu {
@@ -1275,6 +1276,7 @@
     #trainPanel .train-card { left:8px; right:8px; width:auto; }
     #trainPanel .gz { top:8px; }
     #trainPanel .kata { bottom:56px; }
+    body[data-mode="train"] #frameCaption { left:var(--shell-rail); }
     #trainPanel #shooterInset { display:none; }   /* phones: no room, desktop and tablet only */
     /* the hint gets its own row above the tab bar instead of following the goalie */
     #trainHint, #trainHint.off { display:block; transform:none !important; left:8px; right:8px; top:auto; bottom:8px; max-width:none; text-align:center; }

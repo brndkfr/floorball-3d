@@ -156,3 +156,23 @@ test('Library shelf: the four lessons in module order, and each one opens in Tra
     expect(info.caption.length, key).toBeGreaterThan(0);
   }
 });
+
+// A long caption must not run under the KATA card (bottom left): at 1440x900
+// on lesson 5, frame 2, the first letters were clipped by the card.
+test('a long lesson caption stays clear of the KATA card at 1440x900', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await boot(page);
+  await openLesson(page, 'behind');
+  await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(1));
+  const caption = page.locator('#frameCaption');
+  await expect(caption).toBeVisible();
+  await expect(caption).toContainText('Behind the goal: play the line');
+  const card = page.locator('#trainPanel .kata');
+  await expect(card).toBeVisible();
+  const c = await caption.boundingBox();
+  const k = await card.boundingBox();
+  const apart = c.x >= k.x + k.width || c.x + c.width <= k.x || c.y >= k.y + k.height || c.y + c.height <= k.y;
+  expect(apart, `caption ${JSON.stringify(c)} overlaps card ${JSON.stringify(k)}`).toBe(true);
+  expect(c.x).toBeGreaterThanOrEqual(0);
+  expect(c.x + c.width).toBeLessThanOrEqual(1440);
+});
