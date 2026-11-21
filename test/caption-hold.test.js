@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-const { captionHoldMs, captionHolds, stepWithHolds, HOLD_MIN_MS, HOLD_MAX_MS } =
+const { captionHoldMs, captionHolds, stepWithHolds, captionPauseOn, parseCaptionPausePref, HOLD_MIN_MS, HOLD_MAX_MS } =
   await import('../web/src/authoring/caption-hold.js');
 
 test('captionHoldMs: no text no hold; longer text holds longer, within bounds', () => {
@@ -65,4 +65,19 @@ test('stepWithHolds: speed scales play time, not reading time', () => {
 
 test('stepWithHolds: no holds means plain play', () => {
   assert.deepEqual(stepWithHolds(start, 700, 2, []), { elapsed: 1400, holdLeft: 0, heldAt: -1 });
+});
+
+test('captionPauseOn: unset follows the doc (lessons on, own plays off); a choice applies everywhere', () => {
+  const lesson = { autoGoalie: 'A' }, own = {};
+  assert.equal(captionPauseOn(null, lesson), true);
+  assert.equal(captionPauseOn(null, own), false);
+  assert.equal(captionPauseOn(null, undefined), false);
+  assert.equal(captionPauseOn(true, own), true);
+  assert.equal(captionPauseOn(false, lesson), false);
+});
+
+test('parseCaptionPausePref: stored "1" / "0", anything else is unset', () => {
+  assert.equal(parseCaptionPausePref('1'), true);
+  assert.equal(parseCaptionPausePref('0'), false);
+  for (const junk of [null, undefined, '', 'yes', 'true']) assert.equal(parseCaptionPausePref(junk), null, String(junk));
 });

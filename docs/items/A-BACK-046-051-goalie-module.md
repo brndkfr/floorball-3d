@@ -232,8 +232,10 @@ camera to be revisited, captions as drafted for review):
 - Pause on captions (2026-11-21): playback holds at the start of a frame
   with a note for a reading time (`caption-hold.js`: 1 s + 60 ms per
   character, 2 to 8 s, estimates), then plays the move. Wall-clock time,
-  so slow motion does not stretch it. Applies to every play with notes,
-  not only lessons. Not in the video export yet (`seekTo` runs straight
+  so slow motion does not stretch it. A "Hold" switch in the recorder's
+  transport turns it on or off (decided with the user): until the viewer
+  chooses, lessons hold and the coach's own plays do not; the choice is
+  then remembered per browser for every play. Not in the video export yet (`seekTo` runs straight
   through), so an exported lesson does not pause.
 Open: lessons 1, 3, 4, 5; holds in the export; whether "Open as
 play" should keep `autoGoalie` in the copied project.

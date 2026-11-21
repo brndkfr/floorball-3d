@@ -31,6 +31,7 @@ export const state = {
   selectedSet: [],     // every selected Object3D; single-select keeps this at length 0 or 1
   marqueeIncludesShapes: true, // marquee also grabs shapes/zones/arrows/text, not just chips (opt-out in the Layers panel)
   labelsVisible: true, // in-scene chip labels visible (falls back to number sprite when off; toggle in the Layers panel)
+  captionPause: null,  // recorder "Hold": true / false, or null = lessons hold, own plays do not (caption-hold.js, A-BACK-049)
   followBall: false,   // playback moves the 3D camera's target with the ball (recorder "Follow", A-BACK-040 step 7)
 
   // trajectory.js

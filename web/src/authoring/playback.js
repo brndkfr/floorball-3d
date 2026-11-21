@@ -13,7 +13,7 @@ import { ensureDoc } from './doc.js';
 import { getFrames } from './frames.js';
 import { camera, topDownCamera, renderer, getActiveCamera, getCameraRig, applyCameraRig } from '../scene.js';
 import { normalizeSpeed } from './transport-math.js';
-import { captionHolds, stepWithHolds } from './caption-hold.js';
+import { captionHolds, stepWithHolds, captionPauseOn } from './caption-hold.js';
 
 const playback = {
   playing: false,
@@ -46,7 +46,7 @@ function clearHold() {
 }
 
 function advance(dtMs) {
-  const holds = captionHolds(getFrames(), state.lang);
+  const holds = captionPauseOn(state.captionPause, ensureDoc()) ? captionHolds(getFrames(), state.lang) : [];
   Object.assign(playback, stepWithHolds(playback, dtMs, playback.speed, holds));
   const total = totalDuration();
   if (playback.elapsed >= total && playback.holdLeft <= 0) {

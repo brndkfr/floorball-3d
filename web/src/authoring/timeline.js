@@ -28,6 +28,7 @@ import { state } from '../state.js';
 import { onProjectChanged } from './library-dialog.js';
 import { showPrompt } from './dialog.js';
 import { noteText } from './frame-notes.js';
+import { captionPauseOn, parseCaptionPausePref } from './caption-hold.js';
 
 const el = document.getElementById('timeline');
 if (!el) throw new Error('timeline element missing from index.html');
@@ -41,6 +42,7 @@ const btnStop = el.querySelector('[data-tl="stop"]');
 const btnPrev = el.querySelector('[data-tl="prev"]');
 const btnNext = el.querySelector('[data-tl="next"]');
 const btnLoop = el.querySelector('[data-tl="loop"]');
+const btnHold = el.querySelector('[data-tl="hold"]');
 const btnFollow = el.querySelector('[data-tl="follow"]');
 const speedEl = el.querySelector('[data-tl="speed"]');
 const btnAdd = el.querySelector('[data-tl="add"]');
@@ -346,6 +348,9 @@ function render() {
   btnPlay.setAttribute('aria-label', p.playing ? 'Pause' : 'Play');
   btnLoop.classList.toggle('active', p.loop);
   btnLoop.setAttribute('aria-pressed', String(p.loop));
+  const hold = captionPauseOn(state.captionPause, state.doc);
+  btnHold.classList.toggle('active', hold);
+  btnHold.setAttribute('aria-pressed', String(hold));
   btnFollow.classList.toggle('active', state.followBall);
   btnFollow.setAttribute('aria-pressed', String(state.followBall));
   speedEl.textContent = speedLabel(p.speed);
@@ -424,6 +429,15 @@ try { state.followBall = localStorage.getItem(FOLLOW_KEY) === '1'; } catch { /* 
 btnFollow.addEventListener('click', () => {
   state.followBall = !state.followBall;
   try { localStorage.setItem(FOLLOW_KEY, state.followBall ? '1' : '0'); } catch { /* storage blocked */ }
+  window.dispatchEvent(new Event('playbackChanged'));
+});
+// Hold on captions (A-BACK-049, caption-hold.js): a view setting,
+// remembered per browser; unset means lessons hold and own plays do not.
+const HOLD_KEY = 'floorball3d.captionPause';
+try { state.captionPause = parseCaptionPausePref(localStorage.getItem(HOLD_KEY)); } catch { state.captionPause = null; }
+btnHold.addEventListener('click', () => {
+  state.captionPause = !captionPauseOn(state.captionPause, state.doc);
+  try { localStorage.setItem(HOLD_KEY, state.captionPause ? '1' : '0'); } catch { /* storage blocked */ }
   window.dispatchEvent(new Event('playbackChanged'));
 });
 btnAdd.addEventListener('click', addFrame);

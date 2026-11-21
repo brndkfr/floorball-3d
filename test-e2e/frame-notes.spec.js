@@ -116,10 +116,54 @@ test('the caption never sits on the floating dock', async ({ page }) => {
   expect(cap.y + cap.height).toBeLessThanOrEqual(dock.y);
 });
 
+const holdBtn = (page) => page.locator('#timeline [data-tl="hold"]');
+
+// Plays from 0 with ticks driven by hand; returns where playback stands.
+const playTicks = (page, ...ticks) => page.evaluate(async (ticks) => {
+  const pb = await import('/src/authoring/playback.js');
+  pb.play();
+  for (const t of ticks) pb.tickPlayback(t);
+  const { elapsed, holdLeft } = pb.playbackState();
+  pb.stop();
+  return { elapsed, holdLeft };
+}, ticks);
+
+test('Hold switch: off for own plays by default, so a noted frame plays straight through', async ({ page }) => {
+  await boot(page);
+  await twoFrames(page);
+  await addNote(page, 0, 'Pass to the slot');
+  await expect(holdBtn(page)).toHaveAttribute('aria-pressed', 'false');
+  expect((await playTicks(page, 500)).elapsed).toBeGreaterThanOrEqual(500);
+});
+
+test('Hold switch: turning it on holds, and the choice is remembered after a reload', async ({ page }) => {
+  await boot(page);
+  await twoFrames(page);
+  await addNote(page, 0, 'Pass to the slot');
+  await holdBtn(page).click();
+  await expect(holdBtn(page)).toHaveAttribute('aria-pressed', 'true');
+  const r = await playTicks(page, 500);
+  expect(r.elapsed).toBe(0);
+  expect(r.holdLeft).toBeGreaterThan(0);
+  await page.reload();
+  await boot(page);
+  await expect(holdBtn(page)).toHaveAttribute('aria-pressed', 'true');
+  await holdBtn(page).click();
+  await expect(holdBtn(page)).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('Hold switch: a lesson holds by default', async ({ page }) => {
+  await boot(page);
+  expect(await page.evaluate(async () => (await import('/src/authoring/train-mode.js')).openLesson('zones'))).toBe(true);
+  await expect(holdBtn(page)).toHaveAttribute('aria-pressed', 'true');
+  expect((await playTicks(page, 500)).elapsed).toBe(0);
+});
+
 test('pause on captions (A-BACK-049): playback holds on a noted frame, then plays the move', async ({ page }) => {
   await boot(page);
   await twoFrames(page);
   await addNote(page, 0, 'Pass to the slot');
+  await holdBtn(page).click();
   const r = await page.evaluate(async () => {
     const pb = await import('/src/authoring/playback.js');
     const { captionHoldMs } = await import('/src/authoring/caption-hold.js');

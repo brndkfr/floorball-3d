@@ -57,3 +57,19 @@ export function stepWithHolds(s, wallDt, speed, holds) {
   }
   return { elapsed, holdLeft, heldAt };
 }
+
+// The Hold switch in the transport (timeline.js). `pref` is the viewer's
+// choice, remembered per browser: true / false, or null while they have not
+// chosen. Unset: lessons (docs with a live goalie, A-BACK-049) hold, the
+// coach's own plays do not, so editing is not slowed by notes the coach
+// wrote. Once chosen, the choice applies to every play.
+export function captionPauseOn(pref, doc) {
+  if (pref === true || pref === false) return pref;
+  return !!doc?.autoGoalie;
+}
+
+export function parseCaptionPausePref(raw) {
+  if (raw === '1') return true;
+  if (raw === '0') return false;
+  return null;
+}
