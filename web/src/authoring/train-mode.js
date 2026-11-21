@@ -116,6 +116,9 @@ export function openLesson(key) {
   updateKataReadout();
   blendCameraTo(lessonPose(raw.autoGoalie));
   markRenderDirty();
+  // showDoc() fires nothing: the recorder (frame strip, Hold switch) and
+  // the caption re-read the doc on framesChanged.
+  window.dispatchEvent(new Event('framesChanged'));
   return true;
 }
 
