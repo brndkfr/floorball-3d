@@ -80,10 +80,10 @@ test('line lesson: lesson 1, ball still for the three dimensions, then a slow mo
   for (const z of zonesOf('line')) assert.ok(z === 'danger' || z === 'slot', z);
 });
 
-// 5. Behind the goal: the ball goes round behind goal A, post to post, then
+// 4. Behind the goal: the ball goes round behind goal A, post to post, then
 // comes out in front on the other side.
-test('behind lesson: lesson 5, passing-first round the back of goal A, then out into the danger zone', () => {
-  assert.equal(LESSONS.behind.n, 5);
+test('behind lesson: lesson 4, passing-first round the back of goal A, then out into the danger zone', () => {
+  assert.equal(LESSONS.behind.n, 4);
   assert.equal(LESSONS.behind.goal, 'A');
   const zones = zonesOf('behind');
   assert.equal(zones.at(-1), 'danger');

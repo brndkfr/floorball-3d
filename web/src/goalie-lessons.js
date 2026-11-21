@@ -70,7 +70,7 @@ export const LESSONS = Object.freeze({
   // 2. Through the zones: one attacker carries the ball from the attention
   // zone down the right side into the danger zone and behind the goal.
   zones: {
-    n: 2,   // the lesson's number in the plan's list of five (A-BACK-049)
+    n: 2,   // the lesson's number in the Library shelf (A-BACK-049)
     goal: 'A',
     title: { en: 'Through the zones', de: 'Durch die Zonen' },
     frames: [
@@ -128,10 +128,10 @@ export const LESSONS = Object.freeze({
     ],
   },
 
-  // 5. Behind the goal: the carrier goes round behind goal A from the right
+  // 4. Behind the goal: the carrier goes round behind goal A from the right
   // to the left and comes out in front again on the left.
   behind: {
-    n: 5,
+    n: 4,
     goal: 'A',
     title: { en: 'Behind the goal', de: 'Hinter dem Tor' },
     frames: [

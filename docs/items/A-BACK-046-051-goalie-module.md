@@ -252,7 +252,7 @@ camera to be revisited, captions as drafted for review):
     was the same 2-on-1 played twice with the same goalie answers. Its
     idea (most likely vs most dangerous; dangerous option open: stay
     back, ready to push across; closed: play the shot) closes lesson 3's
-    last caption. Four lessons ship; lesson 5 keeps its module number.
+    last caption. Four lessons ship, numbered 1 to 4 (the "behind" lesson became 4).
   - The verdict chip for a centred block now reads "Centred block", not
     "Squared up": the captions use "square up" for the body facing the
     ball, and the two clashed.

@@ -145,6 +145,7 @@ test('Library shelf: the four lessons in module order, and each one opens in Tra
   const keys = await rows.evaluateAll((els) => els.map((e) => e.dataset.lesson));
   expect(keys).toEqual(['line', 'zones', 'passOrShot', 'behind']);
   await expect(rows.nth(0).locator('.library-modified')).toHaveText(/^Lesson 1 · 5 frames/);
+  await expect(rows.nth(3).locator('.library-modified')).toHaveText(/^Lesson 4 · /);
   await page.keyboard.press('Escape');
   for (const key of keys) {
     expect(await openLesson(page, key)).toBe(true);
@@ -158,7 +159,7 @@ test('Library shelf: the four lessons in module order, and each one opens in Tra
 });
 
 // A long caption must not run under the KATA card (bottom left): at 1440x900
-// on lesson 5, frame 2, the first letters were clipped by the card.
+// on lesson 4, frame 2, the first letters were clipped by the card.
 test('a long lesson caption stays clear of the KATA card at 1440x900', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await boot(page);
