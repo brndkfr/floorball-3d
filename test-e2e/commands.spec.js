@@ -29,6 +29,10 @@ test('listCommands offers the first slice with input schemas', async ({ page }) 
     expect(c.description.length).toBeGreaterThan(10);
     expect(c.input.type).toBe('object');
   }
+  const place = list.find((c) => c.name === 'goalie.place');
+  expect(place.description).toMatch(/millimetres/);
+  expect(place.description).toMatch(/goal A/);
+  expect(JSON.parse(JSON.stringify(list))).toEqual(list);   // valid JSON schemas for MCP
 });
 
 test('lesson.open shows the lesson in Train; an unknown key is an error', async ({ page }) => {
@@ -46,17 +50,22 @@ test('lesson.open shows the lesson in Train; an unknown key is an error', async 
 test('goalie.place moves the goalie and stores it in the current frame', async ({ page }) => {
   await boot(page);
   await run(page, 'lesson.open', { key: 'zones' });
-  const r = await run(page, 'goalie.place', { goal: 'A', x: -17000, z: 600, angle: 0.3 });
+  const r = await run(page, 'goalie.place', { goal: 'A', x: -2500, z: 5200, angle: 0.3 });
   expect(r.ok).toBe(true);
   const g = await page.evaluate(async () => {
     const { state } = await import('/src/state.js');
     const doc = state.doc;
     return { mesh: { x: state.goalies.A.position.x, z: state.goalies.A.position.z, a: state.goalies.A.rotation.y }, stored: doc.frames[doc.currentFrame].scheme.goalies.A };
   });
-  expect(g.mesh).toEqual({ x: -17000, z: 600, a: 0.3 });
-  expect(g.stored).toEqual({ x: -17000, z: 600, angle: 0.3 });
+  expect(g.mesh).toEqual({ x: -2500, z: 5200, a: 0.3 });
+  expect(g.stored).toEqual({ x: -2500, z: 5200, angle: 0.3 });
   const bad = await run(page, 'goalie.place', { goal: 'C', x: 0, z: 0 });
   expect(bad.ok).toBe(false);
+  // off the rink (the old test value, 17 m across a 20 m wide rink): rejected, goalie stays put
+  const off = await run(page, 'goalie.place', { goal: 'A', x: -17000, z: 600 });
+  expect(off.ok).toBe(false);
+  expect(off.error).toMatch(/off the rink/);
+  expect(await page.evaluate(async () => (await import('/src/state.js')).state.goalies.A.position.x)).toBe(-2500);
 });
 
 test('playback.seek poses the play at a time; playback.stop goes back to the edit frame', async ({ page }) => {

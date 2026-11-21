@@ -81,8 +81,12 @@ test('Connect AI pairs the tab; the MCP client opens a lesson, places the goalie
     expect(JSON.parse(opened.content[0].text).frames).toBeGreaterThan(2);
     expect(await page.evaluate(() => document.body.dataset.mode)).toBe('train');
 
-    const placed = await relay.call('goalie_place', { goal: 'A', x: -17000, z: 600 });
-    expect(JSON.parse(placed.content[0].text)).toMatchObject({ goal: 'A', x: -17000, z: 600 });
+    const placed = await relay.call('goalie_place', { goal: 'A', x: -2500, z: 5200 });
+    expect(JSON.parse(placed.content[0].text)).toMatchObject({ goal: 'A', x: -2500, z: 5200 });
+    expect(await page.evaluate(async () => { const g = (await import('/src/state.js')).state.goalies.A; return [g.position.x, g.position.z]; })).toEqual([-2500, 5200]);
+    const off = await relay.call('goalie_place', { goal: 'A', x: -17000, z: 600 });
+    expect(off.isError).toBe(true);
+    expect(off.content[0].text).toMatch(/off the rink/);
 
     const kata = await relay.call('kata_read');
     expect(kata.isError).toBeUndefined();
