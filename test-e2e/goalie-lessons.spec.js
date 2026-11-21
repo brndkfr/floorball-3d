@@ -135,3 +135,24 @@ test('Library shelf: in German the shelf and the opened lesson are German', asyn
   await expect(page.locator('#appRail [data-mode="train"]')).toHaveClass(/active/);
   expect(await page.evaluate(async () => (await import('/src/state.js')).state.doc.meta.name)).toBe('Durch die Zonen');
 });
+
+// All five lessons of the module (A-BACK-049), in its order; each one opens.
+test('Library shelf: the five lessons in module order, and each one opens in Train', async ({ page }) => {
+  await boot(page);
+  await page.locator('#appRail button[data-mode="library"]').click();
+  const rows = page.locator('dialog.library-dialog .library-lessons .library-row');
+  await expect(rows).toHaveCount(5);
+  const keys = await rows.evaluateAll((els) => els.map((e) => e.dataset.lesson));
+  expect(keys).toEqual(['line', 'zones', 'passOrShot', 'options', 'behind']);
+  await expect(rows.nth(0).locator('.library-modified')).toHaveText(/^Lesson 1 · 5 frames/);
+  await page.keyboard.press('Escape');
+  for (const key of keys) {
+    expect(await openLesson(page, key)).toBe(true);
+    const info = await page.evaluate(async () => {
+      const { state } = await import('/src/state.js');
+      return { auto: state.doc.autoGoalie, caption: document.getElementById('frameCaption').textContent };
+    });
+    expect(info.auto, key).toBe('A');
+    expect(info.caption.length, key).toBeGreaterThan(0);
+  }
+});

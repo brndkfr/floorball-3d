@@ -237,7 +237,17 @@ camera to be revisited, captions as drafted for review):
   chooses, lessons hold and the coach's own plays do not; the choice is
   then remembered per browser for every play. Not in the video export yet (`seekTo` runs straight
   through), so an exported lesson does not pause.
-Open: lessons 1, 3, 4, 5; holds in the export; whether "Open as
+- All five lessons (2026-11-21, captions drafted for the user's review):
+  1 `line` (ball still while the captions take placement, depth, axis;
+  then a slow move), 3 `passOrShot` and 4 `options` (a cast of two
+  attackers and a defender, each played twice from the same start),
+  5 `behind` (round the back of the goal, post to post, out in front).
+  The builder takes a `cast` and frames with `players`, `carrier` or
+  `shot` (aimed at the middle of the goal); lessons 1, 2, 5 keep the
+  one-attacker `ball` form. Live goalie ok 90-100% of the time per
+  lesson, every keyframe ok (`goalie-track.test.js`, bar 85%).
+Open: caption review by the user; holds in the export; no save after a
+shot (the ball goes through the goalie into the net); whether "Open as
 play" should keep `autoGoalie` in the copied project.
 
 ### A-BACK-050 - "Place the goalie" exercises `[small]` after 046

@@ -116,6 +116,41 @@ export const LESSONS = Object.freeze({
     ],
   },
 
+  // 4. Most dangerous option or most likely action: the carrier in the
+  // danger zone could shoot (likely), the free attacker coming in close on
+  // the far side is the bigger threat (dangerous). Played twice: first the
+  // far-side attacker is free and gets the pass, then the defender covers
+  // them and the carrier shoots.
+  options: {
+    n: 4,
+    goal: 'A',
+    title: { en: 'Most dangerous or most likely', de: 'Gefährlichste oder wahrscheinlichste' },
+    cast: { a: { team: 2, number: '9' }, b: { team: 2, number: '7' }, d: { team: 1, number: '4' } },
+    frames: [
+      { players: { a: { x: 2500, z: 14000 }, b: { x: -4500, z: 12000 }, d: { x: 4000, z: 11500 } }, carrier: 'a', ms: 2500, note: {
+        en: 'Two threats. Most likely: the carrier shoots from here. Most dangerous: the free attacker coming in on the far side, close to the goal.',
+        de: 'Zwei Gefahren. Am wahrscheinlichsten: der Ballführer schiesst von hier. Am gefährlichsten: der freie Angreifer auf der anderen Seite, nahe am Tor.' } },
+      { players: { a: { x: 2000, z: 11000 }, b: { x: -3500, z: 8000 }, d: { x: 2500, z: 9500 } }, carrier: 'a', ms: 2000, note: {
+        en: 'The far-side attacker is free and close: the dangerous pass is open. Do not commit forward. On the line, back, knees parallel, ready to push across.',
+        de: 'Der Angreifer auf der anderen Seite ist frei und nah: der gefährliche Pass ist offen. Nicht nach vorne festlegen. Auf der Linie, hinten, Knie parallel, bereit zum Verschieben.' } },
+      { players: { a: { x: 1800, z: 10000 }, b: { x: -3000, z: 6500 }, d: { x: 2000, z: 9800 } }, carrier: 'b', ms: 1500, note: {
+        en: 'The pass comes: push across and square up to the new shooter.',
+        de: 'Der Pass kommt: hinüberschieben und frontal zum neuen Schützen stellen.' } },
+      { players: { a: { x: 1800, z: 9500 }, b: { x: -2800, z: 6300 }, d: { x: 2000, z: 9300 } }, shot: { aimX: 0 }, ms: 3000, note: {
+        en: 'Again, but this time the defender takes the far-side attacker.',
+        de: 'Noch einmal, aber diesmal nimmt der Verteidiger den Angreifer auf der anderen Seite.' } },
+      { players: { a: { x: 2500, z: 14000 }, b: { x: -4500, z: 12000 }, d: { x: -3000, z: 11000 } }, carrier: 'a', ms: 2500, note: {
+        en: 'The dangerous pass is covered. What is left is the shot.',
+        de: 'Der gefährliche Pass ist zugestellt. Übrig bleibt der Schuss.' } },
+      { players: { a: { x: 2000, z: 11000 }, b: { x: -3500, z: 8000 }, d: { x: -3000, z: 8600 } }, carrier: 'a', ms: 2000, note: {
+        en: 'The most likely action is now also the most dangerous one: forward on the shooting line, square to the ball.',
+        de: 'Die wahrscheinlichste Aktion ist jetzt auch die gefährlichste: nach vorne auf die Schusslinie, frontal zum Ball.' } },
+      { players: { a: { x: 1700, z: 10000 }, b: { x: -3500, z: 7500 }, d: { x: -3100, z: 8100 } }, shot: { aimX: 0 }, ms: 3000, note: {
+        en: 'When the two differ and the dangerous option is open, stay back and ready to move. When it is closed, play the likely shot.',
+        de: 'Gehen beide auseinander und die gefährliche Option ist offen: hinten bleiben, bereit zum Verschieben. Ist sie zu, den wahrscheinlichen Schuss spielen.' } },
+    ],
+  },
+
   // 5. Behind the goal: the carrier goes round behind goal A from the right
   // to the left and comes out in front again on the left.
   behind: {

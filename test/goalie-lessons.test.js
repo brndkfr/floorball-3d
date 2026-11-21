@@ -152,6 +152,32 @@ test('passOrShot lesson: lesson 3, the same start twice, read once as a pass and
   assert.notEqual(shot.g.angle, 0, 'square to the ball for the shot');
 });
 
+// 4. Most dangerous option or most likely action: the carrier could shoot
+// (likely), a free attacker near the goal is the bigger threat (dangerous).
+// Open: the goalie stays back, ready for the pass. Covered: the shot.
+test('options lesson: lesson 4, a free attacker near the goal keeps the goalie back; once covered, the shot', () => {
+  assert.equal(LESSONS.options.n, 4);
+  const spec = LESSONS.options;
+  const doc = buildLesson('options');
+  const num = (f, k) => Object.values(f.scheme.players).find((p) => p.number === spec.cast[k].number);
+  const reads = doc.frames.map((f, i) => {
+    const a = num(f, 'a'), b = num(f, 'b'), d = num(f, 'd');
+    return {
+      i, a, b, d, g: f.scheme.goalies.A,
+      aHasBall: ballOf(f).carrier === a.id,
+      zone: goalieZoneOf(ballOf(f), 'A'),
+      action: expectedAction(doc.frames, startMs(doc.frames, i)),
+    };
+  }).filter((r) => r.aHasBall && r.zone === 'danger');
+  const dist = (p, q) => Math.hypot(p.x - q.x, p.z - q.z);
+  const open = reads.find((r) => r.action === 'pass' && dist(r.d, r.b) > 3000 && r.b.z < r.a.z);
+  const covered = reads.find((r) => r.action === 'shot' && dist(r.d, r.b) < 1500);
+  assert.ok(open, 'the dangerous option open: pass expected');
+  assert.ok(covered && covered.i > open.i, 'then covered: shot expected');
+  assert.ok(open.g.z < covered.g.z, 'back while the dangerous pass is open');
+  assert.equal(open.g.angle, 0, 'knees parallel while the dangerous pass is open');
+});
+
 test('lessons: the goalie at every keyframe is judged ok on placement, depth and axis', () => {
   for (const key of LESSON_KEYS) {
     const doc = buildLesson(key);

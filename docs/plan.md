@@ -279,7 +279,8 @@ lines. An item that needs more than ~10 lines gets its own file under
   animated lesson plays, shipped read-only in the Library. Pilot built
   2026-11-16 (decisions in the spec): lesson 2 "Through the zones" built in
   code, the live goalie, the lesson camera, `openLesson()`; the Lessons shelf in the Library (2026-11-17); pause on captions
-  (2026-11-21). Open: the other four lessons, holds in the export. Same file.
+  (2026-11-21); lessons 1, 3, 4 and 5 (2026-11-21, captions for review).
+  Open: caption review, holds in the export, a save after a shot. Same file.
 - **[A-BACK-050] "Place the goalie" exercises** [blocked-by:
   A-BACK-046] Situations, scoring, ideal ghost, one hint. Same file.
 - **[A-BACK-051] Ideal goalie** [blocked-by: A-BACK-046, A-BACK-048]
