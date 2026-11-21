@@ -168,6 +168,8 @@ A-Q-014). [items/S-BACK-032-035](items/S-BACK-032-035-screenshot-mcp.md).
 1. **[S-BACK-032] Screenshot, whole app** One click saves what is on
    screen, labels included; Copy and Clean in a small menu.
 2. **[S-BACK-033] Command layer** The app's actions as typed commands.
+   First slice built 2026-11-21: registry with schema checks, six
+   commands (lesson, goalie, seek / stop, KATA readout, screenshot).
 3. **[S-BACK-034] MCP server in the app + local relay** Connect AI with
    a pairing code; screenshot is one of the tools.
 4. **[S-BACK-035] Cloud relay** (optional) For claude.ai or a tablet.

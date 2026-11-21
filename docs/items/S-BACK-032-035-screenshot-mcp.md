@@ -54,6 +54,28 @@ players, carrier, pass, shot, frames, timing), Train and the goalie
 (load photo, landmarks, solve, insights), export. Pure dispatch and
 schema checks are Node-tested; each command gets an e2e check.
 
+Design (2026-11-21, first slice):
+- `web/src/commands/registry.js`, pure: `defineCommand({ name,
+  description, input, run })`, `listCommands()` (name, description,
+  input schema: what MCP `tools/list` will return), `runCommand(name,
+  input)` resolving to `{ ok: true, result }` or `{ ok: false, error }`.
+  It never throws: an unknown name, bad input and a handler that throws
+  all come back as `ok: false` with a message.
+- Input schemas are a small JSON-schema subset checked by a built-in
+  validator (no dependency): `type` (object, string, number, integer,
+  boolean), `properties`, `required`, `additionalProperties: false`,
+  `enum`, `minimum`, `maximum`. Missing input means `{}`.
+- `web/src/commands/app-commands.js` defines the app's commands and is
+  imported from `authoring/index.js`. Handlers call the functions the UI
+  uses (openLesson, the drag's mesh move + tickActors, seekTo / stop,
+  updateKataReadout, captureStage); no logic of their own.
+- Progress (2026-11-21): registry, validator and the first slice built
+  (`test/commands-registry.test.js`, `test-e2e/commands.spec.js`). Not
+  yet: undo integration, overwrite confirmation, the rest of the list
+  above.
+- Names are `area.verb`. First slice: `lesson.open`, `goalie.place`,
+  `playback.seek`, `playback.stop`, `kata.read`, `screenshot.take`.
+
 ### S-BACK-034 - MCP server in the app + local relay `[lead]`
 
 - In the app: an MCP server over the command layer (tools/list,
