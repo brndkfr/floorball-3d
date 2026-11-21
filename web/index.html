@@ -46,6 +46,7 @@
 </div>
 <div id="langMenu" role="menu" aria-label="Language" hidden></div>
 <div id="shotToast" role="status" hidden></div>
+<div id="frameCaption" role="status" aria-live="polite" hidden></div>
 <div id="libraryView">Library - coming soon</div>
 <div id="toolPalette" data-view="plan">
   <div class="floatable-grip" title="Drag to move" aria-hidden="true">&#8942;&#8942;</div>
@@ -240,6 +241,7 @@
 <div id="trainPanel" data-view="train" role="region" aria-label="Goalie training">
   <div id="trainSlots"></div>
   <div id="trainHint" role="status" hidden></div>
+  <figure id="shooterInset" hidden><div class="inset-view"></div><figcaption><span class="inset-title">Shooter's view</span><span class="inset-pct"></span></figcaption></figure>
 </div>
 <aside id="photoPanel" class="hud-panel" data-view="analyze" aria-label="Photo analysis">
   <button type="button" id="photoSheetGrab" class="ps-grab" aria-controls="photoPanel" aria-expanded="false" aria-label="Expand the analysis steps"></button>

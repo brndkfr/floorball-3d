@@ -23,6 +23,8 @@ import { rebuildGoalsFromDoc } from './goals.js';
 import { initHistory } from './history.js';
 import { applyActorsFromScheme } from './actors.js';
 import { showAlert, showConfirm, showPrompt } from './dialog.js';
+import { lessonShelf } from '../goalie-lessons.js';
+import { t } from '../lang-state.js';
 
 let styleInjected = false;
 function ensureStyle() {
@@ -51,6 +53,11 @@ function ensureStyle() {
     .library-header-actions button:hover { background:var(--fb-brand-quiet); }
     .library-body {
       max-height:60vh; overflow-y:auto; padding:4px 0;
+    }
+    .library-lessons { border-bottom:1px solid var(--fb-line-strong); padding:4px 0; }
+    .library-lessons h3 {
+      margin:8px 18px 2px; font-size:10.5px; font-weight:600; opacity:0.75;
+      letter-spacing:0.08em; text-transform:uppercase;
     }
     .library-empty {
       padding:24px 18px; text-align:center; opacity:0.7; font-size:12px;
@@ -159,6 +166,45 @@ async function newProjectFlow() {
 }
 
 let openDialog = null;
+
+// Goalie lessons shelf (A-BACK-049): shipped, read-only lessons above the
+// user's projects. Open carries data-action="lesson"; train-mode.js's
+// delegated listener opens it in Train (no import back into train-mode.js,
+// which imports this module).
+function renderLessons(dialog) {
+  const shelf = dialog.querySelector('.library-lessons');
+  shelf.replaceChildren();
+  const heading = document.createElement('h3');
+  heading.textContent = t('goalie.lessons.title');
+  shelf.appendChild(heading);
+  for (const l of lessonShelf(state.lang)) {
+    const row = document.createElement('div');
+    row.className = 'library-row';
+    row.dataset.lesson = l.key;
+    const info = document.createElement('div');
+    info.className = 'library-info';
+    const name = document.createElement('div');
+    name.className = 'library-name';
+    name.textContent = l.title;
+    const meta = document.createElement('div');
+    meta.className = 'library-modified';
+    meta.textContent = t('goalie.lessons.meta', { n: l.n, frames: l.frames, seconds: l.seconds });
+    info.append(name, meta);
+    const actions = document.createElement('div');
+    actions.className = 'library-actions';
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'primary';
+    open.dataset.action = 'lesson';
+    open.dataset.lesson = l.key;
+    open.title = t('goalie.lessons.openTitle');
+    open.textContent = t('goalie.lessons.open');
+    open.addEventListener('click', () => dialog.close());
+    actions.appendChild(open);
+    row.append(info, actions);
+    shelf.appendChild(row);
+  }
+}
 
 function render(dialog) {
   const body = dialog.querySelector('.library-body');
@@ -281,6 +327,7 @@ export function openLibraryDialog() {
         <button type="button" class="library-new">New project&hellip;</button>
       </div>
     </div>
+    <section class="library-lessons"></section>
     <div class="library-body"></div>
     <form method="dialog" class="library-footer">
       <button type="submit" value="close">Close</button>
@@ -300,6 +347,7 @@ export function openLibraryDialog() {
     openDialog = null;
   }, { once: true });
 
+  renderLessons(dialog);
   render(dialog);
   dialog.showModal();
 }

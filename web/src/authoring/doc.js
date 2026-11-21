@@ -11,6 +11,7 @@
 //
 // v1 docs (single implicit frame) are auto-migrated on load via ensureDoc.
 
+import { sanitizeNote } from './frame-notes.js';
 import { state } from '../state.js';
 import { sanitizeZones } from './zones-model.js';
 import { sanitizeHiddenFixed } from './fixed-objects-model.js';
@@ -173,6 +174,10 @@ function sanitizeFrame(frame) {
     if (!isObj(cam) || !isNumArray(3)(cam.position) || !isNumArray(4)(cam.quaternion)) delete frame.camera;
     else cleanFields(cam, CAMERA_FIELDS);
   }
+  if ('note' in frame) {   // A-BACK-035
+    const note = sanitizeNote(frame.note);
+    if (note === undefined) delete frame.note; else frame.note = note;
+  }
   if (!isObj(frame.scheme)) frame.scheme = emptyScheme();
   migrateGoalieScheme(frame.scheme);
   return sanitizeScheme(frame.scheme);
@@ -188,6 +193,7 @@ function sanitizeDoc(doc) {
   if (doc.frames.length === 0) return null;
   doc.zones = sanitizeZones(doc.zones);   // A-BACK-039: shown tactical zones, project-level
   doc.hiddenFixed = sanitizeHiddenFixed(doc.hiddenFixed);   // hidden fixed goals / goalies, project-level
+  if ('autoGoalie' in doc && doc.autoGoalie !== 'A' && doc.autoGoalie !== 'B') delete doc.autoGoalie;   // A-BACK-049: live goalie (goalie-track.js)
   for (const frame of doc.frames) {
     if (!sanitizeFrame(frame)) return null;
     const photo = frame.photo;

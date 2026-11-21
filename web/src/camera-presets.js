@@ -8,7 +8,7 @@
 // rigs: "Player eye" stands at head height, and the blend must reach any
 // pose the camera can be in.
 
-import { RINK_L, HALF_W } from './constants.js';
+import { RINK_L, HALF_W, GOAL_LINE_FROM_BOARD } from './constants.js';
 import { rigToCamera } from './orbit-math.js';
 
 // Shift + 1..6 (plain 1..4 are playback speeds).
@@ -66,6 +66,31 @@ export function trainPose(goal) {
   const end = goal === 'B' ? RINK_L : 0;
   const dir = goal === 'B' ? -1 : 1;
   return aim({ x: 0, y: TRAIN_VIEW.height, z: end + dir * TRAIN_VIEW.out }, { x: 0, y: 0, z: end + dir * TRAIN_VIEW.lookAt });
+}
+
+// Lessons (A-BACK-049): high over the side board, looking across the
+// defending half, so the whole attack (from the attention zone to behind
+// the goal) runs along the wide stage with the goal on the right, clear of
+// the caption (bottom centre) and the cards (left). A view from behind the
+// goal put the goal under the caption. Estimates, chosen by eye; meant to
+// be tuned (the user wants to revisit the lesson camera).
+const LESSON_VIEW = { side: 17000, height: 13000, depth: 12500 };   // camera x and y; camera and look-at depth from the end board, mm
+export function lessonPose(goal) {
+  const end = goal === 'B' ? RINK_L : 0;
+  const dir = goal === 'B' ? -1 : 1;   // B is A turned half round the centre spot: goal B on the right too
+  const z = end + dir * LESSON_VIEW.depth;
+  return aim({ x: dir * LESSON_VIEW.side, y: LESSON_VIEW.height, z }, { x: 0, y: 0, z });
+}
+
+// Focus goalie (KATA marks, A-BACK-046): close in front of the defending
+// goalie, looking back at it and its goal line, so the target band, the
+// footprint and the facing rays read. Estimates, chosen by eye.
+const FOCUS_VIEW = { out: 6000, height: 4200, lean: 0.5 };   // mm in front of the goalie, mm up, share of its x
+export function trainFocusPose(goal, goalie) {
+  const dir = goal === 'B' ? -1 : 1;
+  const lineZ = goal === 'B' ? RINK_L - GOAL_LINE_FROM_BOARD : GOAL_LINE_FROM_BOARD;
+  const x = goalie.x * FOCUS_VIEW.lean;
+  return aim({ x, y: FOCUS_VIEW.height, z: goalie.z + dir * FOCUS_VIEW.out }, { x, y: 0, z: (lineZ + goalie.z) / 2 });
 }
 
 // The preset for a key event, or null. Reads `code` (Digit2 / Numpad2):

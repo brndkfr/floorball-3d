@@ -38,13 +38,18 @@ export const state = {
 
   // goalie-zones-state.js / goalie-zones-layer.js (A-BACK-048)
   goalieZonesShown: false,   // floor zones visible (Plan: stored choice; Train: on)
-  goalieZoneLabelsShown: true,   // standing name tags over the zones (stored, on by default)
+  goalieZoneLabelsShown: true,
+  shooterInsetShown: true,   // Train shooter's view inset (A-BACK-047), stored, on by default   // standing name tags over the zones (stored, on by default)
   goalieZonesLayer: null,    // THREE.Group, one mesh per zone
   goalieZone: null,          // { goal, zone } of the match ball, or null
 
   // kata-readout.js (A-BACK-046)
   kataReadout: null,         // { goal, zone, action, actionAuto, kata, judged, pct } in Train, else null
   kataAction: null,          // null = Auto (from the play) | 'shot' | 'pass' | 'dribble'
+  kataMarks: null,           // kata-marks-layer.js: the marks on the rink (kata-visuals.js), Train only
+  kataMarksLayer: null,      // THREE.Group of the marks
+  kataMarksShown: true,      // Marks toggle in the KATA card (stored, on by default)
+  kataFocus: false,          // Focus goalie camera on (Train)
 
   // lang-state.js: app language, 'en' | 'de' (A-BACK-052, switched from the rail)
   lang: 'en',

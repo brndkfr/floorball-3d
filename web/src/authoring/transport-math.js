@@ -53,12 +53,13 @@ export function parseSecondsInput(str) {
 // frame's value is never played (playback.js totalDuration()).
 export function durationEditable(index, count) { return index < count - 1; }
 
-export function frameMenuItems({ count, hasCamera }) {
+export function frameMenuItems({ count, hasCamera, hasNote = false }) {
   return [
     { action: 'dup', label: 'Duplicate' },
     { action: 'ins-before', label: 'Insert blank before' },
     { action: 'ins-after', label: 'Insert blank after' },
     { action: 'cam', label: hasCamera ? 'Clear camera keyframe' : 'Set camera to current view' },
+    { action: 'note', label: hasNote ? 'Edit note…' : 'Add note…' },   // A-BACK-035
     { action: 'del', label: 'Delete frame', danger: true, disabled: count <= 1 },
   ];
 }

@@ -212,8 +212,11 @@ lines. An item that needs more than ~10 lines gets its own file under
 - **[A-BACK-034] Floorball stick** [in-progress] Figures hold it in
   both hands in a ready stance, per-player Stick L / R (2026-10-16);
   open: pose tuning, hand wrap, team colours. Same spec file.
-- **[A-BACK-035] Frame notes** [open] A caption per frame, shown in
-  playback and export.
+- **[A-BACK-035] Frame notes** [in-progress] A caption per frame, shown in
+  playback and export. Built 2026-11-16: Add / Edit note in the frame
+  menu, a marker on the card, a subtitle over the stage (Plan, Train,
+  Present), in screenshots, burned into MP4 / WebM / PNG; notes may be
+  { en, de } for the lessons (A-BACK-049).
   [Spec](items/A-BACK-035-coaching-features.md), which also lists the
   unnumbered coaching ideas and missing drill-notation shapes.
 - **[A-BACK-036] Printable drill sheet** [blocked-by: A-BACK-035]
@@ -259,15 +262,21 @@ lines. An item that needs more than ~10 lines gets its own file under
 - **[A-BACK-046] KATA readout** [in-progress] Goalie selected: placement off
   the shooting line, depth, axis and coverage against targets per zone
   and expected action (shot / pass, read from the play's next ball
-  event); body (Körper) after A-BACK-042.
+  event); body (Körper) after A-BACK-042. On the rink (2026-11-16): target
+  band, ideal footprint, facing rays with the turn arc and the placement
+  offset, a Marks toggle and a Focus goalie camera
+  (<https://claude.ai/artifact/Dvebi8ZfC8rea9WpHEdm16>, third row).
   [Spec](items/A-BACK-046-051-goalie-module.md).
-- **[A-BACK-047] Shooter's-eye inset** [open] A small second view from
+- **[A-BACK-047] Shooter's-eye inset** [in-progress] Built 2026-11-16: Train top-right, same renderer (viewport + scissor), in screenshots, toggle; plus Auto position (idealGoaliePose, the start of A-BACK-051). A small second view from
   the ball while the goalie moves (the module's "Winkelband"). Same file.
 - **[A-BACK-048] Goalie zone layer** [in-progress] Awareness, attention,
   danger zone + slot, passing-first; borders estimated from the
   module's diagram. Same file.
-- **[A-BACK-049] Goalie lessons** [blocked-by: A-BACK-035] Five
-  animated lesson plays, shipped read-only in the Library. Same file.
+- **[A-BACK-049] Goalie lessons** [in-progress] Five
+  animated lesson plays, shipped read-only in the Library. Pilot built
+  2026-11-16 (decisions in the spec): lesson 2 "Through the zones" built in
+  code, the live goalie, the lesson camera, `openLesson()`; the Lessons shelf in the Library (2026-11-17). Open: the
+  other four lessons, pause on captions. Same file.
 - **[A-BACK-050] "Place the goalie" exercises** [blocked-by:
   A-BACK-046] Situations, scoring, ideal ghost, one hint. Same file.
 - **[A-BACK-051] Ideal goalie** [blocked-by: A-BACK-046, A-BACK-048]

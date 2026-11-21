@@ -343,3 +343,32 @@ test('acceptDoc drops a malformed frame camera and a bad duration', () => {
   assert.equal(doc.frames[0].camera, undefined);
   assert.equal(doc.frames[0].duration, undefined);
 });
+
+// A-BACK-035: frame notes survive load / import cleaned, junk is dropped.
+test('acceptDoc keeps clean frame notes and drops bad ones', async () => {
+  const raw = JSON.parse(JSON.stringify(emptyDoc()));
+  raw.frames.push({ ...JSON.parse(JSON.stringify(raw.frames[0])), id: 'f_b' });
+  raw.frames[0].note = '  Pass to the slot' + String.fromCharCode(10);
+  raw.frames[1].note = { en: 'Shot', de: 'Schuss', evil: '<script>' };
+  const d = acceptDoc(raw);
+  assert.equal(d.frames[0].note, 'Pass to the slot');
+  assert.deepEqual(d.frames[1].note, { en: 'Shot', de: 'Schuss' });
+  const bad = JSON.parse(JSON.stringify(emptyDoc()));
+  bad.frames[0].note = { x: 1 };
+  assert.equal('note' in acceptDoc(bad).frames[0], false);
+});
+
+// A-BACK-049: lesson docs ask for the live goalie at one end; anything
+// else is dropped so a shared link cannot switch on something odd.
+test('acceptDoc keeps autoGoalie A or B and drops other values', () => {
+  const raw = JSON.parse(JSON.stringify(emptyDoc()));
+  raw.autoGoalie = 'B';
+  assert.equal(acceptDoc(JSON.parse(JSON.stringify(raw))).autoGoalie, 'B');
+  for (const bad of ['C', 1, { goal: 'A' }, '']) {
+    const r = JSON.parse(JSON.stringify(raw));
+    r.autoGoalie = bad;
+    assert.equal('autoGoalie' in acceptDoc(r), false, JSON.stringify(bad));
+  }
+  const none = acceptDoc(JSON.parse(JSON.stringify(emptyDoc())));
+  assert.equal('autoGoalie' in none, false);
+});

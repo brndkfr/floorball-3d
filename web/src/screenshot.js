@@ -11,11 +11,13 @@
 import { renderer, scene } from './scene.js';
 import { state } from './state.js';
 import { stageCrop, applyTextTransform, shotFileName } from './screenshot-math.js';
+import { renderFrame } from './shooter-inset.js';
 
 // Labels over the rink that belong in the picture.
-const OVERLAYS = ['#zoneLabels .zl-tag', '#trainHint', '#goalieLabel'];
-// Bars at the bottom of the stage (Plan recorder, Present bar).
-const BOTTOM_BARS = ['#timeline', '#dock', '#presentBar'];
+const OVERLAYS = ['#zoneLabels .zl-tag', '#trainHint', '#goalieLabel', '#shooterInset figcaption', '#frameCaption'];
+// Bars at the bottom of the stage (Plan recorder, Present bar). The dock
+// floats over the stage like the tool palette, so it is not a bar.
+const BOTTOM_BARS = ['#timeline', '#presentBar'];
 
 const shown = (el) => !!el && (el.checkVisibility
   ? el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })
@@ -120,7 +122,7 @@ export async function captureStage({ clean = false } = {}) {
 
   drawCanvas(ctx, $('#photo-canvas'));
   if (shown(gl)) {
-    renderer.render(scene, state.activeCamera);   // fresh frame, copied in the same task
+    renderFrame();   // fresh frame (with the Train inset), copied in the same task
     drawCanvas(ctx, gl);
   }
   if (!clean) {

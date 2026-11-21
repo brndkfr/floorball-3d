@@ -129,3 +129,36 @@ test('trainPose: high in the rink in front of the defending goal, looking down a
   assert.ok(near(b.z, RINK_L - a.z) && near(b.y, a.y) && near(b.pitch, a.pitch));
   assert.ok(near(b.yaw, 0), 'faces +z, toward goal B');
 });
+
+// Focus goalie (KATA marks): close in front of the defending goalie, looking
+// back at it and the goal, so the target band and rays read.
+test('trainFocusPose: a few metres in front of the goalie, low, looking at goalie and goal; mirrored for B', async () => {
+  const { trainFocusPose } = await import('../web/src/camera-presets.js');
+  const gA = { x: 600, z: GOAL_LINE_FROM_BOARD + 1000 };
+  const a = trainFocusPose('A', gA);
+  assert.ok(a.z > gA.z + 3000 && a.z < gA.z + 9000, `in front of the goalie (${a.z})`);
+  assert.ok(a.y > 2500 && a.y < 6500, `low-ish (${a.y})`);
+  assert.ok(near(Math.abs(a.yaw), Math.PI, 0.25), `faces -z (${a.yaw})`);
+  assert.ok(a.pitch < -0.35 && a.pitch > -1.0, `looks down (${a.pitch})`);
+  assert.ok(a.x > 0 && a.x <= gA.x, 'leans toward the goalie side');
+  const b = trainFocusPose('B', { x: 600, z: RINK_L - gA.z });
+  assert.ok(near(b.z, RINK_L - a.z) && near(b.y, a.y) && near(b.pitch, a.pitch) && near(b.x, a.x));
+  assert.ok(near(Math.abs(b.yaw), Math.abs(Math.PI - Math.abs(a.yaw)), 1e-9));
+});
+
+// Lessons (A-BACK-049): the whole attack must stay in view, from the
+// attention zone (26.6 m out) to behind the goal, along the wide stage, so
+// the camera stands high over the side board of the defending half and
+// looks straight across it. Goal B is goal A turned half round the centre.
+test('lessonPose: high over the side board, looking across the defending half; turned half round for B', async () => {
+  const { lessonPose } = await import('../web/src/camera-presets.js');
+  const a = lessonPose('A');
+  assert.ok(a.x > HALF_W, `outside the side board (${a.x})`);
+  assert.ok(a.z > GOAL_LINE_FROM_BOARD + 5000 && a.z < RINK_L / 2, `level with the defending half of A (${a.z})`);
+  assert.ok(a.y > 8000, `high up (${a.y})`);
+  assert.ok(a.pitch < -0.4 && a.pitch > -1.0, `looks down (${a.pitch})`);
+  assert.ok(near(a.yaw, -Math.PI / 2), `faces -x, across the rink (${a.yaw})`);
+  const b = lessonPose('B');
+  assert.ok(near(b.x, -a.x) && near(b.z, RINK_L - a.z) && near(b.y, a.y) && near(b.pitch, a.pitch));
+  assert.ok(near(b.yaw, Math.PI / 2), 'faces +x');
+});
