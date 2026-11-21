@@ -13,7 +13,7 @@
 // by eye for a readable pace, not taken from the module.
 
 import { emptyDoc, emptyMeta, newId } from './authoring/doc.js';
-import { GOAL_Z, BALL_CARRY_OFFSET, makeShot } from './authoring/ball-pose.js';
+import { GOAL_Z, BALL_CARRY_OFFSET, makeShot, savedShot, passPlan } from './authoring/ball-pose.js';
 import { goalieZoneOf } from './goalie-zones.js';
 import { kataTargets, expectedAction, shotAngleDeg } from './kata.js';
 import { idealGoaliePose } from './shooter-view.js';
@@ -201,7 +201,7 @@ export function buildLesson(key, lang = 'en') {
     const { players: at, carrier, shot } = frameCast(spec);
     let ball;
     if (shot) {
-      const s = makeShot(goal, { aimX: shot.aimX ?? 0 });
+      const s = makeShot(goal, { aimX: shot.aimX ?? 0 });   // placeholder in the net, replaced by the saved shot below
       ball = { x: s.rest.x, z: s.rest.z, shot: s.shot };
     } else {
       ball = { x: at[carrier].x + BALL_CARRY_OFFSET.x, z: at[carrier].z + BALL_CARRY_OFFSET.z, carrier: ids[carrier] };
@@ -231,10 +231,23 @@ export function buildLesson(key, lang = 'en') {
   // (awareness) keep the previous frame's value.
   let goalie = { x: goalCenter.x, z: goalCenter.z + (goal === 'B' ? -250 : 250), yaw: goal === 'B' ? Math.PI : 0 };
   let startMs = 0;
+  const rulePose = (ball, ms) => idealGoaliePose({
+    ball, goal, goalCenter, goalie,
+    targets: kataTargets(goalieZoneOf(ball, goal), expectedAction(doc.frames, ms), shotAngleDeg(ball, goal, goalCenter)),
+  });
   for (const frame of doc.frames) {
+    const idx = doc.frames.indexOf(frame);
+    if (lesson.frames[idx].shot) {
+      // A lesson shot ends in a save: the ball stops just in front of the
+      // goalie, on the shot path. The goalie stands on that line whatever
+      // the exact release point, so one pass from the release point finds it.
+      const prev = doc.frames[idx - 1];
+      const { from } = passPlan(prev.scheme, frame.scheme, prev.duration);
+      const s = savedShot(goal, { aimX: lesson.frames[idx].shot.aimX ?? 0 }, from, rulePose(from, startMs));
+      frame.scheme.balls.main = { x: s.rest.x, z: s.rest.z, shot: s.shot };
+    }
     const ball = frame.scheme.balls.main;
-    const targets = kataTargets(goalieZoneOf(ball, goal), expectedAction(doc.frames, startMs), shotAngleDeg(ball, goal, goalCenter));
-    const ideal = idealGoaliePose({ ball, goal, goalCenter, goalie, targets });
+    const ideal = rulePose(ball, startMs);
     const applied = lesson.frames[doc.frames.indexOf(frame)].goalie;
     if (applied) {
       goalie = partialPose({ ball, goal, goalCenter, ideal, applied });

@@ -125,6 +125,12 @@ test('cast lessons: a shot frame is a shot at the lesson goal by the carrier bef
       const ball = ballOf(frames[i]);
       assert.equal(ball.carrier, undefined, `${key} frame ${i}: loose after the shot`);
       assert.equal(ball.shot.goal, goal);
+      // a lesson shot ends in a save: the ball stops just in front of the goalie, on the shot path
+      assert.equal(ball.shot.saved, true, `${key} frame ${i}: saved`);
+      const g = frames[i].scheme.goalies[goal];
+      const gap = Math.hypot(ball.x - g.x, ball.z - g.z);
+      assert.ok(gap > 150 && gap < 700, `${key} frame ${i}: ball ${gap.toFixed(0)} mm from the goalie`);
+      assert.ok(Math.abs(ball.z - GOAL_Z[goal]) > Math.abs(g.z - GOAL_Z[goal]), `${key} frame ${i}: ball in front of the goalie`);
       const plan = passPlan(frames[i - 1].scheme, frames[i].scheme, frames[i - 1].duration);
       assert.equal(plan?.kind, 'shot', `${key} frame ${i - 1} -> ${i}`);
     });

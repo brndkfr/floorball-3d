@@ -154,7 +154,7 @@ the J+S / swiss unihockey module "Goalies - Positionierung". Draft:
 5. **[A-BACK-047] Shooter's-eye inset** The "angle tape", live.
 6. **[A-BACK-035] Frame notes** (moved up from "Later": the lessons
    need captions).
-7. **[A-BACK-049] Goalie lessons** Five animated plays in Train.
+7. **[A-BACK-049] Goalie lessons** Four animated plays in Train (five planned, lesson 4 merged into 3).
 8. **[A-BACK-050] "Place the goalie" exercises**
 9. **[A-BACK-051] Ideal goalie** Ghost from the zone rules; merges
    into A-BACK-043 and needs A-BACK-042 for the body.
@@ -280,7 +280,13 @@ lines. An item that needs more than ~10 lines gets its own file under
   2026-11-16 (decisions in the spec): lesson 2 "Through the zones" built in
   code, the live goalie, the lesson camera, `openLesson()`; the Lessons shelf in the Library (2026-11-17); pause on captions
   (2026-11-21); lessons 1, 3, 4 and 5 (2026-11-21, captions for review).
-  Open: caption review, holds in the export, a save after a shot. Same file.
+  2026-11-22 decisions: lesson 4 merged into lesson 3 (same run, same
+  goalie answers; four lessons ship), the centred-block chip reads
+  "Centred block" (not "Squared up"), lesson 1 builds the KATA up one
+  dimension at a time, lesson shots end in a save (the ball stops at the
+  goalie), and the German captions keep the module's English zone names
+  (Attention-Zone etc.) on purpose. Open: caption review, holds in the
+  export. Same file.
 - **[A-BACK-050] "Place the goalie" exercises** [blocked-by:
   A-BACK-046] Situations, scoring, ideal ghost, one hint. Same file.
 - **[A-BACK-051] Ideal goalie** [blocked-by: A-BACK-046, A-BACK-048]

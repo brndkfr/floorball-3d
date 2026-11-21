@@ -176,3 +176,20 @@ test('a long lesson caption stays clear of the KATA card at 1440x900', async ({ 
   expect(c.x).toBeGreaterThanOrEqual(0);
   expect(c.x + c.width).toBeLessThanOrEqual(1440);
 });
+
+// A lesson shot ends in a save: at the shot frame the ball rests just in
+// front of the goalie, not in the net behind the goal line.
+test('lesson 3: at the shot frame the ball rests in front of the goalie, not in the goal', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'passOrShot');
+  const at = await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    (await import('/src/authoring/frames.js')).selectFrame(3);
+    const { GOAL_Z } = await import('/src/authoring/ball-pose.js');
+    const b = state.ballGroup.position, g = state.goalies.A.position;
+    return { ball: { x: b.x, z: b.z }, goalie: { x: g.x, z: g.z }, line: GOAL_Z.A, saved: state.doc.frames[3].scheme.balls.main.shot.saved };
+  });
+  expect(at.saved).toBe(true);
+  expect(at.ball.z).toBeGreaterThan(at.line + 500);
+  expect(Math.hypot(at.ball.x - at.goalie.x, at.ball.z - at.goalie.z)).toBeLessThan(700);
+});

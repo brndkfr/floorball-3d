@@ -50,6 +50,24 @@ export function makeShot(goal, aim) {
   return { shot: { goal, aimX, aimY }, rest: { x: aimX, z: restZ(goal) } };
 }
 
+// A saved shot (A-BACK-049, lessons): the ball stops in front of the goalie
+// instead of going into the net. `shot.saved` is an optional flag (old docs
+// and shots made in Plan never have it) and the frame's ball x / z is the
+// stop point, SAVE_FRONT_MM short of the goalie on the line release point ->
+// aim point. The aim point and the arrow stay as they are.
+export const SAVE_FRONT_MM = 400;   // goalie centre to ball centre when it stops; ESTIMATE (body half-depth plus the ball), not a sourced figure
+const SAVE_DROP_MS = 200;           // estimate: the stopped ball drops to the floor
+
+export function savedShot(goal, aim, from, goalie, frontMm = SAVE_FRONT_MM) {
+  const { aimX, aimY } = clampAim(aim);
+  const to = { x: aimX, z: GOAL_Z[goal] };
+  const len = Math.hypot(to.x - from.x, to.z - from.z) || 1;
+  const ux = (to.x - from.x) / len, uz = (to.z - from.z) / len;
+  const along = (goalie.x - from.x) * ux + (goalie.z - from.z) * uz;   // the goalie's spot on the path
+  const d = Math.min(Math.max(along - frontMm, 0), len);
+  return { shot: { goal, aimX, aimY, saved: true }, rest: { x: from.x + ux * d, z: from.z + uz * d } };
+}
+
 // Aim pad as seen by the shooter: u = 0..1 left to right, v = 0..1 bottom to top.
 // Facing goal B means facing +z, so the shooter's left is +x; facing A it is -x.
 const leftSign = (goal) => (goal === 'B' ? 1 : -1);
@@ -176,6 +194,12 @@ export function passPlan(fa, fb, durationMs) {
   const base = { passerId, receiverId, releaseT, arriveT, late, needMs, speedMps, from, to, releaseMark, blockedBy };
   if (!shot) return { kind: 'pass', ...base };
   const rest = { x: bb.x, z: bb.z };
+  if (shot.saved === true) {
+    const dist = Math.hypot(to.x - from.x, to.z - from.z);
+    const stopS = dist > 1e-6 ? clamp(Math.hypot(rest.x - from.x, rest.z - from.z) / dist, 0, 1) : 0;
+    const stopT = releaseT + (arriveT - releaseT) * stopS;
+    return { kind: 'shot', goal: shot.goal, aimY: shot.aimY, rest, saved: true, stopS, stopT, restT: Math.min(1, stopT + SAVE_DROP_MS / dur), ...base };
+  }
   const restT = Math.min(1, arriveT + Math.hypot(rest.x - to.x, rest.z - to.z) / speedMps / dur);
   return { kind: 'shot', goal: shot.goal, aimY: shot.aimY, rest, restT, ...base };
 }
@@ -195,6 +219,18 @@ export function ballPoseAt(fa, fb, t, durationMs) {
   if (t <= plan.releaseT) return onFloor(plan.passerId ? withOffset(chipPosAt(fa, fbb, plan.passerId, t)) : plan.from);
   if (plan.kind === 'shot') {
     const top = Math.max(0, plan.aimY - BALL_RADIUS);
+    if (plan.saved) {
+      // in flight up to the goalie, then dropping to the floor right there
+      if (t < plan.stopT) {
+        const s = (t - plan.releaseT) / (plan.arriveT - plan.releaseT);
+        return { ...lerpPt(plan.from, plan.to, s), y: shotHeightAt(plan, s) - BALL_RADIUS };
+      }
+      if (t < plan.restT) {
+        const h = shotHeightAt(plan, plan.stopS) - BALL_RADIUS;
+        return { x: plan.rest.x, z: plan.rest.z, y: h * (1 - (t - plan.stopT) / (plan.restT - plan.stopT)) };
+      }
+      return onFloor(plan.rest);
+    }
     if (t < plan.arriveT) {
       const s = (t - plan.releaseT) / (plan.arriveT - plan.releaseT);
       return { ...lerpPt(plan.from, plan.to, s), y: shotHeightAt(plan, s) - BALL_RADIUS };

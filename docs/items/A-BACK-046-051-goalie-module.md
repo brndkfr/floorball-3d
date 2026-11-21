@@ -237,17 +237,45 @@ camera to be revisited, captions as drafted for review):
   chooses, lessons hold and the coach's own plays do not; the choice is
   then remembered per browser for every play. Not in the video export yet (`seekTo` runs straight
   through), so an exported lesson does not pause.
-- All five lessons (2026-11-21, captions drafted for the user's review):
+- All lessons (2026-11-21, captions drafted for the user's review; lesson
+  4 `options` was merged into 3 on 2026-11-22, see below):
   1 `line` (ball still while the captions take placement, depth, axis;
-  then a slow move), 3 `passOrShot` and 4 `options` (a cast of two
-  attackers and a defender, each played twice from the same start),
+  then a slow move), 3 `passOrShot` (a cast of two
+  attackers and a defender, played twice from the same start),
   5 `behind` (round the back of the goal, post to post, out in front).
   The builder takes a `cast` and frames with `players`, `carrier` or
   `shot` (aimed at the middle of the goal); lessons 1, 2, 5 keep the
   one-attacker `ball` form. Live goalie ok 90-100% of the time per
   lesson, every keyframe ok (`goalie-track.test.js`, bar 85%).
-Open: caption review by the user; holds in the export; no save after a
-shot (the ball goes through the goalie into the net); whether "Open as
+- Decisions after the first review (2026-11-22, with the user):
+  - Lesson 4 "Most dangerous or most likely" is merged into lesson 3: it
+    was the same 2-on-1 played twice with the same goalie answers. Its
+    idea (most likely vs most dangerous; dangerous option open: stay
+    back, ready to push across; closed: play the shot) closes lesson 3's
+    last caption. Four lessons ship; lesson 5 keeps its module number.
+  - The verdict chip for a centred block now reads "Centred block", not
+    "Squared up": the captions use "square up" for the body facing the
+    ball, and the two clashed.
+  - Lesson 1 shows the KATA build-up: a frame spec may carry
+    `goalie: ['placement', ...]` (the dimensions applied so far). The
+    builder stands the goalie on the line but deep and parallel (frame
+    1), then forward (frame 2), then square (frame 3), so the KATA rows
+    turn green one at a time. The frame gets the optional `goalieFixed`
+    flag (kept by `acceptDoc` only when true) and `goalie-track.js` goes
+    to that pose instead of following the rules; docs without the flag
+    behave as before.
+  - Lesson shots end in a save. `shot.saved` is an optional flag; with it
+    the frame's ball x / z is the stop point, 0.4 m (estimate,
+    `SAVE_FRONT_MM`) short of the goalie on the shot path, and the ball
+    drops to the floor there. The aim point and arrow are unchanged and
+    shots made in Plan have no flag, so they behave as before. The
+    verdict still comes from the shooting line (the app has no goal
+    count), so a stopped ball in front of a centred goalie reads as a
+    centred block.
+  - The German captions keep the swiss unihockey module's English zone
+    names (Attention-Zone, Danger-Zone, Passing-First-Zone, Slot) on
+    purpose: they are the terms coaches use in the module.
+Open: caption review by the user; holds in the export; whether "Open as
 play" should keep `autoGoalie` in the copied project.
 
 ### A-BACK-050 - "Place the goalie" exercises `[small]` after 046
