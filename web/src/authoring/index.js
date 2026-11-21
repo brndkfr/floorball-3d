@@ -32,6 +32,7 @@ import '../ui/lang-menu.js';  // side-effect: rail globe button, app-wide Englis
 import './train-mode.js';  // side-effect: Train mode in the rail, own practice rink (A-BACK-054)
 import '../ui/screenshot-menu.js';  // side-effect: top bar Screenshot button + P, every mode (S-BACK-032)
 import '../commands/app-commands.js';  // side-effect: the app's commands on the shared registry (S-BACK-033)
+import '../ui/ai-connect.js';  // side-effect: top bar Connect AI button; loads the MCP bridge on demand (S-BACK-034)
 import '../ui/camera-menu.js';  // side-effect: top bar Views menu + Shift+1..6 (A-BACK-040 step 4)
 import '../ui/panels.js';  // side-effect: right panel strip / drawer toggle (A-BACK-044)
 import '../ui/present.js';  // side-effect: top bar Present + #presentBar (A-BACK-044 step 4)

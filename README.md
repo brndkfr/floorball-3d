@@ -131,6 +131,37 @@ Mode B's OpenCV.js and the YOLO ONNX models (`web/lib/`) are vendored
 locally and lazy-loaded only when Photo Overlay is opened - nothing
 extra to install.
 
+## Driving the app from Claude (MCP)
+
+The app's commands (`web/src/commands/`) are offered as MCP tools, so
+Claude Code or Claude Desktop can open a lesson, place the goalie, read
+KATA and take a screenshot in an open tab (S-BACK-034). A small local
+relay (`scripts/mcp-relay/main.mjs`, Node, no dependencies) talks MCP over
+stdio to Claude and WebSocket to the tab.
+
+1. Register the relay once (any folder; use the absolute path):
+   ```
+   claude mcp add floorball -- node C:/path/to/floorball-3d/scripts/mcp-relay/main.mjs
+   ```
+   Claude Desktop: the same command and args under `mcpServers` in its
+   config. Another port: append `--port 8766`.
+2. Open the app (local dev server or https://brndkfr.github.io/floorball-3d/)
+   in Chrome or Edge and keep the tab visible.
+3. Click **AI** in the top bar and enter the pairing code. Claude knows
+   it from the relay (ask "what is the floorball pairing code?"); the
+   relay also prints it to its stderr log. Codes look like `ABCD-EFGH`,
+   or `ABCD-EFGH@8766` for another port. The button turns blue; the six
+   tools (`lesson_open`, `goalie_place`, `playback_seek`, `playback_stop`,
+   `kata_read`, `screenshot_take`) appear in Claude.
+
+Click **AI** again, reload or close the tab to disconnect. Safety: the
+relay listens on 127.0.0.1 only, accepts only the app's own origins
+(localhost and brndkfr.github.io) with a loopback Host, and needs the
+pairing code, which is new every time the relay starts (ten wrong codes
+lock it until a restart). The site itself never opens a connection until
+you click **AI**. Chrome / Edge may ask once whether the site may reach
+devices on your local network; allow it.
+
 ## Testing
 
 ```
@@ -192,6 +223,8 @@ scripts/
   build.mjs                        stages web/ -> dist/ for deploy (minify,
                                     SHA cache-bust) - never touches web/ itself
   check-size.mjs                   deploy size-budget gate
+  mcp-relay/                       local MCP server for Claude: stdio <-> the
+                                    app tab's WebSocket (dev tool, not deployed)
 test/                              node --test suite - see Testing above
 web/
   index.html                       page shell + HUD + dock + tool palette + timeline
