@@ -80,6 +80,21 @@ test('line lesson: lesson 1, ball still for the three dimensions, then a slow mo
   for (const z of zonesOf('line')) assert.ok(z === 'danger' || z === 'slot', z);
 });
 
+// 5. Behind the goal: the ball goes round behind goal A, post to post, then
+// comes out in front on the other side.
+test('behind lesson: lesson 5, passing-first round the back of goal A, then out into the danger zone', () => {
+  assert.equal(LESSONS.behind.n, 5);
+  assert.equal(LESSONS.behind.goal, 'A');
+  const zones = zonesOf('behind');
+  assert.equal(zones.at(-1), 'danger');
+  assert.ok(zones.slice(0, -1).every((z) => z === 'passing'), zones.join());
+  const balls = buildLesson('behind').frames.map(ballOf);
+  assert.ok(balls.some((b) => b.z < GOAL_Z.A && b.x > 0) && balls.some((b) => b.z < GOAL_Z.A && b.x < 0), 'behind the goal on both sides');
+  // the goalie changes posts when the ball crosses behind the goal
+  const goalies = buildLesson('behind').frames.map((f) => f.scheme.goalies.A.x);
+  assert.ok(goalies[0] > 0 && goalies.at(-2) < 0, goalies.join());
+});
+
 test('lessons: the goalie at every keyframe is judged ok on placement, depth and axis', () => {
   for (const key of LESSON_KEYS) {
     const doc = buildLesson(key);

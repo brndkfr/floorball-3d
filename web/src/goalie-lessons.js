@@ -71,6 +71,31 @@ export const LESSONS = Object.freeze({
         de: 'Hinter dem Tor: Linie spielen, Füsse im Tor, Blick zum Slot für den Pass.' } },
     ],
   },
+
+  // 5. Behind the goal: the carrier goes round behind goal A from the right
+  // to the left and comes out in front again on the left.
+  behind: {
+    n: 5,
+    goal: 'A',
+    title: { en: 'Behind the goal', de: 'Hinter dem Tor' },
+    frames: [
+      { ball: { x: 5000, z: 3800 }, ms: 2000, note: {
+        en: 'The ball is level with the goal line: back onto the line at the near post, knees parallel to the goal line.',
+        de: 'Der Ball ist auf Höhe der Torlinie: zurück auf die Linie an den nahen Pfosten, Knie parallel zur Torlinie.' } },
+      { ball: { x: 2500, z: 1800 }, ms: 2500, note: {
+        en: 'Behind the goal: play the line. Feet in the goal, and glance over the shoulder to the slot for the pass.',
+        de: 'Hinter dem Tor: Linie spielen. Füsse im Tor, und über die Schulter zum Slot schauen, ob ein Pass kommt.' } },
+      { ball: { x: -2500, z: 1800 }, ms: 2000, note: {
+        en: 'The ball has crossed: slide along the line to the other post, never through the middle of the goal.',
+        de: 'Der Ball hat die Seite gewechselt: entlang der Linie an den anderen Pfosten, nie durch die Tormitte.' } },
+      { ball: { x: -5000, z: 3800 }, ms: 2000, note: {
+        en: 'Beside the goal on the other side: still at the post, still parallel. Keep checking the slot.',
+        de: 'Neben dem Tor auf der anderen Seite: weiter am Pfosten, weiter parallel. Den Slot im Blick behalten.' } },
+      { ball: { x: -5500, z: 7000 }, ms: 3000, note: {
+        en: 'The ball comes out in front: leave the line, step forward onto the shooting line and square up.',
+        de: 'Der Ball kommt vors Tor: weg von der Linie, nach vorne auf die Schusslinie und frontal stellen.' } },
+    ],
+  },
 });
 
 export const LESSON_KEYS = Object.freeze(Object.keys(LESSONS));
