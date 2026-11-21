@@ -13,45 +13,71 @@ const { GOAL_Z, BALL_CARRY_OFFSET } = await import('../web/src/authoring/ball-po
 const { HALF_W, RINK_L } = await import('../web/src/constants.js');
 
 const startMs = (frames, i) => frames.slice(0, i).reduce((s, f) => s + f.duration, 0);
+const zonesOf = (key) => buildLesson(key).frames.map((f) => goalieZoneOf(f.scheme.balls.main, LESSONS[key].goal));
+const ballOf = (f) => f.scheme.balls.main;
 
-test('zones lesson: listed, and survives a JSON round-trip through acceptDoc with its notes', () => {
-  assert.ok(LESSON_KEYS.includes('zones'));
-  const doc = acceptDoc(JSON.parse(JSON.stringify(buildLesson('zones'))));
-  assert.ok(doc);
-  assert.equal(doc.frames.length, LESSONS.zones.frames.length);
-  assert.equal(doc.currentFrame, 0);
-  for (const f of doc.frames) {
-    assert.ok(f.note?.en && f.note?.de, 'every frame has an en and a de caption');
+test('lessons: each survives a JSON round-trip through acceptDoc with an en and a de caption on every frame', () => {
+  for (const key of LESSON_KEYS) {
+    const doc = acceptDoc(JSON.parse(JSON.stringify(buildLesson(key))));
+    assert.ok(doc, key);
+    assert.equal(doc.frames.length, LESSONS[key].frames.length, key);
+    assert.equal(doc.currentFrame, 0);
+    doc.frames.forEach((f, i) => assert.ok(f.note?.en && f.note?.de, `${key} frame ${i}: en and de caption`));
   }
 });
 
 test('zones lesson: the ball goes attention -> danger -> danger -> passing-first -> passing-first at goal A', () => {
-  const doc = buildLesson('zones');
-  const zones = doc.frames.map((f) => goalieZoneOf(f.scheme.balls.main, 'A'));
-  assert.deepEqual(zones, ['attention', 'danger', 'danger', 'passing', 'passing']);
+  assert.deepEqual(zonesOf('zones'), ['attention', 'danger', 'danger', 'passing', 'passing']);
 });
 
-test('zones lesson: one attacker carries the ball in every frame, the ball at the carrier\'s stick', () => {
-  const doc = buildLesson('zones');
-  for (const f of doc.frames) {
-    const players = Object.values(f.scheme.players);
-    assert.equal(players.length, 1);
-    const p = players[0];
-    const ball = f.scheme.balls.main;
-    assert.equal(ball.carrier, p.id);
-    assert.equal(ball.x, p.x + BALL_CARRY_OFFSET.x);
-    assert.equal(ball.z, p.z + BALL_CARRY_OFFSET.z);
-    assert.ok(Math.abs(p.x) < HALF_W - 500 && p.z > 500 && p.z < RINK_L - 500, `inside the boards: ${p.x}, ${p.z}`);
+test('zones lesson: one attacker carries the ball in every frame', () => {
+  for (const f of buildLesson('zones').frames) assert.equal(Object.keys(f.scheme.players).length, 1);
+});
+
+test("lessons: a carried ball sits at its carrier's stick; every player is inside the boards", () => {
+  for (const key of LESSON_KEYS) {
+    buildLesson(key).frames.forEach((f, i) => {
+      const ball = ballOf(f);
+      if (ball.carrier) {
+        const p = f.scheme.players[ball.carrier];
+        assert.ok(p, `${key} frame ${i}: carrier on the rink`);
+        assert.equal(ball.x, p.x + BALL_CARRY_OFFSET.x);
+        assert.equal(ball.z, p.z + BALL_CARRY_OFFSET.z);
+      }
+      for (const p of Object.values(f.scheme.players)) {
+        assert.ok(Math.abs(p.x) < HALF_W - 500 && p.z > 500 && p.z < RINK_L - 500, `${key} frame ${i}: inside the boards: ${p.x}, ${p.z}`);
+      }
+    });
   }
 });
 
-test('zones lesson: the carrier moves at a believable speed (at most 7 m/s, an estimate)', () => {
-  const doc = buildLesson('zones');
-  for (let i = 0; i + 1 < doc.frames.length; i++) {
-    const a = doc.frames[i].scheme.balls.main, b = doc.frames[i + 1].scheme.balls.main;
-    const mps = Math.hypot(b.x - a.x, b.z - a.z) / doc.frames[i].duration;   // mm / ms = m/s
-    assert.ok(mps <= 7, `frame ${i}: ${mps.toFixed(1)} m/s`);
+test('lessons: every player moves at a believable speed (at most 7 m/s, an estimate)', () => {
+  for (const key of LESSON_KEYS) {
+    const frames = buildLesson(key).frames;
+    for (let i = 0; i + 1 < frames.length; i++) {
+      for (const [id, a] of Object.entries(frames[i].scheme.players)) {
+        const b = frames[i + 1].scheme.players[id];
+        if (!b) continue;
+        const mps = Math.hypot(b.x - a.x, b.z - a.z) / frames[i].duration;   // mm / ms = m/s
+        assert.ok(mps <= 7, `${key} frame ${i}: ${mps.toFixed(1)} m/s`);
+      }
+    }
   }
+});
+
+// 1. Shooting line and area: the ball stands still while the captions take
+// placement, depth and axis one at a time, then moves slowly.
+test('line lesson: lesson 1, ball still for the three dimensions, then a slow move, all in front of goal A', () => {
+  assert.equal(LESSONS.line.n, 1);
+  assert.equal(LESSONS.line.goal, 'A');
+  const frames = buildLesson('line').frames;
+  assert.ok(frames.length >= 5);
+  for (let i = 1; i < 4; i++) assert.deepEqual([ballOf(frames[i]).x, ballOf(frames[i]).z], [ballOf(frames[0]).x, ballOf(frames[0]).z], `frame ${i} still`);
+  for (let i = 3; i + 1 < frames.length; i++) {
+    const a = ballOf(frames[i]), b = ballOf(frames[i + 1]);
+    assert.ok(Math.hypot(b.x - a.x, b.z - a.z) / frames[i].duration <= 3, `frame ${i}: slow`);
+  }
+  for (const z of zonesOf('line')) assert.ok(z === 'danger' || z === 'slot', z);
 });
 
 test('lessons: the goalie at every keyframe is judged ok on placement, depth and axis', () => {
@@ -102,6 +128,7 @@ test('lessonShelf: every shipped lesson once, ordered by its module number, with
   assert.deepEqual(shelf.map((r) => r.key).sort(), [...LESSON_KEYS].sort());
   const ns = shelf.map((r) => r.n);
   assert.deepEqual(ns, [...ns].sort((a, b) => a - b));
+  assert.equal(new Set(ns).size, ns.length, 'module numbers are unique');
   const zones = shelf.find((r) => r.key === 'zones');
   assert.deepEqual(zones, {
     key: 'zones', n: 2, title: 'Through the zones',

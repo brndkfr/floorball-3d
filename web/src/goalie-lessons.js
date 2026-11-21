@@ -21,6 +21,32 @@ import { idealGoaliePose } from './shooter-view.js';
 const ATTACKER = { team: 2, number: '9' };
 
 export const LESSONS = Object.freeze({
+  // 1. Shooting line and area: the ball stands still in the danger zone
+  // while the captions take placement, depth and axis one at a time, then
+  // it moves slowly across and all three follow it together.
+  line: {
+    n: 1,
+    goal: 'A',
+    title: { en: 'Shooting line and area', de: 'Schusslinie und Schussfläche' },
+    frames: [
+      { ball: { x: 4500, z: 10000 }, ms: 2500, note: {
+        en: 'Shooting line: from the ball to the middle of the goal. First, placement: stand on that line.',
+        de: 'Schusslinie: vom Ball zur Tormitte. Erstens, Ausrichtung: auf dieser Linie stehen.' } },
+      { ball: { x: 4500, z: 10000 }, ms: 2500, note: {
+        en: 'Second, depth: step forward along the line. The closer you stand to the ball, the smaller the goal looks to the shooter.',
+        de: 'Zweitens, Tiefe: auf der Linie nach vorne. Je näher du am Ball stehst, desto kleiner wirkt das Tor für den Schützen.' } },
+      { ball: { x: 4500, z: 10000 }, ms: 2500, note: {
+        en: 'Third, axis: knees and chest square to the ball, so the whole body is in the path of the shot.',
+        de: 'Drittens, Achse: Knie und Brust frontal zum Ball, damit der ganze Körper im Weg des Schusses steht.' } },
+      { ball: { x: 4500, z: 10000 }, ms: 3000, note: {
+        en: 'Now the ball moves. Placement, depth and axis follow it together.',
+        de: 'Jetzt bewegt sich der Ball. Ausrichtung, Tiefe und Achse gehen gemeinsam mit.' } },
+      { ball: { x: -2500, z: 9000 }, ms: 3000, note: {
+        en: 'Shooting area: the triangle from the ball to both posts. On the line, forward and square, the body fills as much of it as it can.',
+        de: 'Schussfläche: das Dreieck vom Ball zu beiden Pfosten. Auf der Linie, vorne und frontal, füllt der Körper so viel davon wie möglich.' } },
+    ],
+  },
+
   // 2. Through the zones: one attacker carries the ball from the attention
   // zone down the right side into the danger zone and behind the goal.
   zones: {
