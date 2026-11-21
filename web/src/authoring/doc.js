@@ -178,6 +178,7 @@ function sanitizeFrame(frame) {
     const note = sanitizeNote(frame.note);
     if (note === undefined) delete frame.note; else frame.note = note;
   }
+  if ('goalieFixed' in frame && frame.goalieFixed !== true) delete frame.goalieFixed;   // A-BACK-049: lesson goalie pose is part of the lesson
   if (!isObj(frame.scheme)) frame.scheme = emptyScheme();
   migrateGoalieScheme(frame.scheme);
   return sanitizeScheme(frame.scheme);

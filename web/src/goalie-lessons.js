@@ -25,6 +25,10 @@ const SOLO_CAST = Object.freeze({ a: ATTACKER });
 // ball: lessons 1, 2, 5) or, for a lesson with a `cast` (lesson 3),
 // { players: { key: { x, z } }, carrier: key, ms, note } or, for a shot by
 // the frame before's carrier, { players, shot: { aimX }, ms, note }.
+// Any frame may add `goalie: ['placement', 'depth', 'axis']` (a subset): only
+// those KATA dimensions are applied, the rest stay at the default stance
+// (deep, knees parallel, centred), and the frame is marked `goalieFixed` so
+// the live goalie follows that pose instead of the rules.
 function frameCast(spec) {
   if (spec.ball) return { players: { a: { x: spec.ball.x - BALL_CARRY_OFFSET.x, z: spec.ball.z - BALL_CARRY_OFFSET.z } }, carrier: 'a' };
   return { players: spec.players, carrier: spec.shot ? null : spec.carrier, shot: spec.shot };
@@ -33,7 +37,10 @@ function frameCast(spec) {
 export const LESSONS = Object.freeze({
   // 1. Shooting line and area: the ball stands still in the danger zone
   // while the captions take placement, depth and axis one at a time, then
-  // it moves slowly across and all three follow it together.
+  // it moves slowly across and all three follow it together. The first
+  // three frames carry a `goalie` hint, the KATA dimensions applied so far,
+  // so the goalie is on the line but deep and parallel in frame 1, forward
+  // in frame 2, square in frame 3 and the KATA rows turn green one by one.
   line: {
     n: 1,
     goal: 'A',
@@ -41,13 +48,16 @@ export const LESSONS = Object.freeze({
     frames: [
       { ball: { x: 4500, z: 10000 }, ms: 2500, note: {
         en: 'Shooting line: from the ball to the middle of the goal. First, placement: stand on that line.',
-        de: 'Schusslinie: vom Ball zur Tormitte. Erstens, Ausrichtung: auf dieser Linie stehen.' } },
+        de: 'Schusslinie: vom Ball zur Tormitte. Erstens, Ausrichtung: auf dieser Linie stehen.' },
+        goalie: ['placement'] },
       { ball: { x: 4500, z: 10000 }, ms: 2500, note: {
         en: 'Second, depth: step forward along the line. The closer you stand to the ball, the smaller the goal looks to the shooter.',
-        de: 'Zweitens, Tiefe: auf der Linie nach vorne. Je näher du am Ball stehst, desto kleiner wirkt das Tor für den Schützen.' } },
+        de: 'Zweitens, Tiefe: auf der Linie nach vorne. Je näher du am Ball stehst, desto kleiner wirkt das Tor für den Schützen.' },
+        goalie: ['placement', 'depth'] },
       { ball: { x: 4500, z: 10000 }, ms: 2500, note: {
         en: 'Third, axis: knees and chest square to the ball, so the whole body is in the path of the shot.',
-        de: 'Drittens, Achse: Knie und Brust frontal zum Ball, damit der ganze Körper im Weg des Schusses steht.' } },
+        de: 'Drittens, Achse: Knie und Brust frontal zum Ball, damit der ganze Körper im Weg des Schusses steht.' },
+        goalie: ['placement', 'depth', 'axis'] },
       { ball: { x: 4500, z: 10000 }, ms: 3000, note: {
         en: 'Now the ball moves. Placement, depth and axis follow it together.',
         de: 'Jetzt bewegt sich der Ball. Ausrichtung, Tiefe und Achse gehen gemeinsam mit.' } },
@@ -163,6 +173,18 @@ export function lessonShelf(lang = 'en') {
     .sort((a, b) => a.n - b.n);
 }
 
+// The pose with only the `applied` KATA dimensions right: the others stay at
+// the default stance (deep, knees parallel to the goal line, centred). On
+// the line means on it at the goalie's own depth.
+function partialPose({ ball, goal, goalCenter, ideal, applied }) {
+  const stance = { x: goalCenter.x, z: goalCenter.z + (goal === 'B' ? -250 : 250), yaw: goal === 'B' ? Math.PI : 0 };
+  const z = applied.includes('depth') ? ideal.z : stance.z;
+  const yaw = applied.includes('axis') ? ideal.yaw : stance.yaw;
+  if (!applied.includes('placement')) return { x: stance.x, z, yaw };
+  const onLine = idealGoaliePose({ ball, goal, goalCenter, goalie: { x: stance.x, z, yaw }, targets: { placement: { ref: 'line' }, depth: null, axis: null } });
+  return { x: onLine.x, z, yaw };
+}
+
 const faceToward = (from, to) => Math.atan2(to.x - from.x, to.z - from.z);   // rotation.y, local +z forward
 
 export function buildLesson(key, lang = 'en') {
@@ -212,7 +234,12 @@ export function buildLesson(key, lang = 'en') {
   for (const frame of doc.frames) {
     const ball = frame.scheme.balls.main;
     const targets = kataTargets(goalieZoneOf(ball, goal), expectedAction(doc.frames, startMs), shotAngleDeg(ball, goal, goalCenter));
-    goalie = idealGoaliePose({ ball, goal, goalCenter, goalie, targets });
+    const ideal = idealGoaliePose({ ball, goal, goalCenter, goalie, targets });
+    const applied = lesson.frames[doc.frames.indexOf(frame)].goalie;
+    if (applied) {
+      goalie = partialPose({ ball, goal, goalCenter, ideal, applied });
+      frame.goalieFixed = true;
+    } else goalie = ideal;
     frame.scheme.goalies[goal] = { x: goalie.x, z: goalie.z, angle: goalie.yaw };
     startMs += frame.duration;
   }

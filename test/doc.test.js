@@ -372,3 +372,15 @@ test('acceptDoc keeps autoGoalie A or B and drops other values', () => {
   const none = acceptDoc(JSON.parse(JSON.stringify(emptyDoc())));
   assert.equal('autoGoalie' in none, false);
 });
+
+test('acceptDoc keeps goalieFixed only when it is true, and old docs load unchanged', () => {
+  const raw = JSON.parse(JSON.stringify(emptyDoc()));
+  raw.frames[0].goalieFixed = true;
+  assert.equal(acceptDoc(JSON.parse(JSON.stringify(raw))).frames[0].goalieFixed, true);
+  for (const bad of [false, 1, 'yes', null, {}]) {
+    const r = JSON.parse(JSON.stringify(raw));
+    r.frames[0].goalieFixed = bad;
+    assert.equal('goalieFixed' in acceptDoc(r).frames[0], false, JSON.stringify(bad));
+  }
+  assert.equal('goalieFixed' in acceptDoc(JSON.parse(JSON.stringify(emptyDoc()))).frames[0], false);
+});

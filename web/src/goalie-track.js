@@ -39,7 +39,28 @@ export function ballAt(frames, ms) {
 // Fixed goals stand centred on x = 0 (the goal centre KATA measures from).
 const goalCenterOf = (goal) => ({ x: 0, z: GOAL_Z[goal] });
 
+// A frame with `goalieFixed` (the KATA build-up of lesson 1) carries a pose
+// that is part of the lesson. The goalie goes to it during the interval
+// before that frame and holds it through the frame, instead of following
+// the rules. Returns that pose at `ms`, or null when the rules apply.
+function fixedPoseAt(frames, goal, ms) {
+  let acc = 0;
+  for (let i = 0; i + 1 < frames.length; i++) {
+    const d = frames[i].duration;
+    if (ms < acc + d) return poseOf(frames[i + 1], goal);
+    acc += d;
+  }
+  return poseOf(frames.at(-1), goal);
+}
+
+function poseOf(frame, goal) {
+  const g = frame.goalieFixed ? frame.scheme.goalies?.[goal] : null;
+  return g ? { x: g.x, z: g.z, yaw: g.angle || 0 } : null;
+}
+
 function idealAt(frames, goal, ms, goalie) {
+  const fixed = fixedPoseAt(frames, goal, ms);
+  if (fixed) return fixed;
   const ball = ballAt(frames, ms);
   if (!ball) return goalie;
   const goalCenter = goalCenterOf(goal);
@@ -87,7 +108,7 @@ export function goalieTrackAt({ stepMs, samples }, ms) {
 // changed (anything the ball, the carriers or the timing depend on).
 let cache = { key: null, track: null };
 export function cachedGoalieTrack(frames, goal) {
-  const key = goal + JSON.stringify(frames.map((f) => [f.duration, f.scheme.players, f.scheme.balls, f.scheme.goalies?.[goal]]));
+  const key = goal + JSON.stringify(frames.map((f) => [f.duration, f.scheme.players, f.scheme.balls, f.scheme.goalies?.[goal], f.goalieFixed]));
   if (cache.key !== key) cache = { key, track: goalieTrack(frames, goal) };
   return cache.track;
 }

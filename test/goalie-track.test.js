@@ -84,13 +84,16 @@ test('every lesson with the live goalie: judged ok at least 85% of the time, and
     const doc = buildLesson(key);
     const track = goalieTrack(doc.frames, goal);
     const end = total(doc.frames);
+    // a KATA build-up (frames with a partial `goalie` hint) is wrong on purpose until its last step
+    const buildUp = LESSONS[key].frames.findLastIndex((f) => f.goalie && f.goalie.length < 3) + 1;
+    const from = doc.frames.slice(0, buildUp).reduce((s, f) => s + f.duration, 0);
     let ok = 0, n = 0;
-    for (let t = 0; t <= end; t += 50, n++) if (allOk(judgeAt(doc.frames, goal, t, goalieTrackAt(track, t)))) ok++;
+    for (let t = from; t <= end; t += 50, n++) if (allOk(judgeAt(doc.frames, goal, t, goalieTrackAt(track, t)))) ok++;
     assert.ok(ok / n >= 0.85, `${key}: ok ${(100 * ok / n).toFixed(1)}% of the time`);
-    let t = 0;
+    let t = from;
     for (const [i, f] of doc.frames.entries()) {
-      assert.ok(allOk(judgeAt(doc.frames, goal, t, goalieTrackAt(track, t))), `${key} keyframe ${i}`);
-      t += f.duration;
+      if (i >= buildUp) assert.ok(allOk(judgeAt(doc.frames, goal, t, goalieTrackAt(track, t))), `${key} keyframe ${i}`);
+      if (i >= buildUp) t += f.duration;
     }
   }
 });
@@ -114,4 +117,31 @@ test('cachedGoalieTrack: same play gives the same track; moving the ball or a du
   assert.notEqual(b, a);
   doc.frames[0].duration += 500;
   assert.notEqual(cachedGoalieTrack(doc.frames, 'A'), b);
+});
+
+// A frame with `goalieFixed` carries a goalie pose that is part of the
+// lesson (the KATA build-up): the track goes to that pose, not to the rules'.
+test('goalieTrack: a frame marked goalieFixed is followed instead of the rules', () => {
+  const doc = buildLesson('line');
+  const track = goalieTrack(doc.frames, 'A');
+  const pose = (f) => { const g = f.scheme.goalies.A; return { x: g.x, z: g.z, yaw: g.angle }; };
+  const near = (a, b, msg) => assert.ok(Math.hypot(a.x - b.x, a.z - b.z) < 5 && Math.abs(wrap(a.yaw - b.yaw)) < 0.01, `${msg}: ${JSON.stringify(a)} vs ${JSON.stringify(b)}`);
+  // the step 0 -> 1 is made within the first interval and held to the end of it
+  near(goalieTrackAt(track, 2400), pose(doc.frames[1]), 'at 2.4 s, frame 2 pose');
+  near(goalieTrackAt(track, 4900), pose(doc.frames[2]), 'at 4.9 s, frame 3 pose');
+  // and the rules would have put the goalie square and forward already at the start
+  assert.notDeepEqual(pose(doc.frames[0]), pose(doc.frames[2]));
+  // without the mark the same frames get the rules' pose
+  const plain = doc.frames.map((f) => { const c = structuredClone(f); delete c.goalieFixed; return c; });
+  const ruled = goalieTrack(plain, 'A');
+  const g = goalieTrackAt(ruled, 2400);
+  assert.ok(Math.abs(wrap(g.yaw - pose(doc.frames[1]).yaw)) > 0.1 || Math.hypot(g.x - pose(doc.frames[1]).x, g.z - pose(doc.frames[1]).z) > 5);
+});
+
+test('goalieTrack: frames without goalieFixed follow the rules exactly as before', () => {
+  const doc = buildLesson('zones');
+  const a = goalieTrack(doc.frames, 'A');
+  const b = goalieTrack(doc.frames.map((f) => ({ ...f })), 'A');
+  assert.deepEqual(a.samples, b.samples);
+  assert.ok(doc.frames.every((f) => !('goalieFixed' in f)));
 });

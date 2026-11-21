@@ -178,7 +178,9 @@ test('lessons: the goalie at every keyframe is judged ok on placement, depth and
       const action = expectedAction(doc.frames, startMs(doc.frames, i));
       const k = kataOf({ ball, goal, goalCenter, goalie: { x: g.x, z: g.z, yaw: g.angle } });
       const { status } = judgeKata(k, kataTargets(zone, action, shotAngleDeg(ball, goal, goalCenter)));
+      const applied = LESSONS[key].frames[i].goalie ?? ['placement', 'depth', 'axis'];   // a build-up frame applies only some
       for (const dim of ['placement', 'depth', 'axis']) {
+        if (!applied.includes(dim)) { assert.equal(status[dim], 'adjust', `${key} frame ${i}: ${dim} not applied yet`); continue; }
         assert.ok(status[dim] === 'ok' || status[dim] === 'free', `${key} frame ${i} (${zone}, ${action}): ${dim} ${status[dim]}`);
       }
     });
@@ -226,4 +228,38 @@ test('lessonShelf: titles follow the language, unknown languages fall back to En
   const { lessonShelf } = await import('../web/src/goalie-lessons.js');
   assert.equal(lessonShelf('de').find((r) => r.key === 'zones').title, 'Durch die Zonen');
   assert.equal(lessonShelf('fr').find((r) => r.key === 'zones').title, 'Through the zones');
+});
+
+// Lesson 1 shows the KATA build-up: placement, then depth, then axis. Each
+// of the first three frames carries a `goalie` hint (the dimensions applied
+// so far), the goalie is placed to match, and the frame is marked so the
+// live goalie (goalie-track.js) follows it instead of the rules.
+test('line lesson: the KATA rows turn ok one at a time, placement, depth, axis', () => {
+  const doc = buildLesson('line');
+  const goalCenter = { x: 0, z: GOAL_Z.A };
+  const statusOf = (i) => {
+    const f = doc.frames[i];
+    const ball = ballOf(f);
+    const g = f.scheme.goalies.A;
+    const targets = kataTargets(goalieZoneOf(ball, 'A'), expectedAction(doc.frames, startMs(doc.frames, i)), shotAngleDeg(ball, 'A', goalCenter));
+    return judgeKata(kataOf({ ball, goal: 'A', goalCenter, goalie: { x: g.x, z: g.z, yaw: g.angle } }), targets).status;
+  };
+  const pick = (st) => [st.placement, st.depth, st.axis];
+  assert.deepEqual(pick(statusOf(0)), ['ok', 'adjust', 'adjust']);
+  assert.deepEqual(pick(statusOf(1)), ['ok', 'ok', 'adjust']);
+  assert.deepEqual(pick(statusOf(2)), ['ok', 'ok', 'ok']);
+  assert.deepEqual(LESSONS.line.frames.slice(0, 3).map((f) => f.goalie), [['placement'], ['placement', 'depth'], ['placement', 'depth', 'axis']]);
+  assert.deepEqual(doc.frames.map((f) => f.goalieFixed === true), [true, true, true, false, false]);
+  const g0 = doc.frames[0].scheme.goalies.A;
+  assert.equal(g0.angle, 0, 'frame 1: knees parallel to the goal line');
+  assert.ok(g0.z - GOAL_Z.A < 500, 'frame 1: deep');
+  assert.ok(doc.frames[1].scheme.goalies.A.z > g0.z, 'frame 2: stepped forward');
+});
+
+test('lessons without a goalie hint carry no goalieFixed', () => {
+  for (const key of LESSON_KEYS) {
+    buildLesson(key).frames.forEach((f, i) => {
+      assert.equal('goalieFixed' in f, !!LESSONS[key].frames[i].goalie, `${key} frame ${i}`);
+    });
+  }
 });
