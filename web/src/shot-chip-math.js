@@ -5,7 +5,7 @@
 export const VERDICT_TITLES = Object.freeze({
   open: 'Open shot',
   'blocked-off': 'Blocked off-centre',
-  'blocked-centred': 'Squared up',
+  'blocked-centred': 'Centred block',
 });
 
 // { key, pctBlocked } (shot-readout.js) -> { key, title, pct } or null.
