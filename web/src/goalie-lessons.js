@@ -13,12 +13,22 @@
 // by eye for a readable pace, not taken from the module.
 
 import { emptyDoc, emptyMeta, newId } from './authoring/doc.js';
-import { GOAL_Z, BALL_CARRY_OFFSET } from './authoring/ball-pose.js';
+import { GOAL_Z, BALL_CARRY_OFFSET, makeShot } from './authoring/ball-pose.js';
 import { goalieZoneOf } from './goalie-zones.js';
 import { kataTargets, expectedAction, shotAngleDeg } from './kata.js';
 import { idealGoaliePose } from './shooter-view.js';
 
 const ATTACKER = { team: 2, number: '9' };
+const SOLO_CAST = Object.freeze({ a: ATTACKER });
+
+// A frame spec is either { ball, ms, note } (one attacker, `a`, carrying the
+// ball: lessons 1, 2, 5) or, for a lesson with a `cast` (lessons 3, 4),
+// { players: { key: { x, z } }, carrier: key, ms, note } or, for a shot by
+// the frame before's carrier, { players, shot: { aimX }, ms, note }.
+function frameCast(spec) {
+  if (spec.ball) return { players: { a: { x: spec.ball.x - BALL_CARRY_OFFSET.x, z: spec.ball.z - BALL_CARRY_OFFSET.z } }, carrier: 'a' };
+  return { players: spec.players, carrier: spec.shot ? null : spec.carrier, shot: spec.shot };
+}
 
 export const LESSONS = Object.freeze({
   // 1. Shooting line and area: the ball stands still in the danger zone
@@ -69,6 +79,40 @@ export const LESSONS = Object.freeze({
       { ball: { x: 1500, z: 1700 }, ms: 3000, note: {
         en: 'Behind the goal: play the line, feet in the goal, eyes on the slot for the pass.',
         de: 'Hinter dem Tor: Linie spielen, Füsse im Tor, Blick zum Slot für den Pass.' } },
+    ],
+  },
+
+  // 3. Pass or shot: the same 2-on-1 twice. First the defender takes the
+  // carrier, so the pass to the free attacker is coming; then the defender
+  // closes the passing lane, so the carrier shoots. Shots are aimed at the
+  // middle of the goal (aimX 0), the line the goalie stands on.
+  passOrShot: {
+    n: 3,
+    goal: 'A',
+    title: { en: 'Pass or shot', de: 'Pass oder Schuss' },
+    cast: { a: { team: 2, number: '9' }, b: { team: 2, number: '7' }, d: { team: 1, number: '4' } },
+    frames: [
+      { players: { a: { x: 4500, z: 19000 }, b: { x: -4000, z: 19500 }, d: { x: 500, z: 12000 } }, carrier: 'a', ms: 2500, note: {
+        en: 'A 2-on-1 is coming. Attention zone: centred, deep, knees parallel. Read the defender: pass or shot?',
+        de: 'Ein 2-gegen-1 kommt. Attention-Zone: mittig, tief, Knie parallel. Lies den Verteidiger: Pass oder Schuss?' } },
+      { players: { a: { x: 4000, z: 12500 }, b: { x: -3500, z: 12000 }, d: { x: 2500, z: 10500 } }, carrier: 'a', ms: 2000, note: {
+        en: 'The defender goes to the carrier and the second attacker is free: a pass is coming. On the line but back, knees parallel, ready to push across.',
+        de: 'Der Verteidiger geht zum Ballführer, der zweite Angreifer ist frei: ein Pass kommt. Auf der Linie, aber hinten, Knie parallel, bereit zum Verschieben.' } },
+      { players: { a: { x: 3500, z: 10500 }, b: { x: -3000, z: 9000 }, d: { x: 3000, z: 10000 } }, carrier: 'b', ms: 1500, note: {
+        en: 'The pass is across: push over with it, then forward and square to the new shooter.',
+        de: 'Der Pass ist drüben: mitschieben, dann nach vorne und frontal zum neuen Schützen.' } },
+      { players: { a: { x: 3000, z: 9000 }, b: { x: -2800, z: 8500 }, d: { x: 2800, z: 9500 } }, shot: { aimX: 0 }, ms: 3000, note: {
+        en: 'Again: the same 2-on-1 from the same start.',
+        de: 'Noch einmal: dasselbe 2-gegen-1 vom selben Start.' } },
+      { players: { a: { x: 4500, z: 19000 }, b: { x: -4000, z: 19500 }, d: { x: 500, z: 12000 } }, carrier: 'a', ms: 2500, note: {
+        en: 'Same start, same stance in the attention zone. Watch the defender again.',
+        de: 'Gleicher Start, gleiche Haltung in der Attention-Zone. Wieder auf den Verteidiger achten.' } },
+      { players: { a: { x: 4000, z: 12500 }, b: { x: -3500, z: 12000 }, d: { x: -500, z: 11500 } }, carrier: 'a', ms: 2000, note: {
+        en: 'This time the defender sits in the passing lane: the carrier will shoot. Forward on the shooting line, square to the ball.',
+        de: 'Diesmal steht der Verteidiger in der Passlinie: der Ballführer schiesst. Nach vorne auf die Schusslinie, frontal zum Ball.' } },
+      { players: { a: { x: 3600, z: 10500 }, b: { x: -3500, z: 11000 }, d: { x: -600, z: 11000 } }, shot: { aimX: 0 }, ms: 3000, note: {
+        en: 'The same 2-on-1, two reads. Pass expected: stay back, knees parallel. Shot expected: forward and square.',
+        de: 'Dasselbe 2-gegen-1, zwei Lesarten. Pass erwartet: hinten bleiben, Knie parallel. Schuss erwartet: nach vorne und frontal.' } },
     ],
   },
 
@@ -127,17 +171,31 @@ export function buildLesson(key, lang = 'en') {
 
   const doc = emptyDoc();
   doc.meta = emptyMeta(lesson.title[lang] ?? lesson.title.en);
-  const id = newId('p');
+  const cast = lesson.cast ?? SOLO_CAST;
+  const ids = Object.fromEntries(Object.keys(cast).map((k) => [k, newId('p')]));
   doc.frames = lesson.frames.map((spec) => {
-    const ball = { ...spec.ball };
-    const p = { x: ball.x - BALL_CARRY_OFFSET.x, z: ball.z - BALL_CARRY_OFFSET.z };
+    const { players: at, carrier, shot } = frameCast(spec);
+    let ball;
+    if (shot) {
+      const s = makeShot(goal, { aimX: shot.aimX ?? 0 });
+      ball = { x: s.rest.x, z: s.rest.z, shot: s.shot };
+    } else {
+      ball = { x: at[carrier].x + BALL_CARRY_OFFSET.x, z: at[carrier].z + BALL_CARRY_OFFSET.z, carrier: ids[carrier] };
+    }
+    const players = {};
+    for (const [k, c] of Object.entries(cast)) {
+      const p = at[k];
+      const id = ids[k];
+      // attackers face the goal, defenders the ball
+      players[id] = { id, team: c.team, number: c.number, x: p.x, z: p.z, angle: faceToward(p, c.team === ATTACKER.team ? goalCenter : ball) };
+    }
     return {
       id: newId('f'),
       duration: spec.ms,
       note: { ...spec.note },
       scheme: {
-        players: { [id]: { id, ...ATTACKER, x: p.x, z: p.z, angle: faceToward(p, goalCenter) } },
-        balls: { main: { x: ball.x, z: ball.z, carrier: id } },
+        players,
+        balls: { main: ball },
         shapes: [],
         cones: [],
         goalies: {},

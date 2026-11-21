@@ -74,6 +74,27 @@ test('zones lesson with the live goalie: judged ok at least 90% of the time, and
   }
 });
 
+// Every shipped lesson (A-BACK-049): lessons with a pass or a shot have
+// fast ball moments the goalie cannot keep up with (at most 3 m/s), so the
+// bar is 85% (an estimate) there; every keyframe is still ok.
+test('every lesson with the live goalie: judged ok at least 85% of the time, and at every keyframe', async () => {
+  const { LESSON_KEYS, LESSONS } = await import('../web/src/goalie-lessons.js');
+  for (const key of LESSON_KEYS) {
+    const goal = LESSONS[key].goal;
+    const doc = buildLesson(key);
+    const track = goalieTrack(doc.frames, goal);
+    const end = total(doc.frames);
+    let ok = 0, n = 0;
+    for (let t = 0; t <= end; t += 50, n++) if (allOk(judgeAt(doc.frames, goal, t, goalieTrackAt(track, t)))) ok++;
+    assert.ok(ok / n >= 0.85, `${key}: ok ${(100 * ok / n).toFixed(1)}% of the time`);
+    let t = 0;
+    for (const [i, f] of doc.frames.entries()) {
+      assert.ok(allOk(judgeAt(doc.frames, goal, t, goalieTrackAt(track, t))), `${key} keyframe ${i}`);
+      t += f.duration;
+    }
+  }
+});
+
 test('goalieTrackAt: interpolates between samples and clamps at both ends', () => {
   const track = { stepMs: 100, samples: [{ x: 0, z: 0, yaw: 0 }, { x: 100, z: 200, yaw: 0.2 }] };
   assert.deepEqual(goalieTrackAt(track, -50), { x: 0, z: 0, yaw: 0 });

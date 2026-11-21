@@ -95,6 +95,63 @@ test('behind lesson: lesson 5, passing-first round the back of goal A, then out 
   assert.ok(goalies[0] > 0 && goalies.at(-2) < 0, goalies.join());
 });
 
+// Lessons with more than one player (3, 4): a cast of named players, each
+// frame lists where they stand and who has the ball, or that the carrier
+// of the frame before shoots.
+const { passPlan } = await import('../web/src/authoring/ball-pose.js');
+const castLessons = () => LESSON_KEYS.filter((k) => LESSONS[k].cast);
+
+test('cast lessons: one player per cast member with its team and number in every frame', () => {
+  assert.ok(castLessons().length > 0);
+  for (const key of castLessons()) {
+    const cast = LESSONS[key].cast;
+    const frames = buildLesson(key).frames;
+    const ids = Object.keys(frames[0].scheme.players);
+    assert.equal(ids.length, Object.keys(cast).length, key);
+    for (const f of frames) {
+      assert.deepEqual(Object.keys(f.scheme.players), ids, `${key}: the same players throughout`);
+      const teams = Object.values(f.scheme.players).map((p) => `${p.team}/${p.number}`).sort();
+      assert.deepEqual(teams, Object.values(cast).map((c) => `${c.team}/${c.number}`).sort());
+    }
+  }
+});
+
+test('cast lessons: a shot frame is a shot at the lesson goal by the carrier before it', () => {
+  for (const key of castLessons()) {
+    const goal = LESSONS[key].goal;
+    const frames = buildLesson(key).frames;
+    LESSONS[key].frames.forEach((spec, i) => {
+      if (!spec.shot) return;
+      const ball = ballOf(frames[i]);
+      assert.equal(ball.carrier, undefined, `${key} frame ${i}: loose after the shot`);
+      assert.equal(ball.shot.goal, goal);
+      const plan = passPlan(frames[i - 1].scheme, frames[i].scheme, frames[i - 1].duration);
+      assert.equal(plan?.kind, 'shot', `${key} frame ${i - 1} -> ${i}`);
+    });
+  }
+});
+
+// 3. Pass or shot: the same 2-on-1 twice. The defender takes the carrier
+// (pass expected: back, knees parallel), then the pass lane (shot
+// expected: forward, square).
+test('passOrShot lesson: lesson 3, the same start twice, read once as a pass and once as a shot', () => {
+  assert.equal(LESSONS.passOrShot.n, 3);
+  const spec = LESSONS.passOrShot;
+  const restart = spec.frames.findIndex((f, i) => i > 0 && JSON.stringify(f.players) === JSON.stringify(spec.frames[0].players));
+  assert.ok(restart > 0, 'the opening positions come back');
+  const doc = buildLesson('passOrShot');
+  const carrierA = (f) => ballOf(f).carrier && f.scheme.players[ballOf(f).carrier].number === spec.cast.a.number;
+  const reads = doc.frames.map((f, i) => ({ i, zone: goalieZoneOf(ballOf(f), 'A'), action: expectedAction(doc.frames, startMs(doc.frames, i)), g: f.scheme.goalies.A }))
+    .filter(({ i, zone }) => carrierA(doc.frames[i]) && (zone === 'danger' || zone === 'slot'));
+  const pass = reads.find((r) => r.action === 'pass' && r.i < restart);
+  const shot = reads.find((r) => r.action === 'shot' && r.i > restart);
+  assert.ok(pass && shot, JSON.stringify(reads.map(({ i, action }) => [i, action])));
+  const depth = (g) => g.z - GOAL_Z.A;
+  assert.ok(depth(pass.g) < depth(shot.g), 'back for the pass, forward for the shot');
+  assert.equal(pass.g.angle, 0, 'knees parallel for the pass');
+  assert.notEqual(shot.g.angle, 0, 'square to the ball for the shot');
+});
+
 test('lessons: the goalie at every keyframe is judged ok on placement, depth and axis', () => {
   for (const key of LESSON_KEYS) {
     const doc = buildLesson(key);
