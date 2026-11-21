@@ -115,3 +115,27 @@ test('the caption never sits on the floating dock', async ({ page }) => {
   const dock = await page.locator('#dock').boundingBox();
   expect(cap.y + cap.height).toBeLessThanOrEqual(dock.y);
 });
+
+test('pause on captions (A-BACK-049): playback holds on a noted frame, then plays the move', async ({ page }) => {
+  await boot(page);
+  await twoFrames(page);
+  await addNote(page, 0, 'Pass to the slot');
+  const r = await page.evaluate(async () => {
+    const pb = await import('/src/authoring/playback.js');
+    const { captionHoldMs } = await import('/src/authoring/caption-hold.js');
+    const hold = captionHoldMs('Pass to the slot');
+    pb.play();
+    pb.tickPlayback(1000);
+    const { updateFrameCaption } = await import('/src/authoring/frame-caption.js');
+    updateFrameCaption();
+    const held = { elapsed: pb.playbackState().elapsed, holdLeft: pb.playbackState().holdLeft, caption: document.getElementById('frameCaption').textContent };
+    pb.tickPlayback(hold);            // the rest of the hold plus 1000 ms of play
+    const moved = pb.playbackState().elapsed;
+    pb.stop();
+    return { hold, held, moved };
+  });
+  expect(r.held.elapsed).toBe(0);
+  expect(r.held.holdLeft).toBeGreaterThan(0);
+  expect(r.held.caption).toBe('Pass to the slot');                 // the caption shows while held
+  expect(r.moved).toBeGreaterThanOrEqual(900);    // real rAF ticks may add a little
+});

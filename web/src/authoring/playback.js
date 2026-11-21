@@ -13,6 +13,7 @@ import { ensureDoc } from './doc.js';
 import { getFrames } from './frames.js';
 import { camera, topDownCamera, renderer, getActiveCamera, getCameraRig, applyCameraRig } from '../scene.js';
 import { normalizeSpeed } from './transport-math.js';
+import { captionHolds, stepWithHolds } from './caption-hold.js';
 
 const playback = {
   playing: false,
@@ -26,6 +27,10 @@ const playback = {
   // tickActors() must not write that pose back into the doc; stop() and
   // any frame switch (frames.js afterMutation) clear it.
   previewing: false,
+  // Pause on captions (A-BACK-049, caption-hold.js): wall ms left to hold
+  // on a noted frame, and the play time of the last hold so it fires once.
+  holdLeft: 0,
+  heldAt: -1,
 };
 state.playback = playback;
 
@@ -35,12 +40,19 @@ state.playback = playback;
 const poseListeners = [];
 export function addPoseListener(fn) { poseListeners.push(fn); }
 
+function clearHold() {
+  playback.holdLeft = 0;
+  playback.heldAt = -1;
+}
+
 function advance(dtMs) {
-  playback.elapsed += dtMs * playback.speed;
+  const holds = captionHolds(getFrames(), state.lang);
+  Object.assign(playback, stepWithHolds(playback, dtMs, playback.speed, holds));
   const total = totalDuration();
-  if (playback.elapsed >= total) {
+  if (playback.elapsed >= total && playback.holdLeft <= 0) {
     if (playback.loop && total > 0) {
       playback.elapsed = playback.elapsed % total;
+      clearHold();
     } else {
       playback.elapsed = total;
       pause();
@@ -63,6 +75,7 @@ export function play() {
   // If we're already at the end and not looping, rewind first.
   if (playback.elapsed >= totalDuration() && !playback.loop) {
     playback.elapsed = 0;
+    clearHold();
   }
   playback.savedFrame = ensureDoc().currentFrame;
   // Snapshot the perspective camera so stop() can put it back where the
@@ -90,6 +103,7 @@ export function pause() {
 export function stop() {
   playback.playing = false;
   playback.elapsed = 0;
+  clearHold();
   restoreEditFrame();
   if (playback.savedCamera) {
     camera.position.copy(playback.savedCamera.position);
@@ -120,6 +134,7 @@ export function stepFrame(delta) {
   const cur = frameIndexAt(playback.elapsed);
   const next = Math.min(Math.max(cur + delta, 0), frames.length - 1);
   playback.elapsed = frameStartTime(next);
+  clearHold();
   applyPose(playback.elapsed);
   window.dispatchEvent(new Event('playbackChanged'));
 }
@@ -320,6 +335,7 @@ export function playbackSegment() { return getFrames().length ? segmentAt(playba
 // Used by the offline export driver to render each frame at max speed.
 export function seekTo(elapsed) {
   playback.elapsed = Math.max(0, elapsed);
+  clearHold();
   applyPose(playback.elapsed);
 }
 

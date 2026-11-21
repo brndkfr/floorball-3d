@@ -229,7 +229,13 @@ camera to be revisited, captions as drafted for review):
   seconds); Open carries `data-action="lesson"` and train-mode.js's
   delegated listener calls `openLesson()`, so library-dialog.js does not
   import train-mode.js (which imports it).
-Open: lessons 1, 3, 4, 5; pause on captions; whether "Open as
+- Pause on captions (2026-11-21): playback holds at the start of a frame
+  with a note for a reading time (`caption-hold.js`: 1 s + 60 ms per
+  character, 2 to 8 s, estimates), then plays the move. Wall-clock time,
+  so slow motion does not stretch it. Applies to every play with notes,
+  not only lessons. Not in the video export yet (`seekTo` runs straight
+  through), so an exported lesson does not pause.
+Open: lessons 1, 3, 4, 5; holds in the export; whether "Open as
 play" should keep `autoGoalie` in the copied project.
 
 ### A-BACK-050 - "Place the goalie" exercises `[small]` after 046
