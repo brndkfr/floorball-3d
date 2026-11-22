@@ -374,7 +374,7 @@ test('director: lesson 1 has the Director switch, on, and the camera follows the
   await expect(page.locator('#directorPill')).toBeHidden();
   expect((await camNow(page)).director).toBe(true);
   // frame 4 of the lesson (index 3) is the side knee shot: a level camera at knee height
-  await seek(page, await frameStart(page, 3) + 2000);
+  await seek(page, await frameStart(page, 3) + 1000);   // the blend to the next shot starts 900 ms before its frame
   const side = await camNow(page);
   expect(side.y).toBeGreaterThan(300);
   expect(side.y).toBeLessThan(600);
@@ -417,7 +417,7 @@ test('director: the viewer zooming turns it off and shows the pill; the pill giv
   expect(zoomed.director).toBe(false);
   expect(Math.hypot(zoomed.x - start.x, zoomed.y - start.y, zoomed.z - start.z)).toBeGreaterThan(50);
   // no automatic snap back: stepping the play leaves the camera of the viewer alone
-  await seek(page, await frameStart(page, 3) + 2000);
+  await seek(page, await frameStart(page, 3) + 1000);   // the blend to the next shot starts 900 ms before its frame
   const kept = await camNow(page);
   expect(Math.hypot(kept.x - zoomed.x, kept.y - zoomed.y, kept.z - zoomed.z)).toBeLessThan(1);
   await pill.click();

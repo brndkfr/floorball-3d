@@ -112,9 +112,12 @@ export function shotAt(frames, elapsed) {
 // The camera pose at play time `elapsed`, or null (no shot named, or an
 // actor missing). `ctx` = { goal, ballAt(ms) -> { x, z }, goalieAt(ms) ->
 // { x, z } }. Within TRANSITION_MS of a change the pose blends from the
-// previous shot, itself still following the live positions.
+// previous shot, itself still following the live positions. The blend runs
+// in the TRANSITION_MS before the new shot's frame starts, so it is complete
+// when the frame (and its caption) begins: a hold on the caption, where the
+// play time stands still, shows the new shot, not the old one.
 export function directorPoseAt(frames, elapsed, { goal, ballAt, goalieAt }) {
-  const s = shotAt(frames, elapsed);
+  const s = shotAt(frames, elapsed + TRANSITION_MS);
   if (!s) return null;
   const ball = ballAt(elapsed);
   const actors = { goal, ball, goalie: goalieAt(elapsed), shooter: kataBall(frames, elapsed, ball) };

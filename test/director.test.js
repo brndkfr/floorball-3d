@@ -111,16 +111,17 @@ test('director timeline: a shot holds until the next frame names one', () => {
   assert.equal(shotAt(frames([null]), 0), null);
 });
 
-test('director pose: blends from the previous shot over TRANSITION_MS and then follows the new one', () => {
+test('director pose: the blend to a new shot ends where its frame starts, so a hold on the caption shows the new shot', () => {
   const f = frames(['wide', 'pushIn', null]);
   const c = { goal, ballAt: () => ball, goalieAt: () => goalie };
   const wide = shotPose('wide', ctx), push = shotPose('pushIn', ctx);
-  assert.deepEqual(directorPoseAt(f, 500, c), wide);
-  assert.deepEqual(directorPoseAt(f, 1000, c), wide, 'starts where the old shot was');
-  const mid = directorPoseAt(f, 1000 + TRANSITION_MS / 2, c);
+  assert.deepEqual(directorPoseAt(f, 0, c), wide);
+  assert.deepEqual(directorPoseAt(f, 1000 - TRANSITION_MS, c), wide, 'starts where the old shot was');
+  const mid = directorPoseAt(f, 1000 - TRANSITION_MS / 2, c);
   assert.ok(Math.abs(mid.x - (wide.x + push.x) / 2) < 1e-6, 'half way');
   assert.ok(Math.abs(mid.y - (wide.y + push.y) / 2) < 1e-6);
-  assert.deepEqual(directorPoseAt(f, 1000 + TRANSITION_MS, c), push);
+  assert.deepEqual(directorPoseAt(f, 1000, c), push, 'at the frame start the new shot is complete');
+  assert.deepEqual(directorPoseAt(f, 1500, c), push);
   assert.equal(directorPoseAt(frames([null]), 0, c), null);
 });
 
