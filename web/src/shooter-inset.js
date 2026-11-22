@@ -111,23 +111,32 @@ function renderInset() {
   const r = view.getBoundingClientRect();
   const c = renderer.domElement.getBoundingClientRect();
   if (r.width < 2 || r.height < 2) return;
-  const ball = getBallWorldCenter();
-  const gc = state.kataReadout.inputs?.goalCenter;
-  if (!ball || !gc) return;
-  const pose = shooterViewPose({ x: ball.x, z: ball.z }, gc, r.width / r.height);
+  // Viewport / scissor in CSS px from the canvas's bottom-left corner.
+  renderInsetAt(r.left - c.left, c.bottom - r.bottom, r.width, r.height);
+}
+
+// Draw the shooter's view into the canvas rectangle (x, y from the
+// bottom-left, renderer units). Train calls it for the card, export.js for
+// lesson videos. It looks from the ball the KATA card grades against, so
+// during a lesson shot it stays at the release point (kataBall) instead of
+// riding into the net. False when there is nothing to show.
+export function renderInsetAt(x, y, w, h) {
+  const inputs = state.kataReadout?.inputs;
+  const ball = inputs?.ball ?? getBallWorldCenter();
+  const gc = inputs?.goalCenter;
+  if (!ball || !gc || w < 2 || h < 2) return false;
+  const pose = shooterViewPose({ x: ball.x, z: ball.z }, gc, w / h);
   cam.position.set(pose.x, pose.y, pose.z);
   cam.lookAt(pose.target.x, pose.target.y, pose.target.z);
   cam.fov = pose.fovDeg;
-  cam.aspect = r.width / r.height;
+  cam.aspect = w / h;
   cam.updateProjectionMatrix();
 
-  // Viewport / scissor in CSS px from the canvas's bottom-left corner.
-  const x = r.left - c.left, y = c.bottom - r.bottom;
   renderer.getViewport(savedViewport);
   renderer.getClearColor(savedClear);
   const savedAlpha = renderer.getClearAlpha();
-  renderer.setViewport(x, y, r.width, r.height);
-  renderer.setScissor(x, y, r.width, r.height);
+  renderer.setViewport(x, y, w, h);
+  renderer.setScissor(x, y, w, h);
   renderer.setScissorTest(true);
   renderer.setClearColor(INSET_BG, 1);
   renderer.clear(true, true, false);
@@ -135,6 +144,7 @@ function renderInset() {
   renderer.setScissorTest(false);
   renderer.setViewport(savedViewport);
   renderer.setClearColor(savedClear, savedAlpha);
+  return true;
 }
 
 // The main frame plus the inset. main.js calls this when it renders, and

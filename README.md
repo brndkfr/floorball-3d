@@ -72,7 +72,9 @@ tactical compute layer on it (**Mode B**).
   progress bar, cancel. Frame notes are burned in as captions; with Hold
   on (the default for lessons) the video pauses on each caption for its
   reading time, and a lesson's video opens on its title card and closes
-  on its recap.
+  on its recap. A lesson video also carries the KATA box, a trail behind
+  the ball on shots, and the shooter's view (from the ball to the goalie,
+  with the share of the goal covered) in the top-right corner.
 
 ### Train - goalie positioning
 After the J+S / swiss unihockey module "Goalies - Positionierung".

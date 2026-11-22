@@ -24,6 +24,10 @@ import { captionPauseOn } from './caption-hold.js';
 import { ensureDoc } from './doc.js';
 import { getFrames } from './frames.js';
 import { cardContent } from '../lesson-cards.js';
+import { renderInsetAt } from '../shooter-inset.js';
+import { updateShotReadout } from '../shot-readout.js';
+import { exportInsetLayout } from '../shooter-view.js';
+import { t } from '../lang-state.js';
 import { updateGoalieZones } from '../goalie-zones-layer.js';
 import { updateKataReadout } from '../kata-readout.js';
 import { kataBoxLayout, kataDotColor, KATA_BOX_DIMS } from '../kata-box.js';
@@ -170,6 +174,7 @@ function seekFrame(ms) {
   seekTo(ms);
   if (ensureDoc().autoGoalie) {
     updateGoalieZones(getBallWorldCenter());
+    updateShotReadout();   // the share covered, for the shooter's view title
     updateKataReadout();
   }
 }
@@ -221,6 +226,44 @@ function drawCard(ctx, w, h, which) {
   });
 }
 
+// A lesson video shows the shooter's view (the view from the ball to the
+// goalie) in its top-right corner on every play frame (asked for
+// 2026-11-22). renderVideoFrame draws the main view and the inset into the
+// GL canvas; composeFrame adds the title bar and the share of the goal covered.
+const insetWanted = (card) => !card && !!ensureDoc().autoGoalie;
+
+function renderVideoFrame(cam, card) {
+  renderer.render(scene, cam);
+  if (!insetWanted(card)) return;
+  const gl = renderer.domElement;
+  const { view } = exportInsetLayout({ w: gl.width, h: gl.height });
+  renderInsetAt(view.x, gl.height - view.y - view.h, view.w, view.h);   // GL counts y from the bottom
+}
+
+function drawInsetFrame(ctx, gl) {
+  const L = exportInsetLayout({ w: gl.width, h: gl.height });
+  const { box, view, fontPx } = L;
+  ctx.fillStyle = 'rgba(19, 23, 29, 0.92)';
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(box.x, box.y, box.w, box.h, Math.round(fontPx * 0.35)); else ctx.rect(box.x, box.y, box.w, box.h);
+  ctx.fill();
+  ctx.drawImage(gl, view.x, view.y, view.w, view.h, view.x, view.y, view.w, view.h);   // the inset, back over the box
+  ctx.font = `600 ${fontPx}px Archivo, Helvetica Neue, Arial, sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#f2f4f7';
+  ctx.textAlign = 'left';
+  ctx.fillText(t('goalie.inset.title'), box.x + L.padX, L.titleY);
+  // The share covered is measured from the live ball; while a shot flies or
+  // sits in the net the view stays at the release point, so leave it out.
+  const r = state.kataReadout, live = getBallWorldCenter();
+  const atRelease = r?.inputs?.ball && live && Math.hypot(r.inputs.ball.x - live.x, r.inputs.ball.z - live.z) > 1;
+  const pct = atRelease ? null : r?.pct;
+  if (pct != null) {
+    ctx.textAlign = 'right';
+    ctx.fillText(`${Math.round(pct)}%`, box.x + box.w - L.padX, L.titleY);
+  }
+}
+
 // The 3D canvas as rendered just now, with the caption burned in, or a
 // lesson card instead of the caption on the plan's card frames.
 function composeFrame(card = null) {
@@ -236,6 +279,7 @@ function composeFrame(card = null) {
   const note = currentCaptionText();
   const box = note ? drawCaption(ctx, composite.width, composite.height, note) : null;
   if (ensureDoc().autoGoalie) drawKataBox(ctx, composite.width, composite.height, box ? box.y : null);
+  if (insetWanted(card)) drawInsetFrame(ctx, gl);
   return composite;
 }
 
@@ -281,7 +325,7 @@ export async function exportMp4({ width, height, fps, startMs = 0, endMs, onProg
       throw encoderError;
     }
     seekFrame(plan[i].playMs);
-    renderer.render(scene, cam);
+    renderVideoFrame(cam, plan[i].card);
     const bitmap = await createImageBitmap(composeFrame(plan[i].card));   // with the frame note (A-BACK-035) or a lesson card
     const frame = new VideoFrame(bitmap, {
       timestamp: i * frameDurationUs,
@@ -337,14 +381,14 @@ export function exportWebm({ fps, startMs = 0, endMs, onProgress, isCancelled })
       if (i >= plan.length) {
         const last = plan.at(-1) ?? { playMs: endMs, card: null };
         seekFrame(last.playMs);
-        renderer.render(scene, cam);
+        renderVideoFrame(cam, last.card);
         composeFrame(last.card);
         setTimeout(() => recorder.stop(), 100);   // drain the stream
         onProgress?.(1);
         return;
       }
       seekFrame(plan[i].playMs);
-      renderer.render(scene, cam);
+      renderVideoFrame(cam, plan[i].card);
       composeFrame(plan[i].card);
       onProgress?.(i / plan.length);
       requestAnimationFrame(tick);
