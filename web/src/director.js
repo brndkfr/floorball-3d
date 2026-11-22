@@ -13,6 +13,7 @@
 // time only, so scrubbing, playback and the video export agree.
 
 import { lerpPose, easeInOut, lessonPose } from './camera-presets.js';
+import { kataBall } from './kata.js';
 
 export const DIRECTOR_SHOTS = Object.freeze(['wide', 'goalieEyes', 'shooterEyes', 'sideKnee', 'followBall', 'pushIn']);
 export const DEFAULT_SHOT = 'wide';
@@ -29,7 +30,7 @@ export const SHOT_LABELS = Object.freeze({
 export const TRANSITION_MS = 900;   // blend between two shots
 const GOALIE_EYE = { back: -600, height: 1250 };  // eyes: mm behind the goalie centre (negative: in front of it, clear of the helmet; ESTIMATE, check in the look-shots); height mm (a kneeling goalie)
 const SHOOTER_EYE = { back: 900, height: 1500 };   // behind the ball, mm; height mm
-const SIDE_KNEE = { dist: 6500, height: 450 };     // side distance from the goalie-ball line, mm; knee height mm
+const SIDE_KNEE = { dist: 3500, height: 450 };     // side distance from the goalie, mm (ESTIMATE, a close-up of the goalie); knee height mm
 const FOLLOW = { back: 4500, height: 2200, ahead: 2500 };   // behind the ball, up, look-at point towards the goal
 const PUSH_IN = { side: 2300, front: 600, height: 1000 };   // close to the goalie and the ball
 
@@ -47,7 +48,9 @@ function unit(from, to, fallback) {
 
 // The pose of one shot. `ctx` = { goal: 'A' | 'B', ball: { x, z },
 // goalie: { x, z } }. Null for an unknown name or a missing actor.
-export function shotPose(name, { goal = 'A', ball, goalie } = {}) {
+// `ctx.shooter` (optional) is where the shooter stands once a shot is
+// released; shooterEyes anchors to it instead of the live ball.
+export function shotPose(name, { goal = 'A', ball, goalie, shooter } = {}) {
   if (name === 'wide') return lessonPose(goal);
   if (!ball || !goalie) return null;
   const out = { x: 0, z: goal === 'B' ? -1 : 1 };   // from the goal into the rink
@@ -60,10 +63,13 @@ export function shotPose(name, { goal = 'A', ball, goalie } = {}) {
   switch (name) {
     case 'goalieEyes':
       return aim({ x: goalie.x - away.x * GOALIE_EYE.back, y: GOALIE_EYE.height, z: goalie.z - away.z * GOALIE_EYE.back }, { x: ball.x, y: 150, z: ball.z });
-    case 'shooterEyes':
-      return aim({ x: ball.x + away.x * SHOOTER_EYE.back, y: SHOOTER_EYE.height, z: ball.z + away.z * SHOOTER_EYE.back }, { x: goalie.x, y: 600, z: goalie.z });
+    case 'shooterEyes': {
+      const a = shooter ?? ball;
+      const back = unit(goalie, a, out);
+      return aim({ x: a.x + back.x * SHOOTER_EYE.back, y: SHOOTER_EYE.height, z: a.z + back.z * SHOOTER_EYE.back }, { x: goalie.x, y: 600, z: goalie.z });
+    }
     case 'sideKnee':
-      return aim({ x: mid.x + side.x * SIDE_KNEE.dist, y: SIDE_KNEE.height, z: mid.z + side.z * SIDE_KNEE.dist }, { x: mid.x, y: SIDE_KNEE.height, z: mid.z });
+      return aim({ x: goalie.x + side.x * SIDE_KNEE.dist, y: SIDE_KNEE.height, z: goalie.z + side.z * SIDE_KNEE.dist }, { x: goalie.x, y: SIDE_KNEE.height, z: goalie.z });
     case 'followBall':
       return aim(
         { x: ball.x + away.x * FOLLOW.back, y: FOLLOW.height, z: ball.z + away.z * FOLLOW.back },
@@ -110,7 +116,8 @@ export function shotAt(frames, elapsed) {
 export function directorPoseAt(frames, elapsed, { goal, ballAt, goalieAt }) {
   const s = shotAt(frames, elapsed);
   if (!s) return null;
-  const actors = { goal, ball: ballAt(elapsed), goalie: goalieAt(elapsed) };
+  const ball = ballAt(elapsed);
+  const actors = { goal, ball, goalie: goalieAt(elapsed), shooter: kataBall(frames, elapsed, ball) };
   const pose = shotPose(s.cur, actors);
   if (!pose) return null;
   if (!s.prev || s.since >= TRANSITION_MS) return pose;

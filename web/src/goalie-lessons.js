@@ -73,7 +73,7 @@ export const LESSONS = Object.freeze({
       { players: { a: SHOOTER }, carrier: 'a', ms: 3000, layers: [], cam: 'shooterEyes', goalie: [], goalieDx: WRONG_DX, note: {
         en: 'The same shot twice. First, the goalie just stands in his goal. Watch the shot.',
         de: 'Derselbe Schuss zweimal. Zuerst steht der Goalie einfach im Tor. Schau dir den Schuss an.' } },
-      { players: { a: SHOOTER }, shot: { aimX: 0, scored: true, ...SLOW_SHOT }, ms: 2500, layers: [], cam: 'sideKnee', goalie: [], goalieDx: WRONG_DX, note: {
+      { players: { a: SHOOTER }, shot: { aimX: 0, scored: true, ...SLOW_SHOT }, ms: 2500, layers: [], cam: 'shooterEyes', goalie: [], goalieDx: WRONG_DX, note: {
         en: 'Goal. What went wrong?',
         de: 'Tor. Was ist schiefgelaufen?' } },
       { players: { a: SHOOTER }, carrier: 'a', ms: 2500, layers: ['line'], cam: 'wide', goalie: ['placement'], note: {
@@ -82,7 +82,7 @@ export const LESSONS = Object.freeze({
       { players: { a: SHOOTER }, carrier: 'a', ms: 2500, layers: ['line'], cam: 'sideKnee', goalie: ['placement', 'depth'], note: {
         en: 'Second, depth: step forward along the line. The closer you stand to the ball, the smaller the goal looks to the shooter.',
         de: 'Zweitens, Tiefe: auf der Linie nach vorne. Je näher du am Ball stehst, desto kleiner wirkt das Tor für den Schützen.' } },
-      { players: { a: SHOOTER }, carrier: 'a', ms: 2500, layers: ['line'], cam: 'goalieEyes', goalie: ['placement', 'depth', 'axis'], note: {
+      { players: { a: SHOOTER }, carrier: 'a', ms: 2500, layers: ['line'], cam: 'shooterEyes', goalie: ['placement', 'depth', 'axis'], note: {
         en: 'Third, axis: knees and chest square to the ball, so the whole body is in the path of the shot.',
         de: 'Drittens, Achse: Knie und Brust frontal zum Ball, damit der ganze Körper im Weg des Schusses steht.' } },
       { players: { a: SHOOTER }, carrier: 'a', ms: 3000, layers: ['area'], cam: 'wide', note: {
