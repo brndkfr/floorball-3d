@@ -194,3 +194,79 @@ test('lesson 3: at the shot frame the ball rests in front of the goalie, not in 
   expect(at.ball.z).toBeGreaterThan(at.line + 500);
   expect(Math.hypot(at.ball.x - at.goalie.x, at.ball.z - at.goalie.z)).toBeLessThan(700);
 });
+
+// A-BACK-049: quiet screen. A lesson frame with `layers` shows only its
+// caption, the KATA card and the named layers; the other lessons are untouched.
+async function quietAt(page, frame) {
+  return page.evaluate(async (frame) => {
+    const { state, getBallWorldCenter } = await import('/src/state.js');
+    const { scene } = await import('/src/scene.js');
+    (await import('/src/authoring/frames.js')).selectFrame(frame);
+    (await import('/src/authoring/lesson-quiet.js')).updateQuiet();
+    await (await import('/src/goalie-zones-layer.js')).updateGoalieZones(getBallWorldCenter());
+    (await import('/src/goalie-zone-labels.js')).placeZoneLabels();
+    (await import('/src/trajectory.js')).updateTrajectory(getBallWorldCenter());
+    (await import('/src/coverage.js')).updateCoverage(getBallWorldCenter());
+    const shown = (sel) => { const el = document.querySelector(sel); return !!el && !el.hidden && getComputedStyle(el).display !== 'none'; };
+    return {
+      quiet: state.quiet,
+      corner: scene.getObjectByName('cornerLines')?.visible,
+      shot: scene.getObjectByName('shootingLine')?.visible,
+      inset: shown('#shooterInset'),
+      zoneCard: shown('#trainPanel .gz'),
+      labels: shown('#zoneLabels'),
+      kata: shown('#trainPanel .kata'),
+      caption: document.getElementById('frameCaption').textContent,
+    };
+  }, frame);
+}
+
+test('quiet screen: the shooting line frame shows the line, the KATA card and the caption, nothing else', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'line');
+  const q = await quietAt(page, 2);
+  expect(q.quiet).toEqual({ shotLine: true, lines: false, coverage: false, zones: false, marks: false });
+  expect(q.shot).toBe(true);
+  expect(q.corner).toBe(false);
+  expect(q.inset).toBe(false);
+  expect(q.zoneCard).toBe(false);
+  expect(q.labels).toBe(false);
+  expect(q.kata).toBe(true);
+  expect(q.caption).toContain('Shooting line: from the ball');
+});
+
+test('quiet screen: the shooting area frame shows the corner lines instead of the shooting line', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'line');
+  const q = await quietAt(page, 5);
+  expect(q.quiet.lines).toBe(true);
+  expect(q.corner).toBe(true);
+  expect(q.shot).toBe(false);
+  expect(q.caption).toContain('Shooting area');
+});
+
+test('quiet screen: the opening frame shows the caption only', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'line');
+  const q = await quietAt(page, 0);
+  expect(q.quiet).toEqual({ shotLine: false, lines: false, coverage: false, zones: false, marks: false });
+  expect(q.corner).toBe(false);
+  expect(q.shot).toBe(false);
+  expect(q.kata).toBe(true);
+});
+
+test('quiet screen: lessons without layers keep the full Train screen', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'zones');
+  const q = await quietAt(page, 1);
+  expect(q.quiet).toBeNull();
+  expect(q.corner).toBe(true);
+  expect(q.shot).toBe(true);
+  expect(q.zoneCard).toBe(true);
+  expect(q.inset).toBe(true);
+  // and a quiet frame of lesson 1 gives the screen back when the lesson changes
+  await openLesson(page, 'line');
+  expect((await quietAt(page, 0)).quiet).not.toBeNull();
+  await openLesson(page, 'zones');
+  expect((await quietAt(page, 0)).quiet).toBeNull();
+});

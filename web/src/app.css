@@ -407,6 +407,7 @@
   #trainPanel .train-card.collapsed { gap:0; }
   #trainPanel .gz { top:20px; width:300px; }
   #trainPanel .kata { bottom:20px; width:340px; }
+  body[data-quiet] #trainPanel .gz { display:none; }   /* lesson quiet screen (A-BACK-049): the caption, the KATA card and the named layers only */
   #trainPanel button { cursor:pointer; font-family:var(--fb-font); }
   #trainPanel button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
   #trainPanel .tc-head { display:flex; align-items:center; gap:8px; min-height:28px; }

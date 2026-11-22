@@ -86,7 +86,7 @@ export const insetCamera = () => cam;
 // The card's box on screen while it shows, else null (labels avoid it).
 export const insetRect = () => (frame.hidden ? null : frame.getBoundingClientRect());
 
-const wanted = () => document.body.dataset.mode === 'train' && state.shooterInsetShown && !!state.kataReadout;
+const wanted = () => document.body.dataset.mode === 'train' && state.shooterInsetShown && !!state.kataReadout && !state.quiet;   // a quiet lesson frame hides it (A-BACK-049)
 
 function refresh() {
   const wasHidden = frame.hidden;
@@ -99,7 +99,7 @@ function refresh() {
   const pct = state.kataReadout?.pct;
   frame.querySelector('.inset-pct').textContent = pct == null ? '' : `${Math.round(pct)}%`;
 }
-for (const ev of ['kataReadoutChanged', 'langChanged', 'shell:mode']) window.addEventListener(ev, () => { refresh(); markRenderDirty(); });
+for (const ev of ['kataReadoutChanged', 'langChanged', 'shell:mode', 'quietChanged']) window.addEventListener(ev, () => { refresh(); markRenderDirty(); });
 refresh();
 
 const savedViewport = new THREE.Vector4();

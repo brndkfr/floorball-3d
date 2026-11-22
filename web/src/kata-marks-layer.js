@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { scene } from './scene.js';
 import { state } from './state.js';
+import { quietAllows } from './lesson-view.js';
 import { kataMarks, KATA_MARKS_STORAGE_KEY, parseKataMarksShown } from './kata-visuals.js';
 import { VECTOR_SHOT_BLOCKED_CENTRED, VECTOR_SHOT_BLOCKED_OFF } from './tokens.js';
 import { markRenderDirty } from './render-dirty.js';
@@ -130,7 +131,7 @@ function rebuild() {
   if (m.offset) add('offset', ribbonGeometry(dashed([[m.offset.from, m.offset.to]], 120, 80), 35), material(YELLOW, 0.95));
 }
 
-const shown = () => document.body.dataset.mode === 'train' && !!state.kataReadout && state.kataMarksShown;
+const shown = () => document.body.dataset.mode === 'train' && !!state.kataReadout && state.kataMarksShown && quietAllows(state.quiet, 'marks');
 
 // Called every frame from main.js. Returns true when something on screen changed.
 export function updateKataMarks() {

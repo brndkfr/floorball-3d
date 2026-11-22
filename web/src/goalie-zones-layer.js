@@ -10,6 +10,7 @@ import { state } from './state.js';
 import { zonePolygons, goalieZoneOf, defendingGoal, GOALIE_ZONE_ORDER } from './goalie-zones.js';
 import { GOALIE_ZONE_TOKENS } from './tokens.js';
 import { markRenderDirty } from './render-dirty.js';
+import { quietAllows } from './lesson-view.js';
 import './goalie-zones-state.js';   // loads state.goalieZonesShown
 
 const Y = 1.5;              // mm: over the tactical zones (1 mm), under the markings (2 mm)
@@ -70,8 +71,9 @@ function highlight(zone) {
 // Returns true when something on screen changed (S-BACK-011).
 export function updateGoalieZones(ballCenter) {
   let changed = false;
-  if (group.visible !== state.goalieZonesShown) {
-    group.visible = state.goalieZonesShown;
+  const on = state.goalieZonesShown && quietAllows(state.quiet, 'zones');   // a quiet lesson frame may hide the zones (A-BACK-049)
+  if (group.visible !== on) {
+    group.visible = on;
     changed = true;
   }
   if (!ballCenter) return changed;

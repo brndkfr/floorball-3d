@@ -7,6 +7,7 @@ import { shotVerdict, shotLineXAtZ } from './insights.js';
 import { VECTOR_TRAJECTORY, SHOT_LINE_TOKENS } from './tokens.js';
 import { createTrajectoryGate } from './trajectory-gate.js';
 import { outlineShown } from './shot-view.js';
+import { quietShotView } from './lesson-view.js';
 import './shot-view-state.js';   // loads state.shotView
 
 // --- ball-to-goal trajectory lines ---
@@ -24,6 +25,7 @@ trajectoryLines.visible = false;
 // object entirely so a stale bounding sphere never makes it vanish from an
 // unexpected camera angle.
 trajectoryLines.frustumCulled = false;
+trajectoryLines.name = 'cornerLines';
 scene.add(trajectoryLines);
 
 // dotted "shooting line" - ball centre straight to the goal mouth centre,
@@ -37,6 +39,7 @@ const shootingLine = new THREE.LineSegments(
 );
 shootingLine.visible = false;
 shootingLine.frustumCulled = false; // same reasoning as trajectoryLines above
+shootingLine.name = 'shootingLine';
 scene.add(shootingLine);
 
 // Shooting-line colour: a coaching cue for where the goalie should stand,
@@ -95,7 +98,7 @@ const trajectoryGate = createTrajectoryGate();
 export function updateTrajectory(ballCenter) {
   // A-BACK-045: corner lines and shooting line switch separately (Inspector's
   // Shot section); the goalie glow comes with the shooting line.
-  const view = state.shotView;
+  const view = quietShotView(state.shotView, state.quiet);   // a lesson frame may show only some (A-BACK-049)
   if (!(view.lines || view.shotLine) || !ballCenter || !shotGoal()) {
     const wasVisible = trajectoryLines.visible || shootingLine.visible;
     trajectoryLines.visible = false;
