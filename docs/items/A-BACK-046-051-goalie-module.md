@@ -327,8 +327,46 @@ camera to be revisited, captions as drafted for review):
     stage while a lesson is open: Play/Pause, Restart and the Director
     switch. A camera-menu pick (shot or preset) keeps turning the director
     off. Stop turns the director back on, like a restart.
-Open: caption review by the user; holds in the export; whether "Open as
-play" should keep `autoGoalie` in the copied project.
+  - Lessons 2-4 get lesson 1's treatment (decided 2026-11-22, all as
+    proposed): title and recap card, quiet screen, director shots, and a
+    wrong run first that ends in a goal ("What went wrong?").
+    - Lesson 2 "Through the zones": one wrong run first (the goalie stays
+      centred and deep, the attacker walks into the danger zone and
+      scores), then the right run. Task: "Watch the goalie as the ball
+      moves through the zones: what changes in each one?" Layers: the
+      zones with the ball's zone on every frame, the shooting line where
+      the caption names it. Camera: mostly wide, the shooter's eyes when
+      the goalie steps out in the danger zone, a side shot at the post,
+      wide behind the goal. Recap: one bullet per zone (attention:
+      centred, deep, patient; danger: forward on the shooting line,
+      square; passing-first and behind: on the line at the post, knees
+      parallel, eyes on the slot).
+    - Lesson 3 "Pass or shot": three runs, a wrong read first (the goalie
+      steps out for the shot, the pass goes across, goal), then the pass
+      read right and saved, then the shot read right and saved. Task:
+      "Watch the defender, then the goalie: how does the goalie know
+      whether a pass or a shot is coming?" Layers: the pass lane while
+      the read is pass, the shooting line once it is shot. Camera: the
+      goalie's eyes while the defender decides, a side shot for the
+      goalie's answer, follow ball on the pass across, push-in on each
+      save. Recap: read the defender first; defender on the carrier: a
+      pass is coming, stay back on the line, ready to push across;
+      defender in the lane: a shot, step forward and square; most likely
+      the shot, most dangerous the pass: while the pass is open, cover it.
+    - Lesson 4 "Behind the goal": a wrong run first (the goalie cuts
+      through the middle of the goal as the ball goes round, a pass into
+      the slot scores), then the right run along the line. Task: "The
+      ball goes round the back of the goal: which way does the goalie
+      move, and where does it look?" Layers: the zones with the slot,
+      the shooting line only once the ball comes out in front. Camera:
+      high, from in front of the goal looking back at it; push-in on the
+      step out. Recap: ball level with the goal line: on the line at the
+      near post, knees parallel; ball behind: slide along the line to
+      the other post, never through the middle; eyes: glance over the
+      shoulder to the slot; ball out in front: forward onto the shooting
+      line, square.
+Open: caption review by the user; whether "Open as play" should keep
+`autoGoalie` in the copied project.
 
 ### A-BACK-050 - "Place the goalie" exercises `[small]` after 046
 
