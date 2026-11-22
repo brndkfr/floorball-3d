@@ -19,6 +19,11 @@ import { state } from '../state.js';
 import { seekTo, playbackState, totalDuration } from './playback.js';
 import { currentCaptionText } from './frame-caption.js';
 import { wrapCaption, captionBox } from './frame-notes.js';
+import { exportPlan } from './export-plan.js';
+import { captionPauseOn } from './caption-hold.js';
+import { ensureDoc } from './doc.js';
+import { getFrames } from './frames.js';
+import { cardContent } from '../lesson-cards.js';
 
 const WEBM_MIME = 'video/webm;codecs=vp9';
 
@@ -125,8 +130,56 @@ function drawCaption(ctx, w, h, text) {
   lines.forEach((l, k) => ctx.fillText(l, w / 2, box.y + box.padY + box.lineH * (k + 0.5)));
 }
 
-// The 3D canvas as rendered just now, with the caption burned in.
-function composeFrame() {
+// A lesson's title or recap card (A-BACK-049, lesson-cards.js) over the
+// middle of the picture, as the Train stage shows it: title, task or bullets.
+function drawCard(ctx, w, h, which) {
+  const doc = ensureDoc();
+  const c = cardContent(doc.lesson, which, state.lang);
+  if (!c) return;
+  if (!c.title && which === 'intro') c.title = doc.meta?.name ?? '';   // as the Train card (lesson-cards-ui.js)
+  const fontPx = Math.max(14, Math.round(h * 0.034));
+  const font = (weight, px) => `${weight} ${px}px Archivo, Helvetica Neue, Arial, sans-serif`;
+  const measure = (s) => ctx.measureText(s).width;
+  const boxW = Math.min(w * 0.62, fontPx * 30);
+  const pad = Math.round(fontPx * 1.1);
+  const inner = boxW - 2 * pad;
+  const titlePx = Math.round(fontPx * 1.3);
+  const lineH = Math.round(fontPx * 1.45);
+  ctx.font = font(700, titlePx);
+  const titleLines = wrapCaption(c.title, inner, measure, 2);
+  ctx.font = font(400, fontPx);
+  const textLines = c.text ? wrapCaption(c.text, inner, measure, 4) : [];
+  const bulletLines = c.bullets.map((b) => wrapCaption(b, inner - fontPx * 1.2, measure, 3));
+  const gap = Math.round(fontPx * 0.7);
+  const bodyLines = textLines.length + bulletLines.reduce((n, l) => n + l.length, 0);
+  const boxH = 2 * pad + titleLines.length * Math.round(titlePx * 1.3) + (bodyLines ? gap : 0) + bodyLines * lineH + Math.max(0, bulletLines.length - 1) * Math.round(gap / 2);
+  const x = Math.round((w - boxW) / 2), y = Math.round((h - boxH) / 2);
+  ctx.fillStyle = 'rgba(19, 23, 29, 0.92)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+  ctx.lineWidth = Math.max(1, Math.round(fontPx / 14));
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, boxW, boxH, Math.round(fontPx * 0.5)); else ctx.rect(x, y, boxW, boxH);
+  ctx.fill();
+  ctx.stroke();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#f2f4f7';
+  let cy = y + pad;
+  ctx.font = font(700, titlePx);
+  for (const l of titleLines) { ctx.fillText(l, x + pad, cy); cy += Math.round(titlePx * 1.3); }
+  if (bodyLines) cy += gap;
+  ctx.font = font(400, fontPx);
+  for (const l of textLines) { ctx.fillText(l, x + pad, cy); cy += lineH; }
+  bulletLines.forEach((lines, k) => {
+    if (k) cy += Math.round(gap / 2);
+    ctx.fillText('•', x + pad, cy);
+    for (const l of lines) { ctx.fillText(l, x + pad + fontPx * 1.2, cy); cy += lineH; }
+  });
+}
+
+// The 3D canvas as rendered just now, with the caption burned in, or a
+// lesson card instead of the caption on the plan's card frames.
+function composeFrame(card = null) {
   const gl = renderer.domElement;
   if (composite.width !== gl.width || composite.height !== gl.height) {
     composite.width = gl.width;
@@ -135,9 +188,17 @@ function composeFrame() {
   const ctx = composite.getContext('2d');
   ctx.clearRect(0, 0, composite.width, composite.height);
   ctx.drawImage(gl, 0, 0);
+  if (card) { drawCard(ctx, composite.width, composite.height, card); return composite; }
   const text = currentCaptionText();
   if (text) drawCaption(ctx, composite.width, composite.height, text);
   return composite;
+}
+
+// What each video frame shows (export-plan.js): holds on captions when the
+// Hold switch is on for this play (lessons by default), the lesson's cards.
+export function planFor(fps, startMs, endMs) {
+  const doc = ensureDoc();
+  return exportPlan({ frames: getFrames(), lang: state.lang, fps, startMs, endMs, holds: captionPauseOn(state.captionPause, doc), lesson: doc.lesson });
 }
 
 // --- MP4 (WebCodecs + mp4-muxer) -------------------------------------
@@ -163,8 +224,8 @@ export async function exportMp4({ width, height, fps, startMs = 0, endMs, onProg
     codec, width, height, bitrate: bitrateFor(width, height, fps), framerate: fps,
   });
 
-  const totalMs = endMs - startMs;
-  const totalFrames = Math.max(1, Math.floor(totalMs * fps / 1000));
+  const plan = planFor(fps, startMs, endMs);
+  const totalFrames = plan.length;
   const frameDurationUs = Math.round(1_000_000 / fps);
 
   for (let i = 0; i < totalFrames; i++) {
@@ -174,10 +235,9 @@ export async function exportMp4({ width, height, fps, startMs = 0, endMs, onProg
       try { encoder.close(); } catch {}
       throw encoderError;
     }
-    const elapsed = startMs + (i * 1000 / fps);
-    seekTo(elapsed);
+    seekTo(plan[i].playMs);
     renderer.render(scene, cam);
-    const bitmap = await createImageBitmap(composeFrame());   // with the frame note (A-BACK-035)
+    const bitmap = await createImageBitmap(composeFrame(plan[i].card));   // with the frame note (A-BACK-035) or a lesson card
     const frame = new VideoFrame(bitmap, {
       timestamp: i * frameDurationUs,
       duration: frameDurationUs,
@@ -222,24 +282,26 @@ export function exportWebm({ fps, startMs = 0, endMs, onProgress, isCancelled })
     // Real-time driver - MediaRecorder samples the canvas at the stream's
     // fps, so we advance elapsed by wall-clock time and let the recorder
     // pick up whatever we've rendered on each rAF.
-    const totalMs = endMs - startMs;
+    // The plan (export-plan.js) is walked by wall-clock time: frame i is due
+    // at i / fps seconds.
+    const plan = planFor(fps, startMs, endMs);
     const startWall = performance.now();
     function tick() {
       if (isCancelled?.()) { recorder.stop(); return; }
-      const now = performance.now();
-      const elapsed = startMs + (now - startWall);
-      if (elapsed >= endMs) {
-        seekTo(endMs);
+      const i = Math.floor((performance.now() - startWall) * fps / 1000);
+      if (i >= plan.length) {
+        const last = plan.at(-1) ?? { playMs: endMs, card: null };
+        seekTo(last.playMs);
         renderer.render(scene, cam);
-        composeFrame();
+        composeFrame(last.card);
         setTimeout(() => recorder.stop(), 100);   // drain the stream
         onProgress?.(1);
         return;
       }
-      seekTo(elapsed);
+      seekTo(plan[i].playMs);
       renderer.render(scene, cam);
-      composeFrame();
-      onProgress?.((elapsed - startMs) / totalMs);
+      composeFrame(plan[i].card);
+      onProgress?.(i / plan.length);
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);

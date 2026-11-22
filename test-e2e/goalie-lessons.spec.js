@@ -595,3 +595,27 @@ test('lesson transport: German labels; a lesson without shots has no Director bu
   await page.locator('#appRail button[data-mode="plan"]').click();
   await expect(bar).toBeHidden();
 });
+
+// Lesson 1 review 2026-11-22: the video export holds on captions, runs
+// through the last caption and carries the title and recap cards (export-plan.js).
+test('export plan: a lesson holds and carries its cards; a fresh own play is the plain sweep', async ({ page }) => {
+  await boot(page);
+  const own = await page.evaluate(async () => {
+    const ex = await import('/src/authoring/export.js');
+    const end = ex.totalDurationMs();
+    const plan = end > 0 ? ex.planFor(30, 0, end) : [];
+    return { n: plan.length, cards: plan.filter((p) => p.card).length, want: Math.max(1, Math.floor(end * 30 / 1000)), end };
+  });
+  if (own.end > 0) { expect(own.cards).toBe(0); expect(own.n).toBe(own.want); }
+  await openLesson(page, 'line');
+  const r = await page.evaluate(async () => {
+    const ex = await import('/src/authoring/export.js');
+    const end = ex.totalDurationMs();
+    const plan = ex.planFor(30, 0, end);
+    return { n: plan.length, plain: Math.floor(end * 30 / 1000), first: plan[0].card, last: plan.at(-1).card, end, lastPlay: plan.filter((p) => !p.card).at(-1).playMs };
+  });
+  expect(r.first).toBe('intro');
+  expect(r.last).toBe('recap');
+  expect(r.n).toBeGreaterThan(r.plain * 2);   // holds and cards: well over twice the plain sweep
+  expect(r.lastPlay).toBe(r.end);
+});
