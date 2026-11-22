@@ -31,6 +31,7 @@ import './goalie-zone-card.js';   // zone card in #trainSlots (A-BACK-048)
 import './kata-section.js';       // KATA card (A-BACK-046)
 import { armLessonIntro } from './lesson-cards-ui.js';   // title and recap card of a lesson (A-BACK-049)
 import './director-ui.js';   // Director switch and Free camera pill (A-BACK-049)
+import './lesson-transport.js';   // Play/Pause, Restart, Director under the Train stage (A-BACK-049)
 import { setDirector } from './director-state.js';
 import { directorPoseFor } from './playback.js';
 import { hasDirector } from '../director.js';

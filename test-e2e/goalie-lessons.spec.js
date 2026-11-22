@@ -544,3 +544,54 @@ test('director: the video export always uses the director, whatever the switch s
   expect(r.free).toEqual({ x: 1, y: 2, z: 3 });
   for (const k of ['x', 'y', 'z']) expect(r.forced[k]).toBeCloseTo(r.at[k], 0);
 });
+
+// A-BACK-049, decided 2026-11-22: Train has its own small transport while a
+// lesson is open (the recorder is Plan only): Play/Pause, Restart and the
+// Director switch, under the stage with the caption above it.
+const playing = (page) => page.evaluate(async () => (await import('/src/authoring/playback.js')).playbackState().playing);
+
+test('lesson transport: shown in Train for a lesson only; Play/Pause, Restart and Director work', async ({ page }) => {
+  await boot(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const bar = page.locator('#lessonTransport');
+  await page.locator('#appRail button[data-mode="train"]').click();
+  await expect(bar).toBeHidden();   // the practice rink, no lesson
+  await openLesson(page, 'line');
+  await page.locator('#lessonCard .lc-close').click();
+  await expect(bar).toBeVisible();
+  const play = bar.getByRole('button', { name: 'Play' });
+  await play.click();
+  expect(await playing(page)).toBe(true);
+  await bar.getByRole('button', { name: 'Pause' }).click();
+  expect(await playing(page)).toBe(false);
+
+  const dir = bar.getByRole('button', { name: 'Director' });
+  await expect(dir).toHaveAttribute('aria-pressed', 'true');
+  await dir.click();
+  await expect(dir).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#directorPill')).toBeVisible();
+
+  await page.evaluate(async () => (await import('/src/authoring/playback.js')).seekTo(6000));
+  await bar.getByRole('button', { name: 'Restart' }).click();
+  expect(await playing(page)).toBe(true);
+  expect(await page.evaluate(async () => (await import('/src/authoring/playback.js')).playbackState().elapsed)).toBeLessThan(500);
+  await expect(dir).toHaveAttribute('aria-pressed', 'true');   // a restart brings the director back
+
+  // the caption sits above the bar, not under it
+  const cap = await page.locator('#frameCaption').boundingBox();
+  const b = await bar.boundingBox();
+  if (cap) expect(cap.y + cap.height).toBeLessThanOrEqual(b.y + 1);
+});
+
+test('lesson transport: German labels; a lesson without shots has no Director button; Plan hides the bar', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'zones');
+  const bar = page.locator('#lessonTransport');
+  await expect(bar).toBeVisible();
+  await expect(bar.locator('[data-lt="director"]')).toBeHidden();
+  await page.evaluate(async () => (await import('/src/lang-state.js')).setLang('de'));
+  await expect(bar.locator('[data-lt="play"]')).toHaveAccessibleName('Abspielen');
+  await expect(bar.locator('[data-lt="restart"]')).toHaveAccessibleName('Neu starten');
+  await page.locator('#appRail button[data-mode="plan"]').click();
+  await expect(bar).toBeHidden();
+});
