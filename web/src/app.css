@@ -411,6 +411,10 @@
   #trainPanel .lc-title { margin:0; font:600 17px/1.3 var(--fb-font); color:var(--fb-text-1); }
   #trainPanel .lc-text { margin:0; font:400 15px/1.45 var(--fb-font); color:var(--fb-text-1); }
   #trainPanel .lc-bullets { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:6px; font:400 14px/1.45 var(--fb-font); color:var(--fb-text-1); }
+  /* "Free camera" pill (A-BACK-049): the viewer has the camera, one click gives it back to the director */
+  .director-pill { position:fixed; top:calc(var(--shell-topbar) + 12px); left:50%; transform:translateX(-50%); z-index:27; cursor:pointer; padding:6px 14px; border-radius:999px; border:1px solid var(--fb-brand); background:var(--fb-brand-quiet); color:var(--fb-text-1); font:500 13px/1.2 var(--fb-font); box-shadow:0 4px 14px rgba(0, 0, 0, 0.35); }
+  .director-pill[hidden] { display:none; }
+  #timeline [data-tl="director"][hidden] { display:none; }
   #trainPanel .lc-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:4px; }
   #trainPanel .lc-actions button { padding:6px 14px; border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-2); background:transparent; color:var(--fb-text-1); font:500 13px/1.2 var(--fb-font); }
   #trainPanel .lc-actions .lc-primary { background:var(--fb-brand-quiet); border-color:var(--fb-brand); }

@@ -35,10 +35,13 @@ test('director: wide is the lesson camera', () => {
   assert.deepEqual(shotPose('wide', { goal: 'B' }), lessonPose('B'));
 });
 
-test('director: goalie eyes look at the ball from head height behind the goalie', () => {
+test('director: goalie eyes look at the ball from head height, in front of the goalie centre (clear of the helmet)', () => {
   const p = shotPose('goalieEyes', ctx);
   assert.ok(p.y > 1000 && p.y < 1600);
-  assert.ok(p.z < goalie.z, 'behind the goalie, towards the goal line');
+  const toBall = { x: ball.x - goalie.x, z: ball.z - goalie.z };
+  const len = Math.hypot(toBall.x, toBall.z);
+  const along = ((p.x - goalie.x) * toBall.x + (p.z - goalie.z) * toBall.z) / len;
+  assert.ok(along > 100 && along < 800, `eyes ${along.toFixed(0)} mm in front of the goalie centre, towards the ball`);
   assert.ok(facing(p, { ...ball, y: 150 }) > 0.999);
 });
 
@@ -68,7 +71,7 @@ test('director: goal B mirrors goal A (side and depth)', () => {
   const p = shotPose('sideKnee', { goal: 'B', ball: bb, goalie: gb });
   assert.ok(p.x < bb.x, 'on the -x side for goal B');
   const e = shotPose('goalieEyes', { goal: 'B', ball: bb, goalie: gb });
-  assert.ok(e.z > gb.z, 'behind the goalie, towards goal line B');
+  assert.ok(e.z < gb.z, 'in front of the goalie, towards the ball, for goal B too');
 });
 
 test('director: follow ball sits behind the ball looking towards the goal; push in is close to the goalie', () => {
@@ -126,4 +129,24 @@ test('director pose: follows the live ball and goalie (a function of the play ti
   const at = (ms) => directorPoseAt(f, ms, { goal, ballAt: (t) => ({ x: ball.x - t, z: ball.z }), goalieAt: () => goalie });
   assert.notEqual(at(0).yaw, at(800).yaw);
   assert.deepEqual(at(300), at(300), 'same time, same pose');
+});
+
+const { directorActive, resumePose, RESUME_MS } = await import('../web/src/director.js');
+
+test('directorActive: the switch or the export, a frame that names a shot, and the 3D camera', () => {
+  const withShot = frames(['wide']), without = frames([null]);
+  assert.equal(directorActive({ switchOn: true, forced: false, frames: withShot, perspective: true }), true);
+  assert.equal(directorActive({ switchOn: false, forced: false, frames: withShot, perspective: true }), false, 'the viewer has the camera');
+  assert.equal(directorActive({ switchOn: false, forced: true, frames: withShot, perspective: true }), true, 'the export ignores the switch');
+  assert.equal(directorActive({ switchOn: true, forced: true, frames: without, perspective: true }), false, 'no shot, nothing to direct');
+  assert.equal(directorActive({ switchOn: true, forced: false, frames: withShot, perspective: false }), false, '2D has no director');
+});
+
+test('resumePose: eases from the viewer camera to the director pose, then is the pose', () => {
+  const a = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 }, b = { x: 100, y: 200, z: 300, yaw: 1, pitch: -0.5 };
+  assert.deepEqual(resumePose(a, b, 0), a);
+  const mid = resumePose(a, b, RESUME_MS / 2);
+  assert.ok(Math.abs(mid.x - 50) < 1e-9 && Math.abs(mid.y - 100) < 1e-9);
+  assert.equal(resumePose(a, b, RESUME_MS), b);
+  assert.equal(resumePose(a, b, RESUME_MS * 5), b);
 });

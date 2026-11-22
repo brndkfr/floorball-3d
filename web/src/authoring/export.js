@@ -68,6 +68,7 @@ function bitrateFor(width, height, fps) {
 }
 
 function saveRendererState() {
+  state.directorForced = true;   // the export always uses a lesson's director camera, whatever the switch says (A-BACK-049)
   return {
     width: renderer.domElement.width,
     height: renderer.domElement.height,
@@ -86,6 +87,7 @@ function applyRendererSize(width, height, cam) {
 }
 
 function restoreRendererState(s) {
+  state.directorForced = false;
   renderer.setPixelRatio(s.pixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   if (camera.isPerspectiveCamera) {

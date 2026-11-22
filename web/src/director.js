@@ -27,7 +27,7 @@ export const SHOT_LABELS = Object.freeze({
 
 // Estimates, chosen by eye like the presets in camera-presets.js.
 export const TRANSITION_MS = 900;   // blend between two shots
-const GOALIE_EYE = { back: 350, height: 1250 };   // behind the goalie's head, mm; height mm (a kneeling goalie)
+const GOALIE_EYE = { back: -600, height: 1250 };  // eyes: mm behind the goalie centre (negative: in front of it, clear of the helmet; ESTIMATE, check in the look-shots); height mm (a kneeling goalie)
 const SHOOTER_EYE = { back: 900, height: 1500 };   // behind the ball, mm; height mm
 const SIDE_KNEE = { dist: 6500, height: 450 };     // side distance from the goalie-ball line, mm; knee height mm
 const FOLLOW = { back: 4500, height: 2200, ahead: 2500 };   // behind the ball, up, look-at point towards the goal
@@ -116,4 +116,18 @@ export function directorPoseAt(frames, elapsed, { goal, ballAt, goalieAt }) {
   if (!s.prev || s.since >= TRANSITION_MS) return pose;
   const from = shotPose(s.prev, actors);
   return from ? lerpPose(from, pose, easeInOut(s.since / TRANSITION_MS)) : pose;
+}
+
+// Does the director drive the camera? `switchOn` is the viewer's Director
+// switch, `forced` the video export (it always uses the director), and
+// the frames must name a shot and the 3D camera be the active one.
+export const directorActive = ({ switchOn, forced, frames, perspective }) =>
+  !!perspective && !!(switchOn || forced) && hasDirector(frames);
+
+// Back to the director after the viewer had the camera: the pose eases from
+// where the camera stood to the director's pose over RESUME_MS (wall time).
+export const RESUME_MS = 600;   // estimate
+export function resumePose(from, pose, sinceMs) {
+  const k = sinceMs / RESUME_MS;
+  return k >= 1 ? pose : lerpPose(from, pose, easeInOut(k));
 }

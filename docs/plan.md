@@ -280,7 +280,10 @@ lines. An item that needs more than ~10 lines gets its own file under
   2026-11-16 (decisions in the spec): lesson 2 "Through the zones" built in
   code, the live goalie, the lesson camera, `openLesson()`; the Lessons shelf in the Library (2026-11-17); pause on captions
   (2026-11-21); lessons 1, 3, 4 and 5 (2026-11-21, captions for review).
-  2026-11-22 decisions: lesson 4 merged into lesson 3 (same run, same
+  Lesson 1 became a showcase (2026-11-22): title and recap cards, a
+  goal against a goalie off the line first, quiet screen (`layers`), director
+  camera (`cam`) with a Director switch and a Free camera pill, slow motion
+  shots; details in the item spec. 2026-11-22 decisions: lesson 4 merged into lesson 3 (same run, same
   goalie answers; four lessons ship), the centred-block chip reads
   "Centred block" (not "Squared up"), lesson 1 builds the KATA up one
   dimension at a time, lesson shots end in a save (the ball stops at the

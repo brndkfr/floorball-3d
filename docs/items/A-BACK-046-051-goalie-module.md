@@ -275,8 +275,57 @@ camera to be revisited, captions as drafted for review):
   - The German captions keep the swiss unihockey module's English zone
     names (Attention-Zone, Danger-Zone, Passing-First-Zone, Slot) on
     purpose: they are the terms coaches use in the module.
+- Lesson 1 as a showcase (2026-11-22, so the lessons explain themselves;
+  all pieces are optional data and only lesson 1 uses them, old docs and
+  the other lessons are unchanged):
+  - Title card and recap card. A lesson carries `doc.lesson = { intro:
+    { title?, task }, recap: { title?, bullets } }` (texts as notes, `{ en,
+    de }`; `lesson-cards.js`, kept by `acceptDoc`). Opening the lesson shows
+    the task ("Watch the goalie: where does it stand, and why?") over the
+    stage until the first play (Start, any play, or Close); when a play
+    ends the recap (placement, depth, axis) shows with Play again / Close
+    (`authoring/lesson-cards-ui.js`).
+  - Wrong first, then right. Frames 1 and 2 are the same shot as at the
+    end, against a goalie off the line (`goalieDx`, 0.7 m, estimate, no KATA
+    dimension applied) and it is a goal (`shot: { scored: true }`, the
+    ball rests in the net), caption "What went wrong?". Then the build-up
+    (placement, depth, axis), the shooting area, and the same shot from
+    the same spot saved (`shot.saved`, as before). Both flights are slow
+    motion: `shot: { speedMps: 6, releaseT: 0.15 }` become the ball's
+    `pass` settings (6 m/s instead of the 25 m/s default, estimates).
+  - Quiet screen. A frame may carry `layers: [...]` (`lesson-view.js`,
+    names `line`, `area`, `coverage`, `zones`, `marks`; kept by
+    `acceptDoc`). `state.quiet` follows the frame whose caption shows
+    (`authoring/lesson-quiet.js`, Train only) and the shooting line, corner
+    lines (the shooting area), coverage, zones, zone labels, shooter inset,
+    verdict chip, hint pill, zone card and pass lines show only what the
+    frame names; the caption and the KATA card always stay. A frame without
+    `layers` leaves the screen as the viewer set it.
+  - Director camera. A frame may carry `cam: '<shot>'` (`director.js`,
+    pure: `wide`, `goalieEyes`, `shooterEyes`, `sideKnee`, `followBall`,
+    `pushIn`; kept by `acceptDoc`). The shot holds until a later frame names
+    another, the pose is computed live from the ball and the goalie track
+    (a function of frames and time, so scrub and export agree) and blends
+    from the previous shot over 0.9 s. `playback.js applyDirector()` sets
+    the camera; the shot offsets are estimates, tuned by eye in look-shots
+    (the goalie eyes sit 0.6 m in front of its centre: nearer, the camera is
+    inside the helmet and the glow outline).
+  - User takeover. The `Director` switch in the recorder's transport (next to
+    Hold and Follow; shown for a play with shots and a live goalie; the
+    recorder is a Plan view, Train shows none) and the pill "Free camera -
+    Back to director" (de: "Freie Kamera - Zurück zur Regie", over the stage
+    in Train and Plan). Any orbit, pan, zoom or key pan of the viewer
+    (`user-camera.js` hooks) turns the director off; the pill or the
+    switch turns it on, easing back over 0.6 s. A pick from the camera menu
+    (the shot list under "From the ball", enabled in any lesson) or a view
+    preset also takes the camera. It comes back on its own only when a new
+    lesson opens or a play restarts. The video export always uses the
+    director (`state.directorForced`).
 Open: caption review by the user; holds in the export; whether "Open as
-play" should keep `autoGoalie` in the copied project.
+play" should keep `autoGoalie` in the copied project; Train has no visible
+play control besides Space and the lesson cards (the recorder is Plan only),
+so the Director switch is only reachable in Plan; the KATA card reads green
+for the ball in the net on the "What went wrong?" frame.
 
 ### A-BACK-050 - "Place the goalie" exercises `[small]` after 046
 

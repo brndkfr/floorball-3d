@@ -10,6 +10,7 @@ import { state } from '../state.js';
 import { playbackState, play, stop, totalDuration } from './playback.js';
 import { cardToShow, cardContent } from '../lesson-cards.js';
 import { t } from '../lang-state.js';
+import { setDirector } from './director-state.js';
 
 // Throw when the DOM root is missing; see CLAUDE.md 'DOM-owning modules'.
 const panel = document.getElementById('trainPanel');
@@ -75,7 +76,7 @@ function refresh() {
 }
 
 primary.addEventListener('click', () => {
-  if (shown === 'recap') stop();   // back to the start
+  if (shown === 'recap') { stop(); setDirector(true); }   // back to the start, the director on again
   introPending = false;
   play();
   refresh();

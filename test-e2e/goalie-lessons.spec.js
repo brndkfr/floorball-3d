@@ -331,3 +331,179 @@ test('lesson cards: the other lessons have no card', async ({ page }) => {
   });
   await expect(page.locator('#lessonCard')).toBeHidden();
 });
+
+// A-BACK-049: director camera. A lesson whose frames name shots (`cam`)
+// steers the 3D camera from the play time; the Director switch sits next to
+// Hold and Follow; the viewer taking the camera turns it off and the pill gives
+// it back. rAF is paused here, so the camera is read after seekTo().
+const camNow = (page) => page.evaluate(async () => {
+  const { camera } = await import('/src/scene.js');
+  const { state } = await import('/src/state.js');
+  return { x: camera.position.x, y: camera.position.y, z: camera.position.z, director: state.director };
+});
+const seek = (page, ms) => page.evaluate(async (ms) => (await import('/src/authoring/playback.js')).seekTo(ms), ms);
+const frameStart = (page, i) => page.evaluate(async (i) => {
+  const { state } = await import('/src/state.js');
+  return state.doc.frames.slice(0, i).reduce((s, f) => s + f.duration, 0);
+}, i);
+const directorPose = (page, ms) => page.evaluate(async (ms) => (await import('/src/authoring/playback.js')).directorPoseFor(ms), ms);
+
+test('director: lesson 1 has the Director switch, on, and the camera follows the shot of the play time', async ({ page }) => {
+  await boot(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openLesson(page, 'line');
+  await expect(page.locator('#directorPill')).toBeHidden();
+  expect((await camNow(page)).director).toBe(true);
+  // frame 4 of the lesson (index 3) is the side knee shot: a level camera at knee height
+  await seek(page, await frameStart(page, 3) + 2000);
+  const side = await camNow(page);
+  expect(side.y).toBeGreaterThan(300);
+  expect(side.y).toBeLessThan(600);
+  // the opening shot: shooter eyes, head height behind the ball
+  await seek(page, 100);
+  const eyes = await camNow(page);
+  expect(eyes.y).toBeGreaterThan(1200);
+  expect(eyes.y).toBeLessThan(1700);
+  const want = await directorPose(page, 100);
+  for (const k of ['x', 'y', 'z']) expect(eyes[k]).toBeCloseTo(want[k], 0);
+});
+
+test('director: slow motion, the flight of the first shot takes longer than a default-speed shot would', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'line');
+  const r = await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    const { passPlan, DEFAULT_SHOT_SPEED_MPS } = await import('/src/authoring/ball-pose.js');
+    const f = state.doc.frames;
+    const plan = passPlan(f[0].scheme, f[1].scheme, f[0].duration);
+    const dist = Math.hypot(plan.to.x - plan.from.x, plan.to.z - plan.from.z);
+    return { needMs: plan.needMs, defaultMs: dist / DEFAULT_SHOT_SPEED_MPS };
+  });
+  expect(r.needMs).toBeGreaterThan(r.defaultMs * 3);
+});
+
+test('director: the viewer zooming turns it off and shows the pill; the pill gives the camera back', async ({ page }) => {
+  await boot(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openLesson(page, 'line');
+  await seek(page, 100);
+  const start = await camNow(page);
+  await page.mouse.move(700, 400);
+  await page.mouse.wheel(0, -300);
+  const pill = page.locator('#directorPill');
+  await expect(pill).toBeVisible();
+  await expect(pill).toHaveText('Free camera - Back to director');
+  await expect(page.locator('#timeline [data-tl="director"]')).toHaveAttribute('aria-pressed', 'false');   // hidden in Train, still in step
+  const zoomed = await camNow(page);
+  expect(zoomed.director).toBe(false);
+  expect(Math.hypot(zoomed.x - start.x, zoomed.y - start.y, zoomed.z - start.z)).toBeGreaterThan(50);
+  // no automatic snap back: stepping the play leaves the camera of the viewer alone
+  await seek(page, await frameStart(page, 3) + 2000);
+  const kept = await camNow(page);
+  expect(Math.hypot(kept.x - zoomed.x, kept.y - zoomed.y, kept.z - zoomed.z)).toBeLessThan(1);
+  await pill.click();
+  await expect(pill).toBeHidden();
+  const back = await camNow(page);
+  expect(back.director).toBe(true);
+  const want = await directorPose(page, await page.evaluate(async () => (await import('/src/authoring/playback.js')).playheadMs()));
+  for (const k of ['x', 'y', 'z']) expect(back[k]).toBeCloseTo(want[k], 0);
+});
+
+test('director: an orbit drag on the 3D view also turns it off', async ({ page }) => {
+  await boot(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openLesson(page, 'line');
+  await seek(page, 100);
+  await page.mouse.move(720, 120);
+  await page.mouse.down();
+  await page.mouse.move(780, 150, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.locator('#directorPill')).toBeVisible();
+  expect((await camNow(page)).director).toBe(false);
+});
+
+test('director: the Director switch sits in the recorder next to Hold and Follow and turns it off and on', async ({ page }) => {
+  await boot(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openLesson(page, 'line');
+  await page.locator('#trainOpenAsPlay').click();   // the lesson as a play in Plan, where the recorder is
+  await expect(page.locator('#appRail [data-mode="plan"]')).toHaveClass(/active/);
+  const btn = page.locator('#timeline [data-tl="director"]');
+  await expect(btn).toBeVisible();
+  await expect(page.locator('#timeline [data-tl="hold"]')).toBeVisible();
+  await expect(page.locator('#timeline [data-tl="follow"]')).toBeVisible();
+  await expect(btn).toHaveText('Director');
+  await expect(btn).toHaveAttribute('aria-pressed', 'true');
+  await btn.click();
+  await expect(btn).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#directorPill')).toBeVisible();
+  expect((await camNow(page)).director).toBe(false);
+  await btn.click();
+  await expect(btn).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#directorPill')).toBeHidden();
+});
+
+test('director: the camera menu (Plan) lists the shots, off without a lesson, and a pick takes the camera', async ({ page }) => {
+  await boot(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const menuButton = page.locator('#appTopbar [data-action="camera-presets"]');
+  await menuButton.click();
+  const shots = page.locator('#cameraPresetMenu [data-shot]');
+  await expect(shots).toHaveCount(6);
+  await expect(shots.nth(3)).toHaveText('Side, knee height');
+  await expect(shots.nth(3)).toBeDisabled();   // a plain play has no goalie to look at
+  await page.keyboard.press('Escape');
+  await openLesson(page, 'line');
+  await page.locator('#trainOpenAsPlay').click();   // the lesson as a play in Plan, where the menu is
+  await menuButton.click();
+  await expect(shots.nth(3)).toBeEnabled();
+  await shots.nth(3).click();
+  await expect(page.locator('#directorPill')).toBeVisible();
+  const c = await camNow(page);
+  expect(c.director).toBe(false);
+  expect(c.y).toBeGreaterThan(300);
+  expect(c.y).toBeLessThan(600);
+});
+
+test('director: a restart and a new lesson bring it back; lessons without shots have no switch', async ({ page }) => {
+  await boot(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openLesson(page, 'line');
+  await page.evaluate(async () => (await import('/src/authoring/director-state.js')).setDirector(false));
+  expect((await camNow(page)).director).toBe(false);
+  await page.evaluate(async () => {
+    const pb = await import('/src/authoring/playback.js');
+    pb.play();
+    pb.tickPlayback(1e9);   // to the end, paused there
+    pb.play();              // a play at the end rewinds: a restart
+  });
+  expect((await camNow(page)).director).toBe(true);
+  await page.evaluate(async () => (await import('/src/authoring/director-state.js')).setDirector(false));
+  await openLesson(page, 'line');   // a new lesson
+  expect((await camNow(page)).director).toBe(true);
+  await openLesson(page, 'zones');
+  expect(await page.evaluate(() => document.querySelector('#timeline [data-tl="director"]').hidden)).toBe(true);   // no shots: no switch
+});
+
+test('director: the video export always uses the director, whatever the switch says', async ({ page }) => {
+  await boot(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openLesson(page, 'line');
+  await page.evaluate(async () => (await import('/src/authoring/director-state.js')).setDirector(false));
+  const r = await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    const { camera } = await import('/src/scene.js');
+    const pb = await import('/src/authoring/playback.js');
+    const at = pb.directorPoseFor(100);
+    camera.position.set(1, 2, 3);
+    pb.seekTo(100);
+    const free = { x: camera.position.x, y: camera.position.y, z: camera.position.z };   // switch off: untouched
+    state.directorForced = true;   // what export.js sets while it renders
+    pb.seekTo(100);
+    const forced = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+    state.directorForced = false;
+    return { at, free, forced };
+  });
+  expect(r.free).toEqual({ x: 1, y: 2, z: 3 });
+  for (const k of ['x', 'y', 'z']) expect(r.forced[k]).toBeCloseTo(r.at[k], 0);
+});
