@@ -8,14 +8,14 @@ test('shotStatus: open shot, nothing in the way', () => {
 });
 
 test('shotStatus: goalie verdicts keep the existing shot-line wording', () => {
-  assert.deepEqual(shotStatus('blocked-off', [], {}), { key: 'blocked-off', text: 'Goalie in the way, not squared up' });
-  assert.deepEqual(shotStatus('blocked-centred', [], {}), { key: 'blocked-centred', text: 'Goalie squared up' });
+  assert.deepEqual(shotStatus('blocked-off', [], {}), { key: 'blocked-off', text: 'Goalie in the way, not centred' });
+  assert.deepEqual(shotStatus('blocked-centred', [], {}), { key: 'blocked-centred', text: 'Goalie centred' });
 });
 
 test('shotStatus: an opponent in the lane makes an open shot yellow and is named', () => {
   const players = { d4: { number: '4' } };
   assert.deepEqual(shotStatus('open', ['d4'], players), { key: 'blocked-off', text: 'Blocked by #4' });
-  assert.deepEqual(shotStatus('blocked-centred', ['d4'], players), { key: 'blocked-centred', text: 'Goalie squared up, also #4 in the lane' });
+  assert.deepEqual(shotStatus('blocked-centred', ['d4'], players), { key: 'blocked-centred', text: 'Goalie centred, also #4 in the lane' });
 });
 
 test('passStatus: clear lane, on time', () => {
