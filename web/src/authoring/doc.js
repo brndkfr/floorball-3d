@@ -12,6 +12,9 @@
 // v1 docs (single implicit frame) are auto-migrated on load via ensureDoc.
 
 import { sanitizeNote } from './frame-notes.js';
+import { sanitizeLayers } from '../lesson-view.js';
+import { sanitizeLessonCards } from '../lesson-cards.js';
+import { DIRECTOR_SHOTS } from '../director.js';
 import { state } from '../state.js';
 import { sanitizeZones } from './zones-model.js';
 import { sanitizeHiddenFixed } from './fixed-objects-model.js';
@@ -179,6 +182,11 @@ function sanitizeFrame(frame) {
     if (note === undefined) delete frame.note; else frame.note = note;
   }
   if ('goalieFixed' in frame && frame.goalieFixed !== true) delete frame.goalieFixed;   // A-BACK-049: lesson goalie pose is part of the lesson
+  if ('layers' in frame) {   // A-BACK-049: quiet screen, the rink layers this frame shows (lesson-view.js)
+    const layers = sanitizeLayers(frame.layers);
+    if (layers === undefined) delete frame.layers; else frame.layers = layers;
+  }
+  if ('cam' in frame && !DIRECTOR_SHOTS.includes(frame.cam)) delete frame.cam;   // A-BACK-049: director camera shot (director.js)
   if (!isObj(frame.scheme)) frame.scheme = emptyScheme();
   migrateGoalieScheme(frame.scheme);
   return sanitizeScheme(frame.scheme);
@@ -195,6 +203,10 @@ function sanitizeDoc(doc) {
   doc.zones = sanitizeZones(doc.zones);   // A-BACK-039: shown tactical zones, project-level
   doc.hiddenFixed = sanitizeHiddenFixed(doc.hiddenFixed);   // hidden fixed goals / goalies, project-level
   if ('autoGoalie' in doc && doc.autoGoalie !== 'A' && doc.autoGoalie !== 'B') delete doc.autoGoalie;   // A-BACK-049: live goalie (goalie-track.js)
+  if ('lesson' in doc) {   // A-BACK-049: title and recap card of a lesson (lesson-cards.js)
+    const lesson = sanitizeLessonCards(doc.lesson);
+    if (lesson === undefined) delete doc.lesson; else doc.lesson = lesson;
+  }
   for (const frame of doc.frames) {
     if (!sanitizeFrame(frame)) return null;
     const photo = frame.photo;

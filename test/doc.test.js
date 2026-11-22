@@ -384,3 +384,34 @@ test('acceptDoc keeps goalieFixed only when it is true, and old docs load unchan
   }
   assert.equal('goalieFixed' in acceptDoc(JSON.parse(JSON.stringify(emptyDoc()))).frames[0], false);
 });
+
+// A-BACK-049: a lesson frame may name the rink layers it shows and its director
+// camera shot; the doc may carry the title / recap card. Anything odd is dropped.
+test('acceptDoc keeps frame layers and cam when valid, cleans or drops the rest', () => {
+  const raw = JSON.parse(JSON.stringify(emptyDoc()));
+  raw.frames[0].layers = ['area', 'bogus', 'line'];
+  raw.frames[0].cam = 'sideKnee';
+  const d = acceptDoc(JSON.parse(JSON.stringify(raw)));
+  assert.deepEqual(d.frames[0].layers, ['line', 'area']);
+  assert.equal(d.frames[0].cam, 'sideKnee');
+  raw.frames[0].layers = 'line';
+  raw.frames[0].cam = 'nope';
+  const e = acceptDoc(JSON.parse(JSON.stringify(raw)));
+  assert.equal('layers' in e.frames[0], false);
+  assert.equal('cam' in e.frames[0], false);
+  const empty = acceptDoc(JSON.parse(JSON.stringify(emptyDoc())));
+  assert.equal('layers' in empty.frames[0], false, 'old docs load unchanged');
+  assert.equal('cam' in empty.frames[0], false);
+  const quiet = JSON.parse(JSON.stringify(emptyDoc()));
+  quiet.frames[0].layers = [];
+  assert.deepEqual(acceptDoc(quiet).frames[0].layers, [], 'an empty list is the quietest screen, kept');
+});
+
+test('acceptDoc keeps a clean doc.lesson and drops a bad one', () => {
+  const raw = JSON.parse(JSON.stringify(emptyDoc()));
+  raw.lesson = { intro: { task: { en: 'Watch', de: 'Schau' } }, recap: { bullets: ['a', { en: 'b', de: 'c' }] } };
+  assert.deepEqual(acceptDoc(JSON.parse(JSON.stringify(raw))).lesson, raw.lesson);
+  raw.lesson = { intro: 5 };
+  assert.equal('lesson' in acceptDoc(JSON.parse(JSON.stringify(raw))), false);
+  assert.equal('lesson' in acceptDoc(JSON.parse(JSON.stringify(emptyDoc()))), false);
+});
