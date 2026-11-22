@@ -98,6 +98,20 @@ aside.
    on the pull request, and nothing merges to `main` on a red CI. Never `--no-verify` past a failing hook,
    never `git restore` unfamiliar working-tree changes to make a
    test go green.
+9. **Update the docs in the same change, when it makes sense.**
+   - [README.md](README.md): a change a user or a contributor would
+     notice (a new or changed feature, control, mode, export option,
+     setup step, command / MCP tool, script, or a new module worth
+     listing in "Project structure") updates the matching README
+     section in the same commit. Internal refactors, tests and fixes
+     that restore documented behaviour do not.
+   - This file (CLAUDE.md): a lasting lesson (a gotcha that cost real
+     time, a convention a future change must follow, a workflow rule
+     the user asked for) goes into the matching section here. One-off
+     details of a single change do not; those belong in the commit
+     message or [docs/plan.md](docs/plan.md).
+   - Say in the commit message which doc you updated, or why none
+     needed it.
 
 ## Coordinate conventions (read before touching camera/movement/placement code)
 
