@@ -619,3 +619,33 @@ test('export plan: a lesson holds and carries its cards; a fresh own play is the
   expect(r.n).toBeGreaterThan(r.plain * 2);   // holds and cards: well over twice the plain sweep
   expect(r.lastPlay).toBe(r.end);
 });
+
+test('lesson shot: a fading ball trail shows in flight, not before the release nor in the build-up', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'line');
+  const dots = () => page.evaluate(async () => {
+    const { scene } = await import('/src/scene.js');
+    const g = scene.getObjectByName('ballTrail');
+    return g ? g.children.filter((m) => m.visible).length : -1;
+  });
+  await seek(page, 100);
+  expect(await dots()).toBe(0);
+  await seek(page, 1500);
+  expect(await dots()).toBeGreaterThanOrEqual(3);
+  await seek(page, await frameStart(page, 2) + 500);
+  expect(await dots()).toBe(0);
+});
+
+test('lesson export: the KATA readout the video box draws is judged for placement, depth and axis', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'line');
+  const info = await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    const { seekTo } = await import('/src/authoring/playback.js');
+    const { updateKataReadout } = await import('/src/kata-readout.js');
+    seekTo(9000);
+    updateKataReadout();
+    return state.kataReadout?.judged?.status ?? null;
+  });
+  expect(info && ['placement', 'depth', 'axis'].every((d) => d in info)).toBe(true);
+});

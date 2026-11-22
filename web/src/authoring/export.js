@@ -15,7 +15,7 @@
 
 import * as THREE from 'three';
 import { scene, renderer, camera, topDownCamera } from '../scene.js';
-import { state } from '../state.js';
+import { state, getBallWorldCenter } from '../state.js';
 import { seekTo, playbackState, totalDuration } from './playback.js';
 import { currentCaptionText } from './frame-caption.js';
 import { wrapCaption, captionBox } from './frame-notes.js';
@@ -24,6 +24,10 @@ import { captionPauseOn } from './caption-hold.js';
 import { ensureDoc } from './doc.js';
 import { getFrames } from './frames.js';
 import { cardContent } from '../lesson-cards.js';
+import { updateGoalieZones } from '../goalie-zones-layer.js';
+import { updateKataReadout } from '../kata-readout.js';
+import { kataBoxLayout, kataDotColor, KATA_BOX_DIMS } from '../kata-box.js';
+import { text } from '../i18n.js';
 
 const WEBM_MIME = 'video/webm;codecs=vp9';
 
@@ -112,12 +116,12 @@ function pickCamera() {
 
 const composite = document.createElement('canvas');
 
-function drawCaption(ctx, w, h, text) {
+function drawCaption(ctx, w, h, text) {   // returns the caption box, or null
   const fontPx = Math.max(14, Math.round(h * 0.035));
   ctx.font = `600 ${fontPx}px Archivo, Helvetica Neue, Arial, sans-serif`;
   const padX = Math.round(fontPx * 0.8);
   const lines = wrapCaption(text, w * 0.8 - 2 * padX, (s) => ctx.measureText(s).width);
-  if (!lines.length) return;
+  if (!lines.length) return null;
   const lineW = Math.max(...lines.map((l) => ctx.measureText(l).width));
   const box = captionBox({ w, h }, { lines: lines.length, lineW, fontPx });
   ctx.fillStyle = 'rgba(13, 15, 18, 0.82)';
@@ -128,6 +132,46 @@ function drawCaption(ctx, w, h, text) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   lines.forEach((l, k) => ctx.fillText(l, w / 2, box.y + box.padY + box.lineH * (k + 0.5)));
+  return box;
+}
+
+// A lesson's KATA card, compact, bottom-left of the picture (A-BACK-049):
+// Placement, Depth, Axis with the same status dots as the Train card. The
+// main loop does not tick during an export, so seekFrame() refreshes the
+// readout first. Canvas drawing, not unit-testable (layout is: kata-box.js).
+function drawKataBox(ctx, w, h, avoidTop) {
+  const judged = state.kataReadout?.judged;
+  if (!judged) return;
+  const fontPx = Math.max(12, Math.round(h * 0.03));
+  ctx.font = `600 ${fontPx}px Archivo, Helvetica Neue, Arial, sans-serif`;
+  const labels = KATA_BOX_DIMS.map((d) => text(`goalie.kata.${d}`, state.lang).replace(/\s*\(.*\)$/, ''));
+  const labelW = Math.max(...labels.map((l) => ctx.measureText(l).width));
+  const L = kataBoxLayout({ w, h }, { fontPx, labelW, avoidTop });
+  ctx.fillStyle = 'rgba(13, 15, 18, 0.82)';
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(L.x, L.y, L.w, L.h, Math.round(fontPx * 0.4)); else ctx.rect(L.x, L.y, L.w, L.h);
+  ctx.fill();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  KATA_BOX_DIMS.forEach((d, k) => {
+    const cy = L.y + L.padY + L.rowH * (k + 0.5);
+    ctx.fillStyle = kataDotColor(judged.status[d]);
+    ctx.beginPath();
+    ctx.arc(L.x + L.padX + L.dot / 2, cy, L.dot / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f2f4f7';
+    ctx.fillText(labels[k], L.x + L.padX + L.dot + L.gap, cy);
+  });
+}
+
+// seekTo plus what the main loop would have ticked for a lesson: the
+// goalie zones and the KATA readout at this play time.
+function seekFrame(ms) {
+  seekTo(ms);
+  if (ensureDoc().autoGoalie) {
+    updateGoalieZones(getBallWorldCenter());
+    updateKataReadout();
+  }
 }
 
 // A lesson's title or recap card (A-BACK-049, lesson-cards.js) over the
@@ -189,8 +233,9 @@ function composeFrame(card = null) {
   ctx.clearRect(0, 0, composite.width, composite.height);
   ctx.drawImage(gl, 0, 0);
   if (card) { drawCard(ctx, composite.width, composite.height, card); return composite; }
-  const text = currentCaptionText();
-  if (text) drawCaption(ctx, composite.width, composite.height, text);
+  const note = currentCaptionText();
+  const box = note ? drawCaption(ctx, composite.width, composite.height, note) : null;
+  if (ensureDoc().autoGoalie) drawKataBox(ctx, composite.width, composite.height, box ? box.y : null);
   return composite;
 }
 
@@ -235,7 +280,7 @@ export async function exportMp4({ width, height, fps, startMs = 0, endMs, onProg
       try { encoder.close(); } catch {}
       throw encoderError;
     }
-    seekTo(plan[i].playMs);
+    seekFrame(plan[i].playMs);
     renderer.render(scene, cam);
     const bitmap = await createImageBitmap(composeFrame(plan[i].card));   // with the frame note (A-BACK-035) or a lesson card
     const frame = new VideoFrame(bitmap, {
@@ -291,14 +336,14 @@ export function exportWebm({ fps, startMs = 0, endMs, onProgress, isCancelled })
       const i = Math.floor((performance.now() - startWall) * fps / 1000);
       if (i >= plan.length) {
         const last = plan.at(-1) ?? { playMs: endMs, card: null };
-        seekTo(last.playMs);
+        seekFrame(last.playMs);
         renderer.render(scene, cam);
         composeFrame(last.card);
         setTimeout(() => recorder.stop(), 100);   // drain the stream
         onProgress?.(1);
         return;
       }
-      seekTo(plan[i].playMs);
+      seekFrame(plan[i].playMs);
       renderer.render(scene, cam);
       composeFrame(plan[i].card);
       onProgress?.(i / plan.length);
