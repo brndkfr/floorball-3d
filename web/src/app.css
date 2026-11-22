@@ -694,6 +694,7 @@
   .shell-btn.ghost { background:transparent; color:var(--fb-text-2); }
   .shell-btn.primary { background:var(--fb-brand); border-color:var(--fb-brand); color:#fff; }
   .shell-btn:hover { border-color:var(--fb-text-3); color:var(--fb-text-1); }
+  #aiBtn[aria-pressed="true"] { border-color:var(--fb-brand); background:var(--fb-brand-quiet); color:var(--fb-text-1); }
   .shell-btn:focus-visible, #appRail button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
   .shell-spacer { flex:1; }
   .shell-seg { display:inline-flex; border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-1); overflow:hidden; }

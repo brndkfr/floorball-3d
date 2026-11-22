@@ -25,6 +25,11 @@ async function addNote(page, i, text) {
   const input = page.locator('.app-dialog-input');
   await input.fill(text);
   await page.getByRole('button', { name: 'OK' }).click();
+  // The note is stored on the dialog's async 'close' event, a tick after the
+  // click: wait for it, or a fast Ctrl+Z lands before the note exists
+  // (failed CI on slower runners, passed locally).
+  await expect(page.locator('dialog.app-dialog')).toHaveCount(0);
+  await expect(caption(page)).toHaveText(text);
 }
 
 const twoFrames = (page) => page.evaluate(async () => {

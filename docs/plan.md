@@ -168,8 +168,11 @@ A-Q-014). [items/S-BACK-032-035](items/S-BACK-032-035-screenshot-mcp.md).
 1. **[S-BACK-032] Screenshot, whole app** One click saves what is on
    screen, labels included; Copy and Clean in a small menu.
 2. **[S-BACK-033] Command layer** The app's actions as typed commands.
+   First slice built 2026-11-21: registry with schema checks, six
+   commands (lesson, goalie, seek / stop, KATA readout, screenshot).
 3. **[S-BACK-034] MCP server in the app + local relay** Connect AI with
-   a pairing code; screenshot is one of the tools.
+   a pairing code; screenshot is one of the tools. Built 2026-11-22:
+   `scripts/mcp-relay/`, the AI button, the six commands as tools.
 4. **[S-BACK-035] Cloud relay** (optional) For claude.ai or a tablet.
 
 ### Later (parked)
@@ -322,10 +325,14 @@ lines. An item that needs more than ~10 lines gets its own file under
 - **[S-BACK-032] Screenshot, whole app** [in-progress] Camera button in
   every mode, PNG with the HTML overlays painted in, Copy and Clean.
   [Spec](items/S-BACK-032-035-screenshot-mcp.md).
-- **[S-BACK-033] Command layer** [open] Typed commands for the app's
-  actions, run by the UI's own code. Same file.
-- **[S-BACK-034] MCP server in the app + local relay** [open] Tools in
-  the tab, a thin relay to MCP clients, Connect AI with pairing. Same file.
+- **[S-BACK-033] Command layer** [in-progress] Typed commands for the
+  app's actions, run by the UI's own code; first six built. Open: undo
+  per command, overwrite confirmation, `area.verb` naming (decide with
+  the editing commands). Same file.
+- **[S-BACK-034] MCP server in the app + local relay** [in-progress]
+  Built 2026-11-22: relay (`scripts/mcp-relay/`, stdio + WebSocket on
+  127.0.0.1, origin + pairing code), AI button, commands as tools.
+  Open: confirmation for overwriting commands, with S-BACK-033. Same file.
 - **[S-BACK-035] Cloud relay** [open, optional] Same file.
 - **[S-BACK-031] e2e area sets** [open] One command for the area run
   that CLAUDE.md workflow step 5 asks for when `test:e2e:affected`
