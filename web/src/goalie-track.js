@@ -40,14 +40,21 @@ export function ballAt(frames, ms) {
 const goalCenterOf = (goal) => ({ x: 0, z: GOAL_Z[goal] });
 
 // A frame with `goalieFixed` (the KATA build-up of lesson 1) carries a pose
-// that is part of the lesson. The goalie goes to it during the interval
-// before that frame and holds it through the frame, instead of following
-// the rules. Returns that pose at `ms`, or null when the rules apply.
+// that is part of the lesson and its caption. The goalie holds it through
+// its frame and moves to the next one only in the last FIXED_LEAD_MS before
+// the next keyframe, instead of following the rules, so a caption never
+// shows the next step early ("What went wrong?" stays wrong). Returns that
+// pose at `ms`, or null when the rules apply.
+export const FIXED_LEAD_MS = 1000;   // estimate: 3 m at GOALIE_MOVE's 3 m/s, more than any build-up step
 function fixedPoseAt(frames, goal, ms) {
   let acc = 0;
   for (let i = 0; i + 1 < frames.length; i++) {
     const d = frames[i].duration;
-    if (ms < acc + d) return poseOf(frames[i + 1], goal);
+    if (ms < acc + d) {
+      const here = poseOf(frames[i], goal);
+      if (here && ms < acc + d - FIXED_LEAD_MS) return here;
+      return poseOf(frames[i + 1], goal);
+    }
     acc += d;
   }
   return poseOf(frames.at(-1), goal);

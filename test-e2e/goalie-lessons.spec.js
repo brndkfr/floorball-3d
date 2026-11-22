@@ -108,12 +108,14 @@ test('lesson 1: on the "What went wrong?" frame the live KATA card reads placeme
     const { seekTo } = await import('/src/authoring/playback.js');
     const { updateGoalieZones } = await import('/src/goalie-zones-layer.js');
     const { updateKataReadout } = await import('/src/kata-readout.js');
-    seekTo(state.doc.frames[0].duration);   // the goal keyframe: the ball is in the net
-    updateGoalieZones(getBallWorldCenter());
-    updateKataReadout();
-    return { placement: state.kataReadout?.judged?.status?.placement, ballZ: getBallWorldCenter().z, gradedZ: state.kataReadout?.inputs?.ball?.z };
+    const at = (ms) => { seekTo(ms); updateGoalieZones(getBallWorldCenter()); updateKataReadout(); return state.kataReadout?.judged?.status?.placement; };
+    const [f0, f1] = state.doc.frames;
+    const mid = at(f0.duration + f1.duration / 2);   // the caption is still up: the goalie still off the line
+    const placement = at(f0.duration);   // the goal keyframe: the ball is in the net
+    return { mid, placement, ballZ: getBallWorldCenter().z, gradedZ: state.kataReadout?.inputs?.ball?.z };
   });
   expect(r.placement).toBe('adjust');
+  expect(r.mid).toBe('adjust');
   expect(r.gradedZ).toBeGreaterThan(r.ballZ + 3000);   // graded from the release point out on the rink
 });
 

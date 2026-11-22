@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-const { goalieTrack, goalieTrackAt, ballAt, GOALIE_MOVE } = await import('../web/src/goalie-track.js');
+const { goalieTrack, goalieTrackAt, ballAt, GOALIE_MOVE, FIXED_LEAD_MS } = await import('../web/src/goalie-track.js');
 const { buildLesson } = await import('../web/src/goalie-lessons.js');
 const { goalieZoneOf } = await import('../web/src/goalie-zones.js');
 const { kataOf, kataTargets, judgeKata, expectedAction, shotAngleDeg } = await import('../web/src/kata.js');
@@ -126,9 +126,20 @@ test('goalieTrack: a frame marked goalieFixed is followed instead of the rules',
   const track = goalieTrack(doc.frames, 'A');
   const pose = (f) => { const g = f.scheme.goalies.A; return { x: g.x, z: g.z, yaw: g.angle }; };
   const near = (a, b, msg) => assert.ok(Math.hypot(a.x - b.x, a.z - b.z) < 5 && Math.abs(wrap(a.yaw - b.yaw)) < 0.01, `${msg}: ${JSON.stringify(a)} vs ${JSON.stringify(b)}`);
-  // the step 0 -> 1 is made within the first interval and held to the end of it
-  near(goalieTrackAt(track, 2400), pose(doc.frames[1]), 'at 2.4 s, frame 2 pose');
-  near(goalieTrackAt(track, 4900), pose(doc.frames[2]), 'at 4.9 s, frame 3 pose');
+  // A fixed pose belongs to its frame's caption: reached by the keyframe and
+  // held through the frame; the move to the next one starts FIXED_LEAD_MS
+  // before the next keyframe (decided 2026-11-22: "What went wrong?" stays
+  // wrong while it is on screen).
+  let acc = 0;
+  for (let k = 1; k < doc.frames.length; k++) {
+    acc += doc.frames[k - 1].duration;
+    if (!doc.frames[k].goalieFixed) continue;
+    near(goalieTrackAt(track, acc), pose(doc.frames[k]), `keyframe ${k}`);
+    if (k + 1 < doc.frames.length) near(goalieTrackAt(track, acc + doc.frames[k].duration - FIXED_LEAD_MS - 40), pose(doc.frames[k]), `frame ${k} held`);
+  }
+  const wrong = doc.frames.findIndex((f) => f.scheme.balls.main.shot && !f.scheme.balls.main.shot.saved);
+  const wStart = doc.frames.slice(0, wrong).reduce((s, f) => s + f.duration, 0);
+  near(goalieTrackAt(track, wStart + doc.frames[wrong].duration / 2), pose(doc.frames[wrong]), 'still off the line in the middle of "What went wrong?"');
   // and the rules would have put the goalie square and forward already at the start
   assert.notDeepEqual(pose(doc.frames[0]), pose(doc.frames[2]));
   // without the mark the same frames get the rules' pose
