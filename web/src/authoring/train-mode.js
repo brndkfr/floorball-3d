@@ -29,6 +29,7 @@ import { setShotViewUnsaved, restoreStoredShotView } from '../shot-view-state.js
 import { trainShotView } from '../shot-view.js';
 import './goalie-zone-card.js';   // zone card in #trainSlots (A-BACK-048)
 import './kata-section.js';       // KATA card (A-BACK-046)
+import { armLessonIntro } from './lesson-cards-ui.js';   // title and recap card of a lesson (A-BACK-049)
 import { getCameraRig, isDefaultView, applyDefaultView, defaultRig } from '../scene.js';
 import { blendCameraTo } from '../ui/camera-menu.js';
 import { trainPose, lessonPose } from '../camera-presets.js';
@@ -119,6 +120,7 @@ export function openLesson(key) {
   // showDoc() fires nothing: the recorder (frame strip, Hold switch) and
   // the caption re-read the doc on framesChanged.
   window.dispatchEvent(new Event('framesChanged'));
+  armLessonIntro();   // the lesson's task card, until the first play
   return true;
 }
 

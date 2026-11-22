@@ -406,6 +406,14 @@
   #trainPanel .train-card[hidden] { display:none; }
   #trainPanel .train-card.collapsed { gap:0; }
   #trainPanel .gz { top:20px; width:300px; }
+  /* Lesson title and recap card (A-BACK-049): over the middle of the stage, clear of the zone card, the KATA card and the caption */
+  #trainPanel .lesson-card { left:50%; top:22%; transform:translateX(-50%); width:min(460px, calc(100% - 40px)); gap:10px; padding:16px 18px; }
+  #trainPanel .lc-title { margin:0; font:600 17px/1.3 var(--fb-font); color:var(--fb-text-1); }
+  #trainPanel .lc-text { margin:0; font:400 15px/1.45 var(--fb-font); color:var(--fb-text-1); }
+  #trainPanel .lc-bullets { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:6px; font:400 14px/1.45 var(--fb-font); color:var(--fb-text-1); }
+  #trainPanel .lc-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:4px; }
+  #trainPanel .lc-actions button { padding:6px 14px; border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-2); background:transparent; color:var(--fb-text-1); font:500 13px/1.2 var(--fb-font); }
+  #trainPanel .lc-actions .lc-primary { background:var(--fb-brand-quiet); border-color:var(--fb-brand); }
   #trainPanel .kata { bottom:20px; width:340px; }
   body[data-quiet] #trainPanel .gz { display:none; }   /* lesson quiet screen (A-BACK-049): the caption, the KATA card and the named layers only */
   #trainPanel button { cursor:pointer; font-family:var(--fb-font); }

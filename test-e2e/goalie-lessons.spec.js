@@ -270,3 +270,64 @@ test('quiet screen: lessons without layers keep the full Train screen', async ({
   await openLesson(page, 'zones');
   expect((await quietAt(page, 0)).quiet).toBeNull();
 });
+
+// A-BACK-049: title card and recap card. Opening lesson 1 shows its task
+// until the first play; the end of a play shows the recap with Play again.
+test('lesson cards: lesson 1 opens with its task card, Start plays and puts it away', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'line');
+  const card = page.locator('#lessonCard');
+  await expect(card).toBeVisible();
+  await expect(card.locator('.lc-title')).toHaveText('Shooting line and area');
+  await expect(card.locator('.lc-text')).toHaveText('Watch the goalie: where does it stand, and why?');
+  await expect(card.locator('.lc-bullets')).toBeHidden();
+  await card.getByRole('button', { name: 'Start' }).click();
+  await expect(card).toBeHidden();
+  expect(await page.evaluate(async () => (await import('/src/authoring/playback.js')).playbackState().playing)).toBe(true);
+});
+
+test('lesson cards: the task card is German in German, and Close puts it away without playing', async ({ page }) => {
+  await boot(page);
+  await page.evaluate(async () => (await import('/src/lang-state.js')).setLang('de'));
+  await openLesson(page, 'line');
+  const card = page.locator('#lessonCard');
+  await expect(card.locator('.lc-text')).toHaveText('Schau auf den Goalie: wo steht er, und warum?');
+  await card.getByRole('button', { name: 'Schliessen' }).click();
+  await expect(card).toBeHidden();
+  expect(await page.evaluate(async () => (await import('/src/authoring/playback.js')).playbackState().playing)).toBe(false);
+});
+
+test('lesson cards: any play dismisses the task card; the end of the play shows the three recap bullets, Play again restarts', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'line');
+  const card = page.locator('#lessonCard');
+  await expect(card).toBeVisible();
+  await page.evaluate(async () => (await import('/src/authoring/playback.js')).play());   // the transport's play
+  await expect(card).toBeHidden();
+  // run to the end (rAF is paused here, so the play is stepped by hand): the end pauses it and the recap shows
+  await page.evaluate(async () => {
+    const pb = await import('/src/authoring/playback.js');
+    pb.tickPlayback(1e9);
+  });
+  await expect(card).toBeVisible();
+  await expect(card.locator('.lc-title')).toHaveText('What to take away');
+  await expect(card.locator('.lc-bullets li')).toHaveCount(3);
+  await expect(card.locator('.lc-bullets li').first()).toContainText('Placement');
+  await card.getByRole('button', { name: 'Play again' }).click();
+  await expect(card).toBeHidden();
+  const pb = await page.evaluate(async () => { const s = (await import('/src/authoring/playback.js')).playbackState(); return { playing: s.playing, elapsed: s.elapsed }; });
+  expect(pb.playing).toBe(true);
+  expect(pb.elapsed).toBeLessThan(1000);
+});
+
+test('lesson cards: the other lessons have no card', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'zones');
+  await expect(page.locator('#lessonCard')).toBeHidden();
+  await page.evaluate(async () => {
+    const pb = await import('/src/authoring/playback.js');
+    pb.play();
+    pb.tickPlayback(1e9);
+  });
+  await expect(page.locator('#lessonCard')).toBeHidden();
+});
