@@ -100,6 +100,23 @@ test('every keyframe of the lesson reads all ok on the live KATA card', async ({
   }
 });
 
+test('lesson 1: on the "What went wrong?" frame the live KATA card reads placement off, not the ball in the net', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'line');
+  const r = await page.evaluate(async () => {
+    const { state, getBallWorldCenter } = await import('/src/state.js');
+    const { seekTo } = await import('/src/authoring/playback.js');
+    const { updateGoalieZones } = await import('/src/goalie-zones-layer.js');
+    const { updateKataReadout } = await import('/src/kata-readout.js');
+    seekTo(state.doc.frames[0].duration);   // the goal keyframe: the ball is in the net
+    updateGoalieZones(getBallWorldCenter());
+    updateKataReadout();
+    return { placement: state.kataReadout?.judged?.status?.placement, ballZ: getBallWorldCenter().z, gradedZ: state.kataReadout?.inputs?.ball?.z };
+  });
+  expect(r.placement).toBe('adjust');
+  expect(r.gradedZ).toBeGreaterThan(r.ballZ + 3000);   // graded from the release point out on the rink
+});
+
 // The Lessons shelf in the Library: a row per shipped lesson, Open shows it in Train.
 test('Library shelf: the lesson row opens the lesson in Train and closes the Library', async ({ page }) => {
   await boot(page);
@@ -483,6 +500,24 @@ test('director: a restart and a new lesson bring it back; lessons without shots 
   expect((await camNow(page)).director).toBe(true);
   await openLesson(page, 'zones');
   expect(await page.evaluate(() => document.querySelector('#timeline [data-tl="director"]').hidden)).toBe(true);   // no shots: no switch
+});
+
+test('director: Stop brings it back and shows the opening shot', async ({ page }) => {
+  await boot(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openLesson(page, 'line');
+  await page.evaluate(async () => {
+    const pb = await import('/src/authoring/playback.js');
+    pb.play();
+    pb.tickPlayback(2000);
+    (await import('/src/authoring/director-state.js')).setDirector(false);   // the viewer took the camera mid-play
+    pb.stop();
+  });
+  const c = await camNow(page);
+  expect(c.director).toBe(true);
+  await expect(page.locator('#directorPill')).toBeHidden();
+  const want = await directorPose(page, 0);
+  for (const k of ['x', 'y', 'z']) expect(c[k]).toBeCloseTo(want[k], 0);
 });
 
 test('director: the video export always uses the director, whatever the switch says', async ({ page }) => {

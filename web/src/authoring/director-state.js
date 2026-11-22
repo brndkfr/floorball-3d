@@ -2,7 +2,7 @@
 // (director.js) drives the 3D view. state.director is on by default and is
 // turned off by the viewer taking the camera (director-ui.js) or picking a
 // shot or view from the camera menu; it comes back with the pill, the
-// switch, a new lesson or a restart. Fires `directorChanged` on window.
+// switch, a new lesson, a restart or Stop. Fires `directorChanged` on window.
 
 import { state } from '../state.js';
 import { playbackState } from './playback.js';

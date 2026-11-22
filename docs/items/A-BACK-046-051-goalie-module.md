@@ -321,11 +321,14 @@ camera to be revisited, captions as drafted for review):
     preset also takes the camera. It comes back on its own only when a new
     lesson opens or a play restarts. The video export always uses the
     director (`state.directorForced`).
+  - Decided 2026-11-22 (to build): on the "What went wrong?" frame the
+    KATA card reads red, grading the goalie's stance when the shot was
+    taken, not the ball in the net. Train gets a small transport under the
+    stage while a lesson is open: Play/Pause, Restart and the Director
+    switch. A camera-menu pick (shot or preset) keeps turning the director
+    off. Stop turns the director back on, like a restart.
 Open: caption review by the user; holds in the export; whether "Open as
-play" should keep `autoGoalie` in the copied project; Train has no visible
-play control besides Space and the lesson cards (the recorder is Plan only),
-so the Director switch is only reachable in Plan; the KATA card reads green
-for the ball in the net on the "What went wrong?" frame.
+play" should keep `autoGoalie` in the copied project.
 
 ### A-BACK-050 - "Place the goalie" exercises `[small]` after 046
 

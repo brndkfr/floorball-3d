@@ -114,6 +114,7 @@ export function stop() {
     camera.updateProjectionMatrix();
     playback.savedCamera = null;
   }
+  if (!state.director) { state.director = true; window.dispatchEvent(new Event('directorChanged')); }   // Stop is a reset, like a restart: the director comes back (A-BACK-049)
   if (directorOn()) {   // back at the start: the opening shot
     const pose = directorPoseFor(0);
     if (pose) setCameraPose(pose);

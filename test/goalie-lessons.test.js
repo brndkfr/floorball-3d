@@ -108,6 +108,39 @@ test('line lesson: wrong first, a goal against a goalie off the shooting line, n
   assert.equal(st.placement, 'adjust');
 });
 
+// The KATA card grades the goalie against the shot's release point, not the
+// ball in the net, from the release until the shot keyframe's own time ends
+// (decided 2026-11-22): "What went wrong?" reads red.
+test('kataBall: from the shot release to the end of the shot keyframe, the release point; else the live ball', async () => {
+  const { kataBall } = await import('../web/src/kata.js');
+  const doc = buildLesson('line');
+  const fr = doc.frames;
+  const plan = passPlan(fr[0].scheme, fr[1].scheme, fr[0].duration);
+  const live = { x: 1, z: 2 };
+  const release = plan.releaseT * fr[0].duration;
+  assert.deepEqual(kataBall(fr, release / 2, live), live, 'before the release: the live ball');
+  for (const ms of [release + 1, fr[0].duration, startMs(fr, 1) + fr[1].duration / 2, startMs(fr, 2) - 1]) {
+    const b = kataBall(fr, ms, live);
+    assert.ok(Math.abs(b.x - plan.from.x) < 1e-6 && Math.abs(b.z - plan.from.z) < 1e-6, `${ms} ms: the release point`);
+  }
+  assert.deepEqual(kataBall(fr, startMs(fr, 2) + 1, live), live, 'after the goal frame: the live ball again');
+  assert.deepEqual(kataBall([], 0, live), live);
+  assert.deepEqual(kataBall(undefined, 0, live), live);
+});
+
+test('line lesson: on the "What went wrong?" frame the KATA card reads placement off, graded from the release point', async () => {
+  const { kataBall } = await import('../web/src/kata.js');
+  const doc = buildLesson('line');
+  const goalCenter = { x: 0, z: GOAL_Z.A };
+  const wrong = LINE_FRAMES.findIndex((f) => f.shot?.scored);
+  const ms = startMs(doc.frames, wrong);
+  const ball = kataBall(doc.frames, ms, ballOf(doc.frames[wrong]));
+  const g = doc.frames[wrong].scheme.goalies.A;
+  const st = judgeKata(kataOf({ ball, goal: 'A', goalCenter, goalie: { x: g.x, z: g.z, yaw: g.angle } }),
+    kataTargets(goalieZoneOf(ball, 'A'), expectedAction(doc.frames, ms), shotAngleDeg(ball, 'A', goalCenter))).status;
+  assert.equal(st.placement, 'adjust');
+});
+
 test('line lesson: then the same shot from the same spot, saved, with the ball stopping before the goalie', () => {
   const doc = buildLesson('line');
   const saved = LINE_FRAMES.findIndex((f) => f.shot && !f.shot.scored);
@@ -272,16 +305,17 @@ test('passOrShot lesson: the old options lesson is merged in, its idea closes le
   for (const l of ['en', 'de']) assert.ok(!/ß|—/.test(last[l]), 'Swiss spelling, no em-dash');
 });
 
-test('lessons: the goalie at every keyframe is judged ok on placement, depth and axis', () => {
+test('lessons: the goalie at every keyframe is judged ok on placement, depth and axis', async () => {
+  const { kataBall } = await import('../web/src/kata.js');
   for (const key of LESSON_KEYS) {
     const doc = buildLesson(key);
     const goal = LESSONS[key].goal;
     const goalCenter = { x: 0, z: GOAL_Z[goal] };
     doc.frames.forEach((f, i) => {
-      const ball = f.scheme.balls.main;
+      const ball = kataBall(doc.frames, startMs(doc.frames, i), f.scheme.balls.main);   // as the live card grades it: a shot from its release point
       const g = f.scheme.goalies[goal];
       assert.ok(g, `${key} frame ${i}: goalie ${goal} placed`);
-      if (LESSONS[key].frames[i].shot?.scored) return;   // the goal that goes in: the ball is in the net, nothing to judge
+      if (LESSONS[key].frames[i].shot?.scored) return;   // the goal that goes in: judged off in its own test
       const zone = goalieZoneOf(ball, goal);
       const action = expectedAction(doc.frames, startMs(doc.frames, i));
       const k = kataOf({ ball, goal, goalCenter, goalie: { x: g.x, z: g.z, yaw: g.angle } });
