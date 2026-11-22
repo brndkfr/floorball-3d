@@ -144,7 +144,7 @@ test('Library shelf: the four lessons in module order, and each one opens in Tra
   await expect(rows).toHaveCount(4);
   const keys = await rows.evaluateAll((els) => els.map((e) => e.dataset.lesson));
   expect(keys).toEqual(['line', 'zones', 'passOrShot', 'behind']);
-  await expect(rows.nth(0).locator('.library-modified')).toHaveText(/^Lesson 1 · 5 frames/);
+  await expect(rows.nth(0).locator('.library-modified')).toHaveText(/^Lesson 1 · 8 frames/);
   await expect(rows.nth(3).locator('.library-modified')).toHaveText(/^Lesson 4 · /);
   await page.keyboard.press('Escape');
   for (const key of keys) {

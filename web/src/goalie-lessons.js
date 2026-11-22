@@ -20,6 +20,9 @@ import { idealGoaliePose } from './shooter-view.js';
 
 const ATTACKER = { team: 2, number: '9' };
 const SOLO_CAST = Object.freeze({ a: ATTACKER });
+const SHOOTER = Object.freeze({ x: 4500, z: 10000 });         // lesson 1's shooter, on the right of the danger zone (estimate)
+const WRONG_DX = -700;                                         // lesson 1: the goalie stands this far off the line, mm (estimate: clear of the shot, inside the goal)
+const SLOW_SHOT = Object.freeze({ speedMps: 6, releaseT: 0.15 });   // lesson 1: a readable flight, not the 25 m/s default (estimate)
 
 // A frame spec is either { ball, ms, note } (one attacker, `a`, carrying the
 // ball: lessons 1, 2, 5) or, for a lesson with a `cast` (lesson 3),
@@ -28,42 +31,69 @@ const SOLO_CAST = Object.freeze({ a: ATTACKER });
 // Any frame may add `goalie: ['placement', 'depth', 'axis']` (a subset): only
 // those KATA dimensions are applied, the rest stay at the default stance
 // (deep, knees parallel, centred), and the frame is marked `goalieFixed` so
-// the live goalie follows that pose instead of the rules.
+// the live goalie follows that pose instead of the rules. `goalieDx` (mm)
+// moves that pose sideways: the goalie off the shooting line, in the "wrong
+// first" frames of lesson 1.
+// Optional per frame, for a lesson that explains itself (lesson 1):
+//   layers: ['line', ...]  quiet screen, only these rink layers (lesson-view.js)
+//   cam: 'sideKnee'        director camera shot from this frame on (director.js)
+//   shot: { aimX, scored: true }  a goal instead of a save
+//   shot: { speedMps, releaseT }  a slow motion flight (the ball's pass settings)
+// and for the lesson itself `intro` / `recap` cards (lesson-cards.js).
 function frameCast(spec) {
   if (spec.ball) return { players: { a: { x: spec.ball.x - BALL_CARRY_OFFSET.x, z: spec.ball.z - BALL_CARRY_OFFSET.z } }, carrier: 'a' };
   return { players: spec.players, carrier: spec.shot ? null : spec.carrier, shot: spec.shot };
 }
 
 export const LESSONS = Object.freeze({
-  // 1. Shooting line and area: the ball stands still in the danger zone
-  // while the captions take placement, depth and axis one at a time, then
-  // it moves slowly across and all three follow it together. The first
-  // three frames carry a `goalie` hint, the KATA dimensions applied so far,
-  // so the goalie is on the line but deep and parallel in frame 1, forward
-  // in frame 2, square in frame 3 and the KATA rows turn green one by one.
+  // 1. Shooting line and area, as a showcase: a task card, then the same shot
+  // twice from the same spot. First the goalie just stands in his goal and
+  // the shot goes in ("what went wrong?"). Then the captions build the KATA
+  // up one dimension at a time (placement, depth, axis; the frames with a
+  // `goalie` hint, so the KATA rows turn green one by one), show the
+  // shooting area, and the same shot is saved. Quiet screen (`layers`) and
+  // the director camera (`cam`) keep the picture on what the caption says;
+  // both shots fly slowly (`speedMps`), the estimate being a readable pace.
   line: {
     n: 1,
     goal: 'A',
     title: { en: 'Shooting line and area', de: 'Schusslinie und Schussfläche' },
+    intro: {
+      task: { en: 'Watch the goalie: where does it stand, and why?', de: 'Schau auf den Goalie: wo steht er, und warum?' },
+    },
+    recap: {
+      title: { en: 'What to take away', de: 'Das nimmst du mit' },
+      bullets: [
+        { en: 'Placement: stand on the shooting line, from the ball to the middle of the goal.', de: 'Ausrichtung: auf der Schusslinie stehen, vom Ball zur Tormitte.' },
+        { en: 'Depth: step forward along the line, the goal looks smaller to the shooter.', de: 'Tiefe: auf der Linie nach vorne, das Tor wirkt kleiner für den Schützen.' },
+        { en: 'Axis: knees and chest square to the ball, the whole body in the path of the shot.', de: 'Achse: Knie und Brust frontal zum Ball, der ganze Körper im Weg des Schusses.' },
+      ],
+    },
     frames: [
-      { ball: { x: 4500, z: 10000 }, ms: 2500, note: {
+      { players: { a: SHOOTER }, carrier: 'a', ms: 3000, layers: [], cam: 'shooterEyes', goalie: [], goalieDx: WRONG_DX, note: {
+        en: 'The same shot twice. First, the goalie just stands in his goal. Watch the shot.',
+        de: 'Derselbe Schuss zweimal. Zuerst steht der Goalie einfach im Tor. Schau dir den Schuss an.' } },
+      { players: { a: SHOOTER }, shot: { aimX: 0, scored: true, ...SLOW_SHOT }, ms: 2500, layers: [], cam: 'sideKnee', goalie: [], goalieDx: WRONG_DX, note: {
+        en: 'Goal. What went wrong?',
+        de: 'Tor. Was ist schiefgelaufen?' } },
+      { players: { a: SHOOTER }, carrier: 'a', ms: 2500, layers: ['line'], cam: 'wide', goalie: ['placement'], note: {
         en: 'Shooting line: from the ball to the middle of the goal. First, placement: stand on that line.',
-        de: 'Schusslinie: vom Ball zur Tormitte. Erstens, Ausrichtung: auf dieser Linie stehen.' },
-        goalie: ['placement'] },
-      { ball: { x: 4500, z: 10000 }, ms: 2500, note: {
+        de: 'Schusslinie: vom Ball zur Tormitte. Erstens, Ausrichtung: auf dieser Linie stehen.' } },
+      { players: { a: SHOOTER }, carrier: 'a', ms: 2500, layers: ['line'], cam: 'sideKnee', goalie: ['placement', 'depth'], note: {
         en: 'Second, depth: step forward along the line. The closer you stand to the ball, the smaller the goal looks to the shooter.',
-        de: 'Zweitens, Tiefe: auf der Linie nach vorne. Je näher du am Ball stehst, desto kleiner wirkt das Tor für den Schützen.' },
-        goalie: ['placement', 'depth'] },
-      { ball: { x: 4500, z: 10000 }, ms: 2500, note: {
+        de: 'Zweitens, Tiefe: auf der Linie nach vorne. Je näher du am Ball stehst, desto kleiner wirkt das Tor für den Schützen.' } },
+      { players: { a: SHOOTER }, carrier: 'a', ms: 2500, layers: ['line'], cam: 'goalieEyes', goalie: ['placement', 'depth', 'axis'], note: {
         en: 'Third, axis: knees and chest square to the ball, so the whole body is in the path of the shot.',
-        de: 'Drittens, Achse: Knie und Brust frontal zum Ball, damit der ganze Körper im Weg des Schusses steht.' },
-        goalie: ['placement', 'depth', 'axis'] },
-      { ball: { x: 4500, z: 10000 }, ms: 3000, note: {
-        en: 'Now the ball moves. Placement, depth and axis follow it together.',
-        de: 'Jetzt bewegt sich der Ball. Ausrichtung, Tiefe und Achse gehen gemeinsam mit.' } },
-      { ball: { x: -2500, z: 9000 }, ms: 3000, note: {
+        de: 'Drittens, Achse: Knie und Brust frontal zum Ball, damit der ganze Körper im Weg des Schusses steht.' } },
+      { players: { a: SHOOTER }, carrier: 'a', ms: 3000, layers: ['area'], cam: 'wide', note: {
         en: 'Shooting area: the triangle from the ball to both posts. On the line, forward and square, the body fills as much of it as it can.',
         de: 'Schussfläche: das Dreieck vom Ball zu beiden Pfosten. Auf der Linie, vorne und frontal, füllt der Körper so viel davon wie möglich.' } },
+      { players: { a: SHOOTER }, carrier: 'a', ms: 3000, layers: ['line'], cam: 'followBall', note: {
+        en: 'Now the same shot from the same spot.',
+        de: 'Jetzt derselbe Schuss vom selben Punkt.' } },
+      { players: { a: SHOOTER }, shot: { aimX: 0, ...SLOW_SHOT }, ms: 2500, layers: ['line'], cam: 'pushIn', note: {
+        en: 'Saved. On the line, forward and square: the goalie is big and in the way.',
+        de: 'Gehalten. Auf der Linie, vorne und frontal: der Goalie ist gross und im Weg.' } },
     ],
   },
 
@@ -201,8 +231,12 @@ export function buildLesson(key, lang = 'en') {
     const { players: at, carrier, shot } = frameCast(spec);
     let ball;
     if (shot) {
-      const s = makeShot(goal, { aimX: shot.aimX ?? 0 });   // placeholder in the net, replaced by the saved shot below
+      const s = makeShot(goal, { aimX: shot.aimX ?? 0 });   // in the net; a saved shot replaces it below
       ball = { x: s.rest.x, z: s.rest.z, shot: s.shot };
+      const pass = {};
+      if (shot.speedMps) pass.speedMps = shot.speedMps;
+      if (shot.releaseT != null) pass.releaseT = shot.releaseT;
+      if (Object.keys(pass).length) ball.pass = pass;
     } else {
       ball = { x: at[carrier].x + BALL_CARRY_OFFSET.x, z: at[carrier].z + BALL_CARRY_OFFSET.z, carrier: ids[carrier] };
     }
@@ -217,6 +251,8 @@ export function buildLesson(key, lang = 'en') {
       id: newId('f'),
       duration: spec.ms,
       note: { ...spec.note },
+      ...(spec.layers ? { layers: [...spec.layers] } : {}),
+      ...(spec.cam ? { cam: spec.cam } : {}),
       scheme: {
         players,
         balls: { main: ball },
@@ -237,25 +273,28 @@ export function buildLesson(key, lang = 'en') {
   });
   for (const frame of doc.frames) {
     const idx = doc.frames.indexOf(frame);
-    if (lesson.frames[idx].shot) {
+    if (lesson.frames[idx].shot && !lesson.frames[idx].shot.scored) {
       // A lesson shot ends in a save: the ball stops just in front of the
       // goalie, on the shot path. The goalie stands on that line whatever
       // the exact release point, so one pass from the release point finds it.
       const prev = doc.frames[idx - 1];
       const { from } = passPlan(prev.scheme, frame.scheme, prev.duration);
       const s = savedShot(goal, { aimX: lesson.frames[idx].shot.aimX ?? 0 }, from, rulePose(from, startMs));
-      frame.scheme.balls.main = { x: s.rest.x, z: s.rest.z, shot: s.shot };
+      frame.scheme.balls.main = { ...frame.scheme.balls.main, x: s.rest.x, z: s.rest.z, shot: s.shot };
     }
     const ball = frame.scheme.balls.main;
     const ideal = rulePose(ball, startMs);
     const applied = lesson.frames[doc.frames.indexOf(frame)].goalie;
     if (applied) {
       goalie = partialPose({ ball, goal, goalCenter, ideal, applied });
+      const dx = lesson.frames[idx].goalieDx;
+      if (dx) goalie = { ...goalie, x: goalie.x + dx };
       frame.goalieFixed = true;
     } else goalie = ideal;
     frame.scheme.goalies[goal] = { x: goalie.x, z: goalie.z, angle: goalie.yaw };
     startMs += frame.duration;
   }
+  if (lesson.intro || lesson.recap) doc.lesson = JSON.parse(JSON.stringify({ intro: lesson.intro, recap: lesson.recap }));   // title and recap card (lesson-cards.js)
   doc.currentFrame = 0;
   doc.autoGoalie = goal;   // playback moves this goalie by the rules between keyframes (goalie-track.js)
   return doc;

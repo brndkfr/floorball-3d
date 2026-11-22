@@ -9,7 +9,8 @@ const { LESSONS, LESSON_KEYS, buildLesson } = await import('../web/src/goalie-le
 const { acceptDoc } = await import('../web/src/authoring/doc.js');
 const { goalieZoneOf } = await import('../web/src/goalie-zones.js');
 const { kataOf, kataTargets, judgeKata, expectedAction, shotAngleDeg } = await import('../web/src/kata.js');
-const { GOAL_Z, BALL_CARRY_OFFSET } = await import('../web/src/authoring/ball-pose.js');
+const { GOAL_Z, BALL_CARRY_OFFSET, DEFAULT_SHOT_SPEED_MPS } = await import('../web/src/authoring/ball-pose.js');
+const { DIRECTOR_SHOTS } = await import('../web/src/director.js');
 const { HALF_W, RINK_L } = await import('../web/src/constants.js');
 
 const startMs = (frames, i) => frames.slice(0, i).reduce((s, f) => s + f.duration, 0);
@@ -65,19 +66,119 @@ test('lessons: every player moves at a believable speed (at most 7 m/s, an estim
   }
 });
 
-// 1. Shooting line and area: the ball stands still while the captions take
-// placement, depth and axis one at a time, then moves slowly.
-test('line lesson: lesson 1, ball still for the three dimensions, then a slow move, all in front of goal A', () => {
+// 1. Shooting line and area, a showcase: the same shot twice from the same
+// spot, first a goal against a goalie off the line, then the KATA build-up
+// and the same shot saved.
+const LINE_FRAMES = LESSONS.line.frames;
+test('line lesson: lesson 1, one shooter at the same spot in every frame, in front of goal A', () => {
   assert.equal(LESSONS.line.n, 1);
   assert.equal(LESSONS.line.goal, 'A');
   const frames = buildLesson('line').frames;
-  assert.ok(frames.length >= 5);
-  for (let i = 1; i < 4; i++) assert.deepEqual([ballOf(frames[i]).x, ballOf(frames[i]).z], [ballOf(frames[0]).x, ballOf(frames[0]).z], `frame ${i} still`);
-  for (let i = 3; i + 1 < frames.length; i++) {
-    const a = ballOf(frames[i]), b = ballOf(frames[i + 1]);
-    assert.ok(Math.hypot(b.x - a.x, b.z - a.z) / frames[i].duration <= 3, `frame ${i}: slow`);
+  assert.equal(frames.length, LINE_FRAMES.length);
+  const spot = (f) => JSON.stringify(Object.values(f.scheme.players).map((p) => [p.x, p.z]));
+  for (const f of frames) assert.equal(spot(f), spot(frames[0]), 'the shooter never moves');
+  for (const [i, z] of zonesOf('line').entries()) {
+    if (LINE_FRAMES[i].shot) continue;   // after a shot the ball is in the net or in front of the goalie
+    assert.ok(z === 'danger' || z === 'slot', `frame ${i}: ${z}`);
   }
-  for (const z of zonesOf('line')) assert.ok(z === 'danger' || z === 'slot', z);
+});
+
+test('line lesson: wrong first, a goal against a goalie off the shooting line, no KATA applied', () => {
+  const doc = buildLesson('line');
+  const goalCenter = { x: 0, z: GOAL_Z.A };
+  const wrong = LINE_FRAMES.findIndex((f) => f.shot?.scored);
+  assert.equal(wrong, 1, 'the goal comes right after the opening frame');
+  assert.deepEqual(LINE_FRAMES[0].goalie, [], 'frame 1 applies no KATA dimension');
+  const ball = ballOf(doc.frames[wrong]);
+  assert.equal(ball.shot.saved, undefined, 'a goal, not a save');
+  assert.ok(Math.abs(ball.x) < 800 && ball.z < GOAL_Z.A, 'in the net');
+  assert.equal(ball.carrier, undefined);
+  const plan = passPlan(doc.frames[0].scheme, doc.frames[wrong].scheme, doc.frames[0].duration);
+  assert.equal(plan.kind, 'shot');
+  assert.ok(!plan.saved);
+  // the goalie never touches the shot line: clear of the path by more than its half width
+  const g = doc.frames[0].scheme.goalies.A;
+  const from = plan.from, to = plan.to;
+  const len = Math.hypot(to.x - from.x, to.z - from.z);
+  const across = Math.abs((g.x - from.x) * (to.z - from.z) - (g.z - from.z) * (to.x - from.x)) / len;
+  assert.ok(across > 500, `goalie ${across.toFixed(0)} mm off the shot path`);
+  // the KATA card reads placement off
+  const targets = kataTargets(goalieZoneOf(ballOf(doc.frames[0]), 'A'), 'shot', shotAngleDeg(ballOf(doc.frames[0]), 'A', goalCenter));
+  const st = judgeKata(kataOf({ ball: ballOf(doc.frames[0]), goal: 'A', goalCenter, goalie: { x: g.x, z: g.z, yaw: g.angle } }), targets).status;
+  assert.equal(st.placement, 'adjust');
+});
+
+test('line lesson: then the same shot from the same spot, saved, with the ball stopping before the goalie', () => {
+  const doc = buildLesson('line');
+  const saved = LINE_FRAMES.findIndex((f) => f.shot && !f.shot.scored);
+  assert.equal(saved, LINE_FRAMES.length - 1, 'the save closes the lesson');
+  const ball = ballOf(doc.frames[saved]);
+  assert.equal(ball.shot.saved, true);
+  const g = doc.frames[saved].scheme.goalies.A;
+  assert.ok(Math.abs(ball.z - GOAL_Z.A) > Math.abs(g.z - GOAL_Z.A), 'in front of the goalie');
+  assert.ok(Math.hypot(ball.x - g.x, ball.z - g.z) < 700);
+  const before = doc.frames[saved - 1], first = doc.frames[0];
+  assert.deepEqual(ballOf(before).carrier && [before.scheme.players[ballOf(before).carrier].x, before.scheme.players[ballOf(before).carrier].z],
+    [first.scheme.players[ballOf(first).carrier].x, first.scheme.players[ballOf(first).carrier].z], 'released from the same spot as the goal');
+});
+
+test('line lesson: both shots fly in slow motion (a lower speed than the default) and are released early', () => {
+  const doc = buildLesson('line');
+  for (const i of [1, doc.frames.length - 1]) {
+    const pass = ballOf(doc.frames[i]).pass;
+    assert.ok(pass.speedMps >= 3 && pass.speedMps < DEFAULT_SHOT_SPEED_MPS, `frame ${i}: speed ${pass.speedMps}`);
+    assert.ok(pass.releaseT < 0.5);
+    const plan = passPlan(doc.frames[i - 1].scheme, doc.frames[i].scheme, doc.frames[i - 1].duration);
+    assert.ok(plan.arriveT < 1 && !plan.late, `frame ${i - 1}: the flight fits the frame`);
+    assert.ok(plan.needMs > 1000, `frame ${i - 1}: a flight of ${plan.needMs.toFixed(0)} ms is slow enough to follow`);
+  }
+});
+
+test('line lesson: the quiet screen names a layer on every frame, the line for the line and the area for the area', () => {
+  const doc = buildLesson('line');
+  for (const [i, f] of doc.frames.entries()) assert.ok(Array.isArray(f.layers), `frame ${i} names its layers`);
+  const noteOf = (i) => doc.frames[i].note.en;
+  for (const [i, f] of doc.frames.entries()) {
+    if (/shooting line/i.test(noteOf(i)) && !/area/i.test(noteOf(i))) assert.ok(f.layers.includes('line'), `frame ${i}`);
+    if (/shooting area/i.test(noteOf(i))) assert.deepEqual(f.layers, ['area'], `frame ${i}`);
+  }
+  assert.deepEqual(doc.frames[0].layers, [], 'the opening shot: caption only');
+  assert.ok(doc.frames.every((f) => f.layers.every((n) => n === 'line' || n === 'area')), 'no labels, no inset, no extra layers');
+});
+
+test('line lesson: director shots in order, all known, the push in on the save', () => {
+  const doc = buildLesson('line');
+  for (const f of doc.frames) assert.ok(DIRECTOR_SHOTS.includes(f.cam), f.cam);
+  assert.equal(doc.frames.at(-1).cam, 'pushIn');
+  assert.equal(doc.frames[0].cam, 'shooterEyes');
+  assert.ok(new Set(doc.frames.map((f) => f.cam)).size >= 4, 'a varied set of shots');
+});
+
+test('line lesson: the title card holds the task, the recap three bullets, in English and German', () => {
+  const doc = buildLesson('line');
+  assert.equal(doc.lesson.intro.task.en, 'Watch the goalie: where does it stand, and why?');
+  assert.equal(doc.lesson.intro.task.de, 'Schau auf den Goalie: wo steht er, und warum?');
+  assert.equal(doc.lesson.recap.bullets.length, 3);
+  for (const b of doc.lesson.recap.bullets) assert.ok(b.en && b.de);
+  assert.match(doc.lesson.recap.bullets[0].en, /placement/i);
+  assert.match(doc.lesson.recap.bullets[1].en, /depth/i);
+  assert.match(doc.lesson.recap.bullets[2].en, /axis/i);
+  const round = acceptDoc(JSON.parse(JSON.stringify(doc)));
+  assert.deepEqual(round.lesson, doc.lesson, 'survives the round trip');
+  assert.deepEqual(round.frames.map((f) => f.layers), doc.frames.map((f) => f.layers));
+  assert.deepEqual(round.frames.map((f) => f.cam), doc.frames.map((f) => f.cam));
+  for (const text of [JSON.stringify(doc.lesson), JSON.stringify(doc.frames.map((f) => f.note))]) assert.ok(!/ß|—/.test(text), 'Swiss spelling, no em-dash');
+});
+
+test('the other lessons carry none of the showcase fields', () => {
+  for (const key of LESSON_KEYS.filter((k) => k !== 'line')) {
+    const doc = buildLesson(key);
+    assert.equal('lesson' in doc, false, key);
+    for (const f of doc.frames) {
+      assert.equal('layers' in f, false, key);
+      assert.equal('cam' in f, false, key);
+    }
+  }
 });
 
 // 4. Behind the goal: the ball goes round behind goal A, post to post, then
@@ -180,6 +281,7 @@ test('lessons: the goalie at every keyframe is judged ok on placement, depth and
       const ball = f.scheme.balls.main;
       const g = f.scheme.goalies[goal];
       assert.ok(g, `${key} frame ${i}: goalie ${goal} placed`);
+      if (LESSONS[key].frames[i].shot?.scored) return;   // the goal that goes in: the ball is in the net, nothing to judge
       const zone = goalieZoneOf(ball, goal);
       const action = expectedAction(doc.frames, startMs(doc.frames, i));
       const k = kataOf({ ball, goal, goalCenter, goalie: { x: g.x, z: g.z, yaw: g.angle } });
@@ -237,9 +339,9 @@ test('lessonShelf: titles follow the language, unknown languages fall back to En
 });
 
 // Lesson 1 shows the KATA build-up: placement, then depth, then axis. Each
-// of the first three frames carries a `goalie` hint (the dimensions applied
-// so far), the goalie is placed to match, and the frame is marked so the
-// live goalie (goalie-track.js) follows it instead of the rules.
+// of the three frames after the goal carries a `goalie` hint (the dimensions
+// applied so far), the goalie is placed to match, and the frame is marked so
+// the live goalie (goalie-track.js) follows it instead of the rules.
 test('line lesson: the KATA rows turn ok one at a time, placement, depth, axis', () => {
   const doc = buildLesson('line');
   const goalCenter = { x: 0, z: GOAL_Z.A };
@@ -251,15 +353,15 @@ test('line lesson: the KATA rows turn ok one at a time, placement, depth, axis',
     return judgeKata(kataOf({ ball, goal: 'A', goalCenter, goalie: { x: g.x, z: g.z, yaw: g.angle } }), targets).status;
   };
   const pick = (st) => [st.placement, st.depth, st.axis];
-  assert.deepEqual(pick(statusOf(0)), ['ok', 'adjust', 'adjust']);
-  assert.deepEqual(pick(statusOf(1)), ['ok', 'ok', 'adjust']);
-  assert.deepEqual(pick(statusOf(2)), ['ok', 'ok', 'ok']);
-  assert.deepEqual(LESSONS.line.frames.slice(0, 3).map((f) => f.goalie), [['placement'], ['placement', 'depth'], ['placement', 'depth', 'axis']]);
-  assert.deepEqual(doc.frames.map((f) => f.goalieFixed === true), [true, true, true, false, false]);
-  const g0 = doc.frames[0].scheme.goalies.A;
-  assert.equal(g0.angle, 0, 'frame 1: knees parallel to the goal line');
-  assert.ok(g0.z - GOAL_Z.A < 500, 'frame 1: deep');
-  assert.ok(doc.frames[1].scheme.goalies.A.z > g0.z, 'frame 2: stepped forward');
+  assert.deepEqual(pick(statusOf(2)), ['ok', 'adjust', 'adjust']);
+  assert.deepEqual(pick(statusOf(3)), ['ok', 'ok', 'adjust']);
+  assert.deepEqual(pick(statusOf(4)), ['ok', 'ok', 'ok']);
+  assert.deepEqual(LINE_FRAMES.slice(0, 5).map((f) => f.goalie), [[], [], ['placement'], ['placement', 'depth'], ['placement', 'depth', 'axis']]);
+  assert.deepEqual(doc.frames.map((f) => f.goalieFixed === true), [true, true, true, true, true, false, false, false]);
+  const g2 = doc.frames[2].scheme.goalies.A;
+  assert.equal(g2.angle, 0, 'frame 3: knees parallel to the goal line');
+  assert.ok(g2.z - GOAL_Z.A < 500, 'frame 3: deep');
+  assert.ok(doc.frames[3].scheme.goalies.A.z > g2.z, 'frame 4: stepped forward');
 });
 
 test('lessons without a goalie hint carry no goalieFixed', () => {
