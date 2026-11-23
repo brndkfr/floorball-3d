@@ -178,12 +178,12 @@ test('Library shelf: the four lessons in module order, and each one opens in Tra
 });
 
 // A long caption must not run under the KATA card (bottom left): at 1440x900
-// on lesson 4, frame 2, the first letters were clipped by the card.
+// on lesson 4, frame 7, the first letters were clipped by the card.
 test('a long lesson caption stays clear of the KATA card at 1440x900', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await boot(page);
   await openLesson(page, 'behind');
-  await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(1));
+  await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(6));
   const caption = page.locator('#frameCaption');
   await expect(caption).toBeVisible();
   await expect(caption).toContainText('Behind the goal: play the line');
@@ -496,7 +496,7 @@ test('director: the camera menu (Plan) lists the shots, off without a lesson, an
   const menuButton = page.locator('#appTopbar [data-action="camera-presets"]');
   await menuButton.click();
   const shots = page.locator('#cameraPresetMenu [data-shot]');
-  await expect(shots).toHaveCount(6);
+  await expect(shots).toHaveCount(8);
   await expect(shots.nth(3)).toHaveText('Side, knee height');
   await expect(shots.nth(3)).toBeDisabled();   // a plain play has no goalie to look at
   await page.keyboard.press('Escape');

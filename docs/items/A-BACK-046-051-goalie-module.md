@@ -365,6 +365,13 @@ camera to be revisited, captions as drafted for review):
       the other post, never through the middle; eyes: glance over the
       shoulder to the slot; ball out in front: forward onto the shooting
       line, square.
+    - Built 2026-11-23: all as decided. New pieces: frame hint
+      `goalieRead` (a goalie that reads a pass as a shot), quiet layer
+      `lane` (pass lane), director shots `frontHigh` (lesson 4) and
+      `goalieClose` (lesson 1's "What went wrong?" frame, under 4 m from
+      the goalie), a longer, thicker ball trail. Lesson 4 gained a second
+      attacker waiting in the slot. Distances of the new shots, the late
+      goalie offset (lesson 3) and the slot player's spot are estimates.
 Open: caption review by the user; whether "Open as play" should keep
 `autoGoalie` in the copied project.
 

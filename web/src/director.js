@@ -14,8 +14,9 @@
 
 import { lerpPose, easeInOut, lessonPose } from './camera-presets.js';
 import { kataBall } from './kata.js';
+import { GOAL_Z } from './authoring/ball-pose.js';
 
-export const DIRECTOR_SHOTS = Object.freeze(['wide', 'goalieEyes', 'shooterEyes', 'sideKnee', 'followBall', 'pushIn']);
+export const DIRECTOR_SHOTS = Object.freeze(['wide', 'goalieEyes', 'shooterEyes', 'sideKnee', 'followBall', 'pushIn', 'goalieClose', 'frontHigh']);
 export const DEFAULT_SHOT = 'wide';
 export const SHOT_LABELS = Object.freeze({
   wide: { en: 'Wide', de: 'Totale' },
@@ -24,6 +25,8 @@ export const SHOT_LABELS = Object.freeze({
   sideKnee: { en: 'Side, knee height', de: 'Seite, Kniehöhe' },
   followBall: { en: 'Follow the ball', de: 'Ball folgen' },
   pushIn: { en: 'Push in', de: 'Heranfahren' },
+  goalieClose: { en: 'Goalie close', de: 'Goalie nah' },
+  frontHigh: { en: 'High, from the front', de: 'Hoch, von vorne' },
 });
 
 // Estimates, chosen by eye like the presets in camera-presets.js.
@@ -32,6 +35,8 @@ const GOALIE_EYE = { back: -600, height: 1250 };  // eyes: mm behind the goalie 
 const SHOOTER_EYE = { back: 900, height: 1500 };   // behind the ball, mm; height mm
 const SIDE_KNEE = { dist: 3500, height: 450 };     // side distance from the goalie, mm (ESTIMATE, a close-up of the goalie); knee height mm
 const FOLLOW = { back: 4500, height: 2200, ahead: 2500 };   // behind the ball, up, look-at point towards the goal
+const GOALIE_CLOSE = { ahead: 2600, side: 1000, height: 1200 };   // from the goalie towards the shooter, to the shooter's side, up; mm (ESTIMATE: close enough to see the goalie and the open half of the goal, under 4 m)
+const FRONT_HIGH = { out: 12000, height: 6000, behind: -2500 };   // in front of the goal line, up, look-at point (negative: in front of the line, so a player in the slot sits mid-picture); mm (ESTIMATE: sees the goal, the slot and the ball behind the goal)
 const PUSH_IN = { side: 2300, front: 600, height: 1000 };   // close to the goalie and the ball
 
 const aim = (from, to) => {
@@ -74,6 +79,20 @@ export function shotPose(name, { goal = 'A', ball, goalie, shooter } = {}) {
       return aim(
         { x: ball.x + away.x * FOLLOW.back, y: FOLLOW.height, z: ball.z + away.z * FOLLOW.back },
         { x: ball.x - away.x * FOLLOW.ahead, y: 300, z: ball.z - away.z * FOLLOW.ahead });
+    case 'goalieClose': {
+      // towards the shooter (the release point once a shot is away), not the ball in the net
+      const toward = unit(goalie, shooter ?? ball, out);
+      const perp2 = { x: -toward.z, z: toward.x };
+      const flip2 = perp2.x * (goal === 'B' ? -1 : 1) >= 0 ? 1 : -1;
+      const sd = { x: perp2.x * flip2, z: perp2.z * flip2 };
+      return aim(
+        { x: goalie.x + toward.x * GOALIE_CLOSE.ahead + sd.x * GOALIE_CLOSE.side, y: GOALIE_CLOSE.height, z: goalie.z + toward.z * GOALIE_CLOSE.ahead + sd.z * GOALIE_CLOSE.side },
+        { x: 0, y: 500, z: GOAL_Z[goal] });
+    }
+    case 'frontHigh': {
+      const dir = goal === 'B' ? -1 : 1;
+      return aim({ x: 0, y: FRONT_HIGH.height, z: GOAL_Z[goal] + dir * FRONT_HIGH.out }, { x: 0, y: 300, z: GOAL_Z[goal] - dir * FRONT_HIGH.behind });
+    }
     case 'pushIn':
       return aim(
         { x: mid.x + side.x * PUSH_IN.side + away.x * PUSH_IN.front, y: PUSH_IN.height, z: mid.z + side.z * PUSH_IN.side + away.z * PUSH_IN.front },

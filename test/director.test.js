@@ -85,6 +85,31 @@ test('director: follow ball sits behind the ball looking towards the goal; push 
   assert.ok(dist(near) < 4000 && dist(near) < dist(far) / 3);
 });
 
+test('director: front high looks back at the goal from in front of it, high up, whatever the ball does', () => {
+  const p = shotPose('frontHigh', ctx);
+  assert.ok(p.z > GOAL_Z.A + 6000 && p.z < GOAL_Z.A + 15000, 'in front of the goal, far enough back to see a player in the slot');
+  assert.ok(p.y > 4000, 'high');
+  assert.ok(p.pitch < 0, 'looks down');
+  assert.ok(Math.abs(p.x) < 2000, 'on the goal axis');
+  assert.ok(facing(p, { x: 0, y: 300, z: GOAL_Z.A }) > 0.95, 'looks towards the goal');
+  assert.ok(Math.abs(Math.cos(p.yaw)) > 0.9 && Math.cos(p.yaw) < 0, 'looks along -z, towards goal A');
+  assert.deepEqual(shotPose('frontHigh', { goal, ball: { x: -5000, z: 1800 }, goalie }), shotPose('frontHigh', { goal, ball: { x: 5000, z: 9000 }, goalie: { x: 0, z: 4000 } }), 'a fixed shot: it does not follow the ball or the goalie');
+  const b = shotPose('frontHigh', { goal: 'B', ball, goalie });
+  assert.ok(b.z < GOAL_Z.B - 6000, 'goal B mirrors it');
+  assert.ok(Math.cos(b.yaw) > 0.9, 'looks along +z, towards goal B');
+});
+
+test('director: goalie close is within 4 m of the goalie, on the shooter side, and sees the goalie and the open half of the goal', () => {
+  const g = { x: -700, z: GOAL_Z.A + 250 };
+  const shooter = { x: 4500, z: 10250 };
+  const p = shotPose('goalieClose', { goal, ball: { x: -700, z: 3000 }, goalie: g, shooter });   // the ball is in the net, the shooter is where it was released
+  assert.ok(Math.hypot(p.x - g.x, p.y - 600, p.z - g.z) < 4000, 'within 4 m of the goalie');
+  assert.ok(p.z > g.z && p.x > g.x, 'on the shooter side of the goalie');
+  assert.ok(facing(p, { x: g.x, y: 600, z: g.z }) > 0.95, 'the goalie is in front of the camera');
+  assert.ok(facing(p, { x: 700, y: 300, z: GOAL_Z.A }) > 0.9, 'so is the open half of the goal');
+  assert.ok(shotPose('goalieClose', { goal: 'B', ball: { x: -4500, z: 28000 }, goalie: { x: 700, z: GOAL_Z.B - 250 } }).x < 700, 'goal B mirrors it');
+});
+
 test('director: a shot with the ball on the goalie does not blow up', () => {
   for (const name of DIRECTOR_SHOTS) {
     const p = shotPose(name, { goal, ball: { ...goalie }, goalie });
@@ -155,14 +180,14 @@ test('resumePose: eases from the viewer camera to the director pose, then is the
 const { buildLesson } = await import('../web/src/goalie-lessons.js');
 const { cachedGoalieTrack, goalieTrackAt, ballAt: trackBallAt } = await import('../web/src/goalie-track.js');
 
-test('director: shooter eyes stay behind the release point during the shot and on the goal, behind the live ball before release', () => {
+test('director: shooter eyes stay behind the release point while the shot is released, behind the live ball before release', () => {
   const doc = buildLesson('line');
   const fr = doc.frames;
   const track = cachedGoalieTrack(fr, 'A');
   const c = { goal: 'A', ballAt: (ms) => trackBallAt(fr, ms), goalieAt: (ms) => goalieTrackAt(track, ms) };
   const release = fr[0].scheme.balls.main;
   const rel = { x: release.x, z: release.z };
-  for (const ms of [500, 1000, 2200, 3000]) {
+  for (const ms of [500, 1000, 2000]) {   // the blend to the next frame's shot (goalie close) starts 900 ms before it
     const p = directorPoseAt(fr, ms, c);
     assert.ok(Math.hypot(p.x - rel.x, p.z - rel.z) < 1500, `${ms} ms: near the release point`);
     assert.ok(p.z > GOAL_Z.A + 3000, `${ms} ms: nowhere near the goal`);

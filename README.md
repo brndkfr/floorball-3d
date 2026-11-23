@@ -91,12 +91,12 @@ After the J+S / swiss unihockey module "Goalies - Positionierung".
 - Shooter's view: a small, resizable second view from the ball.
 - Lessons, from the Lessons shelf in the Library: four animated plays
   with captions and a goalie that follows the zone rules while the play
-  runs. Lesson 1 opens with a task card, shows a goal against a goalie
-  off the line, builds the KATA up one step at a time and closes with
-  the same shot saved and a recap card. A lesson pauses on each caption
+  runs. Every lesson opens with a task card, shows a wrong run first that
+  ends in a goal ("What went wrong?"), then the right run(s), and closes
+  with a recap card. Lesson 1 builds the KATA up one step at a time. A lesson pauses on each caption
   (Hold), shows only the layers its caption talks about, and a director
-  camera picks the shots (shooter's eyes, side at knee height, push-in
-  on the save, ...). A small bar under the stage has Play / Pause,
+  camera picks the shots (shooter's eyes, side at knee height, close on the
+  goalie, high from the front, push-in on the save, ...). A small bar under the stage has Play / Pause,
   Restart and the Director switch; dragging or zooming the view frees
   the camera, and "Back to director", Stop or Restart hands it back.
   "Open as play" copies a lesson into Plan.

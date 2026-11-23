@@ -203,7 +203,7 @@ test('line lesson: the title card holds the task, the recap three bullets, in En
   for (const text of [JSON.stringify(doc.lesson), JSON.stringify(doc.frames.map((f) => f.note))]) assert.ok(!/ß|—/.test(text), 'Swiss spelling, no em-dash');
 });
 
-const SHOWCASE = ['line', 'zones', 'passOrShot'];   // the lessons given the showcase treatment so far
+const SHOWCASE = ['line', 'zones', 'passOrShot', 'behind'];   // the lessons given the showcase treatment so far
 test('showcase lessons carry a task, a recap, layers and a director shot on every frame', () => {
   for (const key of SHOWCASE) {
     const doc = buildLesson(key);
@@ -270,19 +270,53 @@ test('zones lesson: the quiet screen shows the zones on every frame and the line
   }
 });
 
-// 4. Behind the goal: the ball goes round behind goal A, post to post, then
-// comes out in front on the other side.
-test('behind lesson: lesson 4, passing-first round the back of goal A, then out into the danger zone', () => {
+// 4. Behind the goal, as a showcase: a wrong run first (the goalie cuts
+// through the middle of the goal as the ball goes round, a pass into the
+// slot scores), then the right run: round the back post to post, then out
+// into the danger zone in front on the other side.
+const BEHIND_FRAMES = LESSONS.behind.frames;
+const BEHIND_RIGHT = 5;   // the right run starts at this frame
+test('behind lesson: lesson 4, the right run goes passing-first round the back of goal A, then out into the danger zone', () => {
   assert.equal(LESSONS.behind.n, 4);
   assert.equal(LESSONS.behind.goal, 'A');
-  const zones = zonesOf('behind');
+  assert.equal(BEHIND_FRAMES.findIndex((f, i) => i > 0 && JSON.stringify(f.players) === JSON.stringify(BEHIND_FRAMES[0].players)), BEHIND_RIGHT, 'the opening positions come back for the right run');
+  const zones = zonesOf('behind').slice(BEHIND_RIGHT);
   assert.equal(zones.at(-1), 'danger');
   assert.ok(zones.slice(0, -1).every((z) => z === 'passing'), zones.join());
-  const balls = buildLesson('behind').frames.map(ballOf);
+  const balls = buildLesson('behind').frames.slice(BEHIND_RIGHT).map(ballOf);
   assert.ok(balls.some((b) => b.z < GOAL_Z.A && b.x > 0) && balls.some((b) => b.z < GOAL_Z.A && b.x < 0), 'behind the goal on both sides');
   // the goalie changes posts when the ball crosses behind the goal
-  const goalies = buildLesson('behind').frames.map((f) => f.scheme.goalies.A.x);
+  const goalies = buildLesson('behind').frames.slice(BEHIND_RIGHT).map((f) => f.scheme.goalies.A.x);
   assert.ok(goalies[0] > 0 && goalies.at(-2) < 0, goalies.join());
+});
+
+test('behind lesson: the wrong run has the goalie cut through the middle while the ball goes round, then a pass into the slot scores', () => {
+  const doc = buildLesson('behind');
+  const wrong = BEHIND_FRAMES.findIndex((f) => f.shot?.scored);
+  assert.equal(wrong, BEHIND_RIGHT - 1, 'the goal closes the wrong run');
+  const crossed = doc.frames.findIndex((f) => ballOf(f).carrier && ballOf(f).z < GOAL_Z.A && ballOf(f).x < 0);
+  assert.ok(crossed > 0 && crossed < wrong, 'the ball crosses behind the goal in the wrong run');
+  for (let i = crossed; i <= wrong; i++) assert.equal(doc.frames[i].scheme.goalies.A.x, 0, `frame ${i}: in the middle of the goal`);
+  assert.ok(doc.frames[crossed - 1].scheme.goalies.A.x > 0, 'it came from the near post');
+  // the pass goes into the slot and the shot is taken from there
+  const shooter = doc.frames[wrong - 1].scheme.players[ballOf(doc.frames[wrong - 1]).carrier];
+  const ball = ballOf(doc.frames[wrong - 1]);
+  assert.equal(goalieZoneOf(ball, 'A'), 'slot');
+  assert.notEqual(shooter.number, LESSONS.behind.cast.a.number, 'the second attacker, not the one who went round');
+});
+
+test('behind lesson: the quiet screen shows the zones, the shooting line only once the ball is out in front or shot', () => {
+  const doc = buildLesson('behind');
+  doc.frames.forEach((f, i) => {
+    assert.ok(f.layers.includes('zones'), `frame ${i}`);
+    assert.ok(f.layers.every((n) => n === 'zones' || n === 'line'), `frame ${i}`);
+    const b = ballOf(f);
+    const behind = b.z < GOAL_Z.A + 1000 && !BEHIND_FRAMES[i].shot;
+    if (behind) assert.ok(!f.layers.includes('line'), `frame ${i}: the ball is behind the goal`);
+  });
+  assert.ok(doc.frames.at(-1).layers.includes('line'));
+  assert.ok(doc.frames.some((f) => f.cam === 'frontHigh'), 'high from in front of the goal');
+  assert.equal(doc.frames.at(-1).cam, 'pushIn', 'push in on the step out');
 });
 
 // Lessons with more than one player (3, 4): a cast of named players, each
@@ -484,4 +518,21 @@ test('lessons without a goalie hint carry no goalieFixed', () => {
       assert.equal('goalieFixed' in f, !!LESSONS[key].frames[i].goalie, `${key} frame ${i}`);
     });
   }
+});
+
+// Lesson 1, "What went wrong?" frame: the main picture is a close shot of
+// the goalie and the open half of the goal from the shooter's side, not the
+// 7 m shot from behind the shooter (decided 2026-11-23).
+test('line lesson: the "What went wrong?" frame is shot close to the goalie, within 4 m', async () => {
+  const { shotPose } = await import('../web/src/director.js');
+  const { kataBall } = await import('../web/src/kata.js');
+  const doc = buildLesson('line');
+  const wrong = LINE_FRAMES.findIndex((f) => f.shot?.scored);
+  assert.equal(doc.frames[wrong].cam, 'goalieClose');
+  const g = doc.frames[wrong].scheme.goalies.A;
+  const ball = ballOf(doc.frames[wrong]);
+  const shooter = kataBall(doc.frames, startMs(doc.frames, wrong) + 1, ball);
+  const p = shotPose('goalieClose', { goal: 'A', ball, goalie: g, shooter });
+  assert.ok(Math.hypot(p.x - g.x, p.y - 600, p.z - g.z) < 4000, 'within 4 m of the goalie');
+  assert.ok(p.x > g.x, 'on the shooter side, looking at the open half');
 });

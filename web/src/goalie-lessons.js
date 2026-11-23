@@ -30,6 +30,7 @@ const PASS_SHOT = Object.freeze({ a: { x: 3000, z: 9000 }, b: { x: -2800, z: 850
 const SHOT_READ = Object.freeze({ a: { x: 4000, z: 12500 }, b: { x: -3500, z: 12000 }, d: { x: -500, z: 11500 } });
 const SHOT_SHOT = Object.freeze({ a: { x: 3600, z: 10500 }, b: { x: -3500, z: 11000 }, d: { x: -600, z: 11000 } });
 const LATE_DX = 900;   // lesson 3: the goalie that read a shot is still on the first carrier's side when the pass arrives, mm (estimate)
+const BEHIND_B = Object.freeze({ x: 1500, z: 9500 });             // lesson 4: the second attacker waits in the slot all the time (estimate)
 const WRONG_DX = -700;                                         // lesson 1: the goalie stands this far off the line, mm (estimate: clear of the shot, inside the goal)
 const SLOW_SHOT = Object.freeze({ speedMps: 6, releaseT: 0.15 });   // lesson 1: a readable flight, not the 25 m/s default (estimate)
 
@@ -84,7 +85,7 @@ export const LESSONS = Object.freeze({
       { players: { a: SHOOTER }, carrier: 'a', ms: 3000, layers: [], cam: 'shooterEyes', goalie: [], goalieDx: WRONG_DX, note: {
         en: 'The same shot twice. First, the goalie just stands in his goal. Watch the shot.',
         de: 'Derselbe Schuss zweimal. Zuerst steht der Goalie einfach im Tor. Schau dir den Schuss an.' } },
-      { players: { a: SHOOTER }, shot: { aimX: 0, scored: true, ...SLOW_SHOT }, ms: 2500, layers: [], cam: 'shooterEyes', goalie: [], goalieDx: WRONG_DX, note: {
+      { players: { a: SHOOTER }, shot: { aimX: 0, scored: true, ...SLOW_SHOT }, ms: 2500, layers: [], cam: 'goalieClose', goalie: [], goalieDx: WRONG_DX, note: {
         en: 'Goal. What went wrong?',
         de: 'Tor. Was ist schiefgelaufen?' } },
       { players: { a: SHOOTER }, carrier: 'a', ms: 2500, layers: ['line'], cam: 'wide', goalie: ['placement'], note: {
@@ -220,26 +221,57 @@ export const LESSONS = Object.freeze({
     ],
   },
 
-  // 4. Behind the goal: the carrier goes round behind goal A from the right
-  // to the left and comes out in front again on the left.
+  // 4. Behind the goal, as a showcase: first the goalie cuts through the
+  // middle of the goal as the ball goes round and a pass into the slot
+  // scores ("what went wrong?"), then the right run along the line, the
+  // second attacker waiting in the slot all the time. High camera from in
+  // front of the goal; the shooting line only once the ball is out in front.
   behind: {
     n: 4,
     goal: 'A',
     title: { en: 'Behind the goal', de: 'Hinter dem Tor' },
+    cast: { a: { team: 2, number: '9' }, b: { team: 2, number: '7' } },
+    intro: {
+      task: { en: 'The ball goes round the back of the goal: which way does the goalie move, and where does it look?', de: 'Der Ball geht hinter dem Tor herum: wohin bewegt sich der Goalie, und wohin schaut er?' },
+    },
+    recap: {
+      title: { en: 'What to take away', de: 'Das nimmst du mit' },
+      bullets: [
+        { en: 'Ball level with the goal line: on the line at the near post, knees parallel.', de: 'Ball auf Höhe der Torlinie: auf der Linie am nahen Pfosten, Knie parallel.' },
+        { en: 'Ball behind the goal: slide along the line to the other post, never through the middle.', de: 'Ball hinter dem Tor: entlang der Linie zum anderen Pfosten, nie durch die Mitte.' },
+        { en: 'Eyes: glance over the shoulder to the slot.', de: 'Augen: über die Schulter zum Slot schauen.' },
+        { en: 'Ball out in front: forward onto the shooting line, square.', de: 'Ball kommt vors Tor: nach vorne auf die Schusslinie, frontal.' },
+      ],
+    },
     frames: [
-      { ball: { x: 5000, z: 3800 }, ms: 2000, note: {
-        en: 'The ball is level with the goal line: back onto the line at the near post, knees parallel to the goal line.',
-        de: 'Der Ball ist auf Höhe der Torlinie: zurück auf die Linie an den nahen Pfosten, Knie parallel zur Torlinie.' } },
-      { ball: { x: 2500, z: 1800 }, ms: 2500, note: {
+      { players: { a: { x: 5000, z: 3550 }, b: BEHIND_B }, carrier: 'a', ms: 2000, layers: ['zones'], cam: 'frontHigh', note: {
+        en: 'The ball goes round the back of the goal. First, a goalie who does not know where to go.',
+        de: 'Der Ball geht hinter dem Tor herum. Zuerst ein Goalie, der nicht weiss, wohin.' } },
+      { players: { a: { x: 2500, z: 1550 }, b: BEHIND_B }, carrier: 'a', ms: 2500, layers: ['zones'], cam: 'frontHigh', note: {
+        en: 'Behind the goal. So far the goalie plays the line at the post.',
+        de: 'Hinter dem Tor. Bis jetzt spielt der Goalie die Linie am Pfosten.' } },
+      { players: { a: { x: -2500, z: 1550 }, b: BEHIND_B }, carrier: 'a', ms: 2000, layers: ['zones'], cam: 'frontHigh', goalie: [], note: {
+        en: 'The ball crosses. This goalie cuts through the middle of the goal.',
+        de: 'Der Ball wechselt die Seite. Dieser Goalie geht quer durch die Tormitte.' } },
+      { players: { a: { x: -2500, z: 1550 }, b: BEHIND_B }, carrier: 'b', ms: 1800, layers: ['zones'], cam: 'frontHigh', goalie: [], note: {
+        en: 'A pass into the slot. The goalie is in the middle, not ready.',
+        de: 'Ein Pass in den Slot. Der Goalie steht in der Mitte, nicht bereit.' } },
+      { players: { a: { x: -2500, z: 1550 }, b: BEHIND_B }, shot: { aimX: -700, scored: true, ...SLOW_SHOT }, ms: 2500, layers: ['zones', 'line'], cam: 'shooterEyes', goalie: [], note: {
+        en: 'Goal. What went wrong?',
+        de: 'Tor. Was ist schiefgelaufen?' } },
+      { players: { a: { x: 5000, z: 3550 }, b: BEHIND_B }, carrier: 'a', ms: 2000, layers: ['zones'], cam: 'frontHigh', note: {
+        en: 'Now again. The ball is level with the goal line: back onto the line at the near post, knees parallel to the goal line.',
+        de: 'Jetzt nochmals. Der Ball ist auf Höhe der Torlinie: zurück auf die Linie an den nahen Pfosten, Knie parallel zur Torlinie.' } },
+      { players: { a: { x: 2500, z: 1550 }, b: BEHIND_B }, carrier: 'a', ms: 2500, layers: ['zones'], cam: 'frontHigh', note: {
         en: 'Behind the goal: play the line. Feet in the goal, and glance over the shoulder to the slot for the pass.',
         de: 'Hinter dem Tor: Linie spielen. Füsse im Tor, und über die Schulter zum Slot schauen, ob ein Pass kommt.' } },
-      { ball: { x: -2500, z: 1800 }, ms: 2000, note: {
+      { players: { a: { x: -2500, z: 1550 }, b: BEHIND_B }, carrier: 'a', ms: 2000, layers: ['zones'], cam: 'frontHigh', note: {
         en: 'The ball has crossed: slide along the line to the other post, never through the middle of the goal.',
         de: 'Der Ball hat die Seite gewechselt: entlang der Linie an den anderen Pfosten, nie durch die Tormitte.' } },
-      { ball: { x: -5000, z: 3800 }, ms: 2000, note: {
+      { players: { a: { x: -5000, z: 3550 }, b: BEHIND_B }, carrier: 'a', ms: 2000, layers: ['zones'], cam: 'frontHigh', note: {
         en: 'Beside the goal on the other side: still at the post, still parallel. Keep checking the slot.',
         de: 'Neben dem Tor auf der anderen Seite: weiter am Pfosten, weiter parallel. Den Slot im Blick behalten.' } },
-      { ball: { x: -5500, z: 7000 }, ms: 3000, note: {
+      { players: { a: { x: -5500, z: 6750 }, b: BEHIND_B }, carrier: 'a', ms: 3000, layers: ['zones', 'line'], cam: 'pushIn', note: {
         en: 'The ball comes out in front: leave the line, step forward onto the shooting line and square up.',
         de: 'Der Ball kommt vors Tor: weg von der Linie, nach vorne auf die Schusslinie und frontal stellen.' } },
     ],
