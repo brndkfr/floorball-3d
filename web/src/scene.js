@@ -1,3 +1,4 @@
+import { userMovedCamera } from './user-camera.js';
 import * as THREE from 'three';
 import { RINK_L, RINK_W, HALF_W } from './constants.js';
 import { state, shotGoal } from './state.js';
@@ -322,6 +323,7 @@ export function dollyCamera(wheelDelta, clientX = null, clientY = null) {
   const rig = getCameraRig();
   const pivot = clientX === null ? null : screenToFloor(rig, clientX, clientY, cameraView());
   applyCameraRig(dollyBy(rig, wheelDelta, pivot));
+  userMovedCamera();   // a lesson's director hands the camera over (A-BACK-049)
 }
 
 renderer.domElement.addEventListener('wheel', (event) => {

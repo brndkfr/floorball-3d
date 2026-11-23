@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { HALF_W, GRID_TILE_SIZE, GRID_N_COLS, GRID_N_ROWS } from './constants.js';
 import { state } from './state.js';
 import { scene, camera, renderer, getCameraRig, applyCameraRig, cameraView } from './scene.js';
+import { userMovedCamera } from './user-camera.js';
 import { orbitBy, panGrab } from './orbit-math.js';
 import { handleFloorClickForTool, activateTool } from './authoring/dock.js';
 import { chipDataFor, persistChipPosition, scheduleHistoryPush } from './authoring/chips.js';
@@ -290,6 +291,7 @@ let camPan = null;   // { button, downX, downY, lastX, lastY, rig }
 function dragCamera(gesture, event, step) {
   gesture.rig = step(gesture.rig || getCameraRig(), gesture.lastX, gesture.lastY, event.clientX, event.clientY, cameraView());
   applyCameraRig(gesture.rig);
+  userMovedCamera();   // a lesson's director hands the camera over (A-BACK-049)
   gesture.lastX = event.clientX;
   gesture.lastY = event.clientY;
 }

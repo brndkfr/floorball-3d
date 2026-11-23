@@ -5,7 +5,7 @@ const {
   ballPoseAt, passPlan, nearestReleaseT, passFlightPos, goaliePoseAt,
   BALL_CARRY_OFFSET, PASS_FLIGHT_S, DEFAULT_RELEASE_T, DEFAULT_PASS_SPEED_MPS,
   GOAL_Z, DEFAULT_SHOT_SPEED_MPS, SHOT_REST_DEPTH, makeShot, clampAim, padToAim, aimToPad, shotTargetFrame,
-  shotHeightAt, shotHeightAlong, shotPathPoints,
+  shotHeightAt, shotHeightAlong, shotPathPoints, savedShot, SAVE_FRONT_MM,
   MAX_PASS_SPEED_MPS, MAX_SHOT_SPEED_MPS, maxSpeedMps, mpsToKmh, PASS_LANE_HALF_WIDTH_MM,
 } = await import('../web/src/authoring/ball-pose.js');
 const { BALL_RADIUS } = await import('../web/src/constants.js');
@@ -369,4 +369,61 @@ test('nearestGoal: the goal whose line is closer to z', async () => {
   assert.equal(nearestGoal(GOAL_Z.B - 100), 'B');
   assert.equal(nearestGoal(mid - 1), 'A');
   assert.equal(nearestGoal(mid + 1), 'B');
+});
+
+// --- saved shots (A-BACK-049): the ball stops at the goalie, not in the net ---
+
+test('savedShot: stops SAVE_FRONT_MM in front of the goalie on the shot path, flagged saved', () => {
+  const from = { x: 3000, z: 30000 };
+  const goalie = { x: 600, z: 35300 };
+  const { shot, rest } = savedShot('B', { aimX: 0 }, from, goalie);
+  assert.equal(shot.saved, true);
+  assert.equal(shot.goal, 'B');
+  assert.equal(shot.aimX, 0);
+  // on the line from the release to the aim point, short of the goalie
+  const to = { x: 0, z: GOAL_Z.B };
+  const cross = (rest.x - from.x) * (to.z - from.z) - (rest.z - from.z) * (to.x - from.x);
+  assert.ok(Math.abs(cross) / Math.hypot(to.x - from.x, to.z - from.z) < 1, 'on the path');
+  assert.ok(rest.z < goalie.z && rest.z > from.z);
+  assert.ok(close(Math.hypot(rest.x - goalie.x, rest.z - goalie.z), SAVE_FRONT_MM, 80), `${JSON.stringify(rest)}`);
+});
+
+test('makeShot stays as it was: no saved flag, rest behind the goal line', () => {
+  const { shot, rest } = makeShot('A', { aimX: 0 });
+  assert.equal('saved' in shot, false);
+  assert.ok(rest.z < GOAL_Z.A);
+});
+
+const savedFrames = () => {
+  const shooter = pl('p9', 1, 0, 30000);
+  const { shot, rest } = savedShot('B', { aimX: 0, aimY: 600 }, { x: 0, z: 30000 }, { x: 0, z: 35300 });
+  return [
+    frame({ p9: shooter }, { x: -1, z: -1, carrier: 'p9' }),
+    frame({ p9: shooter }, { x: rest.x, z: rest.z, carrier: null, shot }),
+  ];
+};
+
+test('saved shot plan: still aimed at the goal line (arrow, verdict), but stops before it', () => {
+  const [fa, fb] = savedFrames();
+  const plan = passPlan(fa, fb, DUR);
+  assert.equal(plan.kind, 'shot');
+  assert.equal(plan.saved, true);
+  assert.ok(near(plan.to, { x: 0, z: GOAL_Z.B }));
+  assert.ok(plan.stopT > plan.releaseT && plan.stopT < plan.arriveT);
+  assert.ok(plan.restT >= plan.stopT && plan.restT <= 1);
+});
+
+test('saved shot pose: flies to the stop point, drops to the floor there and never goes past it', () => {
+  const [fa, fb] = savedFrames();
+  const plan = passPlan(fa, fb, DUR);
+  const rest = { x: fb.balls.main.x, z: fb.balls.main.z };
+  const atStop = ballPoseAt(fa, fb, plan.stopT, DUR);
+  assert.ok(near(atStop, rest), JSON.stringify(atStop));
+  assert.ok(atStop.y > 0, 'still in the air when it hits the goalie');
+  const end = ballPoseAt(fa, fb, 1, DUR);
+  assert.ok(near(end, rest) && end.y === 0);
+  for (let t = 0; t <= 1; t += 0.01) {
+    const p = ballPoseAt(fa, fb, t, DUR);
+    assert.ok(p.z <= rest.z + 1e-6, `t=${t.toFixed(2)} z ${p.z} past the stop`);
+  }
 });

@@ -32,6 +32,10 @@ export const state = {
   marqueeIncludesShapes: true, // marquee also grabs shapes/zones/arrows/text, not just chips (opt-out in the Layers panel)
   labelsVisible: true, // in-scene chip labels visible (falls back to number sprite when off; toggle in the Layers panel)
   captionPause: null,  // recorder "Hold": true / false, or null = lessons hold, own plays do not (caption-hold.js, A-BACK-049)
+  director: true,        // lessons: the director camera drives the 3D view (recorder "Director" switch, A-BACK-049); the viewer's own camera turns it off
+  directorForced: false, // the video export always uses the director
+  directorResume: null,  // { from, t0 }: easing back to the director after the viewer had the camera
+  quiet: null,         // lesson quiet screen (lesson-view.js, A-BACK-049): null = the viewer's layers, else the layers this frame shows
   followBall: false,   // playback moves the 3D camera's target with the ball (recorder "Follow", A-BACK-040 step 7)
 
   // trajectory.js

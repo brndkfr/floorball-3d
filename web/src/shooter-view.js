@@ -84,3 +84,20 @@ export function rectsOverlap(a, b) {
   if (!a || !b) return false;
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 }
+
+// The shooter's view in a lesson video (A-BACK-049): a 4:3 view in the
+// top-right corner of a w x h picture, under a title bar ("Shooter's view"
+// and the share of the goal covered), clear of the caption and the KATA box
+// at the bottom. Sizes are estimates chosen by eye. `view` is in canvas px
+// from the top-left; export.js turns it into a GL viewport.
+export function exportInsetLayout({ w, h }) {
+  const margin = Math.round(h * 0.04);
+  const vw = Math.round(w * 0.24);
+  const vh = Math.round(vw * 3 / 4);
+  const fontPx = Math.max(12, Math.round(h * 0.026));
+  const bar = Math.round(fontPx * 1.9);
+  const pad = Math.max(2, Math.round(fontPx * 0.25));
+  const box = { x: w - margin - vw - 2 * pad, y: margin, w: vw + 2 * pad, h: bar + vh + pad };
+  const view = { x: box.x + pad, y: box.y + bar, w: vw, h: vh };
+  return { box, view, fontPx, titleY: box.y + Math.round(bar / 2), padX: Math.round(fontPx * 0.6) };
+}

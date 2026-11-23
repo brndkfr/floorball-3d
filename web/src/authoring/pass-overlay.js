@@ -131,6 +131,7 @@ function hide(...objs) {
 
 // Returns whether anything changed this frame (S-BACK-011 render gating).
 export function tickPassOverlay() {
+  if (state.quiet) return hide(arrow, marker, run, aimMarker, trail);   // a quiet lesson frame draws no extra lines (A-BACK-049)
   if (state.playback?.playing) {
     const hidden = hide(arrow, marker, run, aimMarker);
     return updateTrail() || hidden;

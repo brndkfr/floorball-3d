@@ -43,7 +43,7 @@ function build(goal) {
 
 function shown() {
   const mode = document.body.dataset.mode;
-  return state.goalieZonesShown && state.goalieZoneLabelsShown && !!state.goalieZone && (mode === 'plan' || mode === 'train');
+  return state.goalieZonesShown && state.goalieZoneLabelsShown && !state.quiet && !!state.goalieZone && (mode === 'plan' || mode === 'train');
 }
 
 const v = new THREE.Vector3();

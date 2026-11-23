@@ -154,7 +154,7 @@ the J+S / swiss unihockey module "Goalies - Positionierung". Draft:
 5. **[A-BACK-047] Shooter's-eye inset** The "angle tape", live.
 6. **[A-BACK-035] Frame notes** (moved up from "Later": the lessons
    need captions).
-7. **[A-BACK-049] Goalie lessons** Five animated plays in Train.
+7. **[A-BACK-049] Goalie lessons** Four animated plays in Train (five planned, lesson 4 merged into 3).
 8. **[A-BACK-050] "Place the goalie" exercises**
 9. **[A-BACK-051] Ideal goalie** Ghost from the zone rules; merges
    into A-BACK-043 and needs A-BACK-042 for the body.
@@ -279,7 +279,20 @@ lines. An item that needs more than ~10 lines gets its own file under
   animated lesson plays, shipped read-only in the Library. Pilot built
   2026-11-16 (decisions in the spec): lesson 2 "Through the zones" built in
   code, the live goalie, the lesson camera, `openLesson()`; the Lessons shelf in the Library (2026-11-17); pause on captions
-  (2026-11-21). Open: the other four lessons, holds in the export. Same file.
+  (2026-11-21); lessons 1, 3, 4 and 5 (2026-11-21, captions for review).
+  Lesson 1 became a showcase (2026-11-22): title and recap cards, a
+  goal against a goalie off the line first, quiet screen (`layers`), director
+  camera (`cam`) with a Director switch and a Free camera pill, slow motion
+  shots; details in the item spec. 2026-11-22 decisions: lesson 4 merged into lesson 3 (same run, same
+  goalie answers; four lessons ship), the centred-block chip reads
+  "Centred block" (not "Squared up"), lesson 1 builds the KATA up one
+  dimension at a time, lesson shots end in a save (the ball stops at the
+  goalie), and the German captions keep the module's English zone names
+  (Attention-Zone etc.) on purpose. 2026-11-23: all four lessons have
+  the showcase treatment and export as teaching videos (holds, cards,
+  KATA box, shooter's view, ball trail). Open: caption review, and the
+  camera follow-ups from the video review (listed in the item spec).
+  Same file.
 - **[A-BACK-050] "Place the goalie" exercises** [blocked-by:
   A-BACK-046] Situations, scoring, ideal ghost, one hint. Same file.
 - **[A-BACK-051] Ideal goalie** [blocked-by: A-BACK-046, A-BACK-048]

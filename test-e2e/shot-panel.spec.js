@@ -66,7 +66,7 @@ test('selecting the match ball shows the Shot section: target, verdict, toggles,
   for (const name of ['Lines', 'Shooting line', 'Coverage']) await expect(chip(page, name)).toHaveAttribute('aria-pressed', 'false');
   await expect(section(page).getByRole('button', { name: 'Align goalie' })).toBeVisible();
   await expect(section(page).getByRole('button', { name: 'From the ball' })).toBeVisible();
-  await expect(section(page).locator('.shot-verdict')).toContainText(/Open shot|Blocked off-centre|Squared up/);
+  await expect(section(page).locator('.shot-verdict')).toContainText(/Open shot|Blocked off-centre|Centred block/);
   await expect(section(page).locator('.shot-verdict')).toContainText('%');
 });
 
@@ -137,7 +137,7 @@ test('the goalie glow comes with the shooting line, and Align goalie squares it 
   expect(r.key).toBe('blocked-centred');
   expect(Math.abs(r.x)).toBeLessThan(5);
   expect(r.glow).toBe(true);
-  await expect(section(page).locator('.shot-verdict')).toContainText('Squared up');
+  await expect(section(page).locator('.shot-verdict')).toContainText('Centred block');
 });
 
 // A-BACK-045 step 5: the verdict chip on the rink (#goalieLabel, which
@@ -173,7 +173,7 @@ test('the verdict chip shows by the targeted goal while an overlay is on', async
   await chip(page, 'Shooting line').click();
   const c = await chipNow();
   expect(c.shown).toBe(true);
-  expect(c.text).toMatch(/Squared up/);
+  expect(c.text).toMatch(/Centred block/);
   expect(c.text).toMatch(/\d+%/);
   // inside the stage, on goal A's (left) half in the top-down view
   expect(c.x).toBeGreaterThan(c.canvas.left);

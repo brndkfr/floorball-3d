@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-const { goalieTrack, goalieTrackAt, ballAt, GOALIE_MOVE } = await import('../web/src/goalie-track.js');
+const { goalieTrack, goalieTrackAt, ballAt, GOALIE_MOVE, FIXED_LEAD_MS } = await import('../web/src/goalie-track.js');
 const { buildLesson } = await import('../web/src/goalie-lessons.js');
 const { goalieZoneOf } = await import('../web/src/goalie-zones.js');
 const { kataOf, kataTargets, judgeKata, expectedAction, shotAngleDeg } = await import('../web/src/kata.js');
@@ -60,17 +60,44 @@ test('goalieTrack: covers the whole play', () => {
   assert.ok((samples.length - 1) * stepMs >= total(doc.frames));
 });
 
-test('zones lesson with the live goalie: judged ok at least 90% of the time, and at every keyframe', () => {
+test('zones lesson with the live goalie: the right run is judged ok at least 90% of the time, and at every keyframe', () => {
   const doc = buildLesson('zones');
   const track = goalieTrack(doc.frames, 'A');
   const end = total(doc.frames);
+  const first = 4;   // the wrong run (a goalie that stays centred and deep) comes first
+  const from = doc.frames.slice(0, first).reduce((s, f) => s + f.duration, 0);
   let ok = 0, n = 0;
-  for (let t = 0; t <= end; t += 50, n++) if (allOk(judgeAt(doc.frames, 'A', t, goalieTrackAt(track, t)))) ok++;
+  for (let t = from; t <= end; t += 50, n++) if (allOk(judgeAt(doc.frames, 'A', t, goalieTrackAt(track, t)))) ok++;
   assert.ok(ok / n >= 0.9, `ok ${(100 * ok / n).toFixed(0)}% of the time`);
-  let t = 0;
+  let t = from;
   for (const [i, f] of doc.frames.entries()) {
+    if (i < first) continue;
     assert.ok(allOk(judgeAt(doc.frames, 'A', t, goalieTrackAt(track, t))), `keyframe ${i}`);
     t += f.duration;
+  }
+});
+
+// Every shipped lesson (A-BACK-049): lessons with a pass or a shot have
+// fast ball moments the goalie cannot keep up with (at most 3 m/s), so the
+// bar is 85% (an estimate) there; every keyframe is still ok.
+test('every lesson with the live goalie: judged ok at least 85% of the time, and at every keyframe', async () => {
+  const { LESSON_KEYS, LESSONS } = await import('../web/src/goalie-lessons.js');
+  for (const key of LESSON_KEYS) {
+    const goal = LESSONS[key].goal;
+    const doc = buildLesson(key);
+    const track = goalieTrack(doc.frames, goal);
+    const end = total(doc.frames);
+    // a KATA build-up (frames with a partial `goalie` hint) is wrong on purpose until its last step
+    const buildUp = LESSONS[key].frames.findLastIndex((f) => f.goalie && (f.goalie.length < 3 || f.goalieRead || f.goalieDx || f.shot?.scored)) + 1;
+    const from = doc.frames.slice(0, buildUp).reduce((s, f) => s + f.duration, 0);
+    let ok = 0, n = 0;
+    for (let t = from; t <= end; t += 50, n++) if (allOk(judgeAt(doc.frames, goal, t, goalieTrackAt(track, t)))) ok++;
+    assert.ok(ok / n >= 0.85, `${key}: ok ${(100 * ok / n).toFixed(1)}% of the time`);
+    let t = from;
+    for (const [i, f] of doc.frames.entries()) {
+      if (i >= buildUp) assert.ok(allOk(judgeAt(doc.frames, goal, t, goalieTrackAt(track, t))), `${key} keyframe ${i}`);
+      if (i >= buildUp) t += f.duration;
+    }
   }
 });
 
@@ -93,4 +120,43 @@ test('cachedGoalieTrack: same play gives the same track; moving the ball or a du
   assert.notEqual(b, a);
   doc.frames[0].duration += 500;
   assert.notEqual(cachedGoalieTrack(doc.frames, 'A'), b);
+});
+
+// A frame with `goalieFixed` carries a goalie pose that is part of the
+// lesson (the KATA build-up): the track goes to that pose, not to the rules'.
+test('goalieTrack: a frame marked goalieFixed is followed instead of the rules', () => {
+  const doc = buildLesson('line');
+  const track = goalieTrack(doc.frames, 'A');
+  const pose = (f) => { const g = f.scheme.goalies.A; return { x: g.x, z: g.z, yaw: g.angle }; };
+  const near = (a, b, msg) => assert.ok(Math.hypot(a.x - b.x, a.z - b.z) < 5 && Math.abs(wrap(a.yaw - b.yaw)) < 0.01, `${msg}: ${JSON.stringify(a)} vs ${JSON.stringify(b)}`);
+  // A fixed pose belongs to its frame's caption: reached by the keyframe and
+  // held through the frame; the move to the next one starts FIXED_LEAD_MS
+  // before the next keyframe (decided 2026-11-22: "What went wrong?" stays
+  // wrong while it is on screen).
+  let acc = 0;
+  for (let k = 1; k < doc.frames.length; k++) {
+    acc += doc.frames[k - 1].duration;
+    if (!doc.frames[k].goalieFixed) continue;
+    near(goalieTrackAt(track, acc), pose(doc.frames[k]), `keyframe ${k}`);
+    if (k + 1 < doc.frames.length) near(goalieTrackAt(track, acc + doc.frames[k].duration - FIXED_LEAD_MS - 40), pose(doc.frames[k]), `frame ${k} held`);
+  }
+  const wrong = doc.frames.findIndex((f) => f.scheme.balls.main.shot && !f.scheme.balls.main.shot.saved);
+  const wStart = doc.frames.slice(0, wrong).reduce((s, f) => s + f.duration, 0);
+  near(goalieTrackAt(track, wStart + doc.frames[wrong].duration / 2), pose(doc.frames[wrong]), 'still off the line in the middle of "What went wrong?"');
+  // and the rules would have put the goalie square and forward already at the start
+  assert.notDeepEqual(pose(doc.frames[0]), pose(doc.frames[2]));
+  // without the mark the same frames get the rules' pose
+  const plain = doc.frames.map((f) => { const c = structuredClone(f); delete c.goalieFixed; return c; });
+  const ruled = goalieTrack(plain, 'A');
+  const g = goalieTrackAt(ruled, 2400);
+  assert.ok(Math.abs(wrap(g.yaw - pose(doc.frames[1]).yaw)) > 0.1 || Math.hypot(g.x - pose(doc.frames[1]).x, g.z - pose(doc.frames[1]).z) > 5);
+});
+
+test('goalieTrack: frames without goalieFixed follow the rules exactly as before', () => {
+  const doc = buildLesson('zones');
+  const free = doc.frames.slice(4);   // the right run carries no hint
+  assert.ok(free.every((f) => !('goalieFixed' in f)));
+  const a = goalieTrack(free, 'A');
+  const b = goalieTrack(free.map((f) => ({ ...f })), 'A');
+  assert.deepEqual(a.samples, b.samples);
 });

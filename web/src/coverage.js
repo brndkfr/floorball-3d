@@ -3,6 +3,7 @@ import { state, goalieForGoal, shotGoal } from './state.js';
 import { coverageGrid } from './insights.js';
 import { VECTOR_COVERAGE_BLOCKED, VECTOR_COVERAGE_OPEN } from './tokens.js';
 import { snapshotChanged, copySnapshot } from './dirty-check.js';
+import { quietShotView } from './lesson-view.js';
 import './shot-view-state.js';   // loads state.shotView (A-BACK-045: switched from the ball's Inspector)
 
 // --- goal coverage: what fraction of the goal mouth does the goalie block? ---
@@ -85,7 +86,7 @@ function coverageInputsChanged(ballCenter) {
 }
 
 export function updateCoverage(ballCenter) {
-  if (!state.shotView.coverage || !shotGoal()) {
+  if (!quietShotView(state.shotView, state.quiet).coverage || !shotGoal()) {
     coverageMesh.visible = false;
     state.currentCoveragePct = null;
     return;

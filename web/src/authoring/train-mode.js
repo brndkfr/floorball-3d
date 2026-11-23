@@ -29,6 +29,12 @@ import { setShotViewUnsaved, restoreStoredShotView } from '../shot-view-state.js
 import { trainShotView } from '../shot-view.js';
 import './goalie-zone-card.js';   // zone card in #trainSlots (A-BACK-048)
 import './kata-section.js';       // KATA card (A-BACK-046)
+import { armLessonIntro } from './lesson-cards-ui.js';   // title and recap card of a lesson (A-BACK-049)
+import './director-ui.js';   // Director switch and Free camera pill (A-BACK-049)
+import './lesson-transport.js';   // Play/Pause, Restart, Director under the Train stage (A-BACK-049)
+import { setDirector } from './director-state.js';
+import { directorPoseFor } from './playback.js';
+import { hasDirector } from '../director.js';
 import { getCameraRig, isDefaultView, applyDefaultView, defaultRig } from '../scene.js';
 import { blendCameraTo } from '../ui/camera-menu.js';
 import { trainPose, lessonPose } from '../camera-presets.js';
@@ -114,11 +120,14 @@ export function openLesson(key) {
   resetHistory();
   updateGoalieZones(getBallWorldCenter());
   updateKataReadout();
-  blendCameraTo(lessonPose(raw.autoGoalie));
+  // A lesson with director shots opens on its first shot, with the director on again; the others on the lesson camera.
+  if (hasDirector(state.doc.frames)) setDirector(true);
+  blendCameraTo((hasDirector(state.doc.frames) && directorPoseFor(0)) || lessonPose(raw.autoGoalie));
   markRenderDirty();
   // showDoc() fires nothing: the recorder (frame strip, Hold switch) and
   // the caption re-read the doc on framesChanged.
   window.dispatchEvent(new Event('framesChanged'));
+  armLessonIntro();   // the lesson's task card, until the first play
   return true;
 }
 

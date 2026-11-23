@@ -25,7 +25,7 @@ export function updateShotChip() {
   const words = verdictWords(state.shotReadout);
   const goalie = goalieForGoal(shotGoal());
   const cam = state.activeCamera;
-  if (!words || !anyShotOverlay(state.shotView) || !cam) return hide();
+  if (!words || state.quiet || !anyShotOverlay(state.shotView) || !cam) return hide();   // quiet lesson frame: no verdict chip (A-BACK-049)
   const anchor = goalie && goalie.visible ? goalie.position : shotGoal()?.position;
   if (!anchor) return hide();
   p.set(anchor.x, HEAD_MM, anchor.z).project(cam);

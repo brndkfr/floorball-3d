@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { HALF_W, RINK_L } from './constants.js';
 import { state } from './state.js';
 import { camera, topDownCamera, getCameraRig, applyCameraRig } from './scene.js';
+import { userMovedCamera } from './user-camera.js';
 import { panKeys } from './orbit-math.js';
 import { selectObject, deselectAll, labelFor } from './selection.js';
 import { removeChip } from './authoring/chips.js';
@@ -101,6 +102,7 @@ function handleKeyboardMovement(dt) {
     // offset (deriving "right" from camYaw alone points the wrong way).
     const rig = getCameraRig();
     applyCameraRig(panKeys(rig, nf, nr, rig.dist * ORBIT_PAN_RATE * dt));
+    userMovedCamera();   // a lesson's director hands the camera over (A-BACK-049)
   }
 }
 

@@ -2,6 +2,7 @@ import { scene, renderer } from './scene.js';
 import { state, getBallWorldCenter } from './state.js';
 import { handleKeyboardMovement, clock } from './controls.js';
 import { updateTrajectory } from './trajectory.js';
+import { updateQuiet } from './authoring/lesson-quiet.js';
 import { updateCoverage } from './coverage.js';
 import { updateShotChip } from './ui/shot-chip.js';
 import { updateShotReadout } from './shot-readout.js';
@@ -83,6 +84,7 @@ function animate() {
   const passChanged = tickPassOverlay();
   const shadowsChanged = tickBlobShadows();   // after everything that moves an actor
   const ballCenter = getBallWorldCenter(); // computed once, shared by both calls below
+  updateQuiet();   // lesson quiet screen: before the layers read it (A-BACK-049)
   const trajectoryChanged = updateTrajectory(ballCenter);
   updateCoverage(ballCenter);
   updateShotReadout();   // verdict + % blocked for the Inspector card and the rink chip (A-BACK-045)
