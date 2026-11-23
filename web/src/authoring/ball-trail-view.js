@@ -11,7 +11,7 @@ import { addPoseListener } from './playback.js';
 import { trailPoints, TRAIL } from '../ball-trail.js';
 
 const COUNT = Math.floor(TRAIL.lengthMs / TRAIL.stepMs);   // the ball itself is age 0, drawn by the ball mesh
-const R0 = 55, R1 = 22;   // sphere radius mm, newest to oldest; estimates, chosen by eye so it reads at 720p
+const R0 = 90, R1 = 40;   // sphere radius mm, newest to oldest; estimates, chosen by eye so it reads at 720p
 const COLOR = 0xffe14d;   // bright yellow, readable on the blue floor
 
 const group = new THREE.Group();

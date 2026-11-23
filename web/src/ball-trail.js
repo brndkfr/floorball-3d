@@ -6,7 +6,7 @@
 import { passPlan, ballPoseAt } from './authoring/ball-pose.js';
 import { BALL_RADIUS } from './constants.js';
 
-export const TRAIL = Object.freeze({ lengthMs: 400, stepMs: 50 });   // estimates, chosen by eye
+export const TRAIL = Object.freeze({ lengthMs: 800, stepMs: 50 });   // estimates, chosen by eye
 
 // [{ x, y, z, age }] newest first (age 0 = the ball now) for a ball in
 // flight after a shot's release at play time `elapsed`; empty before the

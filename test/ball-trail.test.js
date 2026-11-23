@@ -35,3 +35,12 @@ test('trail: the saved shot of the second half gives one too, and none once it r
   assert.ok(trailPoints(fr, start + 1000).length >= 2);
   assert.deepEqual(trailPoints(fr, start + fr[6].duration + 100), []);
 });
+
+// At 720p the ball is a few pixels: the trail is long (most of a second of a
+// slow shot) and the view draws it with thick spheres.
+test('trail: long enough to follow a slow shot, with enough points for a smooth line', () => {
+  assert.ok(TRAIL.lengthMs >= 700, `${TRAIL.lengthMs} ms`);
+  const t = trailPoints(fr, 1800);
+  assert.ok(t.length >= 10, `${t.length} points in the middle of the flight`);
+  assert.ok(t.at(-1).age >= 600);
+});
