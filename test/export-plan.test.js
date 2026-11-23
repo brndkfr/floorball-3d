@@ -53,7 +53,8 @@ test('exportPlan: a lesson with cards opens on its title card and closes on its 
 });
 
 test('exportPlan: a lesson without cards gets none; an empty play gives no frames', () => {
-  const doc = buildLesson('zones');
+  const doc = buildLesson('line');
+  delete doc.lesson;   // every shipped lesson has cards now: strip them
   const plan = exportPlan({ frames: doc.frames, lang: 'en', fps: 30, endMs: total(doc.frames), holds: true, lesson: doc.lesson });
   assert.ok(plan.every((p) => p.card === null));
   assert.deepEqual(exportPlan({ frames: [], lang: 'en', fps: 30, endMs: 0, holds: true }), []);

@@ -29,8 +29,8 @@ test('openLesson shows the lesson in Train: its frames, its first caption', asyn
     const { state } = await import('/src/state.js');
     return { frames: state.doc.frames.length, auto: state.doc.autoGoalie, name: state.doc.meta.name };
   });
-  expect(info).toEqual({ frames: 5, auto: 'A', name: 'Through the zones' });
-  await expect(page.getByText('Attention zone: stay patient.', { exact: false }).first()).toBeVisible();
+  expect(info).toEqual({ frames: 9, auto: 'A', name: 'Through the zones' });
+  await expect(page.getByText('First the goalie stays centred and deep', { exact: false }).first()).toBeVisible();
   expect(await openLesson(page, 'nope')).toBe(false);
 });
 
@@ -57,12 +57,12 @@ test('during playback the lesson goalie follows the track, not the straight line
     const { seekTo, stop } = await import('/src/authoring/playback.js');
     const { goalieTrack, goalieTrackAt } = await import('/src/goalie-track.js');
     const frames = state.doc.frames;
-    const t = frames[0].duration + frames[1].duration + frames[2].duration / 2;   // halfway into the move toward the corner
+    const t = frames.slice(0, 6).reduce((sum, f) => sum + f.duration, 0) + frames[6].duration / 2;   // halfway into the move toward the corner
     seekTo(t);
     const g = state.goalies.A;
     const shown = { x: g.position.x, z: g.position.z, yaw: g.rotation.y };
     const want = goalieTrackAt(goalieTrack(frames, 'A'), t);
-    const a = frames[2].scheme.goalies.A, b = frames[3].scheme.goalies.A;
+    const a = frames[6].scheme.goalies.A, b = frames[7].scheme.goalies.A;
     const linear = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
     stop();
     const kept = frames.map((f) => f.scheme.goalies.A);
@@ -80,7 +80,7 @@ test('every keyframe of the lesson reads all ok on the live KATA card', async ({
   await boot(page);
   await openLesson(page, 'zones');
   const n = await page.evaluate(async () => (await import('/src/state.js')).state.doc.frames.length);
-  for (let i = 0; i < n; i++) {
+  for (let i = 4; i < n; i++) {   // frames 0-3 are the wrong run: a goalie that stays centred and deep
     await page.evaluate(async (i) => {
       const { state } = await import('/src/state.js');
       const { seekTo } = await import('/src/authoring/playback.js');
@@ -128,7 +128,7 @@ test('Library shelf: the lesson row opens the lesson in Train and closes the Lib
   await expect(shelf.getByRole('heading', { name: 'Goalie lessons' })).toBeVisible();
   const row = shelf.locator('.library-row[data-lesson="zones"]');
   await expect(row.locator('.library-name')).toHaveText('Through the zones');
-  await expect(row.locator('.library-modified')).toHaveText('Lesson 2 · 5 frames · 12 s');
+  await expect(row.locator('.library-modified')).toHaveText('Lesson 2 · 9 frames · 22.5 s');
   await row.getByRole('button', { name: 'Open' }).click();
   await expect(page.locator('dialog.library-dialog')).toHaveCount(0);
   await expect(page.locator('#appRail [data-mode="train"]')).toHaveClass(/active/);
@@ -136,7 +136,7 @@ test('Library shelf: the lesson row opens the lesson in Train and closes the Lib
     const { state } = await import('/src/state.js');
     return { frames: state.doc.frames.length, auto: state.doc.autoGoalie, name: state.doc.meta.name };
   });
-  expect(info).toEqual({ frames: 5, auto: 'A', name: 'Through the zones' });
+  expect(info).toEqual({ frames: 9, auto: 'A', name: 'Through the zones' });
 });
 
 test('Library shelf: in German the shelf and the opened lesson are German', async ({ page }) => {
@@ -276,7 +276,7 @@ test('quiet screen: the opening frame shows the caption only', async ({ page }) 
 
 test('quiet screen: lessons without layers keep the full Train screen', async ({ page }) => {
   await boot(page);
-  await openLesson(page, 'zones');
+  await openPlainLesson(page, 'zones');
   const q = await quietAt(page, 1);
   expect(q.quiet).toBeNull();
   expect(q.corner).toBe(true);
@@ -286,7 +286,7 @@ test('quiet screen: lessons without layers keep the full Train screen', async ({
   // and a quiet frame of lesson 1 gives the screen back when the lesson changes
   await openLesson(page, 'line');
   expect((await quietAt(page, 0)).quiet).not.toBeNull();
-  await openLesson(page, 'zones');
+  await openPlainLesson(page, 'zones');
   expect((await quietAt(page, 0)).quiet).toBeNull();
 });
 
@@ -339,9 +339,9 @@ test('lesson cards: any play dismisses the task card; the end of the play shows 
   expect(pb.elapsed).toBeLessThan(1000);
 });
 
-test('lesson cards: the other lessons have no card', async ({ page }) => {
+test('lesson cards: a lesson without cards has none; lesson 2 has its task card', async ({ page }) => {
   await boot(page);
-  await openLesson(page, 'zones');
+  await openPlainLesson(page, 'zones');
   await expect(page.locator('#lessonCard')).toBeHidden();
   await page.evaluate(async () => {
     const pb = await import('/src/authoring/playback.js');
@@ -349,12 +349,26 @@ test('lesson cards: the other lessons have no card', async ({ page }) => {
     pb.tickPlayback(1e9);
   });
   await expect(page.locator('#lessonCard')).toBeHidden();
+  await openLesson(page, 'zones');
+  await expect(page.locator('#lessonCard')).toBeVisible();
+  await expect(page.locator('#lessonCard .lc-title')).toHaveText('Through the zones');
 });
 
 // A-BACK-049: director camera. A lesson whose frames name shots (`cam`)
 // steers the 3D camera from the play time; the Director switch sits next to
 // Hold and Follow; the viewer taking the camera turns it off and the pill gives
 // it back. rAF is paused here, so the camera is read after seekTo().
+// A lesson stripped of its showcase fields (layers, cam, cards): the plain Train screen.
+const openPlainLesson = async (page, key) => {
+  await openLesson(page, key);
+  await page.evaluate(async () => {
+    const { state } = await import('/src/state.js');
+    for (const f of state.doc.frames) { delete f.layers; delete f.cam; }
+    delete state.doc.lesson;
+    document.querySelector('#lessonCard .lc-close')?.click();
+    window.dispatchEvent(new Event('framesChanged'));
+  });
+};
 const camNow = (page) => page.evaluate(async () => {
   const { camera } = await import('/src/scene.js');
   const { state } = await import('/src/state.js');
@@ -500,7 +514,7 @@ test('director: a restart and a new lesson bring it back; lessons without shots 
   await page.evaluate(async () => (await import('/src/authoring/director-state.js')).setDirector(false));
   await openLesson(page, 'line');   // a new lesson
   expect((await camNow(page)).director).toBe(true);
-  await openLesson(page, 'zones');
+  await openPlainLesson(page, 'zones');
   expect(await page.evaluate(() => document.querySelector('#timeline [data-tl="director"]').hidden)).toBe(true);   // no shots: no switch
 });
 
@@ -585,7 +599,7 @@ test('lesson transport: shown in Train for a lesson only; Play/Pause, Restart an
 
 test('lesson transport: German labels; a lesson without shots has no Director button; Plan hides the bar', async ({ page }) => {
   await boot(page);
-  await openLesson(page, 'zones');
+  await openPlainLesson(page, 'zones');
   const bar = page.locator('#lessonTransport');
   await expect(bar).toBeVisible();
   await expect(bar.locator('[data-lt="director"]')).toBeHidden();

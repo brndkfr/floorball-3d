@@ -60,15 +60,18 @@ test('goalieTrack: covers the whole play', () => {
   assert.ok((samples.length - 1) * stepMs >= total(doc.frames));
 });
 
-test('zones lesson with the live goalie: judged ok at least 90% of the time, and at every keyframe', () => {
+test('zones lesson with the live goalie: the right run is judged ok at least 90% of the time, and at every keyframe', () => {
   const doc = buildLesson('zones');
   const track = goalieTrack(doc.frames, 'A');
   const end = total(doc.frames);
+  const first = 4;   // the wrong run (a goalie that stays centred and deep) comes first
+  const from = doc.frames.slice(0, first).reduce((s, f) => s + f.duration, 0);
   let ok = 0, n = 0;
-  for (let t = 0; t <= end; t += 50, n++) if (allOk(judgeAt(doc.frames, 'A', t, goalieTrackAt(track, t)))) ok++;
+  for (let t = from; t <= end; t += 50, n++) if (allOk(judgeAt(doc.frames, 'A', t, goalieTrackAt(track, t)))) ok++;
   assert.ok(ok / n >= 0.9, `ok ${(100 * ok / n).toFixed(0)}% of the time`);
-  let t = 0;
+  let t = from;
   for (const [i, f] of doc.frames.entries()) {
+    if (i < first) continue;
     assert.ok(allOk(judgeAt(doc.frames, 'A', t, goalieTrackAt(track, t))), `keyframe ${i}`);
     t += f.duration;
   }
@@ -85,7 +88,7 @@ test('every lesson with the live goalie: judged ok at least 85% of the time, and
     const track = goalieTrack(doc.frames, goal);
     const end = total(doc.frames);
     // a KATA build-up (frames with a partial `goalie` hint) is wrong on purpose until its last step
-    const buildUp = LESSONS[key].frames.findLastIndex((f) => f.goalie && f.goalie.length < 3) + 1;
+    const buildUp = LESSONS[key].frames.findLastIndex((f) => f.goalie && (f.goalie.length < 3 || f.goalieRead || f.goalieDx || f.shot?.scored)) + 1;
     const from = doc.frames.slice(0, buildUp).reduce((s, f) => s + f.duration, 0);
     let ok = 0, n = 0;
     for (let t = from; t <= end; t += 50, n++) if (allOk(judgeAt(doc.frames, goal, t, goalieTrackAt(track, t)))) ok++;
@@ -151,8 +154,9 @@ test('goalieTrack: a frame marked goalieFixed is followed instead of the rules',
 
 test('goalieTrack: frames without goalieFixed follow the rules exactly as before', () => {
   const doc = buildLesson('zones');
-  const a = goalieTrack(doc.frames, 'A');
-  const b = goalieTrack(doc.frames.map((f) => ({ ...f })), 'A');
+  const free = doc.frames.slice(4);   // the right run carries no hint
+  assert.ok(free.every((f) => !('goalieFixed' in f)));
+  const a = goalieTrack(free, 'A');
+  const b = goalieTrack(free.map((f) => ({ ...f })), 'A');
   assert.deepEqual(a.samples, b.samples);
-  assert.ok(doc.frames.every((f) => !('goalieFixed' in f)));
 });

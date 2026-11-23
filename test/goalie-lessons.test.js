@@ -27,8 +27,8 @@ test('lessons: each survives a JSON round-trip through acceptDoc with an en and 
   }
 });
 
-test('zones lesson: the ball goes attention -> danger -> danger -> passing-first -> passing-first at goal A', () => {
-  assert.deepEqual(zonesOf('zones'), ['attention', 'danger', 'danger', 'passing', 'passing']);
+test('zones lesson: the right run goes attention -> danger -> danger -> passing-first -> passing-first at goal A', () => {
+  assert.deepEqual(zonesOf('zones').slice(4), ['attention', 'danger', 'danger', 'passing', 'passing']);
 });
 
 test('zones lesson: one attacker carries the ball in every frame', () => {
@@ -203,14 +203,70 @@ test('line lesson: the title card holds the task, the recap three bullets, in En
   for (const text of [JSON.stringify(doc.lesson), JSON.stringify(doc.frames.map((f) => f.note))]) assert.ok(!/ß|—/.test(text), 'Swiss spelling, no em-dash');
 });
 
-test('the other lessons carry none of the showcase fields', () => {
-  for (const key of LESSON_KEYS.filter((k) => k !== 'line')) {
+const SHOWCASE = ['line', 'zones'];   // the lessons given the showcase treatment so far
+test('showcase lessons carry a task, a recap, layers and a director shot on every frame', () => {
+  for (const key of SHOWCASE) {
     const doc = buildLesson(key);
-    assert.equal('lesson' in doc, false, key);
-    for (const f of doc.frames) {
-      assert.equal('layers' in f, false, key);
-      assert.equal('cam' in f, false, key);
-    }
+    assert.ok(doc.lesson.intro.task.en && doc.lesson.intro.task.de, key);
+    assert.ok(doc.lesson.recap.title.en && doc.lesson.recap.bullets.length >= 3, key);
+    for (const b of doc.lesson.recap.bullets) assert.ok(b.en && b.de, key);
+    doc.frames.forEach((f, i) => {
+      assert.ok(Array.isArray(f.layers), `${key} frame ${i}: layers`);
+      assert.ok(DIRECTOR_SHOTS.includes(f.cam), `${key} frame ${i}: cam ${f.cam}`);
+    });
+    for (const text of [JSON.stringify(doc.lesson), JSON.stringify(doc.frames.map((f) => f.note))]) assert.ok(!/ß|—/.test(text), `${key}: Swiss spelling, no em-dash`);
+  }
+});
+
+// Lessons 2-4: a wrong run first that ends in a goal ("What went wrong?"),
+// the goalie clear of the shot path, then the right run(s).
+test('lessons 2-4: the first shot is a goal on a frame that asks what went wrong, past a goalie clear of the shot path', () => {
+  for (const key of SHOWCASE.filter((k) => k !== 'line')) {
+    const doc = buildLesson(key);
+    const specs = LESSONS[key].frames;
+    const wrong = specs.findIndex((f) => f.shot?.scored);
+    assert.ok(wrong > 0, key);
+    assert.ok(specs.slice(0, wrong).every((f) => !f.shot), `${key}: no shot before the goal`);
+    assert.match(doc.frames[wrong].note.en, /What went wrong\?/);
+    assert.match(doc.frames[wrong].note.de, /Was ist schiefgelaufen\?/);
+    const ball = ballOf(doc.frames[wrong]);
+    assert.equal(ball.shot.saved, undefined, `${key}: a goal`);
+    assert.ok(ball.z < GOAL_Z.A, `${key}: in the net`);
+    const plan = passPlan(doc.frames[wrong - 1].scheme, doc.frames[wrong].scheme, doc.frames[wrong - 1].duration);
+    assert.equal(plan.kind, 'shot');
+    const g = doc.frames[wrong].scheme.goalies.A;
+    const len = Math.hypot(plan.to.x - plan.from.x, plan.to.z - plan.from.z);
+    const across = Math.abs((g.x - plan.from.x) * (plan.to.z - plan.from.z) - (g.z - plan.from.z) * (plan.to.x - plan.from.x)) / len;
+    assert.ok(across > 500, `${key}: goalie ${across.toFixed(0)} mm off the shot path`);
+    // the wrong run's goalie reads wrong on the KATA card at the goal
+    const goalCenter = { x: 0, z: GOAL_Z.A };
+    const ms = startMs(doc.frames, wrong - 1);
+    const rel = plan.from;
+    const st = judgeKata(kataOf({ ball: rel, goal: 'A', goalCenter, goalie: { x: g.x, z: g.z, yaw: g.angle } }),
+      kataTargets(goalieZoneOf(rel, 'A'), expectedAction(doc.frames, ms), shotAngleDeg(rel, 'A', goalCenter))).status;
+    assert.ok([st.placement, st.depth, st.axis].includes('adjust'), `${key}: ${JSON.stringify(st)}`);
+  }
+});
+
+test('zones lesson: the wrong run keeps the goalie centred and deep all the way', () => {
+  const doc = buildLesson('zones');
+  const wrong = LESSONS.zones.frames.findIndex((f) => f.shot?.scored);
+  for (let i = 0; i <= wrong; i++) {
+    const g = doc.frames[i].scheme.goalies.A;
+    assert.equal(g.x, 0, `frame ${i}`);
+    assert.equal(g.z, GOAL_Z.A + 250, `frame ${i}`);
+    assert.equal(g.angle, 0, `frame ${i}`);
+  }
+  assert.equal(goalieZoneOf(ballOf(doc.frames[wrong - 1]), 'A'), 'danger');
+  assert.ok(Math.abs(doc.frames.at(wrong + 1).scheme.balls.main.x - 3000) < 1, 'the right run restarts in the attention zone');
+});
+
+test('zones lesson: the quiet screen shows the zones on every frame and the line where the caption names it', () => {
+  const doc = buildLesson('zones');
+  for (const [i, f] of doc.frames.entries()) {
+    assert.ok(f.layers.includes('zones'), `frame ${i}`);
+    assert.ok(f.layers.every((n) => n === 'zones' || n === 'line'), `frame ${i}`);
+    if (/shooting line/i.test(f.note.en)) assert.ok(f.layers.includes('line'), `frame ${i}`);
   }
 });
 
@@ -260,6 +316,7 @@ test('cast lessons: a shot frame is a shot at the lesson goal by the carrier bef
       assert.equal(ball.carrier, undefined, `${key} frame ${i}: loose after the shot`);
       assert.equal(ball.shot.goal, goal);
       // a lesson shot ends in a save: the ball stops just in front of the goalie, on the shot path
+      if (spec.shot.scored) return;   // the wrong run ends in a goal
       assert.equal(ball.shot.saved, true, `${key} frame ${i}: saved`);
       const g = frames[i].scheme.goalies[goal];
       const gap = Math.hypot(ball.x - g.x, ball.z - g.z);
@@ -316,6 +373,7 @@ test('lessons: the goalie at every keyframe is judged ok on placement, depth and
       const g = f.scheme.goalies[goal];
       assert.ok(g, `${key} frame ${i}: goalie ${goal} placed`);
       if (LESSONS[key].frames[i].shot?.scored) return;   // the goal that goes in: judged off in its own test
+      if (key !== 'line' && LESSONS[key].frames[i].goalie) return;   // the wrong run of lessons 2-4: wrong on purpose, judged in its own test
       const zone = goalieZoneOf(ball, goal);
       const action = expectedAction(doc.frames, startMs(doc.frames, i));
       const k = kataOf({ ball, goal, goalCenter, goalie: { x: g.x, z: g.z, yaw: g.angle } });

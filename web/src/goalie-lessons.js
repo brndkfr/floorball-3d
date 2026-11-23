@@ -21,6 +21,7 @@ import { idealGoaliePose } from './shooter-view.js';
 const ATTACKER = { team: 2, number: '9' };
 const SOLO_CAST = Object.freeze({ a: ATTACKER });
 const SHOOTER = Object.freeze({ x: 4500, z: 10000 });         // lesson 1's shooter, on the right of the danger zone (estimate)
+const ZONES_SHOOTER = Object.freeze({ x: 4500, z: 9750 });       // lesson 2: where the attacker shoots from, in the danger zone (estimate)
 const WRONG_DX = -700;                                         // lesson 1: the goalie stands this far off the line, mm (estimate: clear of the shot, inside the goal)
 const SLOW_SHOT = Object.freeze({ speedMps: 6, releaseT: 0.15 });   // lesson 1: a readable flight, not the 25 m/s default (estimate)
 
@@ -97,26 +98,51 @@ export const LESSONS = Object.freeze({
     ],
   },
 
-  // 2. Through the zones: one attacker carries the ball from the attention
-  // zone down the right side into the danger zone and behind the goal.
+  // 2. Through the zones, as a showcase: first the goalie stays centred and
+  // deep whatever the ball does and the attacker walks in and scores ("what
+  // went wrong?"), then the same walk with the goalie playing each zone.
+  // The zones stay on screen, the shooting line only where the caption names it.
   zones: {
     n: 2,   // the lesson's number in the Library shelf (A-BACK-049)
     goal: 'A',
     title: { en: 'Through the zones', de: 'Durch die Zonen' },
+    intro: {
+      task: { en: 'Watch the goalie as the ball moves through the zones: what changes in each one?', de: 'Schau auf den Goalie, während der Ball durch die Zonen geht: was ändert sich in jeder Zone?' },
+    },
+    recap: {
+      title: { en: 'What to take away', de: 'Das nimmst du mit' },
+      bullets: [
+        { en: 'Attention zone: centred, deep and patient.', de: 'Attention-Zone: mittig, tief und geduldig.' },
+        { en: 'Danger zone: forward on the shooting line, square to the ball.', de: 'Danger-Zone: nach vorne auf die Schusslinie, frontal zum Ball.' },
+        { en: 'Passing-first zone and behind the goal: on the line at the post, knees parallel, eyes on the slot.', de: 'Passing-First-Zone und hinter dem Tor: auf der Linie am Pfosten, Knie parallel, Blick zum Slot.' },
+      ],
+    },
     frames: [
-      { ball: { x: 3000, z: 24000 }, ms: 3000, note: {
-        en: 'Attention zone: stay patient. Centred and deep in the goal, knees parallel to the goal line.',
-        de: 'Attention-Zone: geduldig bleiben. Mittig und tief im Tor, Knie parallel zur Torlinie.' } },
-      { ball: { x: 5000, z: 14000 }, ms: 2500, note: {
+      { players: { a: { x: 3000, z: 23750 } }, carrier: 'a', ms: 3000, layers: ['zones'], cam: 'wide', note: {
+        en: 'First the goalie stays centred and deep, whatever the ball does. Attention zone: that is fine here.',
+        de: 'Zuerst bleibt der Goalie mittig und tief, egal was der Ball macht. Attention-Zone: hier ist das richtig.' } },
+      { players: { a: { x: 5000, z: 13750 } }, carrier: 'a', ms: 2500, layers: ['zones'], cam: 'wide', goalie: [], note: {
+        en: 'Danger zone: the attacker comes closer, the goalie stays where he is.',
+        de: 'Danger-Zone: der Angreifer kommt näher, der Goalie bleibt stehen.' } },
+      { players: { a: ZONES_SHOOTER }, carrier: 'a', ms: 2000, layers: ['zones'], cam: 'wide', goalie: [], note: {
+        en: 'Still deep and centred. The near post is open.',
+        de: 'Immer noch tief und mittig. Der nahe Pfosten ist offen.' } },
+      { players: { a: ZONES_SHOOTER }, shot: { aimX: 650, scored: true, ...SLOW_SHOT }, ms: 2500, layers: ['zones'], cam: 'wide', goalie: [], note: {
+        en: 'Goal. What went wrong?',
+        de: 'Tor. Was ist schiefgelaufen?' } },
+      { players: { a: { x: 3000, z: 23750 } }, carrier: 'a', ms: 3000, layers: ['zones'], cam: 'wide', note: {
+        en: 'Now again. Attention zone: stay patient, centred and deep, knees parallel to the goal line.',
+        de: 'Jetzt nochmals. Attention-Zone: geduldig bleiben, mittig und tief, Knie parallel zur Torlinie.' } },
+      { players: { a: { x: 5000, z: 13750 } }, carrier: 'a', ms: 2500, layers: ['zones', 'line'], cam: 'shooterEyes', note: {
         en: 'Danger zone: step forward onto the shooting line and square up to the ball.',
         de: 'Danger-Zone: nach vorne auf die Schusslinie und frontal zum Ball.' } },
-      { ball: { x: 4500, z: 8000 }, ms: 2000, note: {
+      { players: { a: { x: 4500, z: 7750 } }, carrier: 'a', ms: 2000, layers: ['zones', 'line'], cam: 'shooterEyes', note: {
         en: 'The ball comes closer: move with it, stay on the shooting line and square.',
         de: 'Der Ball kommt näher: mitgehen, auf der Schusslinie und frontal bleiben.' } },
-      { ball: { x: 4000, z: 3000 }, ms: 1500, note: {
-        en: 'Passing-first zone: back onto the line, at the ball-side post, knees parallel.',
+      { players: { a: { x: 4000, z: 2750 } }, carrier: 'a', ms: 2000, layers: ['zones'], cam: 'sideKnee', note: {
+        en: 'Passing-First-Zone: back onto the line, at the ball-side post, knees parallel.',
         de: 'Passing-First-Zone: zurück auf die Linie, an den Pfosten auf der Ballseite, Knie parallel.' } },
-      { ball: { x: 1500, z: 1700 }, ms: 3000, note: {
+      { players: { a: { x: 1500, z: 1450 } }, carrier: 'a', ms: 3000, layers: ['zones'], cam: 'wide', note: {
         en: 'Behind the goal: play the line, feet in the goal, eyes on the slot for the pass.',
         de: 'Hinter dem Tor: Linie spielen, Füsse im Tor, Blick zum Slot für den Pass.' } },
     ],
