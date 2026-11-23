@@ -226,6 +226,16 @@ lines. An item that needs more than ~10 lines gets its own file under
   One-page storyboard of numbered frames with notes. Same file.
 - **[A-BACK-037] Formation templates** [open] Formation and set-piece
   templates (2-2-1, box, 5v4, 4v5, face-offs, breakouts). Same file.
+- **[A-BACK-056] Example play "3v2 into 3v2"** [open] Built 2026-11-23
+  as an importable doc (not in the repo): 17 frames, 10 players plus an
+  auto goalie (zone rules), cones, two zone shapes, ball pile, { en, de }
+  captions. Adapted from a field hockey drill video (The Hockey Lab,
+  "3v2 into 3v2, Def can counter"), positions estimated by eye and kept
+  out of the goal area. Checked in Edge via Import JSON (no page errors,
+  all frames stepped). Next: ship it on the Plays shelf (A-BACK-055, on
+  branch feat/play-212) once that exists, built by a builder like the
+  lessons'. Known nit: after the goal the main ball flies from the net
+  back to the centre player.
 - **[A-BACK-038] Scene recorder redesign** [in-progress] Controls
   (seconds, slow motion, frame menu) and the Variant A layout (docked
   time track, segments as wide as they are long, drag to set durations)
