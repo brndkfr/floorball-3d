@@ -288,8 +288,11 @@ lines. An item that needs more than ~10 lines gets its own file under
   "Centred block" (not "Squared up"), lesson 1 builds the KATA up one
   dimension at a time, lesson shots end in a save (the ball stops at the
   goalie), and the German captions keep the module's English zone names
-  (Attention-Zone etc.) on purpose. Open: caption review, holds in the
-  export. Same file.
+  (Attention-Zone etc.) on purpose. 2026-11-23: all four lessons have
+  the showcase treatment and export as teaching videos (holds, cards,
+  KATA box, shooter's view, ball trail). Open: caption review, and the
+  camera follow-ups from the video review (listed in the item spec).
+  Same file.
 - **[A-BACK-050] "Place the goalie" exercises** [blocked-by:
   A-BACK-046] Situations, scoring, ideal ghost, one hint. Same file.
 - **[A-BACK-051] Ideal goalie** [blocked-by: A-BACK-046, A-BACK-048]

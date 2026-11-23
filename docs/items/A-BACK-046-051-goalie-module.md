@@ -374,6 +374,24 @@ camera to be revisited, captions as drafted for review):
       goalie offset (lesson 3) and the slot player's spot are estimates.
 Open: caption review by the user; whether "Open as play" should keep
 `autoGoalie` in the copied project.
+Follow-up from the video review of all four lessons (2026-11-23, merged
+as is, fix later):
+- Lesson 2: the wide shots are far away (the attacker small, often at the
+  left edge); on "What went wrong?" the ball in the net is not visible;
+  behind the goal the ball is a dot at the right edge.
+- Lesson 3: the side shots lose the defender the caption talks about; the
+  shooter's view inset covers the defender's chip at the top right in some
+  frames; at 98 s it is the longest lesson.
+- Lesson 4: the carrier behind the goal is tiny from the high front
+  camera; the final step out is cut off at the right edge (push-in); on
+  the first right-run frame the slot player sits under the two-line
+  caption. Check with the user that the slot attacker may stay in the
+  right run too.
+- Lesson 1: the trail spheres look bulky close to the camera.
+- All: a white dot at the bottom right of the high views and a dark spot
+  at the bottom left of the caption, not traced yet.
+- The shooter's view inset should avoid players: move it, or shrink it,
+  when a player sits under it.
 
 ### A-BACK-050 - "Place the goalie" exercises `[small]` after 046
 
