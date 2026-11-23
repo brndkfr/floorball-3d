@@ -165,8 +165,9 @@ Screenshot for the whole app, then the app's actions as commands and an
 MCP server in the app, so Claude can work with every part of it (A-Q-013,
 A-Q-014). [items/S-BACK-032-035](items/S-BACK-032-035-screenshot-mcp.md).
 
-1. **[S-BACK-032] Screenshot, whole app** One click saves what is on
-   screen, labels included; Copy and Clean in a small menu.
+1. **[S-BACK-032] Screenshot, whole app** [done 2026-11-16] One click
+   saves what is on screen, labels included; Copy and Clean in a small
+   menu.
 2. **[S-BACK-033] Command layer** The app's actions as typed commands.
    First slice built 2026-11-21: registry with schema checks, six
    commands (lesson, goalie, seek / stop, KATA readout, screenshot).
@@ -232,8 +233,9 @@ lines. An item that needs more than ~10 lines gets its own file under
   captions. Adapted from a field hockey drill video (The Hockey Lab,
   "3v2 into 3v2, Def can counter"), positions estimated by eye and kept
   out of the goal area. Checked in Edge via Import JSON (no page errors,
-  all frames stepped). Next: ship it on the Plays shelf (A-BACK-055, on
-  branch feat/play-212) once that exists, built by a builder like the
+  all frames stepped). Next: ship it on the Plays shelf (A-BACK-055, spec
+  on branch feat/play-212, unblocked now that #63 is merged) once that
+  exists, built by a builder like the
   lessons'. Known nit: after the goal the main ball flies from the net
   back to the centre player.
 - **[A-BACK-038] Scene recorder redesign** [in-progress] Controls
@@ -300,7 +302,8 @@ lines. An item that needs more than ~10 lines gets its own file under
   goalie), and the German captions keep the module's English zone names
   (Attention-Zone etc.) on purpose. 2026-11-23: all four lessons have
   the showcase treatment and export as teaching videos (holds, cards,
-  KATA box, shooter's view, ball trail). Open: caption review, and the
+  KATA box, shooter's view, ball trail); merged 2026-11-23 (#63). Open:
+  caption review, and the
   camera follow-ups from the video review (listed in the item spec).
   Same file.
 - **[A-BACK-050] "Place the goalie" exercises** [blocked-by:
@@ -345,15 +348,17 @@ lines. An item that needs more than ~10 lines gets its own file under
   timeouts on battery (Windows throttles the CPU); both timeouts passed
   alone. Open, optional: a native ARM64 Node (the runner and static
   server are still emulated).
-- **[S-BACK-032] Screenshot, whole app** [in-progress] Camera button in
-  every mode, PNG with the HTML overlays painted in, Copy and Clean.
+- **[S-BACK-032] Screenshot, whole app** [done 2026-11-16, #57] Camera
+  button in every mode, PNG with the HTML overlays painted in, Copy and
+  Clean.
   [Spec](items/S-BACK-032-035-screenshot-mcp.md).
 - **[S-BACK-033] Command layer** [in-progress] Typed commands for the
-  app's actions, run by the UI's own code; first six built. Open: undo
+  app's actions, run by the UI's own code; first six merged 2026-11-22
+  (#62). Open: undo
   per command, overwrite confirmation, `area.verb` naming (decide with
   the editing commands). Same file.
 - **[S-BACK-034] MCP server in the app + local relay** [in-progress]
-  Built 2026-11-22: relay (`scripts/mcp-relay/`, stdio + WebSocket on
+  Merged 2026-11-22 (#62): relay (`scripts/mcp-relay/`, stdio + WebSocket on
   127.0.0.1, origin + pairing code), AI button, commands as tools.
   Open: confirmation for overwriting commands, with S-BACK-033. Same file.
 - **[S-BACK-035] Cloud relay** [open, optional] Same file.
