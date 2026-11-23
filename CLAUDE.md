@@ -22,6 +22,14 @@ only the input source differs.
 
 ## Workflow: TDD, always validate, never assume
 
+**Docs-only changes take the fast path.** A change that touches only
+`docs/**` or `*.md` files (plan, items, README, this file) skips steps
+1-7: no `pnpm test`, e2e, build or size check, locally or in CI (both
+CI and CodeQL ignore those paths; the weekly CodeQL run still scans).
+No test reads doc content. Commit, push, open the PR. As soon as a
+`.js`, workflow, asset or config file is in the change, the full order
+below applies again.
+
 Every code change - bug fix, feature, refactor - follows this order.
 Deviating from it requires an explicit written justification in the
 commit message or the [docs/plan.md](docs/plan.md) item, not a chat
@@ -284,7 +292,8 @@ aside.
 ## Verification
 
 - **Before every commit, run `pnpm test` and it must pass in full
-  (0 failures).** Tests live in `test/*.test.js` (`node --test`, no
+  (0 failures).** Exception: docs-only commits (see the fast path in
+  the Workflow section). Tests live in `test/*.test.js` (`node --test`, no
   browser needed - see S-BACK-009 in `docs/archive/plan-2026-10.md` (section 10) for which
   modules are covered and why). If a change touches a module with
   existing tests, extend them rather than leaving the new behaviour

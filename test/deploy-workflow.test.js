@@ -96,6 +96,18 @@ test('CodeQL runs the security-extended suite and ignores only paths that exist'
   for (const p of ignored) assert.ok(existsSync(new URL(`../${p}`, import.meta.url)), `codeql-config ignores missing path ${p}`);
 });
 
+// A docs-only change (plan, items, README) runs no workflow but the weekly
+// CodeQL schedule. Not generators/**: CodeQL scans its Python.
+test('CI and CodeQL skip docs-only pushes and PRs', () => {
+  for (const [file, text] of [['deploy-pages.yml', ci], ['codeql.yml', codeql]]) {
+    for (const event of ['push', 'pull_request']) {
+      const block = text.split(/^on:\n/m)[1].split(new RegExp(`^  ${event}:\\n`, 'm'))[1].split(/^  \w/m)[0];
+      for (const p of ["'docs/**'", "'**.md'"]) assert.ok(block.includes(`- ${p}`), `${file} ${event} does not ignore ${p}`);
+    }
+  }
+  assert.match(codeql, /schedule:/);
+});
+
 test('Dependabot watches GitHub Actions and npm', () => {
   const url = new URL('../.github/dependabot.yml', import.meta.url);
   assert.ok(existsSync(url), '.github/dependabot.yml missing');
