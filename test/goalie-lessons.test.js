@@ -203,7 +203,7 @@ test('line lesson: the title card holds the task, the recap three bullets, in En
   for (const text of [JSON.stringify(doc.lesson), JSON.stringify(doc.frames.map((f) => f.note))]) assert.ok(!/ß|—/.test(text), 'Swiss spelling, no em-dash');
 });
 
-const SHOWCASE = ['line', 'zones'];   // the lessons given the showcase treatment so far
+const SHOWCASE = ['line', 'zones', 'passOrShot'];   // the lessons given the showcase treatment so far
 test('showcase lessons carry a task, a recap, layers and a director shot on every frame', () => {
   for (const key of SHOWCASE) {
     const doc = buildLesson(key);
@@ -331,22 +331,44 @@ test('cast lessons: a shot frame is a shot at the lesson goal by the carrier bef
 // 3. Pass or shot: the same 2-on-1 twice. The defender takes the carrier
 // (pass expected: back, knees parallel), then the pass lane (shot
 // expected: forward, square).
-test('passOrShot lesson: lesson 3, the same start twice, read once as a pass and once as a shot', () => {
+test('passOrShot lesson: lesson 3, the same start three times, read wrong as a shot, then right as a pass, then right as a shot', () => {
   assert.equal(LESSONS.passOrShot.n, 3);
   const spec = LESSONS.passOrShot;
-  const restart = spec.frames.findIndex((f, i) => i > 0 && JSON.stringify(f.players) === JSON.stringify(spec.frames[0].players));
-  assert.ok(restart > 0, 'the opening positions come back');
+  const starts = spec.frames.map((f, i) => i).filter((i) => JSON.stringify(spec.frames[i].players) === JSON.stringify(spec.frames[0].players));
+  assert.equal(starts.length, 3, 'the opening positions come back twice');
   const doc = buildLesson('passOrShot');
   const carrierA = (f) => ballOf(f).carrier && f.scheme.players[ballOf(f).carrier].number === spec.cast.a.number;
-  const reads = doc.frames.map((f, i) => ({ i, zone: goalieZoneOf(ballOf(f), 'A'), action: expectedAction(doc.frames, startMs(doc.frames, i)), g: f.scheme.goalies.A }))
-    .filter(({ i, zone }) => carrierA(doc.frames[i]) && (zone === 'danger' || zone === 'slot'));
-  const pass = reads.find((r) => r.action === 'pass' && r.i < restart);
-  const shot = reads.find((r) => r.action === 'shot' && r.i > restart);
-  assert.ok(pass && shot, JSON.stringify(reads.map(({ i, action }) => [i, action])));
+  const readsIn = (from, to) => doc.frames.map((f, i) => ({ i, zone: goalieZoneOf(ballOf(f), 'A'), action: expectedAction(doc.frames, startMs(doc.frames, i)), g: f.scheme.goalies.A }))
+    .filter(({ i, zone }) => i >= from && i < to && carrierA(doc.frames[i]) && (zone === 'danger' || zone === 'slot'));
+  const wrong = readsIn(starts[0], starts[1]).find((r) => r.action === 'pass');
+  const pass = readsIn(starts[1], starts[2]).find((r) => r.action === 'pass');
+  const shot = readsIn(starts[2], doc.frames.length).find((r) => r.action === 'shot');
+  assert.ok(wrong && pass && shot);
   const depth = (g) => g.z - GOAL_Z.A;
   assert.ok(depth(pass.g) < depth(shot.g), 'back for the pass, forward for the shot');
   assert.equal(pass.g.angle, 0, 'knees parallel for the pass');
   assert.notEqual(shot.g.angle, 0, 'square to the ball for the shot');
+  assert.ok(depth(wrong.g) > depth(pass.g) && wrong.g.angle !== 0, 'the wrong run steps out and squares up although a pass is coming');
+});
+
+test('passOrShot lesson: the wrong run has the pass beat the goalie that stepped out', () => {
+  const doc = buildLesson('passOrShot');
+  const specs = LESSONS.passOrShot.frames;
+  assert.ok(specs.slice(1, 4).every((f) => f.goalieRead === 'shot'));
+  const g = doc.frames[3].scheme.goalies.A;
+  const shooter = doc.frames[2].scheme.players[ballOf(doc.frames[2]).carrier];
+  assert.ok(Math.abs(g.x - shooter.x) > 2500, `the goalie ${Math.abs(g.x - shooter.x).toFixed(0)} mm sideways from the new shooter`);
+});
+
+test('passOrShot lesson: the pass lane shows while the read is pass, the shooting line once it is shot', () => {
+  const doc = buildLesson('passOrShot');
+  const specs = LESSONS.passOrShot.frames;
+  doc.frames.forEach((f, i) => {
+    if (/pass is coming|pass goes across|pass is across/i.test(f.note.en)) assert.ok(f.layers.includes('lane'), `frame ${i}`);
+    if (specs[i].shot || /shooting line/i.test(f.note.en)) assert.ok(f.layers.includes('line'), `frame ${i}`);
+    assert.ok(f.layers.every((n) => ['lane', 'line'].includes(n)), `frame ${i}`);
+    assert.ok(!(f.layers.includes('lane') && f.layers.includes('line')), `frame ${i}: one at a time`);
+  });
 });
 
 // Lesson 4 (most dangerous or most likely) was the same 2-on-1 twice with the

@@ -204,10 +204,10 @@ test('lesson 3: at the shot frame the ball rests in front of the goalie, not in 
   await openLesson(page, 'passOrShot');
   const at = await page.evaluate(async () => {
     const { state } = await import('/src/state.js');
-    (await import('/src/authoring/frames.js')).selectFrame(3);
+    (await import('/src/authoring/frames.js')).selectFrame(7);
     const { GOAL_Z } = await import('/src/authoring/ball-pose.js');
     const b = state.ballGroup.position, g = state.goalies.A.position;
-    return { ball: { x: b.x, z: b.z }, goalie: { x: g.x, z: g.z }, line: GOAL_Z.A, saved: state.doc.frames[3].scheme.balls.main.shot.saved };
+    return { ball: { x: b.x, z: b.z }, goalie: { x: g.x, z: g.z }, line: GOAL_Z.A, saved: state.doc.frames[7].scheme.balls.main.shot.saved };
   });
   expect(at.saved).toBe(true);
   expect(at.ball.z).toBeGreaterThan(at.line + 500);
@@ -244,7 +244,7 @@ test('quiet screen: the shooting line frame shows the line, the KATA card and th
   await boot(page);
   await openLesson(page, 'line');
   const q = await quietAt(page, 2);
-  expect(q.quiet).toEqual({ shotLine: true, lines: false, coverage: false, zones: false, marks: false });
+  expect(q.quiet).toEqual({ shotLine: true, lines: false, coverage: false, zones: false, marks: false, lane: false });
   expect(q.shot).toBe(true);
   expect(q.corner).toBe(false);
   expect(q.inset).toBe(false);
@@ -252,6 +252,20 @@ test('quiet screen: the shooting line frame shows the line, the KATA card and th
   expect(q.labels).toBe(false);
   expect(q.kata).toBe(true);
   expect(q.caption).toContain('Shooting line: from the ball');
+});
+
+// Lesson 3: the pass lane is a ribbon between the carrier and the free attacker, on while the frame names 'lane'.
+test('quiet screen: the pass lane shows on the pass-read frame and goes away on the shot-read frame', async ({ page }) => {
+  await boot(page);
+  await openLesson(page, 'passOrShot');
+  const frames = await page.evaluate(async () => (await import('/src/state.js')).state.doc.frames.map((f) => f.layers));
+  const withLane = frames.findIndex((l) => l.includes('lane'));
+  expect(withLane).toBeGreaterThan(0);
+  await quietAt(page, withLane);
+  const on = await page.evaluate(async () => (await import('/src/scene.js')).scene.getObjectByName('passLane')?.visible);
+  expect(on).toBe(true);
+  await quietAt(page, 0);
+  expect(await page.evaluate(async () => (await import('/src/scene.js')).scene.getObjectByName('passLane')?.visible)).toBe(false);
 });
 
 test('quiet screen: the shooting area frame shows the corner lines instead of the shooting line', async ({ page }) => {
@@ -268,7 +282,7 @@ test('quiet screen: the opening frame shows the caption only', async ({ page }) 
   await boot(page);
   await openLesson(page, 'line');
   const q = await quietAt(page, 0);
-  expect(q.quiet).toEqual({ shotLine: false, lines: false, coverage: false, zones: false, marks: false });
+  expect(q.quiet).toEqual({ shotLine: false, lines: false, coverage: false, zones: false, marks: false, lane: false });
   expect(q.corner).toBe(false);
   expect(q.shot).toBe(false);
   expect(q.kata).toBe(true);

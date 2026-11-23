@@ -7,16 +7,17 @@
 //
 // Layer names: 'line' (the shooting line), 'area' (the shooting area: the
 // ball to both posts), 'coverage', 'zones' (the floor zones), 'marks' (the
-// KATA marks on the rink).
+// KATA marks on the rink), 'lane' (the pass lane: a line from the ball
+// carrier to the free team mate).
 
-export const LAYER_NAMES = Object.freeze(['line', 'area', 'coverage', 'zones', 'marks']);
+export const LAYER_NAMES = Object.freeze(['line', 'area', 'coverage', 'zones', 'marks', 'lane']);
 
 // What each layer switches: the shot overlays (shot-view.js keys) and the
 // floor zones / KATA marks. Everything else is off while quiet.
 export function quietLayers(layers) {
   if (!Array.isArray(layers)) return null;
   const has = (n) => layers.includes(n);
-  return { shotLine: has('line'), lines: has('area'), coverage: has('coverage'), zones: has('zones'), marks: has('marks') };
+  return { shotLine: has('line'), lines: has('area'), coverage: has('coverage'), zones: has('zones'), marks: has('marks'), lane: has('lane') };
 }
 
 // Is `key` on, given the quiet state (null: not quiet, the viewer decides)?
@@ -39,4 +40,16 @@ export function quietForFrame(frames, i) {
 export function sanitizeLayers(raw) {
   if (!Array.isArray(raw)) return undefined;
   return LAYER_NAMES.filter((n) => raw.includes(n));
+}
+
+// The pass lane of a frame: { from, to } floor points, the ball carrier to
+// the other player of its team, or null (a shot in flight, no carrier, no
+// team mate); `ids` are the two players, so a view can follow them live. Used by the lane layer (authoring/pass-lane-view.js).
+export function passLaneOf(frame) {
+  const players = frame?.scheme?.players;
+  const carrierId = frame?.scheme?.balls?.main?.carrier;
+  const carrier = players?.[carrierId];
+  if (!carrier) return null;
+  const mate = Object.values(players).find((p) => p.id !== carrier.id && p.team === carrier.team);
+  return mate ? { from: { x: carrier.x, z: carrier.z }, to: { x: mate.x, z: mate.z }, ids: [carrier.id, mate.id] } : null;
 }
