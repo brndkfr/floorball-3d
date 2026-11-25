@@ -1,13 +1,13 @@
 /*! Copyright 2026 Fonticons, Inc. - https://webawesome.com/license */
 import {
   WaBadge
-} from "../../chunks/chunk.2NOGQWD2.js";
-import "../../chunks/chunk.K5Q2EBKV.js";
-import "../../chunks/chunk.2NV6QW6C.js";
-import "../../chunks/chunk.LBLI4KS5.js";
-import "../../chunks/chunk.TLFIX76K.js";
+} from "../../chunks/chunk.XEID4NVO.js";
+import "../../chunks/chunk.A2LTQBCN.js";
+import "../../chunks/chunk.OGXGNHQG.js";
+import "../../chunks/chunk.MHOHBKM7.js";
+import "../../chunks/chunk.E4Q7ZNYW.js";
 import "../../chunks/chunk.BKE5EYM3.js";
-import "../../chunks/chunk.JHZRD2LV.js";
+import "../../chunks/chunk.763SWQQU.js";
 export {
   WaBadge as default
 };
