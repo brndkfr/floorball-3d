@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@awesome.me/webawesome':
-        specifier: 3.14.0
-        version: 3.14.0(@floating-ui/utils@0.2.12)(@types/react@19.3.0)
+        specifier: 3.15.0
+        version: 3.15.0(@floating-ui/utils@0.2.12)(@types/react@19.3.0)
       '@fontsource/archivo':
         specifier: 5.3.0
         version: 5.3.0
@@ -27,8 +27,8 @@ importers:
         specifier: ^4.5.1
         version: 4.5.1
       '@playwright/test':
-        specifier: ^1.65.0
-        version: 1.65.0
+        specifier: ^1.65.1
+        version: 1.65.1
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
@@ -44,8 +44,8 @@ importers:
 
 packages:
 
-  '@awesome.me/webawesome@3.14.0':
-    resolution: {integrity: sha512-m5rTGLK/iOvaVFOkYxRjiBOp8lwrBap5tv+zz1gsqLgAxlfwdvElB7BVGjs+Lf9gDps7bWRPTkG0FwZk40mk2A==}
+  '@awesome.me/webawesome@3.15.0':
+    resolution: {integrity: sha512-r2RWOu/QAaTShbTy3QfpOw+j2Mc7z+iY/PA1rBbsmrWOm2DMv7K2wNYe4IXt6TgTswkrKuQM19RCGC5FJh7GFg==}
     engines: {node: '>=14.17.0'}
 
   '@ctrl/tinycolor@4.1.0':
@@ -429,8 +429,8 @@ packages:
   '@parse5/tools@0.3.0':
     resolution: {integrity: sha512-zxRyTHkqb7WQMV8kTNBKWb1BeOFUKXBXTBWuxg9H9hfvQB3IwP6Iw2U75Ia5eyRxPNltmY7E8YAlz6zWwUnjKg==}
 
-  '@playwright/test@1.65.0':
-    resolution: {integrity: sha512-iGURLGuKDLakSEl7Pgfv8h7f+XLT+V861Wfhz0zlEl5nyFuKUopdkFBPKqTllTUp06aOwPuH8iuUEb3yp3MpbQ==}
+  '@playwright/test@1.65.1':
+    resolution: {integrity: sha512-y+NCIRm2LvY4slUVWvGh1nujJ8RF/hEisIsq2mtUPgdQC4L701bq5hZGMhrpeXjACvwvO9tj5dJqhvM6TP9lbw==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -454,8 +454,8 @@ packages:
     peerDependencies:
       '@floating-ui/utils': ^0.2.5
 
-  csstype@3.2.3:
-    resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
+  csstype@3.2.4:
+    resolution: {integrity: sha512-PoKaoPzQapnEoqUSnHx1u6W6ku8CVEgKsnpmmzU3m1nwkidpPBQ8V/Zq2+bWNrsOKoKLwTGdbx6xF7BXP1zLVQ==}
 
   cwise-compiler@1.1.3:
     resolution: {integrity: sha512-WXlK/m+Di8DMMcCjcWr4i+XzcQra9eCdXIJrgh4TUgh0pIS/yJduLxS9JgefsHJ/YVLdgPtXm9r62W92MvanEQ==}
@@ -468,8 +468,8 @@ packages:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
 
-  enhanced-resolve@5.26.0:
-    resolution: {integrity: sha512-9vhedylFonb2YGogzUKX6+Ja72gOJbN1QHAqdrvqLwhdl/QWbKopzoUC9EbQNVsAns/bx/4uyqalrQAoy1IByw==}
+  enhanced-resolve@5.27.0:
+    resolution: {integrity: sha512-Do6BB2xzlcc/odFg+XEYyneAx4T/WfywO71yw9ePS2tVfRsf7JVR4mUeELadIeHzixkzbG5DpluiEFPi2WGfYQ==}
     engines: {node: '>=10.13.0'}
 
   entities@6.0.1:
@@ -489,8 +489,8 @@ packages:
     resolution: {integrity: sha512-buewHzMvYL29jdeQTVILecSaZKnt/RJWjoZCF5OW60Z67/GmSLBkOFM7qh1PI3zFNtJbaZL5eQu1vLfazOwj4g==}
     engines: {node: '>=12.20.0'}
 
-  graceful-fs@4.2.11:
-    resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
+  graceful-fs@4.2.12:
+    resolution: {integrity: sha512-iuyGF2E4oafQfPsRrG2wtY2ILupMhvtdrhzrxB+0VcjsPpSPttpfYdjnGFGsTi5MaJFjI1jOKHPQ6UTbTj9TAw==}
 
   iota-array@1.0.0:
     resolution: {integrity: sha512-pZ2xT+LOHckCatGQ3DcG/a+QuEqvoxqkiL7tvE8nn3uuu+f6i1TtpB5/FtWFbxUuVr5PZCx8KskuGatbJDXOWA==}
@@ -517,6 +517,10 @@ packages:
 
   meshoptimizer@1.3.0:
     resolution: {integrity: sha512-2oZqMAcEEiCtXWUjIGtZ71oPx1B0ZxYGTqIKsXB1wzWFhleNsCFxQuUJzgCV706bRcwPWtMGf1odmQvAcqKkIw==}
+
+  microlighter@2.2.0:
+    resolution: {integrity: sha512-XFUHmKclX4taKWVpYkqJ/GlfUS27FzQTCph1u3v9OwkmQJGXry3Pk1e7SivLz6xGOCxRVyi3DSrztF3e460jrg==}
+    engines: {node: '>=18'}
 
   nanoid@5.1.16:
     resolution: {integrity: sha512-kVrnsrJqMR8+oLJnGEmSWw9BivK5mt7H3FZatVRjrc5wGqFYuBxX1yG7+A7Gi5AefkX6t/oCkizcQgpu0cY1dQ==}
@@ -547,13 +551,13 @@ packages:
   parse5@7.3.0:
     resolution: {integrity: sha512-IInvU7fabl34qmi9gY8XOVxhYyMyuH2xUNpb2q8/Y+7552KlejkRvqvD19nMoUW/uQGGbqNpA6Tufu5FL5BZgw==}
 
-  playwright-core@1.65.0:
-    resolution: {integrity: sha512-vNSKgH6YqtN7cdT/L334zo0a+YwkrpicyrHJlWWPIm/Q+Nn2SWInil01oT0mbu96U4GgoRtCYQD9CzJQgju+lA==}
+  playwright-core@1.65.1:
+    resolution: {integrity: sha512-hqPpz7blSMPxWVdoeE1yiBSzXsKiVOd2k+kjCvmUywD2GPO2Dd9HfcWnq9NN0GHbNZDFgZ9JfBFr+X5/BLo0qw==}
     engines: {node: '>=20'}
     hasBin: true
 
-  playwright@1.65.0:
-    resolution: {integrity: sha512-F3AMWcR44qMBt4kq+6Kb6mX7bjGXshktKFOPULd7reED6ZJWevjbNRqysP7q+AATE9kdPEZBibex1BYsvpVoeA==}
+  playwright@1.65.1:
+    resolution: {integrity: sha512-vJ1FuoOrNwOKHUIVEvSt3jT1L+wjjDpwhwIstKtfvTh8XIG4FG4bIFuvNdMxi81LGfAhUgUZleVFaOLY4RIUUw==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -574,8 +578,8 @@ packages:
       '@types/node':
         optional: true
 
-  tapable@2.3.3:
-    resolution: {integrity: sha512-uxc/zpqFg6x7C8vOE7lh6Lbda8eEL9zmVm/PLeTPBRhh1xCgdWaQ+J1CUieGpIfm2HdtsUpRv+HshiasBMcc6A==}
+  tapable@2.3.4:
+    resolution: {integrity: sha512-NHFiWnAbMJxNNpBwiO7jJVGDuqMxT9/oV8v57RR+fgBQShkJil5inGD8/xWy0hjLyHQyX1tu27QANhlz3KBqCg==}
     engines: {node: '>=6'}
 
   three@0.187.0:
@@ -593,7 +597,7 @@ packages:
 
 snapshots:
 
-  '@awesome.me/webawesome@3.14.0(@floating-ui/utils@0.2.12)(@types/react@19.3.0)':
+  '@awesome.me/webawesome@3.15.0(@floating-ui/utils@0.2.12)(@types/react@19.3.0)':
     dependencies:
       '@ctrl/tinycolor': 4.1.0
       '@floating-ui/dom': 1.8.0
@@ -607,6 +611,7 @@ snapshots:
       composed-offset-position: 0.0.6(@floating-ui/utils@0.2.12)
       lit: 3.3.3
       marked: 11.2.0
+      microlighter: 2.2.0
       nanoid: 5.1.16
     transitivePeerDependencies:
       - '@floating-ui/utils'
@@ -855,7 +860,7 @@ snapshots:
       '@lit-labs/ssr-dom-shim': 1.6.0
       '@lit/reactive-element': 2.1.2
       '@parse5/tools': 0.3.0
-      enhanced-resolve: 5.26.0
+      enhanced-resolve: 5.27.0
       lit: 3.3.3
       lit-element: 4.2.2
       lit-html: 3.3.3
@@ -878,9 +883,9 @@ snapshots:
     dependencies:
       parse5: 7.3.0
 
-  '@playwright/test@1.65.0':
+  '@playwright/test@1.65.1':
     dependencies:
-      playwright: 1.65.0
+      playwright: 1.65.1
 
   '@shoelace-style/animations@1.2.0': {}
 
@@ -890,7 +895,7 @@ snapshots:
 
   '@types/react@19.3.0':
     dependencies:
-      csstype: 3.2.3
+      csstype: 3.2.4
 
   '@types/trusted-types@2.0.7': {}
 
@@ -898,7 +903,7 @@ snapshots:
     dependencies:
       '@floating-ui/utils': 0.2.12
 
-  csstype@3.2.3: {}
+  csstype@3.2.4: {}
 
   cwise-compiler@1.1.3:
     dependencies:
@@ -908,10 +913,10 @@ snapshots:
 
   detect-libc@2.1.2: {}
 
-  enhanced-resolve@5.26.0:
+  enhanced-resolve@5.27.0:
     dependencies:
-      graceful-fs: 4.2.11
-      tapable: 2.3.3
+      graceful-fs: 4.2.12
+      tapable: 2.3.4
 
   entities@6.0.1: {}
 
@@ -953,7 +958,7 @@ snapshots:
     dependencies:
       fetch-blob: 3.2.0
 
-  graceful-fs@4.2.11: {}
+  graceful-fs@4.2.12: {}
 
   iota-array@1.0.0: {}
 
@@ -980,6 +985,8 @@ snapshots:
   marked@11.2.0: {}
 
   meshoptimizer@1.3.0: {}
+
+  microlighter@2.2.0: {}
 
   nanoid@5.1.16: {}
 
@@ -1018,11 +1025,11 @@ snapshots:
     dependencies:
       entities: 6.0.1
 
-  playwright-core@1.65.0: {}
+  playwright-core@1.65.1: {}
 
-  playwright@1.65.0:
+  playwright@1.65.1:
     dependencies:
-      playwright-core: 1.65.0
+      playwright-core: 1.65.1
 
   property-graph@4.1.0: {}
 
@@ -1060,7 +1067,7 @@ snapshots:
       '@img/sharp-win32-ia32': 0.35.5
       '@img/sharp-win32-x64': 0.35.5
 
-  tapable@2.3.3: {}
+  tapable@2.3.4: {}
 
   three@0.187.0: {}
 
