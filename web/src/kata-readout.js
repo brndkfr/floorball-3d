@@ -9,7 +9,8 @@
 
 import { state, getBallWorldCenter } from './state.js';
 import { GOAL_CENTER_LOCAL } from './constants.js';
-import { kataOf, kataTargets, judgeKata, expectedAction, shotAngleDeg } from './kata.js';
+import { kataOf, kataTargets, judgeKata, expectedAction, shotAngleDeg, kataBall } from './kata.js';
+import { goalieZoneOf } from './goalie-zones.js';
 
 let lastKey = null;
 
@@ -30,19 +31,25 @@ export function updateKataReadout() {
   const gc = goalGroup.localToWorld(GOAL_CENTER_LOCAL.clone());
   const actionAuto = expectedAction(state.doc?.frames, state.playback?.elapsed ?? 0);
   const action = state.kataAction ?? actionAuto;
+  // In a lesson (read-only, the live goalie), a shot is graded from its
+  // release point, not the ball in the net (A-BACK-049). Not in the user's
+  // own docs: there a stale playhead must not pin the ball they drag.
+  const live = { x: ball.x, z: ball.z };
+  const graded = state.doc?.autoGoalie ? kataBall(state.doc.frames, state.playback?.elapsed ?? 0, live) : live;
+  const gradedZone = graded.x === ball.x && graded.z === ball.z ? zone.zone : goalieZoneOf(graded, zone.goal);
   const inputs = {
-    ball: { x: ball.x, z: ball.z },
+    ball: graded,
     goal: zone.goal,
     goalCenter: { x: gc.x, z: gc.z },
     goalie: { x: goalie.position.x, z: goalie.position.z, yaw: goalie.rotation.y },
   };
   const kata = kataOf(inputs);
-  const targets = kataTargets(zone.zone, action, shotAngleDeg(inputs.ball, zone.goal, inputs.goalCenter));
+  const targets = kataTargets(gradedZone, action, shotAngleDeg(inputs.ball, zone.goal, inputs.goalCenter));
   const judged = judgeKata(kata, targets);
   const pct = state.shotReadout?.goal === zone.goal ? state.shotReadout.pctBlocked : null;
-  const key = JSON.stringify([zone, action, actionAuto, Math.round(kata.placementLeftMm / 10), Math.round(kata.depthMm / 10),
+  const key = JSON.stringify([zone, gradedZone, action, actionAuto, Math.round(kata.placementLeftMm / 10), Math.round(kata.depthMm / 10),
     Math.round(kata.axisDeg), Math.round(kata.axisToLineDeg), judged, pct == null ? null : Math.round(pct), state.lang]);
-  publish({ goal: zone.goal, zone: zone.zone, action, actionAuto, kata, judged, pct, inputs, targets }, key);   // inputs + targets: KATA marks
+  publish({ goal: zone.goal, zone: gradedZone, action, actionAuto, kata, judged, pct, inputs, targets }, key);   // inputs + targets: KATA marks
 }
 
 export function setKataAction(action) {

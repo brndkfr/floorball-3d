@@ -250,7 +250,7 @@ test.describe('A-BACK-022 shots at goal', () => {
       const { selectObject } = await import('/src/selection.js');
       selectObject((await import('/src/state.js')).state.ballGroup);
     });
-    await expect(page.locator('#shotStatus')).toHaveText('Goalie squared up');
+    await expect(page.locator('#shotStatus')).toHaveText('Goalie centred');
 
     await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(0));
     await selectChip(page, id);
@@ -261,7 +261,7 @@ test.describe('A-BACK-022 shots at goal', () => {
     });
     // Goal B now has its own default goalie (centred, same as goal A's), so a
     // straight-on shot is squared up there too, not left wide open.
-    await expect(page.locator('#shotStatus')).toHaveText('Goalie squared up');
+    await expect(page.locator('#shotStatus')).toHaveText('Goalie centred');
   });
 
   test('verdict: goalie B is judged independently of goalie A (A-BACK-024)', async ({ page }) => {
@@ -279,7 +279,7 @@ test.describe('A-BACK-022 shots at goal', () => {
       const { selectObject } = await import('/src/selection.js');
       selectObject((await import('/src/state.js')).state.ballGroup);
     });
-    await expect(page.locator('#shotStatus')).toHaveText('Goalie squared up');
+    await expect(page.locator('#shotStatus')).toHaveText('Goalie centred');
 
     await page.evaluate(async () => (await import('/src/authoring/frames.js')).selectFrame(0));
     await selectChip(page, id);
@@ -316,6 +316,6 @@ test.describe('A-BACK-022 shots at goal', () => {
 
     // Release late: arrival lands at (or past) the frame end, once the goalie is fully on the line.
     await page.evaluate(async () => (await import('/src/authoring/actors.js')).setPassTiming({ releaseT: 0.9 }));
-    await expect(page.locator('#shotStatus')).toHaveText('Goalie squared up');
+    await expect(page.locator('#shotStatus')).toHaveText('Goalie centred');
   });
 });

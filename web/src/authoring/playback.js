@@ -11,7 +11,8 @@ import * as THREE from 'three';
 import { state } from '../state.js';
 import { ensureDoc } from './doc.js';
 import { getFrames } from './frames.js';
-import { camera, topDownCamera, renderer, getActiveCamera, getCameraRig, applyCameraRig } from '../scene.js';
+import { camera, topDownCamera, renderer, getActiveCamera, getCameraRig, applyCameraRig, setCameraLook } from '../scene.js';
+import { directorActive, directorPoseAt, shotPose, resumePose, RESUME_MS } from '../director.js';
 import { normalizeSpeed } from './transport-math.js';
 import { captionHolds, stepWithHolds, captionPauseOn } from './caption-hold.js';
 
@@ -76,6 +77,7 @@ export function play() {
   if (playback.elapsed >= totalDuration() && !playback.loop) {
     playback.elapsed = 0;
     clearHold();
+    if (!state.director) { state.director = true; window.dispatchEvent(new Event('directorChanged')); }   // a restart goes back to the director (A-BACK-049)
   }
   playback.savedFrame = ensureDoc().currentFrame;
   // Snapshot the perspective camera so stop() can put it back where the
@@ -111,6 +113,11 @@ export function stop() {
     camera.fov = playback.savedCamera.fov;
     camera.updateProjectionMatrix();
     playback.savedCamera = null;
+  }
+  if (!state.director) { state.director = true; window.dispatchEvent(new Event('directorChanged')); }   // Stop is a reset, like a restart: the director comes back (A-BACK-049)
+  if (directorOn()) {   // back at the start: the opening shot
+    const pose = directorPoseFor(0);
+    if (pose) setCameraPose(pose);
   }
   window.dispatchEvent(new Event('playbackChanged'));
 }
@@ -188,7 +195,7 @@ function lerp(a, b, t) { return a + (b - a) * t; }
 // three.js graph.
 import { bezierPos, segmentControls, lerpAngle } from './bezier.js';
 import { ballPoseAt } from './ball-pose.js';
-import { followTargetAt } from './follow-ball.js';
+import { followTargetAt, ballAtTime } from './follow-ball.js';
 import { applyActorsFromScheme } from './actors.js';
 import { cachedGoalieTrack, goalieTrackAt } from '../goalie-track.js';
 
@@ -240,8 +247,68 @@ function applyPose(elapsed) {
     }
   }
 
-  if (!applyCamera(elapsed)) applyFollow(elapsed);
+  if (!applyDirector(elapsed) && !applyCamera(elapsed)) applyFollow(elapsed);
   for (const fn of poseListeners) fn(elapsed);
+}
+
+// Director camera (A-BACK-049, director.js): a lesson whose frames name
+// shots (`cam`) drives the 3D camera from the play time, live from the
+// ball and the goalie, while the Director switch is on (state.director) or
+// the video export runs (state.directorForced). The viewer's own camera
+// (user-camera.js) turns the switch off and this stands aside.
+function directorOn() {
+  return !!ensureDoc().autoGoalie && directorActive({ switchOn: state.director, forced: state.directorForced, frames: getFrames(), perspective: state.activeCamera === camera });
+}
+
+// The ball and goalie of the play at `ms` for a lesson, or null (no live goalie).
+function actorsAt(frames) {
+  const goal = ensureDoc().autoGoalie;
+  if (!goal) return null;
+  const track = cachedGoalieTrack(frames, goal);
+  return { goal, ballAt: (ms) => ballAtTime(frames, ms), goalieAt: (ms) => goalieTrackAt(track, ms) };
+}
+
+// The director's pose at `elapsed`, or null.
+export function directorPoseFor(elapsed) {
+  const frames = getFrames();
+  const actors = actorsAt(frames);
+  return actors ? directorPoseAt(frames, elapsed, actors) : null;
+}
+
+// One named shot from where the ball and goalie are at the playhead (the
+// camera menu's shot list), or null.
+export function shotPoseNow(name) {
+  const frames = getFrames();
+  const actors = actorsAt(frames);
+  if (!actors) return null;
+  const ms = playheadMs();
+  return shotPose(name, { goal: actors.goal, ball: actors.ballAt(ms), goalie: actors.goalieAt(ms) });
+}
+
+// The play time under the playhead: the preview time, or the start of the frame being edited.
+export function playheadMs() {
+  return playback.playing || playback.previewing ? playback.elapsed : frameStartTime(ensureDoc().currentFrame);
+}
+
+function setCameraPose(p) {
+  camera.position.set(p.x, p.y, p.z);
+  setCameraLook(p.yaw, p.pitch);
+}
+
+// Returns true when the director set the camera.
+function applyDirector(elapsed) {
+  if (!directorOn()) return false;
+  let pose = directorPoseFor(elapsed);
+  if (!pose) return false;
+  if (!playback.savedCamera) saveCamera();
+  const r = state.directorResume;
+  if (r) {
+    const since = performance.now() - r.t0;
+    pose = resumePose(r.from, pose, since);
+    if (since >= RESUME_MS) state.directorResume = null;
+  }
+  setCameraPose(pose);
+  return true;
 }
 
 // Follow ball (A-BACK-040 step 7): where no camera keyframe applies, the

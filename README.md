@@ -69,7 +69,37 @@ tactical compute layer on it (**Mode B**).
   before falling back to a JSON download).
 - **Export video**: MP4 (H.264 via WebCodecs + mp4-muxer), WebM (VP9 via
   MediaRecorder), or PNG. Format / resolution / fps / range dialog, live
-  progress bar, cancel.
+  progress bar, cancel. Frame notes are burned in as captions; with Hold
+  on (the default for lessons) the video pauses on each caption for its
+  reading time, and a lesson's video opens on its title card and closes
+  on its recap. A lesson video also carries the KATA box, a trail behind
+  the ball on shots, and the shooter's view (from the ball to the goalie,
+  with the share of the goal covered) in the top-right corner.
+
+### Train - goalie positioning
+After the J+S / swiss unihockey module "Goalies - Positionierung".
+- Its own practice rink: drag the goalie and the ball, turn the goalie
+  with the buttons or Q / E.
+- Goalie zones (awareness, attention, danger zone with the slot,
+  passing-first) in front of the goal, the ball's zone highlighted, with
+  a zone card and optional zone labels.
+- KATA card: placement, depth and axis against the zone's targets, for
+  a shot, a pass or a dribble (Auto reads it from the play), with how
+  much of the goal the goalie covers. KATA marks on the rink, Focus
+  goalie, projection lines, and Auto position (the ideal spot and
+  facing for the situation).
+- Shooter's view: a small, resizable second view from the ball.
+- Lessons, from the Lessons shelf in the Library: four animated plays
+  with captions and a goalie that follows the zone rules while the play
+  runs. Every lesson opens with a task card, shows a wrong run first that
+  ends in a goal ("What went wrong?"), then the right run(s), and closes
+  with a recap card. Lesson 1 builds the KATA up one step at a time. A lesson pauses on each caption
+  (Hold), shows only the layers its caption talks about, and a director
+  camera picks the shots (shooter's eyes, side at knee height, close on the
+  goalie, high from the front, push-in on the save, ...). A small bar under the stage has Play / Pause,
+  Restart and the Director switch; dragging or zooming the view frees
+  the camera, and "Back to director", Stop or Restart hands it back.
+  "Open as play" copies a lesson into Plan.
 
 ### Mode B - photo/video analysis
 - Align a real match photo to the rink via manual landmark placement, a
@@ -241,6 +271,14 @@ web/
     coverage.js, trajectory.js     goal coverage heatmap + shot lines (Mode A scene)
     goalie.js                      goalie models + outline highlight
     help.js                        cheat-sheet overlay + first-visit tip
+    i18n.js, lang-state.js         English / German strings, language switch
+    goalie-zones.js, kata.js       Train compute (pure): zones, KATA targets,
+                                    judging, kataBall() for a shot's release point
+    goalie-lessons.js              the shipped lessons, built in code
+    goalie-track.js, director.js   live lesson goalie, director camera shots
+    shooter-view.js, kata-box.js,
+    ball-trail.js                  shooter's view, the KATA box and the ball
+                                    trail drawn into lesson videos
     touch-controls.js              on-screen D-pad + pinch zoom
     authoring/                     Mode A: tactical planning & animation
       doc.js, storage.js           schema v2 with frames[], migrate v1 on load,
@@ -258,6 +296,12 @@ web/
       share.js                     deflate-raw share URL
       faceoff-snap.js              snap-to-dot for chip placement
       export.js, export-dialog.js  MP4 / WebM / PNG export
+      export-plan.js               which play time and card each video frame shows
+      caption-hold.js              Hold: pause on captions (frame notes)
+      train-mode.js, kata-section.js  Train mode, the KATA card, openLesson()
+      lesson-cards-ui.js, lesson-transport.js,
+      director-ui.js               lesson title / recap card, Train transport,
+                                    Director switch + Free camera pill
       photo-overlay/               Mode B: photo/video analysis
         pnp.js                     OpenCV.js solvePnP wrapper (camera pose)
         landmarks.js, border-mode.js,

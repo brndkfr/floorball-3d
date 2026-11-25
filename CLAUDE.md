@@ -22,6 +22,14 @@ only the input source differs.
 
 ## Workflow: TDD, always validate, never assume
 
+**Docs-only changes take the fast path.** A change that touches only
+`docs/**` or `*.md` files (plan, items, README, this file) skips steps
+1-7: no `pnpm test`, e2e, build or size check, locally or in CI (both
+CI and CodeQL ignore those paths; the weekly CodeQL run still scans).
+No test reads doc content. Commit, push, open the PR. As soon as a
+`.js`, workflow, asset or config file is in the change, the full order
+below applies again.
+
 Every code change - bug fix, feature, refactor - follows this order.
 Deviating from it requires an explicit written justification in the
 commit message or the [docs/plan.md](docs/plan.md) item, not a chat
@@ -98,6 +106,20 @@ aside.
    on the pull request, and nothing merges to `main` on a red CI. Never `--no-verify` past a failing hook,
    never `git restore` unfamiliar working-tree changes to make a
    test go green.
+9. **Update the docs in the same change, when it makes sense.**
+   - [README.md](README.md): a change a user or a contributor would
+     notice (a new or changed feature, control, mode, export option,
+     setup step, command / MCP tool, script, or a new module worth
+     listing in "Project structure") updates the matching README
+     section in the same commit. Internal refactors, tests and fixes
+     that restore documented behaviour do not.
+   - This file (CLAUDE.md): a lasting lesson (a gotcha that cost real
+     time, a convention a future change must follow, a workflow rule
+     the user asked for) goes into the matching section here. One-off
+     details of a single change do not; those belong in the commit
+     message or [docs/plan.md](docs/plan.md).
+   - Say in the commit message which doc you updated, or why none
+     needed it.
 
 ## Coordinate conventions (read before touching camera/movement/placement code)
 
@@ -270,7 +292,8 @@ aside.
 ## Verification
 
 - **Before every commit, run `pnpm test` and it must pass in full
-  (0 failures).** Tests live in `test/*.test.js` (`node --test`, no
+  (0 failures).** Exception: docs-only commits (see the fast path in
+  the Workflow section). Tests live in `test/*.test.js` (`node --test`, no
   browser needed - see S-BACK-009 in `docs/archive/plan-2026-10.md` (section 10) for which
   modules are covered and why). If a change touches a module with
   existing tests, extend them rather than leaving the new behaviour

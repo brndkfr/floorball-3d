@@ -11,6 +11,9 @@ import { PRESETS, presetPose, presetForKey, lerpPose, easeInOut } from '../camer
 import { isTopDown, exitTopDown } from '../authoring/topdown-camera.js';
 import { prefersReducedMotion } from '../reduced-motion.js';
 import { markRenderDirty } from '../render-dirty.js';
+import { DIRECTOR_SHOTS, SHOT_LABELS } from '../director.js';
+import { shotPoseNow } from '../authoring/playback.js';
+import { setDirector } from '../authoring/director-state.js';
 
 const TWEEN_MS = 400;   // estimate
 
@@ -20,7 +23,9 @@ if (!button || !menu) throw new Error('camera-menu.js: Views button or #cameraPr
 
 menu.innerHTML = PRESETS.map((p) =>
   `<button type="button" role="menuitem" data-preset="${p.id}">${p.label}<kbd>Shift+${p.key}</kbd></button>`).join('')
-  + '<hr><button type="button" role="menuitem" data-action="view-from-ball">From the ball</button>';
+  + '<hr><button type="button" role="menuitem" data-action="view-from-ball">From the ball</button>'
+  // A lesson's director shots (A-BACK-049): picking one takes the camera from the director, from where the ball and goalie are now.
+  + '<hr>' + DIRECTOR_SHOTS.map((s) => `<button type="button" role="menuitem" data-shot="${s}">${SHOT_LABELS[s].en}</button>`).join('');
 
 function selectedChip() {
   const g = state.selected;
@@ -29,7 +34,7 @@ function selectedChip() {
 }
 
 // Same reading of the camera as scene.js getCameraRig().
-function currentPose() {
+export function currentPose() {
   return { x: camera.position.x, y: camera.position.y, z: camera.position.z, yaw: camera.rotation.y - Math.PI, pitch: camera.rotation.x };
 }
 
@@ -44,7 +49,18 @@ export function goToPreset(id) {
   if (isTopDown()) exitTopDown();
   const to = presetPose(id, { fit: defaultRig(), chip: selectedChip() });
   if (!to) return false;
+  setDirector(false);   // the viewer chose a view: a lesson's director stands aside
   blendCameraTo(to, id === 'stand' ? applyDefaultView : null);
+  return true;
+}
+
+// A director shot picked from the menu (A-BACK-049).
+export function goToShot(name) {
+  const to = shotPoseNow(name);
+  if (!to) return false;
+  if (isTopDown()) exitTopDown();
+  setDirector(false);
+  blendCameraTo(to);
   return true;
 }
 
@@ -83,6 +99,10 @@ renderer.domElement.addEventListener('wheel', stop, { capture: true, passive: tr
 
 function openMenu() {
   menu.querySelector('[data-preset="player"]').disabled = !selectedChip();
+  for (const b of menu.querySelectorAll('[data-shot]')) {
+    b.textContent = SHOT_LABELS[b.dataset.shot][state.lang] ?? SHOT_LABELS[b.dataset.shot].en;
+    b.disabled = !shotPoseNow(b.dataset.shot);   // only in a lesson
+  }
   menu.hidden = false;
   button.setAttribute('aria-expanded', 'true');
   menu.querySelector('button:not(:disabled)')?.focus();
@@ -102,8 +122,10 @@ menu.addEventListener('click', (e) => {
   if (!b || b.disabled) return;
   closeMenu();
   if (b.dataset.preset) goToPreset(b.dataset.preset);
+  else if (b.dataset.shot) goToShot(b.dataset.shot);
   else if (b.dataset.action === 'view-from-ball') {
     if (isTopDown()) exitTopDown();
+    setDirector(false);
     viewFromBall();
   }
 });

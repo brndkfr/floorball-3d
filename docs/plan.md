@@ -154,7 +154,7 @@ the J+S / swiss unihockey module "Goalies - Positionierung". Draft:
 5. **[A-BACK-047] Shooter's-eye inset** The "angle tape", live.
 6. **[A-BACK-035] Frame notes** (moved up from "Later": the lessons
    need captions).
-7. **[A-BACK-049] Goalie lessons** Five animated plays in Train.
+7. **[A-BACK-049] Goalie lessons** Four animated plays in Train (five planned, lesson 4 merged into 3).
 8. **[A-BACK-050] "Place the goalie" exercises**
 9. **[A-BACK-051] Ideal goalie** Ghost from the zone rules; merges
    into A-BACK-043 and needs A-BACK-042 for the body.
@@ -165,8 +165,9 @@ Screenshot for the whole app, then the app's actions as commands and an
 MCP server in the app, so Claude can work with every part of it (A-Q-013,
 A-Q-014). [items/S-BACK-032-035](items/S-BACK-032-035-screenshot-mcp.md).
 
-1. **[S-BACK-032] Screenshot, whole app** One click saves what is on
-   screen, labels included; Copy and Clean in a small menu.
+1. **[S-BACK-032] Screenshot, whole app** [done 2026-11-16] One click
+   saves what is on screen, labels included; Copy and Clean in a small
+   menu.
 2. **[S-BACK-033] Command layer** The app's actions as typed commands.
    First slice built 2026-11-21: registry with schema checks, six
    commands (lesson, goalie, seek / stop, KATA readout, screenshot).
@@ -226,6 +227,17 @@ lines. An item that needs more than ~10 lines gets its own file under
   One-page storyboard of numbered frames with notes. Same file.
 - **[A-BACK-037] Formation templates** [open] Formation and set-piece
   templates (2-2-1, box, 5v4, 4v5, face-offs, breakouts). Same file.
+- **[A-BACK-056] Example play "3v2 into 3v2"** [open] Built 2026-11-23
+  as an importable doc (not in the repo): 17 frames, 10 players plus an
+  auto goalie (zone rules), cones, two zone shapes, ball pile, { en, de }
+  captions. Adapted from a field hockey drill video (The Hockey Lab,
+  "3v2 into 3v2, Def can counter"), positions estimated by eye and kept
+  out of the goal area. Checked in Edge via Import JSON (no page errors,
+  all frames stepped). Next: ship it on the Plays shelf (A-BACK-055, spec
+  on branch feat/play-212, unblocked now that #63 is merged) once that
+  exists, built by a builder like the
+  lessons'. Known nit: after the goal the main ball flies from the net
+  back to the centre player.
 - **[A-BACK-038] Scene recorder redesign** [in-progress] Controls
   (seconds, slow motion, frame menu) and the Variant A layout (docked
   time track, segments as wide as they are long, drag to set durations)
@@ -279,7 +291,21 @@ lines. An item that needs more than ~10 lines gets its own file under
   animated lesson plays, shipped read-only in the Library. Pilot built
   2026-11-16 (decisions in the spec): lesson 2 "Through the zones" built in
   code, the live goalie, the lesson camera, `openLesson()`; the Lessons shelf in the Library (2026-11-17); pause on captions
-  (2026-11-21). Open: the other four lessons, holds in the export. Same file.
+  (2026-11-21); lessons 1, 3, 4 and 5 (2026-11-21, captions for review).
+  Lesson 1 became a showcase (2026-11-22): title and recap cards, a
+  goal against a goalie off the line first, quiet screen (`layers`), director
+  camera (`cam`) with a Director switch and a Free camera pill, slow motion
+  shots; details in the item spec. 2026-11-22 decisions: lesson 4 merged into lesson 3 (same run, same
+  goalie answers; four lessons ship), the centred-block chip reads
+  "Centred block" (not "Squared up"), lesson 1 builds the KATA up one
+  dimension at a time, lesson shots end in a save (the ball stops at the
+  goalie), and the German captions keep the module's English zone names
+  (Attention-Zone etc.) on purpose. 2026-11-23: all four lessons have
+  the showcase treatment and export as teaching videos (holds, cards,
+  KATA box, shooter's view, ball trail); merged 2026-11-23 (#63). Open:
+  caption review, and the
+  camera follow-ups from the video review (listed in the item spec).
+  Same file.
 - **[A-BACK-050] "Place the goalie" exercises** [blocked-by:
   A-BACK-046] Situations, scoring, ideal ghost, one hint. Same file.
 - **[A-BACK-051] Ideal goalie** [blocked-by: A-BACK-046, A-BACK-048]
@@ -322,15 +348,17 @@ lines. An item that needs more than ~10 lines gets its own file under
   timeouts on battery (Windows throttles the CPU); both timeouts passed
   alone. Open, optional: a native ARM64 Node (the runner and static
   server are still emulated).
-- **[S-BACK-032] Screenshot, whole app** [in-progress] Camera button in
-  every mode, PNG with the HTML overlays painted in, Copy and Clean.
+- **[S-BACK-032] Screenshot, whole app** [done 2026-11-16, #57] Camera
+  button in every mode, PNG with the HTML overlays painted in, Copy and
+  Clean.
   [Spec](items/S-BACK-032-035-screenshot-mcp.md).
 - **[S-BACK-033] Command layer** [in-progress] Typed commands for the
-  app's actions, run by the UI's own code; first six built. Open: undo
+  app's actions, run by the UI's own code; first six merged 2026-11-22
+  (#62). Open: undo
   per command, overwrite confirmation, `area.verb` naming (decide with
   the editing commands). Same file.
 - **[S-BACK-034] MCP server in the app + local relay** [in-progress]
-  Built 2026-11-22: relay (`scripts/mcp-relay/`, stdio + WebSocket on
+  Merged 2026-11-22 (#62): relay (`scripts/mcp-relay/`, stdio + WebSocket on
   127.0.0.1, origin + pairing code), AI button, commands as tools.
   Open: confirmation for overwriting commands, with S-BACK-033. Same file.
 - **[S-BACK-035] Cloud relay** [open, optional] Same file.

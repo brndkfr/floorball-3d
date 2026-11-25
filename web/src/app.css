@@ -406,7 +406,26 @@
   #trainPanel .train-card[hidden] { display:none; }
   #trainPanel .train-card.collapsed { gap:0; }
   #trainPanel .gz { top:20px; width:300px; }
+  /* Lesson title and recap card (A-BACK-049): over the middle of the stage, clear of the zone card, the KATA card and the caption */
+  #trainPanel .lesson-card { left:50%; top:22%; transform:translateX(-50%); width:min(460px, calc(100% - 40px)); gap:10px; padding:16px 18px; }
+  #trainPanel .lc-title { margin:0; font:600 17px/1.3 var(--fb-font); color:var(--fb-text-1); }
+  #trainPanel .lc-text { margin:0; font:400 15px/1.45 var(--fb-font); color:var(--fb-text-1); }
+  #trainPanel .lc-bullets { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:6px; font:400 14px/1.45 var(--fb-font); color:var(--fb-text-1); }
+  /* "Free camera" pill (A-BACK-049): the viewer has the camera, one click gives it back to the director */
+  .director-pill { position:fixed; top:calc(var(--shell-topbar) + 12px); left:50%; transform:translateX(-50%); z-index:27; cursor:pointer; padding:6px 14px; border-radius:999px; border:1px solid var(--fb-brand); background:var(--fb-brand-quiet); color:var(--fb-text-1); font:500 13px/1.2 var(--fb-font); box-shadow:0 4px 14px rgba(0, 0, 0, 0.35); }
+  .director-pill[hidden] { display:none; }
+  #timeline [data-tl="director"][hidden] { display:none; }
+  #trainPanel .lc-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:4px; }
+  #trainPanel .lc-actions button { padding:6px 14px; border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-2); background:transparent; color:var(--fb-text-1); font:500 13px/1.2 var(--fb-font); }
+  #trainPanel .lc-actions .lc-primary { background:var(--fb-brand-quiet); border-color:var(--fb-brand); }
   #trainPanel .kata { bottom:20px; width:340px; }
+  /* Lesson transport (A-BACK-049): under the stage in the free space right of the KATA card; the caption moves up above it */
+  #trainPanel .lesson-transport { left:calc(20px + 340px + 16px); right:20px; bottom:20px; margin-inline:auto; width:fit-content; flex-direction:row; gap:6px; padding:6px; }
+  #trainPanel .lesson-transport button { min-width:84px; padding:6px 12px; border:1px solid var(--fb-line-strong); border-radius:var(--fb-radius-2); background:transparent; color:var(--fb-text-1); font:500 13px/1.2 var(--fb-font); }
+  #trainPanel .lesson-transport button.active { background:var(--fb-brand-quiet); border-color:var(--fb-brand); }
+  #trainPanel .lesson-transport button[hidden] { display:none; }
+  body[data-mode="train"][data-lesson-transport] #frameCaption { bottom:76px; }
+  body[data-quiet] #trainPanel .gz { display:none; }   /* lesson quiet screen (A-BACK-049): the caption, the KATA card and the named layers only */
   #trainPanel button { cursor:pointer; font-family:var(--fb-font); }
   #trainPanel button:focus-visible { outline:2px solid var(--fb-brand); outline-offset:2px; }
   #trainPanel .tc-head { display:flex; align-items:center; gap:8px; min-height:28px; }
@@ -775,7 +794,8 @@
     color:var(--fb-text-1); font:600 15px/1.35 var(--fb-font);
   }
   #frameCaption[hidden] { display:none; }
-  body[data-mode="train"] #frameCaption { right:0; bottom:24px; }
+  /* Train: sit in the free space to the right of the bottom-left KATA card (20px + 340px wide), never under it */
+  body[data-mode="train"] #frameCaption { left:calc(var(--shell-rail) + 20px + 340px + 16px); right:0; bottom:24px; max-width:min(80vw, 720px); }
   html.presenting #frameCaption { left:0; right:0; bottom:84px; font-size:18px; }
   #timeline .tl-card .tl-note { display:inline-flex; color:var(--fb-text-2); }
   #langMenu {
@@ -1275,6 +1295,12 @@
     #trainPanel .train-card { left:8px; right:8px; width:auto; }
     #trainPanel .gz { top:8px; }
     #trainPanel .kata { bottom:56px; }
+    body[data-mode="train"] #frameCaption { left:var(--shell-rail); }
+    /* a lesson on a phone, bottom up: hint row, the transport row, the KATA card; the caption at the top of the stage, where nothing hides it */
+    #trainPanel .lesson-transport { left:8px; right:8px; bottom:52px; width:auto; justify-content:center; }
+    #trainPanel .lesson-transport button { flex:1; min-width:0; }
+    body[data-lesson-transport] #trainPanel .kata { bottom:104px; }
+    body[data-mode="train"][data-lesson-transport] #frameCaption { top:calc(var(--shell-topbar) + 8px); bottom:auto; left:8px; right:8px; max-width:none; }
     #trainPanel #shooterInset { display:none; }   /* phones: no room, desktop and tablet only */
     /* the hint gets its own row above the tab bar instead of following the goalie */
     #trainHint, #trainHint.off { display:block; transform:none !important; left:8px; right:8px; top:auto; bottom:8px; max-width:none; text-align:center; }

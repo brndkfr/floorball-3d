@@ -198,6 +198,7 @@ const HEAD_MM = 1200;   // estimate: pill at about head height
 const GAP = 28;         // px between the goalie and the pill
 export function placeTrainHint() {
   if (pill.hidden || document.body.dataset.mode !== 'train') return;
+  if (state.quiet) { pill.classList.add('off'); return; }   // a quiet lesson frame: the caption and the card only (A-BACK-049)
   const g = state.goalies[state.kataReadout?.goal ?? 'A'];
   if (!g) return;
   v.set(g.position.x, g.position.y + HEAD_MM, g.position.z).project(state.activeCamera);

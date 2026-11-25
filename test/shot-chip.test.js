@@ -9,8 +9,8 @@ import assert from 'node:assert/strict';
 const { VERDICT_TITLES, verdictWords, ndcToPage } = await import('../web/src/shot-chip-math.js');
 
 test('verdictWords: title and a rounded percentage per verdict', () => {
-  assert.deepEqual(VERDICT_TITLES, { open: 'Open shot', 'blocked-off': 'Blocked off-centre', 'blocked-centred': 'Squared up' });
-  assert.deepEqual(verdictWords({ key: 'blocked-centred', pctBlocked: 54.17 }), { key: 'blocked-centred', title: 'Squared up', pct: '54%' });
+  assert.deepEqual(VERDICT_TITLES, { open: 'Open shot', 'blocked-off': 'Blocked off-centre', 'blocked-centred': 'Centred block' });
+  assert.deepEqual(verdictWords({ key: 'blocked-centred', pctBlocked: 54.17 }), { key: 'blocked-centred', title: 'Centred block', pct: '54%' });
   assert.deepEqual(verdictWords({ key: 'open', pctBlocked: 0.2 }), { key: 'open', title: 'Open shot', pct: '0%' });
   assert.equal(verdictWords(null), null);
 });

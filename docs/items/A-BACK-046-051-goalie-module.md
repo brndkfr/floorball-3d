@@ -237,8 +237,161 @@ camera to be revisited, captions as drafted for review):
   chooses, lessons hold and the coach's own plays do not; the choice is
   then remembered per browser for every play. Not in the video export yet (`seekTo` runs straight
   through), so an exported lesson does not pause.
-Open: lessons 1, 3, 4, 5; holds in the export; whether "Open as
-play" should keep `autoGoalie` in the copied project.
+- All lessons (2026-11-21, captions drafted for the user's review; lesson
+  4 `options` was merged into 3 on 2026-11-22, see below):
+  1 `line` (ball still while the captions take placement, depth, axis;
+  then a slow move), 3 `passOrShot` (a cast of two
+  attackers and a defender, played twice from the same start),
+  5 `behind` (round the back of the goal, post to post, out in front).
+  The builder takes a `cast` and frames with `players`, `carrier` or
+  `shot` (aimed at the middle of the goal); lessons 1, 2, 5 keep the
+  one-attacker `ball` form. Live goalie ok 90-100% of the time per
+  lesson, every keyframe ok (`goalie-track.test.js`, bar 85%).
+- Decisions after the first review (2026-11-22, with the user):
+  - Lesson 4 "Most dangerous or most likely" is merged into lesson 3: it
+    was the same 2-on-1 played twice with the same goalie answers. Its
+    idea (most likely vs most dangerous; dangerous option open: stay
+    back, ready to push across; closed: play the shot) closes lesson 3's
+    last caption. Four lessons ship, numbered 1 to 4 (the "behind" lesson became 4).
+  - The verdict chip for a centred block now reads "Centred block", not
+    "Squared up": the captions use "square up" for the body facing the
+    ball, and the two clashed.
+  - Lesson 1 shows the KATA build-up: a frame spec may carry
+    `goalie: ['placement', ...]` (the dimensions applied so far). The
+    builder stands the goalie on the line but deep and parallel (frame
+    1), then forward (frame 2), then square (frame 3), so the KATA rows
+    turn green one at a time. The frame gets the optional `goalieFixed`
+    flag (kept by `acceptDoc` only when true) and `goalie-track.js` goes
+    to that pose instead of following the rules; docs without the flag
+    behave as before.
+  - Lesson shots end in a save. `shot.saved` is an optional flag; with it
+    the frame's ball x / z is the stop point, 0.4 m (estimate,
+    `SAVE_FRONT_MM`) short of the goalie on the shot path, and the ball
+    drops to the floor there. The aim point and arrow are unchanged and
+    shots made in Plan have no flag, so they behave as before. The
+    verdict still comes from the shooting line (the app has no goal
+    count), so a stopped ball in front of a centred goalie reads as a
+    centred block.
+  - The German captions keep the swiss unihockey module's English zone
+    names (Attention-Zone, Danger-Zone, Passing-First-Zone, Slot) on
+    purpose: they are the terms coaches use in the module.
+- Lesson 1 as a showcase (2026-11-22, so the lessons explain themselves;
+  all pieces are optional data and only lesson 1 uses them, old docs and
+  the other lessons are unchanged):
+  - Title card and recap card. A lesson carries `doc.lesson = { intro:
+    { title?, task }, recap: { title?, bullets } }` (texts as notes, `{ en,
+    de }`; `lesson-cards.js`, kept by `acceptDoc`). Opening the lesson shows
+    the task ("Watch the goalie: where does it stand, and why?") over the
+    stage until the first play (Start, any play, or Close); when a play
+    ends the recap (placement, depth, axis) shows with Play again / Close
+    (`authoring/lesson-cards-ui.js`).
+  - Wrong first, then right. Frames 1 and 2 are the same shot as at the
+    end, against a goalie off the line (`goalieDx`, 0.7 m, estimate, no KATA
+    dimension applied) and it is a goal (`shot: { scored: true }`, the
+    ball rests in the net), caption "What went wrong?". Then the build-up
+    (placement, depth, axis), the shooting area, and the same shot from
+    the same spot saved (`shot.saved`, as before). Both flights are slow
+    motion: `shot: { speedMps: 6, releaseT: 0.15 }` become the ball's
+    `pass` settings (6 m/s instead of the 25 m/s default, estimates).
+  - Quiet screen. A frame may carry `layers: [...]` (`lesson-view.js`,
+    names `line`, `area`, `coverage`, `zones`, `marks`; kept by
+    `acceptDoc`). `state.quiet` follows the frame whose caption shows
+    (`authoring/lesson-quiet.js`, Train only) and the shooting line, corner
+    lines (the shooting area), coverage, zones, zone labels, shooter inset,
+    verdict chip, hint pill, zone card and pass lines show only what the
+    frame names; the caption and the KATA card always stay. A frame without
+    `layers` leaves the screen as the viewer set it.
+  - Director camera. A frame may carry `cam: '<shot>'` (`director.js`,
+    pure: `wide`, `goalieEyes`, `shooterEyes`, `sideKnee`, `followBall`,
+    `pushIn`; kept by `acceptDoc`). The shot holds until a later frame names
+    another, the pose is computed live from the ball and the goalie track
+    (a function of frames and time, so scrub and export agree) and blends
+    from the previous shot over 0.9 s. `playback.js applyDirector()` sets
+    the camera; the shot offsets are estimates, tuned by eye in look-shots
+    (the goalie eyes sit 0.6 m in front of its centre: nearer, the camera is
+    inside the helmet and the glow outline).
+  - User takeover. The `Director` switch in the recorder's transport (next to
+    Hold and Follow; shown for a play with shots and a live goalie; the
+    recorder is a Plan view, Train shows none) and the pill "Free camera -
+    Back to director" (de: "Freie Kamera - Zurück zur Regie", over the stage
+    in Train and Plan). Any orbit, pan, zoom or key pan of the viewer
+    (`user-camera.js` hooks) turns the director off; the pill or the
+    switch turns it on, easing back over 0.6 s. A pick from the camera menu
+    (the shot list under "From the ball", enabled in any lesson) or a view
+    preset also takes the camera. It comes back on its own only when a new
+    lesson opens or a play restarts. The video export always uses the
+    director (`state.directorForced`).
+  - Decided 2026-11-22 (to build): on the "What went wrong?" frame the
+    KATA card reads red, grading the goalie's stance when the shot was
+    taken, not the ball in the net. Train gets a small transport under the
+    stage while a lesson is open: Play/Pause, Restart and the Director
+    switch. A camera-menu pick (shot or preset) keeps turning the director
+    off. Stop turns the director back on, like a restart.
+  - Lessons 2-4 get lesson 1's treatment (decided 2026-11-22, all as
+    proposed): title and recap card, quiet screen, director shots, and a
+    wrong run first that ends in a goal ("What went wrong?").
+    - Lesson 2 "Through the zones": one wrong run first (the goalie stays
+      centred and deep, the attacker walks into the danger zone and
+      scores), then the right run. Task: "Watch the goalie as the ball
+      moves through the zones: what changes in each one?" Layers: the
+      zones with the ball's zone on every frame, the shooting line where
+      the caption names it. Camera: mostly wide, the shooter's eyes when
+      the goalie steps out in the danger zone, a side shot at the post,
+      wide behind the goal. Recap: one bullet per zone (attention:
+      centred, deep, patient; danger: forward on the shooting line,
+      square; passing-first and behind: on the line at the post, knees
+      parallel, eyes on the slot).
+    - Lesson 3 "Pass or shot": three runs, a wrong read first (the goalie
+      steps out for the shot, the pass goes across, goal), then the pass
+      read right and saved, then the shot read right and saved. Task:
+      "Watch the defender, then the goalie: how does the goalie know
+      whether a pass or a shot is coming?" Layers: the pass lane while
+      the read is pass, the shooting line once it is shot. Camera: the
+      goalie's eyes while the defender decides, a side shot for the
+      goalie's answer, follow ball on the pass across, push-in on each
+      save. Recap: read the defender first; defender on the carrier: a
+      pass is coming, stay back on the line, ready to push across;
+      defender in the lane: a shot, step forward and square; most likely
+      the shot, most dangerous the pass: while the pass is open, cover it.
+    - Lesson 4 "Behind the goal": a wrong run first (the goalie cuts
+      through the middle of the goal as the ball goes round, a pass into
+      the slot scores), then the right run along the line. Task: "The
+      ball goes round the back of the goal: which way does the goalie
+      move, and where does it look?" Layers: the zones with the slot,
+      the shooting line only once the ball comes out in front. Camera:
+      high, from in front of the goal looking back at it; push-in on the
+      step out. Recap: ball level with the goal line: on the line at the
+      near post, knees parallel; ball behind: slide along the line to
+      the other post, never through the middle; eyes: glance over the
+      shoulder to the slot; ball out in front: forward onto the shooting
+      line, square.
+    - Built 2026-11-23: all as decided. New pieces: frame hint
+      `goalieRead` (a goalie that reads a pass as a shot), quiet layer
+      `lane` (pass lane), director shots `frontHigh` (lesson 4) and
+      `goalieClose` (lesson 1's "What went wrong?" frame, under 4 m from
+      the goalie), a longer, thicker ball trail. Lesson 4 gained a second
+      attacker waiting in the slot. Distances of the new shots, the late
+      goalie offset (lesson 3) and the slot player's spot are estimates.
+Open: caption review by the user; whether "Open as play" should keep
+`autoGoalie` in the copied project.
+Follow-up from the video review of all four lessons (2026-11-23, merged
+as is, fix later):
+- Lesson 2: the wide shots are far away (the attacker small, often at the
+  left edge); on "What went wrong?" the ball in the net is not visible;
+  behind the goal the ball is a dot at the right edge.
+- Lesson 3: the side shots lose the defender the caption talks about; the
+  shooter's view inset covers the defender's chip at the top right in some
+  frames; at 98 s it is the longest lesson.
+- Lesson 4: the carrier behind the goal is tiny from the high front
+  camera; the final step out is cut off at the right edge (push-in); on
+  the first right-run frame the slot player sits under the two-line
+  caption. Check with the user that the slot attacker may stay in the
+  right run too.
+- Lesson 1: the trail spheres look bulky close to the camera.
+- All: a white dot at the bottom right of the high views and a dark spot
+  at the bottom left of the caption, not traced yet.
+- The shooter's view inset should avoid players: move it, or shrink it,
+  when a player sits under it.
 
 ### A-BACK-050 - "Place the goalie" exercises `[small]` after 046
 

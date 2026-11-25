@@ -100,3 +100,19 @@ test('rectsOverlap: labels that would sit on the inset card are hidden', async (
   assert.equal(rectsOverlap({ left: 900, top: 380, right: 950, bottom: 400 }, card), false);  // touching is not overlapping
   assert.equal(rectsOverlap({ left: 1000, top: 100, right: 1100, bottom: 120 }, null), false);
 });
+
+// Lesson videos carry the shooter's view in the top-right corner (A-BACK-049,
+// asked for 2026-11-22): a 4:3 inset with a title bar, clear of the edges.
+test('exportInsetLayout: top-right, 4:3 view, a title bar above it, inside the picture at any size', async () => {
+  const { exportInsetLayout } = await import('../web/src/shooter-view.js');
+  for (const [w, h] of [[1280, 720], [1920, 1080], [854, 480]]) {
+    const L = exportInsetLayout({ w, h });
+    assert.ok(Math.abs(L.view.w / L.view.h - 4 / 3) < 0.02, `${w}: 4:3`);
+    assert.ok(L.view.w >= w * 0.2 && L.view.w <= w * 0.3, `${w}: a fifth to under a third of the width`);
+    assert.ok(L.box.x + L.box.w <= w && L.box.y >= 0 && L.box.x > w / 2, `${w}: inside, on the right`);
+    assert.ok(L.box.y + L.box.h < h / 2, `${w}: in the top half, clear of the caption and the KATA box`);
+    assert.ok(L.view.y > L.box.y && L.view.y + L.view.h <= L.box.y + L.box.h, 'the view sits under the title bar inside the box');
+    assert.ok(L.titleY > L.box.y && L.titleY < L.view.y, 'the title is in the bar');
+    assert.ok(Number.isInteger(L.view.x) && Number.isInteger(L.view.y), 'whole pixels for the GL viewport');
+  }
+});

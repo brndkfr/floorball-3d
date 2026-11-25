@@ -125,6 +125,26 @@ export function judgeKata(k, targets) {
 const withBall = (fa, fb) => (fb.balls?.main || !fa.balls?.main ? fb : { ...fb, balls: { ...fb.balls, main: fa.balls.main } });
 const carrierIn = (s) => { const c = s?.balls?.main?.carrier; return c && s.players?.[c] ? c : null; };
 
+// The ball the KATA card grades against (A-BACK-049, decided 2026-11-22):
+// from a shot's release until its keyframe's own time ends, the release
+// point, so a goal in the net reads the goalie's stance when the shot was
+// taken, not the ball behind it. Any other time: the live ball.
+export function kataBall(frames, elapsedMs, liveBall) {
+  if (!frames?.length) return liveBall;
+  let acc = 0;
+  let hit = null;   // the latest shot released by now wins
+  for (let i = 0; i + 1 < frames.length && acc <= elapsedMs; i++) {
+    const d = frames[i].duration;
+    const end = acc + d + frames[i + 1].duration;   // the shot keyframe's own time ends here
+    if (elapsedMs < end) {
+      const plan = passPlan(frames[i].scheme, frames[i + 1].scheme, d);
+      if (plan?.kind === 'shot' && elapsedMs >= acc + plan.releaseT * d) hit = { x: plan.from.x, z: plan.from.z };
+    }
+    acc += d;
+  }
+  return hit ?? liveBall;
+}
+
 // 'shot' | 'pass' from the next pass or shot released at or after
 // elapsedMs; 'dribble' when a player carries the ball and nothing follows;
 // 'shot' otherwise (a loose ball near goal is the shot to fear).
