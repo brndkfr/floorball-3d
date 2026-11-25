@@ -109,6 +109,10 @@ test('initialize: tools capability with listChanged, instructions carry the pair
   assert.equal(typeof r.result.serverInfo.name, 'string');
   assert.match(r.result.instructions, /ABCD-EFGH/);
   assert.match(r.result.instructions, /Connect AI/);
+  // The frame the tools use (rink-bounds.js): z = 0 is goal A's end board,
+  // not the rink centre. Claiming "centre at 0,0" puts z placements 20 m off.
+  assert.doesNotMatch(r.result.instructions, /centre at 0,0/);
+  assert.match(r.result.instructions, /z along it from 0 at goal A's end board/);
   // An unknown version gets the relay's own.
   relay.onClientMessage({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '1999-01-01' } });
   assert.match(out[1].result.protocolVersion, /^\d{4}-\d{2}-\d{2}$/);

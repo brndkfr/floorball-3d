@@ -58,7 +58,7 @@ export function createRelay({ code, port, send, log = () => {}, timeoutMs = 60_0
     return [
       'Drives an open floorball-3d app tab (tactics board and goalie training) through the app\'s own commands.',
       'Tools appear once a tab is connected. ' + pairingHint(),
-      'Tell the user this code if no tools are listed. Positions are millimetres with the rink centre at 0,0.',
+      "Tell the user this code if no tools are listed. Positions are millimetres: x across the rink (0 = centre line), z along it from 0 at goal A's end board; tool descriptions give the bounds.",
     ].join(' ');
   }
 
